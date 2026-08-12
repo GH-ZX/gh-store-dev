@@ -24,5 +24,14 @@
     "direction": "Direction",
     "directionValue": "Arabic-first, English-ready",
     "note": "The storefront shell is ready. Catalog and checkout arrive through the next vertical slices."
+  },
+  "games": {
+    "eyebrow": "Catalog",
+    "title": "Choose your next game.",
+    "description": "Discover the games and packs currently available on GH Store.",
+    "emptyTitle": "No games are available yet",
+    "emptyDescription": "The catalog will appear here as soon as games and packs are added from the dashboard.",
+    "errorTitle": "Unable to load the catalog",
+    "errorDescription": "Please refresh the page and try again shortly."
   }
 }
