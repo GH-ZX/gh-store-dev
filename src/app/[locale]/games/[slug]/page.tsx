@@ -126,6 +126,7 @@ export default async function GameDetailPage({ params }: PageProps<"/[locale]/ga
             labels={getOfferCardLabels(common, messages)}
             gameSlug={game.slug}
             showGameName={false}
+            compact
           />
         )}
       </Section>

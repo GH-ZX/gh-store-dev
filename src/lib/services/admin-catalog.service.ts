@@ -1,0 +1,512 @@
+import "server-only";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/lib/auth/guards";
+import { toSearchTokens } from "@/lib/catalog/search";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
+import type { Database } from "@/types/database";
+
+/**
+ * Admin reads and writes of the catalog.
+ *
+ * Every function runs behind {@link requireAdmin} and uses the caller's own
+ * session, so the database's admin policy is the real gate. Supplier cost and
+ * pricing mode are read here because an operator prices against them, but they
+ * never travel to a storefront page — only to the dashboard.
+ *
+ * Writes are deliberately narrow: an update touches the columns an admin edits
+ * and nothing else, so a later provider import still owns supplier cost and
+ * availability.
+ */
+
+type Client = SupabaseClient<Database>;
+
+/** Raised when a slug an admin typed already belongs to another game. */
+export class SlugTakenError extends Error {
+  constructor() {
+    super("That slug already belongs to another game.");
+    this.name = "SlugTakenError";
+  }
+}
+
+/** Raised when the edited game disappeared between loading the form and saving it. */
+export class GameNotFoundError extends Error {
+  constructor() {
+    super("That game no longer exists.");
+    this.name = "GameNotFoundError";
+  }
+}
+
+/** Postgres `unique_violation`: the slug lost a race with a concurrent rename. */
+const UNIQUE_VIOLATION = "23505";
+
+/**
+ * A non-uuid id is treated as "no such game" rather than passed to Postgres,
+ * which would reject it as malformed input and surface as a 500 instead of a 404.
+ */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export const PRICING_MODES = ["default", "custom", "fixed"] as const;
+
+export type PricingMode = (typeof PRICING_MODES)[number];
+
+export function toPricingMode(value: string | null | undefined): PricingMode {
+  return PRICING_MODES.includes(value as PricingMode) ? (value as PricingMode) : "default";
+}
+
+export type AdminGameListItem = {
+  id: string;
+  slug: string;
+  nameAr: string;
+  nameEn: string;
+  imageUrl: string | null;
+  isActive: boolean;
+  isFeatured: boolean;
+  showInCarousel: boolean;
+  sortOrder: number;
+  offerCount: number;
+  /** G2Bulk game code, when the game came from that provider. */
+  providerCode: string | null;
+};
+
+const LIST_COLUMNS =
+  "id, slug, name_ar, name_en, image_url, is_active, is_featured, show_in_carousel, sort_order";
+
+const GAME_SEARCH_COLUMNS = ["name_ar", "name_en", "slug"];
+
+function orIlike(columns: string[], token: string): string {
+  return columns.map((column) => `${column}.ilike.%${token}%`).join(",");
+}
+
+/**
+ * Offer totals per game.
+ *
+ * A plain id read tallied in memory rather than one count query per game: the
+ * dashboard list needs every total at once, and a single round trip keeps the
+ * page fast as the catalog grows.
+ */
+async function countOffersByGame(client: Client, gameIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+
+  if (gameIds.length === 0) {
+    return counts;
+  }
+
+  const { data, error } = await client.from("offers").select("game_id").in("game_id", gameIds);
+
+  if (error) {
+    throw new Error(`Counting offers failed: ${error.message}`);
+  }
+
+  for (const row of data) {
+    counts.set(row.game_id, (counts.get(row.game_id) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
+async function providerCodesByGame(client: Client, gameIds: string[]): Promise<Map<string, string>> {
+  const codes = new Map<string, string>();
+
+  if (gameIds.length === 0) {
+    return codes;
+  }
+
+  const { data, error } = await client
+    .from("provider_game_mappings")
+    .select("game_id, external_game_code")
+    .eq("provider_name", G2BULK_PROVIDER_NAME)
+    .in("game_id", gameIds);
+
+  if (error) {
+    throw new Error(`Reading provider mappings failed: ${error.message}`);
+  }
+
+  for (const row of data) {
+    codes.set(row.game_id, row.external_game_code);
+  }
+
+  return codes;
+}
+
+export type ListAdminGamesOptions = {
+  query?: string;
+  publishedOnly?: boolean;
+};
+
+export async function listAdminGames({
+  query,
+  publishedOnly = false,
+}: ListAdminGamesOptions = {}): Promise<AdminGameListItem[]> {
+  await requireAdmin();
+
+  const client = await createSupabaseServerClient();
+  let games = client
+    .from("games")
+    .select(LIST_COLUMNS)
+    .order("sort_order", { ascending: true })
+    .order("name_en", { ascending: true });
+
+  if (publishedOnly) {
+    games = games.eq("is_active", true);
+  }
+
+  // Every token must match, so "pubg uc" narrows rather than widens. Tokens are
+  // already stripped of the characters that would break out of a filter group.
+  for (const token of toSearchTokens(query ?? "")) {
+    games = games.or(orIlike(GAME_SEARCH_COLUMNS, token));
+  }
+
+  const { data, error } = await games;
+
+  if (error) {
+    throw new Error(`Reading the catalog failed: ${error.message}`);
+  }
+
+  const gameIds = data.map((game) => game.id);
+  const [offerCounts, providerCodes] = await Promise.all([
+    countOffersByGame(client, gameIds),
+    providerCodesByGame(client, gameIds),
+  ]);
+
+  return data.map((game) => ({
+    id: game.id,
+    slug: game.slug,
+    nameAr: game.name_ar,
+    nameEn: game.name_en,
+    imageUrl: game.image_url,
+    isActive: game.is_active,
+    isFeatured: game.is_featured,
+    showInCarousel: game.show_in_carousel,
+    sortOrder: game.sort_order,
+    offerCount: offerCounts.get(game.id) ?? 0,
+    providerCode: providerCodes.get(game.id) ?? null,
+  }));
+}
+
+/** The editable half of a game, shared by the read and the write. */
+export type AdminGameFields = {
+  nameAr: string;
+  nameEn: string;
+  slug: string;
+  pointsNameAr: string | null;
+  pointsNameEn: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
+  imageUrl: string | null;
+  logoUrl: string | null;
+  carouselBadgeAr: string | null;
+  carouselBadgeEn: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  showInCarousel: boolean;
+  carouselOrder: number | null;
+};
+
+export type AdminGame = AdminGameFields & {
+  id: string;
+  providerCode: string | null;
+};
+
+export type AdminGameOffer = {
+  id: string;
+  slug: string;
+  nameAr: string;
+  nameEn: string;
+  price: number;
+  originalPrice: number | null;
+  currency: string;
+  isSale: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  offerType: string;
+  /** Provider cost in USD, for the operator's margin check only. */
+  supplierCostUsd: number | null;
+  pricingMode: PricingMode;
+};
+
+export type AdminGameDetail = {
+  game: AdminGame;
+  offers: AdminGameOffer[];
+};
+
+const OFFER_COLUMNS =
+  "id, slug, name_ar, name_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
+
+export async function getAdminGame(gameId: string): Promise<AdminGameDetail | null> {
+  await requireAdmin();
+
+  if (!UUID_PATTERN.test(gameId)) {
+    return null;
+  }
+
+  const client = await createSupabaseServerClient();
+  const { data: game, error } = await client
+    .from("games")
+    .select(
+      "id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order",
+    )
+    .eq("id", gameId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Reading the game failed: ${error.message}`);
+  }
+
+  if (!game) {
+    return null;
+  }
+
+  const [offers, providerCodes] = await Promise.all([
+    client
+      .from("offers")
+      .select(OFFER_COLUMNS)
+      .eq("game_id", gameId)
+      .order("sort_order", { ascending: true })
+      .order("price", { ascending: true }),
+    providerCodesByGame(client, [gameId]),
+  ]);
+
+  if (offers.error) {
+    throw new Error(`Reading the game's offers failed: ${offers.error.message}`);
+  }
+
+  return {
+    game: {
+      id: game.id,
+      slug: game.slug,
+      nameAr: game.name_ar,
+      nameEn: game.name_en,
+      pointsNameAr: game.points_name_ar,
+      pointsNameEn: game.points_name_en,
+      descriptionAr: game.description_ar,
+      descriptionEn: game.description_en,
+      imageUrl: game.image_url,
+      logoUrl: game.logo_url,
+      carouselBadgeAr: game.carousel_badge_ar,
+      carouselBadgeEn: game.carousel_badge_en,
+      sortOrder: game.sort_order,
+      isActive: game.is_active,
+      isFeatured: game.is_featured,
+      showInCarousel: game.show_in_carousel,
+      carouselOrder: game.carousel_order,
+      providerCode: providerCodes.get(gameId) ?? null,
+    },
+    offers: offers.data.map((offer) => {
+      // The mapping is embedded as a collection because `offer_id` alone is not
+      // unique across providers; only the G2Bulk row carries our cost.
+      const mapping = offer.provider_offer_mappings.find(
+        (row) => row.provider_name === G2BULK_PROVIDER_NAME,
+      );
+
+      return {
+        id: offer.id,
+        slug: offer.slug,
+        nameAr: offer.name_ar,
+        nameEn: offer.name_en,
+        price: offer.price,
+        originalPrice: offer.original_price,
+        currency: offer.currency,
+        isSale: offer.is_sale,
+        isActive: offer.is_active,
+        sortOrder: offer.sort_order,
+        offerType: offer.offer_type,
+        supplierCostUsd: mapping?.supplier_cost_usd ?? null,
+        pricingMode: toPricingMode(mapping?.pricing_mode),
+      };
+    }),
+  };
+}
+
+export async function updateAdminGame(gameId: string, fields: AdminGameFields): Promise<void> {
+  await requireAdmin();
+
+  if (!UUID_PATTERN.test(gameId)) {
+    throw new GameNotFoundError();
+  }
+
+  const client = await createSupabaseServerClient();
+
+  // A slug is the game's public URL, so a collision is reported as its own
+  // failure instead of a generic "could not save".
+  const { data: clash, error: clashError } = await client
+    .from("games")
+    .select("id")
+    .eq("slug", fields.slug)
+    .neq("id", gameId)
+    .maybeSingle();
+
+  if (clashError) {
+    throw new Error(`Checking the slug failed: ${clashError.message}`);
+  }
+
+  if (clash) {
+    throw new SlugTakenError();
+  }
+
+  const { data, error } = await client
+    .from("games")
+    .update({
+      name_ar: fields.nameAr,
+      name_en: fields.nameEn,
+      slug: fields.slug,
+      points_name_ar: fields.pointsNameAr,
+      points_name_en: fields.pointsNameEn,
+      description_ar: fields.descriptionAr,
+      description_en: fields.descriptionEn,
+      image_url: fields.imageUrl,
+      logo_url: fields.logoUrl,
+      carousel_badge_ar: fields.carouselBadgeAr,
+      carousel_badge_en: fields.carouselBadgeEn,
+      sort_order: fields.sortOrder,
+      is_active: fields.isActive,
+      is_featured: fields.isFeatured,
+      show_in_carousel: fields.showInCarousel,
+      carousel_order: fields.carouselOrder,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", gameId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === UNIQUE_VIOLATION) {
+      throw new SlugTakenError();
+    }
+
+    throw new Error(`Saving the game failed: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new GameNotFoundError();
+  }
+}
+
+export type AdminOfferUpdate = {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  price: number;
+  originalPrice: number | null;
+  isSale: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  pricingMode: PricingMode;
+};
+
+/**
+ * Save one game's packages.
+ *
+ * Rows are matched against the offers the game actually owns, so a forged id
+ * cannot reach another game's pricing. A row whose offer vanished since the form
+ * was rendered is skipped rather than failing the whole save — the rest of the
+ * admin's edits are still worth keeping.
+ */
+export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]): Promise<void> {
+  await requireAdmin();
+
+  if (!UUID_PATTERN.test(gameId)) {
+    throw new GameNotFoundError();
+  }
+
+  if (rows.length === 0) {
+    return;
+  }
+
+  const client = await createSupabaseServerClient();
+  const { data: owned, error: ownedError } = await client
+    .from("offers")
+    .select("id")
+    .eq("game_id", gameId);
+
+  if (ownedError) {
+    throw new Error(`Reading the game's offers failed: ${ownedError.message}`);
+  }
+
+  const ownedIds = new Set(owned.map((offer) => offer.id));
+  const writable = rows.filter((row) => ownedIds.has(row.id));
+
+  if (writable.length === 0) {
+    return;
+  }
+
+  const { data: mappings, error: mappingsError } = await client
+    .from("provider_offer_mappings")
+    .select("offer_id")
+    .eq("provider_name", G2BULK_PROVIDER_NAME)
+    .in(
+      "offer_id",
+      writable.map((row) => row.id),
+    );
+
+  if (mappingsError) {
+    throw new Error(`Reading offer mappings failed: ${mappingsError.message}`);
+  }
+
+  const mapped = new Set(mappings.map((mapping) => mapping.offer_id));
+  const updatedAt = new Date().toISOString();
+
+  for (const row of writable) {
+    const { error } = await client
+      .from("offers")
+      .update({
+        name_ar: row.nameAr,
+        name_en: row.nameEn,
+        price: row.price,
+        original_price: row.originalPrice,
+        is_sale: row.isSale,
+        is_active: row.isActive,
+        sort_order: row.sortOrder,
+        updated_at: updatedAt,
+      })
+      .eq("id", row.id)
+      .eq("game_id", gameId);
+
+    if (error) {
+      throw new Error(`Saving a package failed: ${error.message}`);
+    }
+
+    // Pricing mode lives on the provider mapping, so a manually added offer has
+    // nothing to write.
+    if (!mapped.has(row.id)) {
+      continue;
+    }
+
+    const { error: mappingError } = await client
+      .from("provider_offer_mappings")
+      .update({ pricing_mode: row.pricingMode, updated_at: updatedAt })
+      .eq("offer_id", row.id)
+      .eq("provider_name", G2BULK_PROVIDER_NAME);
+
+    if (mappingError) {
+      throw new Error(`Saving a package's pricing mode failed: ${mappingError.message}`);
+    }
+  }
+}
+
+/** Deletes the game; offers and provider mappings cascade with it. */
+export async function deleteAdminGame(gameId: string): Promise<void> {
+  await requireAdmin();
+
+  if (!UUID_PATTERN.test(gameId)) {
+    throw new GameNotFoundError();
+  }
+
+  const client = await createSupabaseServerClient();
+  const { data, error } = await client
+    .from("games")
+    .delete()
+    .eq("id", gameId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Deleting the game failed: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new GameNotFoundError();
+  }
+}

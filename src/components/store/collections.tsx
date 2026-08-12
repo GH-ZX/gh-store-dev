@@ -25,6 +25,8 @@ export type OfferCollectionProps = {
   railLabel?: string;
   gameSlug?: string;
   showGameName?: boolean;
+  /** Compact rows without artwork, for a list inside a single game. */
+  compact?: boolean;
   className?: string;
 };
 
@@ -36,6 +38,7 @@ export function OfferGrid({
   railLabel,
   gameSlug,
   showGameName = true,
+  compact = false,
   className,
 }: OfferCollectionProps) {
   if (layout === "rail" && railLabel) {
@@ -49,6 +52,7 @@ export function OfferGrid({
               labels={labels}
               gameSlug={gameSlug}
               showGameName={showGameName}
+              compact={compact}
             />
           </RailItem>
         ))}
@@ -66,6 +70,7 @@ export function OfferGrid({
             labels={labels}
             gameSlug={gameSlug}
             showGameName={showGameName}
+            compact={compact}
           />
         </li>
       ))}

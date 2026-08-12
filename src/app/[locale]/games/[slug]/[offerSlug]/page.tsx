@@ -247,6 +247,7 @@ export default async function OfferDetailPage({
             labels={getOfferCardLabels(common, messages)}
             gameSlug={game.slug}
             showGameName={false}
+            compact
           />
         </Section>
       ) : null}

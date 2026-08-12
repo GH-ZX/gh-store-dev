@@ -93,3 +93,22 @@ describe("catalog offer mapper", () => {
     expect(toStoreOffer(row, "en").imageUrl).toBeNull();
   });
 });
+
+describe("numeric denomination names", () => {
+  const gameWithPoints = { ...gameRelation, points_name_ar: "شدة", points_name_en: "UC" };
+
+  it("appends the game currency to a bare number", () => {
+    expect(toStoreOffer({ ...row, name_en: "60", games: gameWithPoints }, "en").name).toBe("60 UC");
+    expect(toStoreOffer({ ...row, name_ar: "60", games: gameWithPoints }, "ar").name).toBe("60 شدة");
+  });
+
+  it("leaves a descriptive name alone", () => {
+    expect(
+      toStoreOffer({ ...row, name_en: "Meltdown Supplies", games: gameWithPoints }, "en").name,
+    ).toBe("Meltdown Supplies");
+  });
+
+  it("leaves a number alone when the game has no currency name", () => {
+    expect(toStoreOffer({ ...row, name_en: "60", games: gameRelation }, "en").name).toBe("60");
+  });
+});

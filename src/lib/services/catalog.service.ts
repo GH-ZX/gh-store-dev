@@ -159,6 +159,8 @@ export async function getGameBySlug(locale: Locale, slug: string): Promise<Store
     name_en: game.name_en,
     image_url: game.image_url,
     logo_url: game.logo_url,
+    points_name_ar: game.points_name_ar,
+    points_name_en: game.points_name_en,
   };
 
   return {

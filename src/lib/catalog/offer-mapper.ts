@@ -7,6 +7,8 @@ type OfferGameRelation = {
   name_en: string;
   image_url: string | null;
   logo_url: string | null;
+  points_name_ar?: string | null;
+  points_name_en?: string | null;
 };
 
 export type OfferRow = {
@@ -57,7 +59,7 @@ export const OFFER_SELECT =
   "id, slug, offer_type, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, region_code, sale_image_url";
 
 /** Offer columns plus the parent game fields needed to build an offer link. */
-export const OFFER_WITH_GAME_SELECT = `${OFFER_SELECT}, games!inner (slug, name_ar, name_en, image_url, logo_url)`;
+export const OFFER_WITH_GAME_SELECT = `${OFFER_SELECT}, games!inner (slug, name_ar, name_en, image_url, logo_url, points_name_ar, points_name_en)`;
 
 function firstRelation(
   value: OfferGameRelation | OfferGameRelation[] | null | undefined,
@@ -67,6 +69,21 @@ function firstRelation(
   }
 
   return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+/**
+ * Supplier catalogues often name a denomination with a bare number — "60", "18".
+ * Alone on a card that says nothing, so the game's currency name is appended
+ * when there is one: "60 UC". A name that already carries words is left alone.
+ */
+function displayName(name: string, pointsName: string | null | undefined): string {
+  const trimmed = name.trim();
+
+  if (!pointsName?.trim() || !/^\d+$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `${trimmed} ${pointsName.trim()}`;
 }
 
 function discountPercent(price: number, originalPrice: number | null): number | null {
@@ -83,11 +100,13 @@ export function toStoreOffer(row: OfferRow, locale: Locale): StoreOffer {
     row.offer_type === "gift_card" || row.offer_type === "redeem_code" ? row.offer_type : "topup";
   const game = firstRelation(row.games);
 
+  const pointsName = game ? (isArabic ? game.points_name_ar : game.points_name_en) : null;
+
   return {
     id: row.id,
     slug: row.slug,
     offerType,
-    name: isArabic ? row.name_ar : row.name_en,
+    name: displayName(isArabic ? row.name_ar : row.name_en, pointsName),
     description: isArabic ? row.description_ar : row.description_en,
     price: row.price,
     originalPrice: row.original_price,

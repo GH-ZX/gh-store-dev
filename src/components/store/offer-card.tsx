@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
-import { ArrowIcon, CardIcon, TagIcon, BoltIcon } from "@/components/ui/icons";
+import { ArrowIcon, BoltIcon, CardIcon, TagIcon } from "@/components/ui/icons";
 import { Price } from "@/components/ui/price";
 import type { Locale } from "@/i18n/config";
 import { formatMessage } from "@/i18n/messages";
@@ -11,9 +11,15 @@ import { cn } from "@/lib/cn";
 /**
  * Offer tile.
  *
+ * Two shapes for two contexts. Across games — a sale row, search results — the
+ * card carries artwork and the game name, because the offer needs identifying.
+ * Inside one game's page every offer would show the *same* picture and the same
+ * type badge, so the compact shape drops both and leads with the denomination
+ * and price, which is the only thing that differs.
+ *
  * Links to the offer page when the parent game is known, and falls back to the
- * game page otherwise — an offer read without its game join has no canonical URL
- * of its own, and a dead link is worse than a broader one.
+ * games index otherwise — an offer read without its game join has no canonical
+ * URL of its own, and a dead link is worse than a broader one.
  */
 export type OfferCardLabels = {
   sale: string;
@@ -28,6 +34,8 @@ export type OfferCardProps = {
   /** Overrides the parent game from the offer, for a game-scoped list. */
   gameSlug?: string;
   showGameName?: boolean;
+  /** Drops artwork and the type badge, for a list within a single game. */
+  compact?: boolean;
   className?: string;
 };
 
@@ -43,19 +51,65 @@ export function OfferCard({
   labels,
   gameSlug,
   showGameName = true,
+  compact = false,
   className,
 }: OfferCardProps) {
   const slug = gameSlug ?? offer.game?.slug ?? null;
   const href = slug ? `/${locale}/games/${slug}/${offer.slug}` : `/${locale}/games`;
   const TypeIcon = TYPE_ICONS[offer.offerType];
+  const discountLabel = offer.discountPercent
+    ? formatMessage(labels.discount, { percent: offer.discountPercent }, locale)
+    : undefined;
+
+  const interactive =
+    "transition-[transform,border-color,box-shadow] duration-[var(--duration)] ease-[var(--ease-spring)] hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:shadow-[var(--elevation-2)]";
+
+  if (compact) {
+    return (
+      <Link
+        href={href}
+        className={cn(
+          "group flex h-full items-center justify-between gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--elevation-1)]",
+          interactive,
+          className,
+        )}
+      >
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-[0.9375rem] font-semibold text-[var(--ink)]">
+              {offer.name}
+            </span>
+            {offer.isSale ? <Badge tone="sale">{labels.sale}</Badge> : null}
+          </span>
+          <span className="mt-2 block">
+            <Price
+              amount={offer.price}
+              currency={offer.currency}
+              locale={locale}
+              originalAmount={offer.originalPrice}
+              discountPercent={offer.discountPercent}
+              discountLabel={discountLabel}
+              size="sm"
+            />
+          </span>
+        </span>
+
+        <span
+          className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
+          aria-hidden="true"
+        >
+          <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
+        </span>
+      </Link>
+    );
+  }
 
   return (
     <Link
       href={href}
       className={cn(
         "group flex h-full flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--elevation-1)]",
-        "transition-[transform,border-color,box-shadow] duration-[var(--duration)] ease-[var(--ease-spring)]",
-        "hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:shadow-[var(--elevation-2)]",
+        interactive,
         className,
       )}
     >
@@ -96,11 +150,7 @@ export function OfferCard({
             locale={locale}
             originalAmount={offer.originalPrice}
             discountPercent={offer.discountPercent}
-            discountLabel={
-              offer.discountPercent
-                ? formatMessage(labels.discount, { percent: offer.discountPercent }, locale)
-                : undefined
-            }
+            discountLabel={discountLabel}
           />
           <span
             className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"

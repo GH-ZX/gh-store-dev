@@ -122,3 +122,37 @@ describe("merging an update", () => {
     expect(toG2BulkStatus(merged).updatedAt).toBe(NOW);
   });
 });
+
+describe("enabling on first save", () => {
+  it("enables the provider when the first key is saved", () => {
+    const merged = mergeG2BulkSettings({}, { apiKey: "first-key", markupPercent: 15 }, NOW);
+
+    expect(readG2BulkCredentials(merged).enabled).toBe(true);
+  });
+
+  it("keeps an explicit off while only the markup changes", () => {
+    const merged = mergeG2BulkSettings(
+      { g2bulk: { api_key: "k", enabled: false } },
+      { markupPercent: 30 },
+      NOW,
+    );
+
+    expect(readG2BulkCredentials(merged).enabled).toBe(false);
+  });
+
+  it("re-enables when a new key is pasted over a disabled provider", () => {
+    const merged = mergeG2BulkSettings(
+      { g2bulk: { api_key: "old", enabled: false } },
+      { apiKey: "new-key" },
+      NOW,
+    );
+
+    expect(readG2BulkCredentials(merged).enabled).toBe(true);
+  });
+
+  it("is disabled once the key is cleared", () => {
+    const merged = mergeG2BulkSettings({ g2bulk: { api_key: "k" } }, { apiKey: "" }, NOW);
+
+    expect(readG2BulkCredentials(merged).enabled).toBe(false);
+  });
+});

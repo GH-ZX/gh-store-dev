@@ -113,14 +113,23 @@ export function mergeG2BulkSettings(
   const base: Record<string, Json | undefined> =
     providers && typeof providers === "object" && !Array.isArray(providers) ? { ...providers } : {};
 
+  const parsed = providerSettingsSchema.safeParse(providers ?? {});
+  const storedFlag = parsed.success ? parsed.data.g2bulk?.enabled : undefined;
   const current = readG2BulkCredentials(providers);
-  const nextKey =
-    update.apiKey === undefined ? current.apiKey : update.apiKey.trim() ? update.apiKey.trim() : null;
+  const suppliedKey = update.apiKey?.trim();
+  const nextKey = update.apiKey === undefined ? current.apiKey : suppliedKey || null;
 
   base.g2bulk = {
     api_key: nextKey,
     markup_percent: clampMarkup(update.markupPercent ?? current.markupPercent),
-    enabled: update.enabled ?? current.enabled,
+    /*
+     * Saving a key enables the provider. Deriving this from the previous
+     * `enabled` instead is what left the very first save disabled: with no key
+     * stored yet, the computed value was false, and that false was then written
+     * alongside the new key. An admin who explicitly turned the provider off
+     * keeps it off while only the markup changes.
+     */
+    enabled: update.enabled ?? (nextKey === null ? false : suppliedKey ? true : storedFlag !== false),
     updated_at: updatedAt,
   };
 

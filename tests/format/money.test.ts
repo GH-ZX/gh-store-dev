@@ -9,13 +9,21 @@ describe("price formatting", () => {
     expect(formatted).not.toMatch(/[٠-٩]/);
   });
 
-  it("formats English prices with a symbol", () => {
+  it("formats English prices with a leading symbol", () => {
     expect(formatPrice(12.5, "USD", "en")).toBe("$12.50");
   });
 
-  it("does not crash on an unknown currency code from provider data", () => {
-    expect(() => formatPrice(5, "XYZ", "en")).not.toThrow();
-    expect(formatPrice(5, "XYZ", "en")).toMatch(/5/);
+  it("puts the symbol after the amount in Arabic, where that reads naturally", () => {
+    expect(formatPrice(12.5, "USD", "ar")).toBe("12.50 $");
+  });
+
+  it("falls back to the currency code for an unknown currency", () => {
+    expect(formatPrice(5, "XYZ", "en")).toBe("5.00 XYZ");
+    expect(formatPrice(5, "XYZ", "ar")).toBe("5.00 XYZ");
+  });
+
+  it("always shows two decimals so a price column lines up", () => {
+    expect(formatPrice(3, "USD", "en")).toBe("$3.00");
   });
 
   it("formats plain numbers with Latin digits in Arabic", () => {
