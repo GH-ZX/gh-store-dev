@@ -4,7 +4,7 @@
 **Technical repository name:** `gh-store`  
 **Reference repository:** `echocore-store`  
 **Archive:** `gh-store-old`  
-**Current status:** Stage 6 complete; Stage 7 next
+**Current status:** Stage 6 complete; Stage 11 started (providers and catalog import)
 
 ## Progress Snapshot
 
@@ -21,7 +21,7 @@
 | 8. Commerce core | Pending | Cart, checkout, orders, invoices |
 | 9. G2Bulk fulfillment | Pending | Sync, top-ups, redeem codes, webhooks, reconciliation |
 | 10. Payments | Pending | Manual recharge, Sam, SyriatelCash, Binance Pay |
-| 11. Admin operations | Pending | Dashboard, support, reviews, settings, audit |
+| 11. Admin operations | In progress | Dashboard shell, overview, admin sign-in, G2Bulk key and games import done; catalog editing, orders, payments, website settings remain |
 | 12. Release | Pending | QA, staging UAT, Cloudflare domain, production launch |
 
 ## Stage 0: Reset and Archive

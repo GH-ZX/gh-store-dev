@@ -11,17 +11,27 @@ GH-Store is a bilingual digital gaming store for game top-ups, redeem codes, and
 5. GH-Store fulfills the order through the configured provider.
 6. The customer receives a status update, delivery details, and an invoice.
 
+## Getting Started
+
+Connect your G2Bulk account and import a real catalog:
+[docs/operations/connecting-g2bulk.md](operations/connecting-g2bulk.md). It also
+covers creating the first administrator.
+
 ## Admin Areas
 
-| Operation | Area |
-|-----------|------|
-| Orders and delivery | Dashboard -> Orders |
-| Wallet recharge | Dashboard -> Recharges / Payments |
-| Games and offers | Dashboard -> Catalog |
-| Provider sync | Dashboard -> Providers |
-| Homepage and theme | Dashboard -> Website |
-| Reviews and messages | Dashboard -> Reviews / Support |
-| Audit and health | Dashboard -> Operations |
+| Operation | Area | Status |
+|-----------|------|--------|
+| Provider keys and catalog import | Dashboard -> Providers and API | Available |
+| Store overview | Dashboard -> Home | Available |
+| Games and offers editing | Dashboard -> Catalog | Planned |
+| Orders and delivery | Dashboard -> Orders | Planned |
+| Wallet recharge | Dashboard -> Recharges / Payments | Planned |
+| Homepage and theme | Dashboard -> Website | Planned |
+| Reviews and messages | Dashboard -> Reviews / Support | Planned |
+| Audit and health | Dashboard -> Operations | Planned |
+
+Planned sections appear in the dashboard navigation marked "in progress", so the
+shape of the finished dashboard is visible without any link leading nowhere.
 
 ## Important Safety Rules
 
