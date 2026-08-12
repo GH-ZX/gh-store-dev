@@ -89,7 +89,7 @@ export function SelectField({
 }: SelectFieldProps) {
   return (
     <FieldShell label={label} hint={hint} className={fieldClassName}>
-      <select className={cn(CONTROL_CLASSES, "pe-8")} {...props}>
+      <select className={cn(CONTROL_CLASSES, "pe-8", className)} {...props}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
