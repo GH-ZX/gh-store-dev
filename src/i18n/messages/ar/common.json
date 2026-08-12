@@ -1,0 +1,28 @@
+{
+  "navigation": {
+    "home": "الرئيسية",
+    "games": "الألعاب",
+    "giftCards": "البطاقات",
+    "offers": "العروض",
+    "menu": "القائمة"
+  },
+  "footer": {
+    "tagline": "منتجات رقمية وتسليم واضح للاعبين."
+  },
+  "foundation": {
+    "eyebrow": "الأساس 01",
+    "title": "شحن لعبتك يجب أن يكون بسيطًا.",
+    "description": "نعيد بناء GH Store ليكون متجرًا أسرع وأوضح لشحن الألعاب والمنتجات الرقمية.",
+    "primaryAction": "استكشف المتجر",
+    "secondaryAction": "تصفح الألعاب",
+    "buildStatus": "حالة البناء",
+    "online": "متصل",
+    "runtime": "التشغيل",
+    "runtimeValue": "Next.js على Cloudflare Workers",
+    "data": "البيانات",
+    "dataValue": "Supabase مستضاف مع RLS",
+    "direction": "اللغات",
+    "directionValue": "العربية أولاً، والإنجليزية جاهزة",
+    "note": "هيكل المتجر جاهز. سيصل الكتالوج والدفع على مراحل متتالية."
+  }
+}

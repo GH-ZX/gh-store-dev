@@ -1,0 +1,28 @@
+{
+  "navigation": {
+    "home": "Home",
+    "games": "Games",
+    "giftCards": "Gift cards",
+    "offers": "Offers",
+    "menu": "Menu"
+  },
+  "footer": {
+    "tagline": "Digital goods, delivered with clarity."
+  },
+  "foundation": {
+    "eyebrow": "Foundation 01",
+    "title": "Your next top-up should feel simple.",
+    "description": "GH Store is rebuilding a faster, clearer home for game top-ups and digital goods.",
+    "primaryAction": "Explore the store",
+    "secondaryAction": "Browse games",
+    "buildStatus": "Build status",
+    "online": "Online",
+    "runtime": "Runtime",
+    "runtimeValue": "Next.js on Cloudflare Workers",
+    "data": "Data",
+    "dataValue": "Hosted Supabase with RLS",
+    "direction": "Direction",
+    "directionValue": "Arabic-first, English-ready",
+    "note": "The storefront shell is ready. Catalog and checkout arrive through the next vertical slices."
+  }
+}
