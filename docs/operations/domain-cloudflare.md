@@ -4,6 +4,20 @@
 
 GH-Store runs on Cloudflare Workers through OpenNext. The future domain may be purchased through GoDaddy, but DNS should be managed by Cloudflare.
 
+## Workers Builds Settings
+
+The existing `gh-store` Worker should use Cloudflare Workers Builds, not Pages:
+
+| Setting | Value |
+|---------|-------|
+| Root directory | `/` |
+| Production branch | `main` |
+| Build command | `pnpm exec opennextjs-cloudflare build` |
+| Deploy command | `pnpm exec wrangler deploy` |
+| Preview builds | Disabled until staging environments are configured |
+
+Do not use `pnpm run build:cf`; that script is not part of GH-Store. Do not configure this application as a Pages static site because OpenNext produces a Worker runtime and server routes.
+
 ## Cutover Sequence
 
 1. Purchase the domain through GoDaddy.
