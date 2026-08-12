@@ -3,7 +3,7 @@ import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 
 type OfferCardProps = {
   offer: StoreOffer;
-  gameSlug: string;
+  gameSlug?: string;
   locale: string;
 };
 
@@ -15,7 +15,7 @@ export function OfferCard({ offer, gameSlug, locale }: OfferCardProps) {
 
   return (
     <Link
-      href={`/${locale}/games/${gameSlug}/${offer.slug}`}
+      href={gameSlug ? `/${locale}/games/${gameSlug}/${offer.slug}` : `/${locale}/gift-cards`}
       className="group flex min-h-52 flex-col justify-between rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5 transition-colors hover:border-[var(--accent)]"
     >
       <div>

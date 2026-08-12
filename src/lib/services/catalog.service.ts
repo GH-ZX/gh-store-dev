@@ -55,7 +55,7 @@ export async function getGameBySlug(locale: Locale, slug: string): Promise<Store
   const { data: offers, error: offersError } = await supabase
     .from("offers")
     .select(
-      "id, slug, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale",
+      "id, slug, offer_type, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale",
     )
     .eq("game_id", game.id)
     .eq("is_active", true)
@@ -70,4 +70,43 @@ export async function getGameBySlug(locale: Locale, slug: string): Promise<Store
     game: toStoreGame(game, locale),
     offers: offers.map((offer) => toStoreOffer(offer, locale)),
   };
+}
+
+export async function getOffersByType(locale: Locale, offerType: "gift_card" | "redeem_code"): Promise<StoreOffer[]> {
+  const supabase = createSupabasePublicClient();
+  const types = offerType === "gift_card" ? ["gift_card", "redeem_code"] : [offerType];
+  const { data, error } = await supabase
+    .from("offers")
+    .select(
+      "id, slug, offer_type, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale",
+    )
+    .in("offer_type", types)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("price", { ascending: true });
+
+  if (error) {
+    throw new CatalogReadError();
+  }
+
+  return data.map((offer) => toStoreOffer(offer, locale));
+}
+
+export async function getSaleOffers(locale: Locale): Promise<StoreOffer[]> {
+  const supabase = createSupabasePublicClient();
+  const { data, error } = await supabase
+    .from("offers")
+    .select(
+      "id, slug, offer_type, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale",
+    )
+    .eq("is_active", true)
+    .eq("is_sale", true)
+    .order("sort_order", { ascending: true })
+    .order("price", { ascending: true });
+
+  if (error) {
+    throw new CatalogReadError();
+  }
+
+  return data.map((offer) => toStoreOffer(offer, locale));
 }

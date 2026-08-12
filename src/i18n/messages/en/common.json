@@ -38,5 +38,23 @@
     "chooseOffer": "Choose a pack, then complete the required top-up details securely.",
     "emptyTitle": "No packs are available",
     "emptyDescription": "Packs will appear here after they are added or synchronized from the dashboard."
+  },
+  "giftCards": {
+    "eyebrow": "Digital cards",
+    "title": "Choose the right card.",
+    "description": "Digital cards and codes ready to deliver after checkout.",
+    "emptyTitle": "No cards are available yet",
+    "emptyDescription": "Cards will appear here after they are added or synchronized from the dashboard.",
+    "errorTitle": "Unable to load gift cards",
+    "errorDescription": "Please refresh the page and try again shortly."
+  },
+  "sale": {
+    "eyebrow": "Offers",
+    "title": "Better prices for a limited time.",
+    "description": "Discover the discounted packs currently available on GH Store.",
+    "emptyTitle": "There are no active offers",
+    "emptyDescription": "Discounts will appear here when they are enabled from the dashboard.",
+    "errorTitle": "Unable to load offers",
+    "errorDescription": "Please refresh the page and try again shortly."
   }
 }
