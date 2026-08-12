@@ -12,7 +12,7 @@ export default function Home() {
           Foundation 01
         </p>
         <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-white sm:text-6xl">
-          GH-Store is ready for the real build.
+          GH Store is ready for the real build.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
           A clean Next.js foundation for the reference store experience, rebuilt

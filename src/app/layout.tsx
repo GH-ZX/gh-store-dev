@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GH-Store",
+  title: "GH Store",
   description: "A modern digital gaming store.",
 };
 
