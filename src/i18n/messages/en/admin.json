@@ -1,0 +1,133 @@
+{
+  "auth": {
+    "eyebrow": "Sign in",
+    "signInTitle": "Sign in",
+    "signInDescription": "Sign in to reach your account and the dashboard.",
+    "signUpTitle": "Create an account",
+    "signUpDescription": "Create a new account with an email and password.",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "passwordHint": "At least 8 characters.",
+    "signInAction": "Sign in",
+    "signUpAction": "Create account",
+    "signOutAction": "Sign out",
+    "toggleToSignUp": "No account yet? Create one.",
+    "toggleToSignIn": "Already have an account? Sign in.",
+    "errors": {
+      "invalid_input": "Check the email and password, then try again.",
+      "invalid_credentials": "Those sign-in details are not correct.",
+      "signup_failed": "We could not create the account. Try another email or again later."
+    },
+    "notices": {
+      "confirm_email": "We sent a confirmation email. Open the link to activate the account.",
+      "signed_up": "Account created and signed in."
+    }
+  },
+  "shell": {
+    "title": "Dashboard",
+    "navLabel": "Dashboard sections",
+    "backToStore": "Back to the store",
+    "signedInAs": "Signed in as",
+    "forbiddenTitle": "You do not have access",
+    "forbiddenDescription": "This area is for store administrators. If you think this is a mistake, contact the store owner.",
+    "groups": {
+      "overview": "Overview",
+      "catalog": "Catalog",
+      "operations": "Operations",
+      "settings": "Settings"
+    },
+    "nav": {
+      "overview": "Home",
+      "games": "Games",
+      "offers": "Packages",
+      "orders": "Orders",
+      "recharges": "Recharges",
+      "customers": "Customers",
+      "providers": "Providers and API",
+      "website": "Website",
+      "operations": "Logs"
+    },
+    "comingSoon": "In progress"
+  },
+  "overview": {
+    "title": "Overview",
+    "description": "The current state of the store, straight from the database.",
+    "stats": {
+      "games": "Games",
+      "activeGames": "Published games",
+      "offers": "Packages",
+      "activeOffers": "Published packages",
+      "orders": "Orders",
+      "customers": "Customers"
+    },
+    "emptyCatalogTitle": "The catalog is empty",
+    "emptyCatalogDescription": "Connect the G2Bulk provider and import games so they appear in the store.",
+    "goToProviders": "Set up providers"
+  },
+  "providers": {
+    "eyebrow": "Providers",
+    "title": "Providers and APIs",
+    "description": "Connect digital product suppliers and control pricing and syncing.",
+    "g2bulk": {
+      "name": "G2Bulk",
+      "summary": "Supplier for game top-ups and digital cards. The API key is used on the server only.",
+      "statusConfigured": "Key saved",
+      "statusMissing": "No key added yet",
+      "keyHintLabel": "Saved key",
+      "apiKeyLabel": "API key",
+      "apiKeyPlaceholder": "Paste your G2Bulk key here",
+      "apiKeyHelp": "The key is stored in store settings and never shown again after saving. It is never sent to the browser.",
+      "apiKeyKeepHelp": "Leave empty to keep the saved key.",
+      "markupLabel": "Markup (%)",
+      "markupHelp": "Applied to the supplier cost to calculate your selling price on import.",
+      "saveAction": "Save settings",
+      "testAction": "Verify key",
+      "balanceLabel": "Supplier wallet balance",
+      "accountLabel": "Account",
+      "importAction": "Import games",
+      "importHint": "Fetch the provider's game list and choose what to add to your store.",
+      "logsHeading": "Recent syncs",
+      "logsEmpty": "No syncs yet.",
+      "logRequested": "Requested",
+      "logCreated": "Created",
+      "logUpdated": "Updated",
+      "logFailed": "Failed",
+      "saved": "Settings saved.",
+      "verified": "The key is valid and the provider connection works.",
+      "errors": {
+        "invalid_input": "Check the values you entered, then try again.",
+        "missing_key": "Add the API key first.",
+        "auth": "The provider rejected the key. Check it — we do not retry automatically, to avoid an IP ban.",
+        "rate_limit": "We hit the provider's rate limit. Try again shortly.",
+        "server": "The provider service is unavailable right now. Try again shortly.",
+        "network": "We could not reach the provider. Check connectivity and try again.",
+        "contract": "The provider replied in an unexpected shape. Nothing was changed.",
+        "unknown": "Something unexpected went wrong."
+      }
+    }
+  },
+  "import": {
+    "eyebrow": "Import",
+    "title": "Import G2Bulk games",
+    "description": "Choose the games to add. Importing again refreshes prices instead of duplicating games.",
+    "loadFailed": "We could not fetch the provider's game list.",
+    "searchLabel": "Search provider games",
+    "searchPlaceholder": "Type a game name…",
+    "selectAll": "Select all",
+    "clearSelection": "Clear selection",
+    "selectedCount": "{count} games selected",
+    "availableCount": "{count} games available from the provider",
+    "alreadyImported": "Imported",
+    "publishLabel": "Publish imported games in the store immediately",
+    "publishHelp": "Turn this off if you want to review names and prices before customers see them.",
+    "submitAction": "Import selected",
+    "emptyTitle": "The provider returned no games",
+    "emptyDescription": "No games came back. Check your account with the provider.",
+    "noSelectionError": "Select at least one game.",
+    "resultTitle": "Import result",
+    "resultSummary": "{created} games added, {updated} updated, {failed} failed.",
+    "resultOffers": "Packages: {created} created and {updated} updated.",
+    "backToProviders": "Back to providers",
+    "viewStore": "View games in the store"
+  }
+}

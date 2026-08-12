@@ -1030,6 +1030,63 @@ export type Database = {
           },
         ]
       }
+      provider_sync_logs: {
+        Row: {
+          created_at: string
+          created_count: number
+          details: Json
+          error_message: string | null
+          failed_count: number
+          finished_at: string | null
+          id: string
+          kind: string
+          provider_name: string
+          requested_count: number
+          skipped_count: number
+          started_at: string
+          started_by: string | null
+          status: string
+          updated_at: string
+          updated_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_count?: number
+          details?: Json
+          error_message?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          kind: string
+          provider_name: string
+          requested_count?: number
+          skipped_count?: number
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+          updated_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_count?: number
+          details?: Json
+          error_message?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          provider_name?: string
+          requested_count?: number
+          skipped_count?: number
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+          updated_count?: number
+        }
+        Relationships: []
+      }
       recharge_requests: {
         Row: {
           admin_note: string | null
