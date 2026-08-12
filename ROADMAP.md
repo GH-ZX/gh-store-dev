@@ -4,7 +4,7 @@
 **Technical repository name:** `gh-store`  
 **Reference repository:** `echocore-store`  
 **Archive:** `gh-store-old`  
-**Current status:** Stage 3 in progress
+**Current status:** Stage 6 complete; Stage 7 next
 
 ## Progress Snapshot
 
@@ -13,10 +13,10 @@
 | 0. Reset and archive | Complete | Old attempt archived; active repository reset |
 | 1. Reference extraction | Complete | Docs, skills, provider contracts, and SQL baseline added |
 | 2. Clean foundation | Complete | Next.js, OpenNext, CI, Vitest, and quality gates working |
-| 3. Supabase and security | In progress | Identity, SSR clients, proxy, generated types, RLS migration, and pgTAP tests working |
-| 4. Design system | Pending | New GH Store visual system and shell |
+| 3. Supabase and security | Complete | Identity, catalog, wallet, orders, storage, settings, and reviews applied to hosted staging with RLS and generated types |
+| 4. Design system | Complete | Tokens, primitives, glass shell, theme switch, RTL guards |
 | 5. Localization and routing | Complete | Arabic RTL, English LTR, route shell, locale-aware document metadata |
-| 6. Public storefront | In progress | Games, gift cards, sale, game detail, and offer data path are live; search and homepage sections remain |
+| 6. Public storefront | Complete | Configurable homepage, carousel, catalog, search, game and offer detail, static pages, SEO, sitemap, robots |
 | 7. Customer account | Pending | Auth UI, profile, wallet, notifications |
 | 8. Commerce core | Pending | Cart, checkout, orders, invoices |
 | 9. G2Bulk fulfillment | Pending | Sync, top-ups, redeem codes, webhooks, reconciliation |
