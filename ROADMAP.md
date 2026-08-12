@@ -67,11 +67,11 @@
 
 ### Completed
 
-- Initialize Supabase local configuration.
+- Create and link the hosted GH Store staging project.
 - Install Supabase SSR `0.12.4` and Supabase JS `2.112.3`.
 - Add server and browser Supabase clients.
 - Add Next.js `src/proxy.ts` session refresh boundary.
-- Add generated database types from the local schema.
+- Generate database types from the linked staging schema.
 - Add `profiles`, roles, timestamps, auth trigger, admin helper, and RLS policies.
 - Add `requireAuth`, `requireAdmin`, and profile authorization tests.
 - Add pgTAP identity/RLS tests.
@@ -85,7 +85,7 @@
 - Add provider settings and protected storage policies.
 - Create the new Supabase staging project and apply the migration set.
 
-**Exit criteria:** Staging migrations apply cleanly, generated types match the schema, and anonymous/customer/admin RLS tests pass.
+**Exit criteria:** Hosted staging migrations apply cleanly, generated types match the schema, and anonymous/customer/admin RLS checks pass without using the Supabase Docker stack.
 
 ## Stage 4: Design System and Shell
 
