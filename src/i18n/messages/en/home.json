@@ -17,22 +17,17 @@
     "slideLabel": "Slide {index} of {total}",
     "goToSlide": "Go to slide {index}",
     "pause": "Pause automatic rotation",
-    "play": "Resume automatic rotation",
-    "emptyTitle": "No featured games",
-    "emptyDescription": "Select carousel games from the dashboard and they appear here."
+    "play": "Resume automatic rotation"
   },
   "sections": {
     "gamesSubtitle": "Pick your game and start topping up.",
     "giftCardsSubtitle": "Cards and codes ready for delivery.",
     "saleSubtitle": "Discounts running right now.",
     "suggestedSubtitle": "Packages most players start with.",
-    "reviewsSubtitle": "Real experiences from store customers.",
-    "emptySection": "This section has no content yet."
+    "reviewsSubtitle": "Real experiences from store customers."
   },
   "reviews": {
     "ratingLabel": "{rating} out of 5",
-    "emptyTitle": "No published reviews yet",
-    "emptyDescription": "Customer reviews appear here once approved from the dashboard.",
     "verified": "Verified customer"
   },
   "social": {

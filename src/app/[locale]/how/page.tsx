@@ -33,7 +33,9 @@ export default async function HowItWorksPage({ params }: PageProps<"/[locale]/ho
           title={messages.how.title}
           subtitle={messages.how.description}
         />
-        <StepList steps={messages.how.steps} />
+        <div className="mt-12">
+          <StepList steps={messages.how.steps} />
+        </div>
       </Section>
 
       <Section spacing="tight">

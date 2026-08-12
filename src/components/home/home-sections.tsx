@@ -185,14 +185,14 @@ export function HomeSections({
   );
 }
 
-/** Compact link row shown when the layout resolves to nothing renderable. */
-export function HomeFallbackLinks({
-  locale,
-  common,
-}: {
-  locale: Locale;
-  common: CommonMessages;
-}) {
+/**
+ * Shown when the layout resolves to nothing renderable — an empty catalog, or
+ * every section disabled.
+ *
+ * Presented as a deliberate panel rather than a loose row of pills, so a store
+ * that is still being filled does not look broken to a visitor.
+ */
+export function HomeFallbackLinks({ locale, common }: { locale: Locale; common: CommonMessages }) {
   const links = [
     { href: `/${locale}/games`, label: common.navigation.games },
     { href: `/${locale}/gift-cards`, label: common.navigation.giftCards },
@@ -201,17 +201,26 @@ export function HomeFallbackLinks({
   ];
 
   return (
-    <ul className="flex flex-wrap gap-2">
-      {links.map((link) => (
-        <li key={link.href}>
-          <Link
-            href={link.href}
-            className="inline-flex min-h-11 items-center rounded-[var(--radius-pill)] border border-[var(--line)] px-4 text-sm font-medium text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
-          >
-            {link.label}
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-8 text-center sm:p-12">
+      <h2 className="text-[clamp(1.25rem,2.6vw,1.75rem)] leading-[1.2] font-semibold tracking-[-0.02em] text-[var(--ink)]">
+        {common.states.emptyTitle}
+      </h2>
+      <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[var(--ink-muted)]">
+        {common.states.emptyDescription}
+      </p>
+
+      <ul className="mt-7 flex flex-wrap justify-center gap-2">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className="inline-flex min-h-11 items-center rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--surface)] px-5 text-sm font-medium text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:text-[var(--ink)]"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

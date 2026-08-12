@@ -26,7 +26,7 @@
   "states": {
     "loading": "Loading…",
     "emptyTitle": "Nothing to show yet",
-    "emptyDescription": "Content appears here as soon as it is added from the dashboard.",
+    "emptyDescription": "We are still filling this section. Browse the rest of the store in the meantime.",
     "errorTitle": "We could not load this",
     "errorDescription": "Please refresh the page in a moment."
   },

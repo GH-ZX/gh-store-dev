@@ -5,7 +5,7 @@
     "description": "Explore the games and packages available in GH Store right now.",
     "count": "{count} games available",
     "emptyTitle": "No games available yet",
-    "emptyDescription": "The catalog appears here as soon as games and packages are added from the dashboard.",
+    "emptyDescription": "We are preparing the catalog. Check back soon to find games and packages here.",
     "errorTitle": "We could not load the catalog",
     "errorDescription": "Please refresh the page in a moment."
   },
@@ -13,7 +13,7 @@
     "chooseOffer": "Pick the package you need, then complete your top-up details securely.",
     "offersHeading": "Available packages",
     "emptyTitle": "No packages available",
-    "emptyDescription": "Packages appear here once they are added or synced from the dashboard.",
+    "emptyDescription": "No packages are available for this game right now. Try another game or check back later.",
     "backToGames": "All games",
     "howItWorksHeading": "How delivery works",
     "howItWorksSteps": [
@@ -47,7 +47,7 @@
     "description": "Gift cards and digital codes ready for delivery once your order completes.",
     "count": "{count} cards available",
     "emptyTitle": "No cards available yet",
-    "emptyDescription": "Cards appear here once they are added or synced from the dashboard.",
+    "emptyDescription": "We are preparing our card selection. Check back soon to find it here.",
     "errorTitle": "We could not load the cards",
     "errorDescription": "Please refresh the page in a moment."
   },
@@ -57,7 +57,7 @@
     "description": "Discover the discounted packages available in GH Store right now.",
     "count": "{count} offers available",
     "emptyTitle": "No current offers",
-    "emptyDescription": "Discounts appear here once they are enabled from the dashboard.",
+    "emptyDescription": "No discounts are running right now. Follow us to hear about the next offers first.",
     "errorTitle": "We could not load the offers",
     "errorDescription": "Please refresh the page in a moment."
   },

@@ -114,7 +114,13 @@ a {
   display: none;
 }
 
-/* Ambient mesh backdrop. Purely decorative, so it is never announced. */
+/*
+ * Ambient mesh backdrop. Purely decorative, so it is never announced.
+ *
+ * The mask fades the layer out before the element's bottom edge. Without it the
+ * gradients are clipped by the section box and leave a visible horizontal seam
+ * where the tint stops — obvious in the light theme.
+ */
 @utility gh-mesh {
   position: absolute;
   inset: 0;
@@ -123,6 +129,7 @@ a {
     radial-gradient(58% 48% at 18% 0%, var(--glow-1), transparent 68%),
     radial-gradient(46% 44% at 88% 8%, var(--glow-2), transparent 66%),
     radial-gradient(40% 38% at 50% 100%, var(--glow-3), transparent 70%);
+  mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
 }
 
 /* Hairline top highlight that makes glass panels read as physical. */

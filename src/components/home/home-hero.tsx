@@ -1,19 +1,20 @@
 import { HeroCarousel } from "@/components/home/hero-carousel";
-import { Bezel } from "@/components/ui/card";
 import { Eyebrow } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { ArrowIcon, BoltIcon, GamepadIcon, ShieldIcon, SparkIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { CommonMessages, HomeMessages } from "@/i18n/messages";
 import type { StoreGame } from "@/lib/catalog/game-mapper";
+import { cn } from "@/lib/cn";
 
 /**
  * Homepage hero.
  *
- * Asymmetric split: the pitch and calls to action on one side, the featured
- * carousel on the other. When no carousel game is configured the artwork column
- * falls back to a value panel, so the hero never collapses to a bare column of
- * text on a fresh store.
+ * Asymmetric split when featured games exist: the pitch and calls to action on
+ * one side, the carousel on the other. With no featured game the hero becomes a
+ * single centred column instead of pairing the copy with a placeholder — a panel
+ * explaining that the carousel is unconfigured is dashboard feedback, and a
+ * customer should never be shown it.
  */
 export type HomeHeroProps = {
   locale: Locale;
@@ -30,6 +31,8 @@ export function HomeHero({
   carouselGames,
   carouselIntervalSeconds,
 }: HomeHeroProps) {
+  const hasCarousel = carouselGames.length > 0;
+
   const stats = [
     {
       icon: <BoltIcon />,
@@ -49,19 +52,34 @@ export function HomeHero({
   ];
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[1.15fr_minmax(0,0.85fr)] lg:items-center lg:gap-14">
-      <div className="gh-rise">
+    <div
+      className={cn(
+        "grid gap-10",
+        hasCarousel && "lg:grid-cols-[1.15fr_minmax(0,0.85fr)] lg:items-center lg:gap-14",
+      )}
+    >
+      <div className={cn("gh-rise", !hasCarousel && "mx-auto max-w-3xl text-center")}>
         <Eyebrow icon={<SparkIcon />}>{messages.hero.eyebrow}</Eyebrow>
 
         <h1 className="mt-5 text-[clamp(2.5rem,7vw,4.5rem)] leading-[1.02] font-semibold tracking-[-0.04em] text-[var(--ink)]">
           {messages.hero.title}
         </h1>
 
-        <p className="mt-6 max-w-xl text-base leading-7 text-[var(--ink-soft)] sm:text-lg sm:leading-8">
+        <p
+          className={cn(
+            "mt-6 max-w-xl text-base leading-7 text-[var(--ink-soft)] sm:text-lg sm:leading-8",
+            !hasCarousel && "mx-auto",
+          )}
+        >
           {messages.hero.description}
         </p>
 
-        <div className="mt-9 flex flex-wrap items-center gap-3">
+        <div
+          className={cn(
+            "mt-9 flex flex-wrap items-center gap-3",
+            !hasCarousel && "justify-center",
+          )}
+        >
           <ButtonLink
             href={`/${locale}/games`}
             size="lg"
@@ -78,7 +96,7 @@ export function HomeHero({
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--shell)] p-4"
+              className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--shell)] p-4 text-start"
             >
               <dt className="flex items-center gap-2 text-xs font-medium text-[var(--ink-faint)] [&>svg]:size-4 [&>svg]:text-[var(--accent)]">
                 {stat.icon}
@@ -90,7 +108,7 @@ export function HomeHero({
         </dl>
       </div>
 
-      {carouselGames.length > 0 ? (
+      {hasCarousel ? (
         <HeroCarousel
           games={carouselGames}
           locale={locale}
@@ -107,30 +125,7 @@ export function HomeHero({
             featured: common.badges.featured,
           }}
         />
-      ) : (
-        <Bezel>
-          <div className="grid gap-4 p-6">
-            <h2 className="text-base font-semibold text-[var(--ink)]">
-              {messages.carousel.emptyTitle}
-            </h2>
-            <p className="text-sm leading-6 text-[var(--ink-muted)]">
-              {messages.carousel.emptyDescription}
-            </p>
-            <div className="mt-2 grid gap-2">
-              {[messages.sections.gamesSubtitle, messages.sections.giftCardsSubtitle, messages.sections.saleSubtitle].map(
-                (line) => (
-                  <p
-                    key={line}
-                    className="rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-3 py-2.5 text-xs text-[var(--ink-soft)]"
-                  >
-                    {line}
-                  </p>
-                ),
-              )}
-            </div>
-          </div>
-        </Bezel>
-      )}
+      ) : null}
     </div>
   );
 }

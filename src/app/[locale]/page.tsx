@@ -34,7 +34,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const [layout, settings] = await Promise.all([getHomeLayout(), getPublicStoreSettings()]);
   const [carousel, sections] = await Promise.all([
     getHomeCarousel(locale, layout),
-    resolveHomeSections(locale, layout),
+    resolveHomeSections(locale, layout, { hasSocialLinks: settings.socialLinks.length > 0 }),
   ]);
 
   return (

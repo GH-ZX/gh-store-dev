@@ -17,22 +17,17 @@
     "slideLabel": "الشريحة {index} من {total}",
     "goToSlide": "انتقل إلى الشريحة {index}",
     "pause": "إيقاف التبديل التلقائي",
-    "play": "تشغيل التبديل التلقائي",
-    "emptyTitle": "لا توجد ألعاب مميزة",
-    "emptyDescription": "حدّد ألعابًا للسلايدر من لوحة الإدارة لتظهر هنا."
+    "play": "تشغيل التبديل التلقائي"
   },
   "sections": {
     "gamesSubtitle": "اختر لعبتك وابدأ الشحن فورًا.",
     "giftCardsSubtitle": "بطاقات وأكواد جاهزة للتسليم.",
     "saleSubtitle": "خصومات فعّالة الآن.",
     "suggestedSubtitle": "باقات يبدأ بها معظم اللاعبين.",
-    "reviewsSubtitle": "تجارب حقيقية من زبائن المتجر.",
-    "emptySection": "لا يوجد محتوى في هذا القسم بعد."
+    "reviewsSubtitle": "تجارب حقيقية من زبائن المتجر."
   },
   "reviews": {
     "ratingLabel": "{rating} من 5",
-    "emptyTitle": "لا توجد آراء منشورة بعد",
-    "emptyDescription": "ستظهر آراء الزبائن هنا بعد اعتمادها من لوحة الإدارة.",
     "verified": "زبون موثّق"
   },
   "social": {

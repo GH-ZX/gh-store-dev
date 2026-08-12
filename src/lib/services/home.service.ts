@@ -79,6 +79,7 @@ async function resolveSection(
       return reviews.length > 0 ? { kind: "reviews", section, reviews } : null;
     }
     case "social_links":
+      // Its content lives in settings, so availability is passed in by the page.
       return { kind: "social", section };
     case "carousel":
       // Resolved by getHomeCarousel so the hero can render above the section list.
@@ -86,11 +87,27 @@ async function resolveSection(
   }
 }
 
+export type HomeSectionContext = {
+  /** Whether store settings hold any social link to render. */
+  hasSocialLinks: boolean;
+};
+
 export async function resolveHomeSections(
   locale: Locale,
   layout: HomeSection[],
+  context: HomeSectionContext,
 ): Promise<ResolvedHomeSection[]> {
-  const enabled = layout.filter((section) => section.enabled && section.type !== "carousel");
+  const enabled = layout.filter((section) => {
+    if (!section.enabled || section.type === "carousel") {
+      return false;
+    }
+
+    // Drop the social section here rather than rendering nothing for it later:
+    // the page decides between sections and a fallback by counting this list, so
+    // a section that cannot render must not be counted.
+    return section.type !== "social_links" || context.hasSocialLinks;
+  });
+
   const resolved = await Promise.all(enabled.map((section) => resolveSection(locale, section)));
 
   return resolved.filter((section): section is ResolvedHomeSection => section !== null);

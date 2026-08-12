@@ -67,7 +67,7 @@
     "channelsHeading": "Contact channels",
     "orderNote": "To speed things up, include your order number, the game, and your account ID.",
     "emptyTitle": "No contact channels yet",
-    "emptyDescription": "Contact methods appear here once they are added from the dashboard."
+    "emptyDescription": "We are adding contact channels soon. Until then, the FAQ has quick answers."
   },
   "privacy": {
     "eyebrow": "Legal",
@@ -134,6 +134,6 @@
     "title": "Every channel in one place.",
     "description": "Follow new offers and announcements on the channel you prefer.",
     "emptyTitle": "No links yet",
-    "emptyDescription": "Social links appear here once they are added from the dashboard."
+    "emptyDescription": "We are adding our channels soon. Check back to find them here."
   }
 }
