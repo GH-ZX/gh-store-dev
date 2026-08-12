@@ -1,22 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { DEFAULT_LOCALE, isLocale } from "@/i18n/config";
+import { DEFAULT_LOCALE, getLocaleFromPathname } from "@/i18n/config";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
 // Cloudflare OpenNext currently requires the Edge middleware runtime.
 // Next.js 16 renamed this convention to proxy, but proxy defaults to Node.js.
 export async function middleware(request: NextRequest) {
-  const firstSegment = request.nextUrl.pathname.split("/")[1] ?? "";
+  const locale = getLocaleFromPathname(request.nextUrl.pathname);
 
-  if (!isLocale(firstSegment)) {
+  if (!locale) {
     const localizedUrl = request.nextUrl.clone();
     localizedUrl.pathname = `/${DEFAULT_LOCALE}${request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname}`;
     return NextResponse.redirect(localizedUrl);
   }
 
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-gh-store-locale", locale);
+
   const response = NextResponse.next({
     request: {
-      headers: request.headers,
+      headers: requestHeaders,
     },
   });
 

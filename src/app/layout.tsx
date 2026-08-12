@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
+import { getLocaleDirection, isLocale } from "@/i18n/config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,11 +19,15 @@ export const metadata: Metadata = {
   description: "A modern digital gaming store.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const requestHeaders = await headers();
+  const locale = requestHeaders.get("x-gh-store-locale") ?? "ar";
+  const resolvedLocale = isLocale(locale) ? locale : "ar";
+
   return (
     <html
-      lang="ar"
-      dir="rtl"
+      lang={resolvedLocale}
+      dir={getLocaleDirection(resolvedLocale)}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-[var(--canvas)] text-[var(--ink)]">

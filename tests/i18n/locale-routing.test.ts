@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LOCALE,
   getLocaleDirection,
+  getLocaleFromPathname,
   isLocale,
   SUPPORTED_LOCALES,
 } from "@/i18n/config";
@@ -14,5 +15,11 @@ describe("locale configuration", () => {
     expect(getLocaleDirection("en")).toBe("ltr");
     expect(isLocale("ar")).toBe(true);
     expect(isLocale("fr")).toBe(false);
+  });
+
+  it("extracts a supported locale from a request path", () => {
+    expect(getLocaleFromPathname("/en/games")).toBe("en");
+    expect(getLocaleFromPathname("/ar")).toBe("ar");
+    expect(getLocaleFromPathname("/games")).toBeNull();
   });
 });
