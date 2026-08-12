@@ -33,5 +33,10 @@
     "emptyDescription": "The catalog will appear here as soon as games and packs are added from the dashboard.",
     "errorTitle": "Unable to load the catalog",
     "errorDescription": "Please refresh the page and try again shortly."
+  },
+  "gameDetail": {
+    "chooseOffer": "Choose a pack, then complete the required top-up details securely.",
+    "emptyTitle": "No packs are available",
+    "emptyDescription": "Packs will appear here after they are added or synchronized from the dashboard."
   }
 }
