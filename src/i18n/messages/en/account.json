@@ -1,0 +1,93 @@
+{
+  "eyebrow": "My account",
+  "title": "My account",
+  "description": "Your details, wallet balance, and transaction history in one place.",
+  "signedInAs": "Signed in as",
+  "profile": {
+    "title": "Account details",
+    "description": "The name shown in the store and on support messages.",
+    "fullName": "Full name",
+    "username": "Username",
+    "usernameHint": "Letters, numbers, and underscores only.",
+    "email": "Email",
+    "emailHint": "Contact support to change your email.",
+    "saveAction": "Save details",
+    "saved": "Your details are saved."
+  },
+  "password": {
+    "title": "Password",
+    "description": "Choose a strong password you do not use anywhere else.",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "saveAction": "Update password",
+    "saved": "Password updated.",
+    "mismatch": "The two passwords do not match."
+  },
+  "wallet": {
+    "eyebrow": "Wallet",
+    "title": "My wallet",
+    "description": "Your balance and every movement on it.",
+    "balanceLabel": "Current balance",
+    "rechargeAction": "Add balance",
+    "rechargeSoon": "Payment methods are coming soon. Contact support to add balance for now.",
+    "historyTitle": "Transaction history",
+    "historyDescription": "This history is append-only and cannot be edited.",
+    "emptyTitle": "No transactions yet",
+    "emptyDescription": "Every top-up, purchase, and refund appears here.",
+    "types": {
+      "deposit": "Deposit",
+      "purchase": "Purchase",
+      "refund": "Refund",
+      "adjustment": "Admin adjustment",
+      "withdrawal": "Withdrawal"
+    },
+    "columnDate": "Date",
+    "columnType": "Type",
+    "columnAmount": "Amount",
+    "columnBalance": "Balance after",
+    "columnNote": "Note",
+    "loadMore": "Show more"
+  },
+  "orders": {
+    "title": "My orders",
+    "description": "Every order with its status and delivery details.",
+    "emptyTitle": "No orders yet",
+    "emptyDescription": "Start from the games catalog and pick your first package.",
+    "browseAction": "Browse games",
+    "soonTitle": "Orders are being built",
+    "soonDescription": "The cart and wallet payment arrive in the next stage."
+  },
+  "notifications": {
+    "eyebrow": "Notifications",
+    "title": "Notifications",
+    "description": "Updates about your orders and balance.",
+    "emptyTitle": "No notifications",
+    "emptyDescription": "We will tell you here when an order or your balance changes.",
+    "markAllRead": "Mark all as read",
+    "unreadBadge": "New"
+  },
+  "banned": {
+    "title": "Account suspended",
+    "description": "This account has been suspended. Contact support to find out why and to restore it."
+  },
+  "recovery": {
+    "eyebrow": "Account recovery",
+    "requestTitle": "Reset your password",
+    "requestDescription": "Enter your email and we will send you a reset link.",
+    "requestAction": "Send the link",
+    "requestSent": "If that email is registered, a message with a reset link is on its way.",
+    "resetTitle": "Set a new password",
+    "resetDescription": "Choose a new password for your account.",
+    "resetAction": "Save password",
+    "resetDone": "Your password is set. You can use it now.",
+    "linkExpired": "That link has expired or is not valid. Request a new one.",
+    "forgotLink": "Forgot your password?"
+  },
+  "errors": {
+    "invalid_input": "Check the values you entered, then try again.",
+    "username_taken": "That username is taken. Pick another.",
+    "weak_password": "That password is too short. Use at least 8 characters.",
+    "not_signed_in": "Your session expired. Sign in and try again.",
+    "unknown": "We could not complete that. Please try again."
+  }
+}

@@ -306,5 +306,36 @@
     "resultOffers": "Cards: {created} created and {updated} updated.",
     "backToProviders": "Back to providers",
     "loadFailed": "We could not fetch the provider's categories."
+  },
+  "customers": {
+    "eyebrow": "Customers",
+    "title": "Customers",
+    "description": "Search accounts, review balances, and correct one when you need to.",
+    "searchLabel": "Search customers",
+    "searchPlaceholder": "Email or name…",
+    "countLabel": "{count} customers",
+    "emptyTitle": "No customers yet",
+    "emptyDescription": "Accounts appear here after the first signup.",
+    "columnCustomer": "Customer",
+    "columnBalance": "Balance",
+    "columnJoined": "Joined",
+    "columnStatus": "Status",
+    "statusActive": "Active",
+    "statusSuspended": "Suspended",
+    "roleAdmin": "Admin",
+    "adjustTitle": "Correct the balance",
+    "adjustDescription": "A positive amount adds balance, a negative one deducts. Every change is recorded in the transaction history.",
+    "adjustAmount": "Amount",
+    "adjustNote": "Reason",
+    "adjustAction": "Apply adjustment",
+    "adjusted": "Balance adjusted.",
+    "recentTransactions": "Recent transactions",
+    "errors": {
+      "invalid_input": "Check the amount and reason, then try again.",
+      "negative_balance": "That deduction would leave a negative balance.",
+      "not_found": "We could not find that account.",
+      "forbidden": "You are not allowed to adjust balances.",
+      "unknown": "We could not apply the adjustment. Please try again."
+    }
   }
 }

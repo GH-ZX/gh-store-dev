@@ -306,5 +306,36 @@
     "resultOffers": "البطاقات: {created} جديدة و{updated} محدّثة.",
     "backToProviders": "عودة إلى الموردين",
     "loadFailed": "تعذر جلب فئات المورد."
+  },
+  "customers": {
+    "eyebrow": "الزبائن",
+    "title": "الزبائن",
+    "description": "ابحث في الحسابات، وراجع الأرصدة، وصحّح رصيدًا عند الحاجة.",
+    "searchLabel": "ابحث في الزبائن",
+    "searchPlaceholder": "بريد إلكتروني أو اسم…",
+    "countLabel": "{count} زبون",
+    "emptyTitle": "لا يوجد زبائن بعد",
+    "emptyDescription": "ستظهر الحسابات هنا بعد أول تسجيل.",
+    "columnCustomer": "الزبون",
+    "columnBalance": "الرصيد",
+    "columnJoined": "تاريخ التسجيل",
+    "columnStatus": "الحالة",
+    "statusActive": "نشط",
+    "statusSuspended": "موقوف",
+    "roleAdmin": "مدير",
+    "adjustTitle": "تصحيح الرصيد",
+    "adjustDescription": "المبلغ الموجب يضيف رصيدًا والسالب يخصم. تُسجَّل كل عملية في سجل الحركات.",
+    "adjustAmount": "المبلغ",
+    "adjustNote": "سبب التعديل",
+    "adjustAction": "تنفيذ التعديل",
+    "adjusted": "تم تعديل الرصيد.",
+    "recentTransactions": "آخر الحركات",
+    "errors": {
+      "invalid_input": "تحقق من المبلغ والسبب ثم أعد المحاولة.",
+      "negative_balance": "هذا الخصم يجعل الرصيد سالبًا.",
+      "not_found": "لم نجد هذا الحساب.",
+      "forbidden": "لا تملك صلاحية تعديل الأرصدة.",
+      "unknown": "تعذر تنفيذ التعديل. أعد المحاولة."
+    }
   }
 }

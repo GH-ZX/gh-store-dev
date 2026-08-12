@@ -1452,6 +1452,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_wallet: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_idempotency_key?: string
+          p_user_id: string
+        }
+        Returns: {
+          balance: number
+          idempotent: boolean
+          transaction_id: string
+          wallet_id: string
+        }[]
+      }
       credit_wallet: {
         Args: {
           p_amount: number

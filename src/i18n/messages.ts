@@ -1,9 +1,11 @@
+import arAccount from "@/i18n/messages/ar/account.json";
 import arAdmin from "@/i18n/messages/ar/admin.json";
 import arCatalog from "@/i18n/messages/ar/catalog.json";
 import arCommon from "@/i18n/messages/ar/common.json";
 import arContent from "@/i18n/messages/ar/content.json";
 import arHome from "@/i18n/messages/ar/home.json";
 import arSearch from "@/i18n/messages/ar/search.json";
+import enAccount from "@/i18n/messages/en/account.json";
 import enAdmin from "@/i18n/messages/en/admin.json";
 import enCatalog from "@/i18n/messages/en/catalog.json";
 import enCommon from "@/i18n/messages/en/common.json";
@@ -22,6 +24,7 @@ import type { Locale } from "@/i18n/config";
 const AR = {
   common: arCommon,
   admin: arAdmin,
+  account: arAccount,
   catalog: arCatalog,
   home: arHome,
   search: arSearch,
@@ -33,6 +36,7 @@ type Dictionary = typeof AR;
 const EN: Dictionary = {
   common: enCommon,
   admin: enAdmin,
+  account: enAccount,
   catalog: enCatalog,
   home: enHome,
   search: enSearch,
@@ -53,6 +57,7 @@ export type HomeMessages = Messages<"home">;
 export type SearchMessages = Messages<"search">;
 export type ContentMessages = Messages<"content">;
 export type AdminMessages = Messages<"admin">;
+export type AccountMessages = Messages<"account">;
 
 export function getMessages<N extends MessageNamespace>(locale: Locale, namespace: N): Messages<N> {
   return MESSAGES[locale][namespace];
