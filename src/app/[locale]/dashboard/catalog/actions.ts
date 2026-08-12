@@ -35,8 +35,14 @@ import {
 
 const MAX_OFFER_ROWS = 500;
 
-/** A slug reaches customers as a URL, so only letters, numbers, and single dashes. */
-const SLUG_PATTERN = /^[\p{Letter}\p{Number}]+(?:-[\p{Letter}\p{Number}]+)*$/u;
+/**
+ * A slug reaches customers as a URL, so it stays letters, numbers, and dashes.
+ *
+ * Deliberately permissive about repeated and trailing dashes: an imported slug is
+ * truncated to fit the column and can end on one, and refusing to save a game
+ * until its generated slug is hand-cleaned would be a worse bug than an ugly URL.
+ */
+const SLUG_PATTERN = /^[\p{Letter}\p{Number}][\p{Letter}\p{Number}-]*$/u;
 
 const optionalText = (max: number) => z.union([z.null(), z.string().trim().max(max)]);
 const optionalNumber = (max: number) =>

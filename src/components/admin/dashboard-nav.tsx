@@ -37,7 +37,13 @@ export function DashboardNav({ locale, messages }: DashboardNavProps) {
 
   const groups: NavGroup[] = [
     { key: "overview", items: [{ key: "overview", href: base }] },
-    { key: "catalog", items: [{ key: "games" }, { key: "offers" }, { key: "website" }] },
+    {
+      key: "catalog",
+      items: [
+        { key: "games", href: `${base}/catalog` },
+        { key: "website", href: `${base}/website` },
+      ],
+    },
     { key: "operations", items: [{ key: "orders" }, { key: "recharges" }, { key: "customers" }] },
     {
       key: "settings",
