@@ -1,0 +1,139 @@
+{
+  "faq": {
+    "eyebrow": "Help",
+    "title": "Frequently asked questions.",
+    "description": "Quick answers about top-ups, delivery, and payment in GH Store.",
+    "items": [
+      {
+        "question": "How do I top up my game?",
+        "answer": "Pick the game, then the package, enter your in-game account details, and pay from your wallet balance. Fulfilment starts as soon as the order is confirmed."
+      },
+      {
+        "question": "How long does delivery take?",
+        "answer": "Most orders are fulfilled automatically within minutes. When the supplier is busy an order may move to processing, and the update appears on your order page without any action from you."
+      },
+      {
+        "question": "How do I add balance to my wallet?",
+        "answer": "Use the recharge page to add balance with the methods available in your country. Balance is credited once the payment is verified and appears in your transaction history."
+      },
+      {
+        "question": "I entered the wrong account ID. What now?",
+        "answer": "Contact support immediately with your order number. If the order has not been fulfilled yet the details can be corrected or the order cancelled; after fulfilment a top-up cannot be reversed."
+      },
+      {
+        "question": "Are codes ready to use right away?",
+        "answer": "Yes. Your redeem code appears on the order page after delivery, ready to copy and use on its platform."
+      },
+      {
+        "question": "Can I refund a completed order?",
+        "answer": "Digital products cannot be refunded once delivered. If fulfilment fails, the amount is returned to your wallet automatically."
+      }
+    ]
+  },
+  "how": {
+    "eyebrow": "How it works",
+    "title": "Four steps from choosing to delivery.",
+    "description": "GH Store keeps it simple: keep balance in your wallet, then buy without repeating payment steps.",
+    "steps": [
+      {
+        "title": "Create your account",
+        "description": "One account holds your orders, balance, and transaction history."
+      },
+      {
+        "title": "Recharge your wallet",
+        "description": "Add balance with the method available to you; it is credited once the payment is verified."
+      },
+      {
+        "title": "Choose a package",
+        "description": "Browse games and cards, then enter your in-game account details."
+      },
+      {
+        "title": "Receive your order",
+        "description": "The order is fulfilled automatically and your top-up or code appears on the order page."
+      }
+    ],
+    "assuranceHeading": "What every order guarantees",
+    "assurances": [
+      "Displayed prices are final and recalculated on the server before payment.",
+      "Your balance cannot be charged twice for the same order.",
+      "Every wallet movement is recorded and cannot be edited.",
+      "Your in-game account details are used only to fulfil your order."
+    ]
+  },
+  "contact": {
+    "eyebrow": "Contact",
+    "title": "We are here to help.",
+    "description": "Reach us on whichever channel suits you and we will get back to you shortly.",
+    "channelsHeading": "Contact channels",
+    "orderNote": "To speed things up, include your order number, the game, and your account ID.",
+    "emptyTitle": "No contact channels yet",
+    "emptyDescription": "Contact methods appear here once they are added from the dashboard."
+  },
+  "privacy": {
+    "eyebrow": "Legal",
+    "title": "Privacy policy.",
+    "description": "What we collect, why we collect it, and how we protect it.",
+    "sections": [
+      {
+        "heading": "Data we collect",
+        "body": "We collect basic account data such as your email, order data such as your in-game account ID and region, and your wallet transaction history. We do not store your bank card details."
+      },
+      {
+        "heading": "Why we collect it",
+        "body": "We use this data to fulfil your orders, issue your invoices, prevent abuse, and answer support requests."
+      },
+      {
+        "heading": "Sharing",
+        "body": "We share the minimum order data with the fulfilment supplier and payment provider needed to complete the transaction. We never sell your data."
+      },
+      {
+        "heading": "Retention",
+        "body": "Order and invoice data is kept as long as accounting and dispute resolution require, then deleted or anonymised."
+      },
+      {
+        "heading": "Your rights",
+        "body": "You can request a copy of your data, ask for corrections, or request account deletion by contacting support."
+      }
+    ],
+    "reviewNote": "This page is an initial draft and needs legal review before launch."
+  },
+  "terms": {
+    "eyebrow": "Legal",
+    "title": "Terms and conditions.",
+    "description": "The rules for using GH Store and buying digital products from it.",
+    "sections": [
+      {
+        "heading": "Your account",
+        "body": "You are responsible for the accuracy of your account details and for keeping your password private. Creating multiple accounts to bypass limits is not allowed."
+      },
+      {
+        "heading": "Prices and payment",
+        "body": "Prices are shown in the store currency and recalculated on the server before an order is confirmed. The order amount is debited from your wallet balance."
+      },
+      {
+        "heading": "Delivery",
+        "body": "Products are digital and delivered to your in-game account or as a redeem code. You are responsible for the account ID and region you choose."
+      },
+      {
+        "heading": "Refunds",
+        "body": "A digital product cannot be refunded once successfully delivered. If fulfilment fails, the amount is returned to your wallet."
+      },
+      {
+        "heading": "Prohibited use",
+        "body": "Using the store for unlawful activity, fraud, or exploiting pricing errors is prohibited, and we may suspend an account on reasonable suspicion."
+      },
+      {
+        "heading": "Changes to these terms",
+        "body": "We may update these terms, and an update applies from the date it is published on this page."
+      }
+    ],
+    "reviewNote": "This page is an initial draft and needs legal review before launch."
+  },
+  "links": {
+    "eyebrow": "Our links",
+    "title": "Every channel in one place.",
+    "description": "Follow new offers and announcements on the channel you prefer.",
+    "emptyTitle": "No links yet",
+    "emptyDescription": "Social links appear here once they are added from the dashboard."
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "hero": {
+    "eyebrow": "GH Store",
+    "title": "Top up your game in minutes.",
+    "description": "Top-up packages and digital cards at clear prices, with a wallet balance that makes every purchase faster.",
+    "primaryAction": "Browse games",
+    "secondaryAction": "See offers",
+    "statsDelivery": "Automated delivery",
+    "statsDeliveryValue": "Within minutes",
+    "statsCatalog": "Catalog",
+    "statsCatalogValue": "Games and cards",
+    "statsSupport": "Support",
+    "statsSupportValue": "Arabic and English"
+  },
+  "carousel": {
+    "regionLabel": "Featured games",
+    "slideLabel": "Slide {index} of {total}",
+    "goToSlide": "Go to slide {index}",
+    "pause": "Pause automatic rotation",
+    "play": "Resume automatic rotation",
+    "emptyTitle": "No featured games",
+    "emptyDescription": "Select carousel games from the dashboard and they appear here."
+  },
+  "sections": {
+    "gamesSubtitle": "Pick your game and start topping up.",
+    "giftCardsSubtitle": "Cards and codes ready for delivery.",
+    "saleSubtitle": "Discounts running right now.",
+    "suggestedSubtitle": "Packages most players start with.",
+    "reviewsSubtitle": "Real experiences from store customers.",
+    "emptySection": "This section has no content yet."
+  },
+  "reviews": {
+    "ratingLabel": "{rating} out of 5",
+    "emptyTitle": "No published reviews yet",
+    "emptyDescription": "Customer reviews appear here once approved from the dashboard.",
+    "verified": "Verified customer"
+  },
+  "social": {
+    "buttonLabel": "All our links"
+  }
+}

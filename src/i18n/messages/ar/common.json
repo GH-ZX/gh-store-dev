@@ -4,57 +4,70 @@
     "games": "الألعاب",
     "giftCards": "البطاقات",
     "offers": "العروض",
-    "menu": "القائمة"
+    "menu": "القائمة",
+    "close": "إغلاق",
+    "primaryLabel": "التنقل الرئيسي",
+    "mobileLabel": "قائمة التنقل",
+    "skipToContent": "تخطَّ إلى المحتوى"
+  },
+  "actions": {
+    "search": "بحث",
+    "searchPlaceholder": "ابحث عن لعبة أو بطاقة…",
+    "clear": "مسح",
+    "viewAll": "عرض الكل",
+    "browse": "تصفح المتجر",
+    "buyNow": "اشترِ الآن",
+    "addToCart": "أضف إلى السلة",
+    "details": "التفاصيل",
+    "retry": "أعد المحاولة",
+    "next": "التالي",
+    "previous": "السابق"
+  },
+  "states": {
+    "loading": "جارٍ التحميل…",
+    "emptyTitle": "لا يوجد شيء لعرضه بعد",
+    "emptyDescription": "سيظهر المحتوى هنا فور إضافته من لوحة الإدارة.",
+    "errorTitle": "تعذر تحميل البيانات",
+    "errorDescription": "حاول تحديث الصفحة بعد قليل."
+  },
+  "locale": {
+    "switchLabel": "تغيير اللغة",
+    "arabic": "العربية",
+    "english": "English"
+  },
+  "theme": {
+    "toggleLabel": "تغيير المظهر",
+    "dark": "المظهر الداكن",
+    "light": "المظهر الفاتح"
   },
   "footer": {
-    "tagline": "منتجات رقمية وتسليم واضح للاعبين."
+    "tagline": "منتجات رقمية وتسليم واضح للاعبين.",
+    "storeHeading": "المتجر",
+    "helpHeading": "المساعدة",
+    "legalHeading": "قانوني",
+    "followHeading": "تابعنا",
+    "rights": "جميع الحقوق محفوظة."
   },
-  "foundation": {
-    "eyebrow": "الأساس 01",
-    "title": "شحن لعبتك يجب أن يكون بسيطًا.",
-    "description": "نعيد بناء GH Store ليكون متجرًا أسرع وأوضح لشحن الألعاب والمنتجات الرقمية.",
-    "primaryAction": "استكشف المتجر",
-    "secondaryAction": "تصفح الألعاب",
-    "buildStatus": "حالة البناء",
-    "online": "متصل",
-    "runtime": "التشغيل",
-    "runtimeValue": "Next.js على Cloudflare Workers",
-    "data": "البيانات",
-    "dataValue": "Supabase مستضاف مع RLS",
-    "direction": "اللغات",
-    "directionValue": "العربية أولاً، والإنجليزية جاهزة",
-    "note": "هيكل المتجر جاهز. سيصل الكتالوج والدفع على مراحل متتالية."
+  "links": {
+    "faq": "الأسئلة الشائعة",
+    "how": "كيف يعمل المتجر",
+    "contact": "اتصل بنا",
+    "privacy": "سياسة الخصوصية",
+    "terms": "الشروط والأحكام",
+    "social": "روابط التواصل",
+    "sale": "العروض",
+    "search": "البحث"
   },
-  "games": {
-    "eyebrow": "الكتالوج",
-    "title": "اختر لعبتك التالية.",
-    "description": "اكتشف الألعاب والباقات المتوفرة حاليًا في GH Store.",
-    "emptyTitle": "لا توجد ألعاب متاحة الآن",
-    "emptyDescription": "سيظهر الكتالوج هنا فور إضافة الألعاب والباقات من لوحة الإدارة.",
-    "errorTitle": "تعذر تحميل الكتالوج",
-    "errorDescription": "حاول تحديث الصفحة بعد قليل."
+  "badges": {
+    "sale": "خصم",
+    "featured": "مميز",
+    "giftCard": "بطاقة",
+    "redeemCode": "كود",
+    "topup": "شحن"
   },
-  "gameDetail": {
-    "chooseOffer": "اختر الباقة المناسبة ثم أكمل تفاصيل الشحن بأمان.",
-    "emptyTitle": "لا توجد باقات متاحة",
-    "emptyDescription": "ستظهر الباقات هنا بعد إضافتها أو مزامنتها من لوحة الإدارة."
-  },
-  "giftCards": {
-    "eyebrow": "بطاقات رقمية",
-    "title": "اختر البطاقة المناسبة.",
-    "description": "بطاقات وأكواد رقمية جاهزة للتسليم بعد إتمام الطلب.",
-    "emptyTitle": "لا توجد بطاقات متاحة الآن",
-    "emptyDescription": "ستظهر البطاقات هنا بعد إضافتها أو مزامنتها من لوحة الإدارة.",
-    "errorTitle": "تعذر تحميل البطاقات",
-    "errorDescription": "حاول تحديث الصفحة بعد قليل."
-  },
-  "sale": {
-    "eyebrow": "عروض",
-    "title": "أسعار أفضل لفترة محدودة.",
-    "description": "اكتشف الباقات المخفضة المتاحة الآن في GH Store.",
-    "emptyTitle": "لا توجد عروض حالية",
-    "emptyDescription": "ستظهر التخفيضات هنا عند تفعيلها من لوحة الإدارة.",
-    "errorTitle": "تعذر تحميل العروض",
-    "errorDescription": "حاول تحديث الصفحة بعد قليل."
+  "price": {
+    "from": "يبدأ من",
+    "was": "كان",
+    "discount": "خصم {percent}%"
   }
 }

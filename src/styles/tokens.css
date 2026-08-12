@@ -1,37 +1,128 @@
+/*
+ * GH Store design tokens.
+ *
+ * Dark is the default surface for a gaming storefront; light is a full peer
+ * theme applied with `data-theme="light"` on the document element. Components
+ * reference these variables only, never raw colour values, so retheming never
+ * requires touching a component.
+ *
+ * Naming: `canvas` is the page, `surface` is a raised panel, `ink` is text,
+ * `line` is a hairline border, `accent` is the interactive brand colour.
+ */
 :root {
   color-scheme: dark;
-  --canvas: #07111f;
-  --canvas-raised: #0b1728;
-  --surface: #0f1d30;
-  --surface-strong: #14243a;
-  --ink: #f3f7fb;
-  --ink-soft: #c3d0de;
-  --ink-muted: #7f91a5;
-  --accent: #63d9ff;
-  --accent-strong: #b3efff;
-  --accent-ink: #06111c;
-  --line: rgba(176, 216, 239, 0.14);
-  --line-strong: rgba(176, 216, 239, 0.28);
+
+  /* Surfaces */
+  --canvas: #050b14;
+  --canvas-raised: #08111e;
+  --surface: #0d1a2b;
+  --surface-strong: #132437;
+  --surface-inset: #060e19;
+  --shell: rgba(148, 196, 232, 0.05);
+
+  /* Text */
+  --ink: #f4f8fc;
+  --ink-soft: #c2d2e2;
+  --ink-muted: #8598ac;
+  --ink-faint: #6a7d92;
+
+  /* Brand */
+  --accent: #5ad8ff;
+  --accent-strong: #a7ecff;
+  --accent-deep: #0c7ea6;
+  --accent-ink: #04121c;
+  --accent-2: #a08bff;
+  --accent-2-ink: #0d0820;
+  --accent-3: #ffb45c;
+
+  /* Status */
+  --success: #4ddba0;
+  --warning: #ffc766;
+  --danger: #ff7a85;
+  --danger-surface: rgba(255, 122, 133, 0.1);
+
+  /* Lines, rings, and inner highlights */
+  --line: rgba(160, 205, 236, 0.13);
+  --line-strong: rgba(160, 205, 236, 0.26);
   --focus: #9ceaff;
-  --shadow-soft: 0 20px 60px rgba(0, 0, 0, 0.2);
+  --sheen: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* Elevation: wide and diffused, never a harsh dark drop shadow */
+  --elevation-1: 0 1px 2px rgba(2, 8, 16, 0.4);
+  --elevation-2: 0 18px 44px -22px rgba(2, 8, 16, 0.85);
+  --elevation-3: 0 42px 90px -38px rgba(2, 8, 16, 0.95);
+  --shadow-soft: var(--elevation-2);
+  --glow-accent: 0 0 0 1px rgba(90, 216, 255, 0.28), 0 18px 50px -24px rgba(90, 216, 255, 0.5);
+
+  /* Ambient mesh behind hero and section backdrops */
+  --glow-1: rgba(90, 216, 255, 0.18);
+  --glow-2: rgba(160, 139, 255, 0.16);
+  --glow-3: rgba(255, 180, 92, 0.08);
+
+  /* Radii: concentric — an inner radius is its shell minus the shell padding */
+  --radius-shell: 1.75rem;
   --radius-card: 1.25rem;
-  --radius-control: 0.75rem;
+  --radius-inner: 1rem;
+  --radius-control: 0.875rem;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 180ms;
+  --duration: 320ms;
+  --duration-slow: 620ms;
+
+  /* Layout */
+  --page-max: 82rem;
+  --page-gutter: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --page-gutter: 2rem;
+  }
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --canvas: #f2f6fa;
-  --canvas-raised: #e8f0f6;
+
+  --canvas: #f4f7fb;
+  --canvas-raised: #eaf1f7;
   --surface: #ffffff;
-  --surface-strong: #e5eef5;
-  --ink: #102033;
-  --ink-soft: #415468;
-  --ink-muted: #6e8194;
-  --accent: #087ea3;
-  --accent-strong: #075c78;
-  --accent-ink: #f5fbff;
-  --line: rgba(16, 32, 51, 0.12);
-  --line-strong: rgba(16, 32, 51, 0.24);
+  --surface-strong: #eef4f9;
+  --surface-inset: #e4edf4;
+  --shell: rgba(16, 32, 51, 0.04);
+
+  --ink: #0d1c2e;
+  --ink-soft: #3b4f65;
+  --ink-muted: #5d7086;
+  --ink-faint: #78899b;
+
+  --accent: #0b7fa6;
+  --accent-strong: #075d7c;
+  --accent-deep: #064c66;
+  --accent-ink: #f6fcff;
+  --accent-2: #6a4fd8;
+  --accent-2-ink: #f8f6ff;
+  --accent-3: #a75f18;
+
+  --success: #12855f;
+  --warning: #8a5a0f;
+  --danger: #c0343f;
+  --danger-surface: rgba(192, 52, 63, 0.08);
+
+  --line: rgba(13, 28, 46, 0.12);
+  --line-strong: rgba(13, 28, 46, 0.22);
   --focus: #05617e;
-  --shadow-soft: 0 20px 60px rgba(16, 32, 51, 0.1);
+  --sheen: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  --elevation-1: 0 1px 2px rgba(13, 28, 46, 0.08);
+  --elevation-2: 0 18px 40px -24px rgba(13, 28, 46, 0.28);
+  --elevation-3: 0 40px 84px -40px rgba(13, 28, 46, 0.32);
+  --glow-accent: 0 0 0 1px rgba(11, 127, 166, 0.24), 0 18px 44px -26px rgba(11, 127, 166, 0.4);
+
+  --glow-1: rgba(11, 127, 166, 0.14);
+  --glow-2: rgba(106, 79, 216, 0.12);
+  --glow-3: rgba(180, 102, 26, 0.08);
 }

@@ -1,0 +1,41 @@
+{
+  "hero": {
+    "eyebrow": "GH Store",
+    "title": "اشحن لعبتك في دقائق.",
+    "description": "باقات شحن وبطاقات رقمية بأسعار واضحة، ورصيد محفظة يجعل كل عملية شراء أسرع.",
+    "primaryAction": "تصفح الألعاب",
+    "secondaryAction": "شاهد العروض",
+    "statsDelivery": "تسليم مؤتمت",
+    "statsDeliveryValue": "خلال دقائق",
+    "statsCatalog": "الكتالوج",
+    "statsCatalogValue": "ألعاب وبطاقات",
+    "statsSupport": "الدعم",
+    "statsSupportValue": "عربي وإنجليزي"
+  },
+  "carousel": {
+    "regionLabel": "الألعاب المميزة",
+    "slideLabel": "الشريحة {index} من {total}",
+    "goToSlide": "انتقل إلى الشريحة {index}",
+    "pause": "إيقاف التبديل التلقائي",
+    "play": "تشغيل التبديل التلقائي",
+    "emptyTitle": "لا توجد ألعاب مميزة",
+    "emptyDescription": "حدّد ألعابًا للسلايدر من لوحة الإدارة لتظهر هنا."
+  },
+  "sections": {
+    "gamesSubtitle": "اختر لعبتك وابدأ الشحن فورًا.",
+    "giftCardsSubtitle": "بطاقات وأكواد جاهزة للتسليم.",
+    "saleSubtitle": "خصومات فعّالة الآن.",
+    "suggestedSubtitle": "باقات يبدأ بها معظم اللاعبين.",
+    "reviewsSubtitle": "تجارب حقيقية من زبائن المتجر.",
+    "emptySection": "لا يوجد محتوى في هذا القسم بعد."
+  },
+  "reviews": {
+    "ratingLabel": "{rating} من 5",
+    "emptyTitle": "لا توجد آراء منشورة بعد",
+    "emptyDescription": "ستظهر آراء الزبائن هنا بعد اعتمادها من لوحة الإدارة.",
+    "verified": "زبون موثّق"
+  },
+  "social": {
+    "buttonLabel": "كل روابطنا"
+  }
+}

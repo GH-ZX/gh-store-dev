@@ -1,0 +1,69 @@
+{
+  "games": {
+    "eyebrow": "Catalog",
+    "title": "Pick your next game.",
+    "description": "Explore the games and packages available in GH Store right now.",
+    "count": "{count} games available",
+    "emptyTitle": "No games available yet",
+    "emptyDescription": "The catalog appears here as soon as games and packages are added from the dashboard.",
+    "errorTitle": "We could not load the catalog",
+    "errorDescription": "Please refresh the page in a moment."
+  },
+  "gameDetail": {
+    "chooseOffer": "Pick the package you need, then complete your top-up details securely.",
+    "offersHeading": "Available packages",
+    "emptyTitle": "No packages available",
+    "emptyDescription": "Packages appear here once they are added or synced from the dashboard.",
+    "backToGames": "All games",
+    "howItWorksHeading": "How delivery works",
+    "howItWorksSteps": [
+      "Choose the package that fits you.",
+      "Enter your in-game account details carefully.",
+      "Pay from your wallet balance.",
+      "Your top-up or code arrives once processed."
+    ]
+  },
+  "offerDetail": {
+    "eyebrow": "Package details",
+    "summaryHeading": "Order summary",
+    "fieldsHeading": "Details we will need",
+    "fieldsDescription": "We ask for these at checkout. Make sure they are correct before paying.",
+    "noFieldsTitle": "This package needs no extra details",
+    "noFieldsDescription": "Your code is delivered to your account once payment completes.",
+    "requiredField": "Required",
+    "optionalField": "Optional",
+    "regionLabel": "Region",
+    "typeLabel": "Type",
+    "priceLabel": "Price",
+    "relatedHeading": "Other packages for this game",
+    "checkoutSoonTitle": "Checkout is being built",
+    "checkoutSoonDescription": "The cart and wallet payment arrive in the next build stage.",
+    "notFoundTitle": "This package is unavailable",
+    "notFoundDescription": "It may have been changed or disabled. Browse the remaining packages instead."
+  },
+  "giftCards": {
+    "eyebrow": "Digital cards",
+    "title": "Choose the right card.",
+    "description": "Gift cards and digital codes ready for delivery once your order completes.",
+    "count": "{count} cards available",
+    "emptyTitle": "No cards available yet",
+    "emptyDescription": "Cards appear here once they are added or synced from the dashboard.",
+    "errorTitle": "We could not load the cards",
+    "errorDescription": "Please refresh the page in a moment."
+  },
+  "sale": {
+    "eyebrow": "Offers",
+    "title": "Better prices, limited time.",
+    "description": "Discover the discounted packages available in GH Store right now.",
+    "count": "{count} offers available",
+    "emptyTitle": "No current offers",
+    "emptyDescription": "Discounts appear here once they are enabled from the dashboard.",
+    "errorTitle": "We could not load the offers",
+    "errorDescription": "Please refresh the page in a moment."
+  },
+  "offerTypes": {
+    "topup": "Direct top-up",
+    "gift_card": "Gift card",
+    "redeem_code": "Redeem code"
+  }
+}

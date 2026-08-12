@@ -4,57 +4,70 @@
     "games": "Games",
     "giftCards": "Gift cards",
     "offers": "Offers",
-    "menu": "Menu"
+    "menu": "Menu",
+    "close": "Close",
+    "primaryLabel": "Primary navigation",
+    "mobileLabel": "Navigation menu",
+    "skipToContent": "Skip to content"
+  },
+  "actions": {
+    "search": "Search",
+    "searchPlaceholder": "Search a game or gift card…",
+    "clear": "Clear",
+    "viewAll": "View all",
+    "browse": "Browse the store",
+    "buyNow": "Buy now",
+    "addToCart": "Add to cart",
+    "details": "Details",
+    "retry": "Try again",
+    "next": "Next",
+    "previous": "Previous"
+  },
+  "states": {
+    "loading": "Loading…",
+    "emptyTitle": "Nothing to show yet",
+    "emptyDescription": "Content appears here as soon as it is added from the dashboard.",
+    "errorTitle": "We could not load this",
+    "errorDescription": "Please refresh the page in a moment."
+  },
+  "locale": {
+    "switchLabel": "Change language",
+    "arabic": "العربية",
+    "english": "English"
+  },
+  "theme": {
+    "toggleLabel": "Change appearance",
+    "dark": "Dark appearance",
+    "light": "Light appearance"
   },
   "footer": {
-    "tagline": "Digital goods, delivered with clarity."
+    "tagline": "Digital products and clear delivery for players.",
+    "storeHeading": "Store",
+    "helpHeading": "Help",
+    "legalHeading": "Legal",
+    "followHeading": "Follow us",
+    "rights": "All rights reserved."
   },
-  "foundation": {
-    "eyebrow": "Foundation 01",
-    "title": "Your next top-up should feel simple.",
-    "description": "GH Store is rebuilding a faster, clearer home for game top-ups and digital goods.",
-    "primaryAction": "Explore the store",
-    "secondaryAction": "Browse games",
-    "buildStatus": "Build status",
-    "online": "Online",
-    "runtime": "Runtime",
-    "runtimeValue": "Next.js on Cloudflare Workers",
-    "data": "Data",
-    "dataValue": "Hosted Supabase with RLS",
-    "direction": "Direction",
-    "directionValue": "Arabic-first, English-ready",
-    "note": "The storefront shell is ready. Catalog and checkout arrive through the next vertical slices."
+  "links": {
+    "faq": "FAQ",
+    "how": "How it works",
+    "contact": "Contact us",
+    "privacy": "Privacy policy",
+    "terms": "Terms and conditions",
+    "social": "Social links",
+    "sale": "Offers",
+    "search": "Search"
   },
-  "games": {
-    "eyebrow": "Catalog",
-    "title": "Choose your next game.",
-    "description": "Discover the games and packs currently available on GH Store.",
-    "emptyTitle": "No games are available yet",
-    "emptyDescription": "The catalog will appear here as soon as games and packs are added from the dashboard.",
-    "errorTitle": "Unable to load the catalog",
-    "errorDescription": "Please refresh the page and try again shortly."
+  "badges": {
+    "sale": "Sale",
+    "featured": "Featured",
+    "giftCard": "Gift card",
+    "redeemCode": "Code",
+    "topup": "Top-up"
   },
-  "gameDetail": {
-    "chooseOffer": "Choose a pack, then complete the required top-up details securely.",
-    "emptyTitle": "No packs are available",
-    "emptyDescription": "Packs will appear here after they are added or synchronized from the dashboard."
-  },
-  "giftCards": {
-    "eyebrow": "Digital cards",
-    "title": "Choose the right card.",
-    "description": "Digital cards and codes ready to deliver after checkout.",
-    "emptyTitle": "No cards are available yet",
-    "emptyDescription": "Cards will appear here after they are added or synchronized from the dashboard.",
-    "errorTitle": "Unable to load gift cards",
-    "errorDescription": "Please refresh the page and try again shortly."
-  },
-  "sale": {
-    "eyebrow": "Offers",
-    "title": "Better prices for a limited time.",
-    "description": "Discover the discounted packs currently available on GH Store.",
-    "emptyTitle": "There are no active offers",
-    "emptyDescription": "Discounts will appear here when they are enabled from the dashboard.",
-    "errorTitle": "Unable to load offers",
-    "errorDescription": "Please refresh the page and try again shortly."
+  "price": {
+    "from": "From",
+    "was": "Was",
+    "discount": "{percent}% off"
   }
 }

@@ -46,6 +46,11 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Metadata routes must be excluded explicitly: they are real routes, so
+     * without this the locale redirect would rewrite /sitemap.xml to
+     * /ar/sitemap.xml and hand crawlers a 404.
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$).*)",
   ],
 };

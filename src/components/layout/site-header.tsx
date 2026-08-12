@@ -1,54 +1,112 @@
 import Link from "next/link";
-import { BRAND } from "@/lib/brand";
+import { Suspense } from "react";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
+import { MobileNav } from "@/components/layout/mobile-nav";
+import { NavLink } from "@/components/layout/nav-link";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { SearchField } from "@/components/search/search-field";
+import { SearchIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
+import type { CommonMessages, SearchMessages } from "@/i18n/messages";
+import { BRAND } from "@/lib/brand";
 
-const navigation = [
-  { href: "", key: "home" },
-  { href: "games", key: "games" },
-  { href: "gift-cards", key: "giftCards" },
-  { href: "sale", key: "offers" },
-];
-
-type SiteHeaderProps = {
+/**
+ * Storefront header.
+ *
+ * A floating glass bar detached from the viewport edge rather than glued to it.
+ * Desktop shows inline navigation and a search field; mobile collapses to a
+ * search shortcut and an overlay menu.
+ */
+export type SiteHeaderProps = {
   locale: Locale;
-  labels: Record<"home" | "games" | "giftCards" | "offers" | "menu", string>;
+  messages: CommonMessages;
+  searchMessages: SearchMessages;
 };
 
-export function SiteHeader({ locale, labels }: SiteHeaderProps) {
+export function SiteHeader({ locale, messages, searchMessages }: SiteHeaderProps) {
+  const primaryItems = [
+    { href: `/${locale}`, label: messages.navigation.home },
+    { href: `/${locale}/games`, label: messages.navigation.games },
+    { href: `/${locale}/gift-cards`, label: messages.navigation.giftCards },
+    { href: `/${locale}/sale`, label: messages.navigation.offers },
+  ];
+
+  const secondaryItems = [
+    { href: `/${locale}/search`, label: messages.links.search },
+    { href: `/${locale}/faq`, label: messages.links.faq },
+    { href: `/${locale}/how`, label: messages.links.how },
+    { href: `/${locale}/contact`, label: messages.links.contact },
+  ];
+
   return (
-    <header className="border-b border-[var(--line)] bg-[color-mix(in_srgb,var(--canvas)_90%,transparent)] backdrop-blur-xl">
-      <div className="mx-auto flex min-h-[4.5rem] w-full max-w-7xl items-center justify-between gap-6 px-5 sm:px-8">
-        <Link href={`/${locale}`} className="flex shrink-0 items-center gap-3" aria-label={BRAND.name}>
-          <span className="grid size-9 place-items-center rounded-xl border border-[var(--line-strong)] bg-[var(--surface-strong)] text-xs font-bold tracking-tight text-[var(--accent)]">
-            GS
-          </span>
-          <span className="text-base font-semibold tracking-tight text-[var(--ink)]">{BRAND.name}</span>
-        </Link>
-
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
-          {navigation.map((item) => (
-            <Link
-              key={item.key}
-              href={`/${locale}/${item.href}`}
-              className="rounded-lg px-3 py-2 text-sm text-[var(--ink-muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--ink)]"
+    <header className="sticky top-0 z-40 pt-3 sm:pt-5">
+      <div className="gh-page">
+        <div className="gh-sheen flex min-h-16 items-center gap-3 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[color-mix(in_srgb,var(--canvas-raised)_82%,transparent)] px-3 shadow-[var(--elevation-2)] backdrop-blur-2xl sm:gap-4 sm:px-4">
+          <Link href={`/${locale}`} className="flex shrink-0 items-center gap-2.5" aria-label={BRAND.name}>
+            <span
+              className="grid size-9 place-items-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[linear-gradient(140deg,color-mix(in_srgb,var(--accent)_28%,var(--surface-strong)),var(--surface-strong))] text-xs font-bold text-[var(--accent-strong)]"
+              aria-hidden="true"
             >
-              {labels[item.key as keyof typeof labels]}
-            </Link>
-          ))}
-        </nav>
+              GH
+            </span>
+            <span className="hidden text-[0.9375rem] font-semibold tracking-tight text-[var(--ink)] sm:inline">
+              {BRAND.name}
+            </span>
+          </Link>
 
-        <details className="relative lg:hidden">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-lg border border-[var(--line)] px-3 text-sm text-[var(--ink-soft)]">
-            {labels.menu}
-          </summary>
-          <nav className="absolute end-0 top-14 z-20 grid min-w-48 gap-1 rounded-xl border border-[var(--line-strong)] bg-[var(--surface)] p-2 shadow-[var(--shadow-soft)]" aria-label="Mobile navigation">
-            {navigation.map((item) => (
-              <Link key={item.key} href={`/${locale}/${item.href}`} className="rounded-lg px-3 py-3 text-sm text-[var(--ink-soft)] hover:bg-[var(--surface-strong)] hover:text-[var(--ink)]">
-                {labels[item.key as keyof typeof labels]}
-              </Link>
+          <nav className="hidden items-center gap-0.5 lg:flex" aria-label={messages.navigation.primaryLabel}>
+            {primaryItems.map((item) => (
+              <NavLink key={item.href} href={item.href}>
+                {item.label}
+              </NavLink>
             ))}
           </nav>
-        </details>
+
+          <div className="ms-auto flex items-center gap-2">
+            <SearchField
+              locale={locale}
+              size="sm"
+              className="hidden w-64 xl:flex"
+              labels={{
+                fieldLabel: searchMessages.fieldLabel,
+                placeholder: messages.actions.searchPlaceholder,
+                submit: searchMessages.submit,
+                clear: searchMessages.clear,
+              }}
+            />
+
+            <Link
+              href={`/${locale}/search`}
+              aria-label={messages.actions.search}
+              className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] xl:hidden [&>svg]:size-4.5"
+            >
+              <SearchIcon />
+            </Link>
+
+            {/*
+             * The switcher reads the query string to preserve it across a
+             * language change, which makes it a request-time dependency. The
+             * boundary keeps that out of the static shell.
+             */}
+            <Suspense fallback={null}>
+              <div className="hidden sm:block">
+                <LocaleSwitcher locale={locale} labels={messages.locale} />
+              </div>
+            </Suspense>
+
+            <ThemeToggle labels={messages.theme} />
+
+            <MobileNav
+              labels={{
+                menu: messages.navigation.menu,
+                close: messages.navigation.close,
+                mobileLabel: messages.navigation.mobileLabel,
+              }}
+              items={primaryItems}
+              footerItems={secondaryItems}
+            />
+          </div>
+        </div>
       </div>
     </header>
   );

@@ -1,49 +1,155 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EmptyState } from "@/components/shared/empty-state";
-import { OfferCard } from "@/components/store/offer-card";
-import { isLocale, type Locale } from "@/i18n/config";
-import { getCommonMessages } from "@/i18n/messages";
+import { EmptyState } from "@/components/shared/states";
+import { OfferGrid } from "@/components/store/collections";
+import { StoreImage } from "@/components/store/store-image";
+import { Badge, Eyebrow } from "@/components/ui/badge";
+import { ChevronIcon } from "@/components/ui/icons";
+import { Section, SectionHeader } from "@/components/ui/section";
+import { getMessages } from "@/i18n/messages";
+import { getOfferCardLabels } from "@/lib/catalog/labels";
+import { formatPrice, lowestPrice } from "@/lib/format/money";
+import { resolveLocaleParam } from "@/lib/routing/locale-params";
+import { buildPageMetadata } from "@/lib/seo";
 import { getGameBySlug } from "@/lib/services/catalog.service";
 
-type GameDetailPageProps = {
-  params: Promise<{ locale: string; slug: string }>;
-};
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/games/[slug]">): Promise<Metadata> {
+  const locale = await resolveLocaleParam(params);
+  const { slug } = await params;
+  const detail = await getGameBySlug(locale, slug);
 
-export default async function GameDetailPage({ params }: GameDetailPageProps) {
-  const { locale: rawLocale, slug } = await params;
-
-  if (!isLocale(rawLocale)) {
-    notFound();
+  if (!detail) {
+    return {};
   }
 
-  const locale = rawLocale as Locale;
-  const messages = getCommonMessages(locale);
+  const messages = getMessages(locale, "catalog");
+
+  return buildPageMetadata({
+    locale,
+    path: `/games/${slug}`,
+    title: detail.game.name,
+    description: detail.game.description ?? messages.gameDetail.chooseOffer,
+    imageUrl: detail.game.imageUrl,
+  });
+}
+
+export default async function GameDetailPage({ params }: PageProps<"/[locale]/games/[slug]">) {
+  const locale = await resolveLocaleParam(params);
+  const { slug } = await params;
+  const common = getMessages(locale, "common");
+  const messages = getMessages(locale, "catalog");
   const detail = await getGameBySlug(locale, slug);
 
   if (!detail) {
     notFound();
   }
 
-  return (
-    <section className="mx-auto w-full max-w-7xl px-5 py-14 sm:px-8 sm:py-20">
-      <div className="grid gap-8 border-b border-[var(--line)] pb-10 lg:grid-cols-[1fr_0.72fr] lg:items-end">
-        <div>
-          {detail.game.pointsName ? <p className="text-sm font-medium text-[var(--accent)]">{detail.game.pointsName}</p> : null}
-          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-[var(--ink)] sm:text-6xl">{detail.game.name}</h1>
-          {detail.game.description ? <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--ink-soft)]">{detail.game.description}</p> : null}
-        </div>
-        <p className="text-sm leading-6 text-[var(--ink-muted)]">{messages.gameDetail.chooseOffer}</p>
-      </div>
+  const { game, offers } = detail;
+  const cheapest = lowestPrice(offers);
 
-      {detail.offers.length === 0 ? (
-        <div className="mt-10"><EmptyState title={messages.gameDetail.emptyTitle} description={messages.gameDetail.emptyDescription} /></div>
-      ) : (
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {detail.offers.map((offer) => (
-            <OfferCard key={offer.id} offer={offer} gameSlug={detail.game.slug} locale={locale} />
-          ))}
+  return (
+    <>
+      <Section spacing="page" mesh>
+        <nav aria-label={messages.gameDetail.backToGames}>
+          <Link
+            href={`/${locale}/games`}
+            className="inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
+          >
+            <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
+            {messages.gameDetail.backToGames}
+          </Link>
+        </nav>
+
+        <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_minmax(0,26rem)] lg:items-center">
+          <div>
+            {game.pointsName ? <Eyebrow className="mb-4">{game.pointsName}</Eyebrow> : null}
+            <h1 className="text-[clamp(2.25rem,6vw,3.75rem)] leading-[1.05] font-semibold tracking-[-0.035em] text-[var(--ink)]">
+              {game.name}
+            </h1>
+            {game.description ? (
+              <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--ink-soft)]">
+                {game.description}
+              </p>
+            ) : null}
+
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              {game.isFeatured ? <Badge tone="accent">{common.badges.featured}</Badge> : null}
+              {cheapest ? (
+                <Badge tone="neutral">
+                  {common.price.from} {formatPrice(cheapest.price, cheapest.currency, locale)}
+                </Badge>
+              ) : null}
+            </div>
+
+            <p className="mt-6 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
+              {messages.gameDetail.chooseOffer}
+            </p>
+          </div>
+
+          <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-1.5 backdrop-blur-xl">
+            <div className="gh-sheen relative aspect-[4/3] overflow-hidden rounded-[var(--radius-inner)] border border-[var(--line)]">
+              <StoreImage
+                src={game.imageUrl}
+                alt={game.name}
+                priority
+                focus={game.carouselFocus}
+                sizes="(min-width: 1024px) 26rem, 92vw"
+              />
+              {game.logoUrl ? (
+                <span className="absolute bottom-3 start-3 grid size-14 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
+                  <StoreImage src={game.logoUrl} alt="" sizes="3.5rem" />
+                </span>
+              ) : null}
+            </div>
+          </div>
         </div>
-      )}
-    </section>
+      </Section>
+
+      <Section spacing="tight">
+        <SectionHeader title={messages.gameDetail.offersHeading} />
+
+        {offers.length === 0 ? (
+          <EmptyState
+            className="mt-8"
+            title={messages.gameDetail.emptyTitle}
+            description={messages.gameDetail.emptyDescription}
+            action={{ href: `/${locale}/games`, label: messages.gameDetail.backToGames }}
+          />
+        ) : (
+          <OfferGrid
+            className="mt-8"
+            offers={offers}
+            locale={locale}
+            labels={getOfferCardLabels(common, messages)}
+            gameSlug={game.slug}
+            showGameName={false}
+          />
+        )}
+      </Section>
+
+      <Section spacing="normal">
+        <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6 sm:p-8">
+          <h2 className="text-lg font-semibold text-[var(--ink)]">
+            {messages.gameDetail.howItWorksHeading}
+          </h2>
+          <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {messages.gameDetail.howItWorksSteps.map((step, index) => (
+              <li
+                key={step}
+                className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4"
+              >
+                <span className="grid size-8 place-items-center rounded-full border border-[var(--line-strong)] text-xs font-bold text-[var(--accent)] tabular-nums">
+                  {index + 1}
+                </span>
+                <p className="mt-3 text-sm leading-6 text-[var(--ink-soft)]">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </Section>
+    </>
   );
 }

@@ -1,27 +1,85 @@
 import Link from "next/link";
+import { StoreImage } from "@/components/store/store-image";
+import { Badge } from "@/components/ui/badge";
+import { ArrowIcon } from "@/components/ui/icons";
+import type { Locale } from "@/i18n/config";
 import type { StoreGame } from "@/lib/catalog/game-mapper";
+import { cn } from "@/lib/cn";
 
-type GameCardProps = {
+/**
+ * Game tile.
+ *
+ * The whole tile is one link, so the accessible name is the game name and there
+ * is a single tab stop per card. Artwork sits behind a bottom-weighted scrim so
+ * the title stays legible over any image.
+ */
+export type GameCardProps = {
   game: StoreGame;
-  locale: string;
+  locale: Locale;
+  labels: { featured: string; from?: string };
+  /** Trailing metadata line, e.g. a "from $2.50" price. */
+  meta?: string;
+  priority?: boolean;
+  className?: string;
 };
 
-export function GameCard({ game, locale }: GameCardProps) {
+export function GameCard({ game, locale, labels, meta, priority = false, className }: GameCardProps) {
   return (
     <Link
       href={`/${locale}/games/${game.slug}`}
-      className="group relative flex min-h-64 flex-col justify-end overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)] transition-transform duration-200 hover:-translate-y-1"
-    >
-      {game.imageUrl ? (
-        <div className="absolute inset-0 bg-cover bg-center opacity-45 transition-opacity duration-200 group-hover:opacity-60" style={{ backgroundImage: `url(${game.imageUrl})` }} />
-      ) : (
-        <div className="absolute inset-0 bg-[linear-gradient(145deg,var(--surface-strong),var(--canvas))]" />
+      className={cn(
+        "group relative flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--elevation-2)]",
+        "transition-[transform,border-color,box-shadow] duration-[var(--duration)] ease-[var(--ease-spring)]",
+        "hover:-translate-y-1.5 hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:shadow-[var(--elevation-3)]",
+        className,
       )}
-      <div className="absolute inset-0 bg-[linear-gradient(0deg,color-mix(in_srgb,var(--canvas)_94%,transparent),transparent_75%)]" />
-      <div className="relative">
-        {game.pointsName ? <p className="mb-2 text-xs font-medium text-[var(--accent)]">{game.pointsName}</p> : null}
-        <h2 className="text-xl font-semibold tracking-tight text-[var(--ink)]">{game.name}</h2>
-        {game.description ? <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--ink-soft)]">{game.description}</p> : null}
+    >
+      <div className="absolute inset-0">
+        <StoreImage
+          src={game.imageUrl}
+          alt=""
+          priority={priority}
+          focus={game.carouselFocus}
+          sizes="(min-width: 1024px) 22rem, (min-width: 640px) 45vw, 80vw"
+          className="transition-transform duration-[var(--duration-slow)] ease-[var(--ease-out-expo)] group-hover:scale-[1.06]"
+        />
+      </div>
+      <div
+        className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--canvas)_96%,transparent)_8%,color-mix(in_srgb,var(--canvas)_60%,transparent)_42%,transparent_72%)]"
+        aria-hidden="true"
+      />
+
+      {game.isFeatured ? (
+        <div className="absolute top-3 end-3">
+          <Badge tone="accent">{labels.featured}</Badge>
+        </div>
+      ) : null}
+
+      <div className="relative flex items-end gap-3 p-4">
+        {game.logoUrl ? (
+          <span className="grid size-12 shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
+            <StoreImage src={game.logoUrl} alt="" sizes="3rem" />
+          </span>
+        ) : null}
+
+        <div className="min-w-0 flex-1">
+          {game.pointsName ? (
+            <p className="truncate text-[0.6875rem] font-semibold tracking-[0.1em] text-[var(--accent)] uppercase">
+              {game.pointsName}
+            </p>
+          ) : null}
+          <h3 className="mt-1 truncate text-base font-semibold tracking-tight text-[var(--ink)]">
+            {game.name}
+          </h3>
+          {meta ? <p className="mt-1 truncate text-xs text-[var(--ink-muted)] tabular-nums">{meta}</p> : null}
+        </div>
+
+        <span
+          className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--line-strong)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] text-[var(--ink-soft)] backdrop-blur-md transition-[background-color,color,transform] duration-[var(--duration)] ease-[var(--ease-spring)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
+          aria-hidden="true"
+        >
+          <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
+        </span>
       </div>
     </Link>
   );
