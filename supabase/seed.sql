@@ -1,0 +1,1 @@
+-- GH Store staging seed data will be added after the catalog migration.
