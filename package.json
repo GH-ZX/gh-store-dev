@@ -1,0 +1,36 @@
+{
+  "name": "gh-store",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm lint && pnpm typecheck && pnpm build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+  },
+  "dependencies": {
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@opennextjs/cloudflare": "1.20.2",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "20.19.43",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "esbuild": "0.28.2",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "wrangler": "4.120.1"
+  },
+  "packageManager": "pnpm@11.17.0"
+}
