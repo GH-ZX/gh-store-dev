@@ -39,6 +39,15 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+/** Whether a sync parked this offer, as recorded in the mapping metadata. */
+function readParkedBySync(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return false;
+  }
+
+  return (metadata as { parked_by_sync?: unknown }).parked_by_sync === true;
+}
+
 function describeError(error: unknown): string {
   if (error instanceof G2BulkError) {
     return `${error.kind}: ${error.message}`;
@@ -222,12 +231,15 @@ async function importOffers(
   const offersById = new Map(existingOffers.map((offer) => [offer.id, offer]));
 
   const offerIds = existingOffers.map((offer) => offer.id);
-  const mappingsByName = new Map<string, { offerId: string; pricingMode: string }>();
+  const mappingsByName = new Map<
+    string,
+    { offerId: string; pricingMode: string; parkedBySync: boolean }
+  >();
 
   if (offerIds.length > 0) {
     const { data: mappings, error: mappingsError } = await supabase
       .from("provider_offer_mappings")
-      .select("offer_id, external_catalogue_name, pricing_mode")
+      .select("offer_id, external_catalogue_name, pricing_mode, metadata")
       .eq("provider_name", G2BULK_PROVIDER_NAME)
       .in("offer_id", offerIds);
 
@@ -240,6 +252,7 @@ async function importOffers(
         mappingsByName.set(mapping.external_catalogue_name, {
           offerId: mapping.offer_id,
           pricingMode: mapping.pricing_mode,
+          parkedBySync: readParkedBySync(mapping.metadata),
         });
       }
     }
@@ -268,9 +281,14 @@ async function importOffers(
         offerUpdate.price = price;
       }
 
-      // The provider is offering it again, so an offer parked by an earlier
-      // reconciliation becomes available once more.
-      if (offerRow?.is_active === false) {
+      /*
+       * Reactivate only what a sync parked. An offer is inactive for one of two
+       * very different reasons: reconciliation withdrew it, or an admin hid it
+       * (including importing with "publish immediately" off). Republishing the
+       * second kind would override a decision, so the mapping records which one
+       * it was.
+       */
+      if (offerRow?.is_active === false && existing.parkedBySync) {
         offerUpdate.is_active = true;
       }
 
@@ -292,7 +310,7 @@ async function importOffers(
           external_catalogue_name: item.name,
           supplier_cost_usd: item.amount,
           markup_percent: options.markupPercent,
-          metadata: { catalogue_id: item.id, synced_at: nowIso() },
+          metadata: { catalogue_id: item.id, synced_at: nowIso(), parked_by_sync: false },
         },
         { onConflict: "offer_id,provider_name" },
       );
@@ -333,7 +351,7 @@ async function importOffers(
       supplier_cost_usd: item.amount,
       pricing_mode: "default",
       markup_percent: options.markupPercent,
-      metadata: { catalogue_id: item.id, synced_at: nowIso() },
+      metadata: { catalogue_id: item.id, synced_at: nowIso(), parked_by_sync: false },
     });
 
     if (mapError) {
@@ -347,6 +365,7 @@ async function importOffers(
     supabase,
     mappingsByName,
     new Set(catalogues.map((item) => item.name)),
+    new Map(catalogues.map((item) => [item.name, item.id])),
   );
 
   return { offersCreated, offersUpdated, offersDeactivated: deactivated };
@@ -362,21 +381,39 @@ async function importOffers(
  */
 async function deactivateWithdrawnOffers(
   supabase: Client,
-  mappingsByName: Map<string, { offerId: string; pricingMode: string }>,
+  mappingsByName: Map<string, { offerId: string; pricingMode: string; parkedBySync: boolean }>,
   liveNames: Set<string>,
+  catalogueIdByName: Map<string, number>,
 ): Promise<number> {
-  const withdrawn = [...mappingsByName.entries()]
-    .filter(([name]) => !liveNames.has(name))
-    .map(([, mapping]) => mapping.offerId);
+  const withdrawn = [...mappingsByName.entries()].filter(([name]) => !liveNames.has(name));
 
   if (withdrawn.length === 0) {
     return 0;
   }
 
-  const { error } = await supabase.from("offers").update({ is_active: false }).in("id", withdrawn);
+  const offerIds = withdrawn.map(([, mapping]) => mapping.offerId);
+  const { error } = await supabase.from("offers").update({ is_active: false }).in("id", offerIds);
 
   if (error) {
     throw new Error(`Deactivating withdrawn offers failed: ${error.message}`);
+  }
+
+  // Record that the sync did this, so a later run may put it back but will leave
+  // an admin's own decision alone.
+  for (const [name, mapping] of withdrawn) {
+    await supabase.from("provider_offer_mappings").upsert(
+      {
+        offer_id: mapping.offerId,
+        provider_name: G2BULK_PROVIDER_NAME,
+        external_catalogue_name: name,
+        metadata: {
+          catalogue_id: catalogueIdByName.get(name) ?? null,
+          synced_at: nowIso(),
+          parked_by_sync: true,
+        },
+      },
+      { onConflict: "offer_id,provider_name" },
+    );
   }
 
   return withdrawn.length;

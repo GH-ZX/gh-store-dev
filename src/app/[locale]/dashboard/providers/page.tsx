@@ -48,13 +48,23 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             ) : null}
           </div>
 
-          <ButtonLink
-            href={`/${locale}/dashboard/providers/g2bulk/import`}
-            variant={status.configured ? "primary" : "secondary"}
-            trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
-          >
-            {provider.importAction}
-          </ButtonLink>
+          {/* Two import lanes: game top-ups, and gift cards and codes. */}
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink
+              href={`/${locale}/dashboard/providers/g2bulk/import`}
+              variant={status.configured ? "primary" : "secondary"}
+              trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
+            >
+              {provider.importAction}
+            </ButtonLink>
+            <ButtonLink
+              href={`/${locale}/dashboard/providers/g2bulk/vouchers`}
+              variant="secondary"
+              trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
+            >
+              {messages.vouchers.title}
+            </ButtonLink>
+          </div>
         </div>
 
         <div className="mt-8 border-t border-[var(--line)] pt-8">

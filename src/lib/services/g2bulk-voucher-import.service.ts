@@ -261,17 +261,18 @@ function uniqueSlug(base: string, taken: Set<string>, fallbackSuffix: string): s
   return unique;
 }
 
-/**
- * Whether a row was last deactivated by a sync rather than by an admin.
- *
- * Recorded in the mapping metadata so a returning item can be reactivated
- * without also republishing something an admin deliberately hid — importing with
- * "publish immediately" off and then re-importing must not quietly go live.
- */
+/** `metadata` is `Json`, so it has to be narrowed before a key can be read from it. */
 function asRecord(metadata: Json | null | undefined): Record<string, Json | undefined> {
   return metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {};
 }
 
+/**
+ * Whether a row was last hidden by a sync rather than by an admin.
+ *
+ * Recorded in the mapping metadata so an item that comes back can be reactivated
+ * without also republishing something an admin deliberately hid — importing with
+ * "publish immediately" off and then re-importing must not quietly go live.
+ */
 function parkedBySync(metadata: Json | null | undefined): boolean {
   return asRecord(metadata).parked_by_sync === true;
 }
@@ -367,6 +368,10 @@ async function importOneCategory(
   }
 
   const counts = await importVoucherOffers(supabase, gameId, products, options);
+  // Only claim the right to reactivate this later if the row would otherwise be
+  // live: a group created dormant because the admin declined to publish was not
+  // hidden by the sync, and the next run must leave it alone.
+  const parkedByThisRun = !group.hasStock && (status === "updated" || options.publish);
 
   // Reconcile the container itself: nothing in stock means nothing to sell.
   if (!group.hasStock) {
@@ -396,7 +401,7 @@ async function importOneCategory(
         provider_image_url: category.image_url ?? null,
         product_count: products.length,
         in_stock_count: products.filter(inStock).length,
-        parked_by_sync: !group.hasStock,
+        parked_by_sync: parkedByThisRun,
         synced_at: nowIso(),
       },
     },
@@ -476,9 +481,9 @@ async function importVoucherOffers(
         category_id: product.category_id ?? null,
         face_value: product.face_value ?? null,
         stock: product.stock ?? 0,
-        // A card parked for being out of stock may come back; one an admin hid
-        // stays hidden.
-        parked_by_sync: !sellable,
+        // A card hidden by this run for being out of stock may come back; one an
+        // admin hid — or one created dormant on purpose — stays hidden.
+        parked_by_sync: !sellable && (existing !== undefined || options.publish),
         synced_at: nowIso(),
       },
     };

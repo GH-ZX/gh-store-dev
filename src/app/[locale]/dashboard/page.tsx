@@ -3,7 +3,7 @@ import { EmptyState } from "@/components/shared/states";
 import { ButtonLink } from "@/components/ui/button";
 import { ArrowIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
-import { formatMessage, getMessages } from "@/i18n/messages";
+import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getAdminOverviewStats } from "@/lib/services/admin-overview.service";
 
@@ -61,14 +61,16 @@ export default async function DashboardOverviewPage({ params }: PageProps<"/[loc
       ) : (
         <div className="flex flex-wrap gap-3">
           <ButtonLink
-            href={`/${locale}/dashboard/providers`}
-            variant="secondary"
+            href={`/${locale}/dashboard/catalog`}
             trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
           >
+            {messages.shell.nav.games}
+          </ButtonLink>
+          <ButtonLink href={`/${locale}/dashboard/providers`} variant="secondary">
             {messages.shell.nav.providers}
           </ButtonLink>
-          <ButtonLink href={`/${locale}/games`} variant="ghost">
-            {formatMessage(messages.overview.stats.games, {}, locale)}
+          <ButtonLink href={`/${locale}/dashboard/website`} variant="ghost">
+            {messages.shell.nav.website}
           </ButtonLink>
         </div>
       )}

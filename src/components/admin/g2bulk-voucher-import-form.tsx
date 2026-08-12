@@ -55,6 +55,11 @@ export function G2BulkVoucherImportForm({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
+  const totalProducts = useMemo(
+    () => categories.reduce((total, category) => total + category.productCount, 0),
+    [categories],
+  );
+
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
 
@@ -149,9 +154,7 @@ export function G2BulkVoucherImportForm({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--ink-muted)] tabular-nums">
-          {formatMessage(messages.productsCount, {
-            count: categories.reduce((total, category) => total + category.productCount, 0),
-          }, locale)}
+          {formatMessage(messages.productsCount, { count: totalProducts }, locale)}
         </p>
         <p className="text-sm font-semibold text-[var(--ink)] tabular-nums">
           {formatMessage(messages.selectedCount, { count: selected.size }, locale)}
@@ -214,7 +217,11 @@ export function G2BulkVoucherImportForm({
                       {category.title}
                     </span>
                     <span className="block text-xs text-[var(--ink-faint)] tabular-nums">
-                      {formatMessage(messages.productsCount, { count: category.productCount }, locale)}
+                      {formatMessage(
+                        messages.productsCount,
+                        { count: category.productCount },
+                        locale,
+                      )}
                     </span>
                   </span>
                   <Badge tone={category.hasStock ? "success" : "warning"}>
