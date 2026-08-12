@@ -39,6 +39,313 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          created_at: string
+          description_ar: string | null
+          description_en: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name_ar: string
+          name_en: string
+          parent_id: string | null
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name_ar: string
+          name_en: string
+          parent_id?: string | null
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name_ar?: string
+          name_en?: string
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_input_fields: {
+        Row: {
+          created_at: string
+          field_key: string
+          field_type: string
+          game_id: string
+          id: string
+          is_required: boolean
+          label_ar: string
+          label_en: string
+          options: Json
+          placeholder_ar: string | null
+          placeholder_en: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_key: string
+          field_type?: string
+          game_id: string
+          id?: string
+          is_required?: boolean
+          label_ar: string
+          label_en: string
+          options?: Json
+          placeholder_ar?: string | null
+          placeholder_en?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_key?: string
+          field_type?: string
+          game_id?: string
+          id?: string
+          is_required?: boolean
+          label_ar?: string
+          label_en?: string
+          options?: Json
+          placeholder_ar?: string | null
+          placeholder_en?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_input_fields_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_regions: {
+        Row: {
+          code: string
+          created_at: string
+          game_id: string
+          id: string
+          is_active: boolean
+          name_ar: string
+          name_en: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          game_id: string
+          id?: string
+          is_active?: boolean
+          name_ar: string
+          name_en: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          game_id?: string
+          id?: string
+          is_active?: boolean
+          name_ar?: string
+          name_en?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_regions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      games: {
+        Row: {
+          carousel_badge_ar: string | null
+          carousel_badge_en: string | null
+          carousel_focus_x: number
+          carousel_focus_y: number
+          carousel_order: number | null
+          category_id: string | null
+          created_at: string
+          description_ar: string | null
+          description_en: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_featured: boolean
+          logo_url: string | null
+          name_ar: string
+          name_en: string
+          points_name_ar: string | null
+          points_name_en: string | null
+          show_in_carousel: boolean
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          carousel_badge_ar?: string | null
+          carousel_badge_en?: string | null
+          carousel_focus_x?: number
+          carousel_focus_y?: number
+          carousel_order?: number | null
+          category_id?: string | null
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          logo_url?: string | null
+          name_ar: string
+          name_en: string
+          points_name_ar?: string | null
+          points_name_en?: string | null
+          show_in_carousel?: boolean
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          carousel_badge_ar?: string | null
+          carousel_badge_en?: string | null
+          carousel_focus_x?: number
+          carousel_focus_y?: number
+          carousel_order?: number | null
+          category_id?: string | null
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          logo_url?: string | null
+          name_ar?: string
+          name_en?: string
+          points_name_ar?: string | null
+          points_name_en?: string | null
+          show_in_carousel?: boolean
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "games_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          created_at: string
+          currency: string
+          description_ar: string | null
+          description_en: string | null
+          game_id: string
+          id: string
+          is_active: boolean
+          is_sale: boolean
+          name_ar: string
+          name_en: string
+          offer_type: string
+          original_price: number | null
+          price: number
+          region_code: string | null
+          sale_image_url: string | null
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          description_ar?: string | null
+          description_en?: string | null
+          game_id: string
+          id?: string
+          is_active?: boolean
+          is_sale?: boolean
+          name_ar: string
+          name_en: string
+          offer_type?: string
+          original_price?: number | null
+          price: number
+          region_code?: string | null
+          sale_image_url?: string | null
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          description_ar?: string | null
+          description_en?: string | null
+          game_id?: string
+          id?: string
+          is_active?: boolean
+          is_sale?: boolean
+          name_ar?: string
+          name_en?: string
+          offer_type?: string
+          original_price?: number | null
+          price?: number
+          region_code?: string | null
+          sale_image_url?: string | null
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -74,6 +381,94 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      provider_game_mappings: {
+        Row: {
+          created_at: string
+          external_game_code: string
+          game_id: string
+          id: string
+          metadata: Json
+          provider_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_game_code: string
+          game_id: string
+          id?: string
+          metadata?: Json
+          provider_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_game_code?: string
+          game_id?: string
+          id?: string
+          metadata?: Json
+          provider_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_game_mappings_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_offer_mappings: {
+        Row: {
+          created_at: string
+          external_catalogue_name: string | null
+          external_product_id: string | null
+          id: string
+          markup_percent: number | null
+          metadata: Json
+          offer_id: string
+          pricing_mode: string
+          provider_name: string
+          supplier_cost_usd: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_catalogue_name?: string | null
+          external_product_id?: string | null
+          id?: string
+          markup_percent?: number | null
+          metadata?: Json
+          offer_id: string
+          pricing_mode?: string
+          provider_name: string
+          supplier_cost_usd?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_catalogue_name?: string | null
+          external_product_id?: string | null
+          id?: string
+          markup_percent?: number | null
+          metadata?: Json
+          offer_id?: string
+          pricing_mode?: string
+          provider_name?: string
+          supplier_cost_usd?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_offer_mappings_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
