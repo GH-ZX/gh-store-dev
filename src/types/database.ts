@@ -346,6 +346,130 @@ export type Database = {
           },
         ]
       }
+      payment_attempts: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          entity_id: string
+          entity_type: string
+          expires_at: string | null
+          external_payment_id: string | null
+          id: string
+          idempotency_key: string | null
+          paid_at: string | null
+          payment_url: string | null
+          provider: string
+          provider_payload: Json
+          status: string
+          transaction_reference: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          entity_id: string
+          entity_type: string
+          expires_at?: string | null
+          external_payment_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          paid_at?: string | null
+          payment_url?: string | null
+          provider: string
+          provider_payload?: Json
+          status?: string
+          transaction_reference?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          entity_id?: string
+          entity_type?: string
+          expires_at?: string | null
+          external_payment_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          paid_at?: string | null
+          payment_url?: string | null
+          provider?: string
+          provider_payload?: Json
+          status?: string
+          transaction_reference?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_events: {
+        Row: {
+          amount: number | null
+          currency: string | null
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string
+          external_event_id: string
+          id: string
+          payload: Json
+          payment_attempt_id: string | null
+          processed_at: string | null
+          processing_error: string | null
+          provider: string
+          received_at: string
+        }
+        Insert: {
+          amount?: number | null
+          currency?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type: string
+          external_event_id: string
+          id?: string
+          payload?: Json
+          payment_attempt_id?: string | null
+          processed_at?: string | null
+          processing_error?: string | null
+          provider: string
+          received_at?: string
+        }
+        Update: {
+          amount?: number | null
+          currency?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type?: string
+          external_event_id?: string
+          id?: string
+          payload?: Json
+          payment_attempt_id?: string | null
+          processed_at?: string | null
+          processing_error?: string | null
+          provider?: string
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_payment_attempt_id_fkey"
+            columns: ["payment_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "payment_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -470,11 +594,213 @@ export type Database = {
           },
         ]
       }
+      recharge_requests: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          exchange_rate: number | null
+          id: string
+          payment_method: string
+          reference: string
+          requested_amount: number
+          requested_currency: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          wallet_credit_amount: number | null
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          exchange_rate?: number | null
+          id?: string
+          payment_method: string
+          reference: string
+          requested_amount: number
+          requested_currency?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          wallet_credit_amount?: number | null
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          exchange_rate?: number | null
+          id?: string
+          payment_method?: string
+          reference?: string
+          requested_amount?: number
+          requested_currency?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          wallet_credit_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recharge_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recharge_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at: string
+          description: string | null
+          id: string
+          idempotency_key: string | null
+          metadata: Json
+          payment_method: string | null
+          reference_id: string | null
+          reference_type: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          payment_method?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          payment_method?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          type?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          currency: string
+          id: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      credit_wallet: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_idempotency_key?: string
+          p_reference_id?: string
+          p_reference_type?: string
+          p_user_id: string
+        }
+        Returns: {
+          balance: number
+          idempotent: boolean
+          transaction_id: string
+          wallet_id: string
+        }[]
+      }
+      debit_wallet: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_idempotency_key?: string
+          p_reference_id?: string
+          p_reference_type?: string
+          p_user_id: string
+        }
+        Returns: {
+          balance: number
+          idempotent: boolean
+          transaction_id: string
+          wallet_id: string
+        }[]
+      }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
     }
     Enums: {
