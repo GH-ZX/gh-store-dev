@@ -1096,6 +1096,116 @@ export type Database = {
           },
         ]
       }
+      reviews: {
+        Row: {
+          admin_note: string | null
+          body: string
+          created_at: string
+          display_name: string
+          id: string
+          is_featured: boolean
+          locale: string
+          order_id: string | null
+          rating: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          body: string
+          created_at?: string
+          display_name: string
+          id?: string
+          is_featured?: boolean
+          locale?: string
+          order_id?: string | null
+          rating: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          body?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_featured?: boolean
+          locale?: string
+          order_id?: string | null
+          rating?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_settings: {
+        Row: {
+          contact: Json
+          created_at: string
+          home_layout: Json
+          id: string
+          maintenance_message_ar: string | null
+          maintenance_message_en: string | null
+          maintenance_mode: boolean
+          payments: Json
+          providers: Json
+          seo: Json
+          social_links: Json
+          theme: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          contact?: Json
+          created_at?: string
+          home_layout?: Json
+          id?: string
+          maintenance_message_ar?: string | null
+          maintenance_message_en?: string | null
+          maintenance_mode?: boolean
+          payments?: Json
+          providers?: Json
+          seo?: Json
+          social_links?: Json
+          theme?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          contact?: Json
+          created_at?: string
+          home_layout?: Json
+          id?: string
+          maintenance_message_ar?: string | null
+          maintenance_message_en?: string | null
+          maintenance_mode?: boolean
+          payments?: Json
+          providers?: Json
+          seo?: Json
+          social_links?: Json
+          theme?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       support_messages: {
         Row: {
           body: string
@@ -1317,6 +1427,8 @@ export type Database = {
           wallet_id: string
         }[]
       }
+      get_home_layout: { Args: never; Returns: Json }
+      get_public_store_settings: { Args: never; Returns: Json }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
     }
     Enums: {
