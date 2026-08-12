@@ -6,6 +6,7 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { G2BulkClient } from "@/providers/g2bulk/client";
 import { G2BulkError } from "@/providers/g2bulk/errors";
 import { requireAdmin } from "@/lib/auth/guards";
+import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
   getG2BulkCredentials,
   saveG2BulkSettings,
@@ -52,9 +53,9 @@ export async function saveG2BulkSettingsAction(
   await requireAdmin();
 
   const parsed = settingsSchema.safeParse({
-    apiKey: formData.get("apiKey") ?? undefined,
-    markupPercent: formData.get("markupPercent"),
-    locale: formData.get("locale"),
+    apiKey: formText(formData, "apiKey"),
+    markupPercent: formText(formData, "markupPercent"),
+    locale: formText(formData, "locale"),
   });
 
   if (!parsed.success) {
@@ -119,9 +120,9 @@ export async function importG2BulkGamesAction(
   const admin = await requireAdmin();
 
   const parsed = importSchema.safeParse({
-    codes: formData.getAll("codes").map((value) => String(value)),
-    publish: formData.get("publish") === "on",
-    locale: formData.get("locale"),
+    codes: formTextList(formData, "codes"),
+    publish: formFlag(formData, "publish"),
+    locale: formText(formData, "locale"),
   });
 
   if (!parsed.success) {

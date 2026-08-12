@@ -3,6 +3,8 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getLocaleDirection, isLocale, type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
+import { getG2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
+import { getSessionSummary } from "@/lib/services/session.service";
 import { getPublicStoreSettings } from "@/lib/services/settings.service";
 
 /**
@@ -22,7 +24,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
   const locale = rawLocale as Locale;
   const common = getMessages(locale, "common");
   const search = getMessages(locale, "search");
-  const settings = await getPublicStoreSettings();
+  const [settings, session] = await Promise.all([getPublicStoreSettings(), getSessionSummary()]);
+  // Only an administrator sees the supplier balance, so only their render pays
+  // for the provider call.
+  const wallet = session?.isAdmin ? await getG2BulkWalletSnapshot() : null;
 
   return (
     <div lang={locale} dir={getLocaleDirection(locale)} className="flex min-h-screen flex-col">
@@ -33,7 +38,13 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
         {common.navigation.skipToContent}
       </a>
 
-      <SiteHeader locale={locale} messages={common} searchMessages={search} />
+      <SiteHeader
+        locale={locale}
+        messages={common}
+        searchMessages={search}
+        session={session}
+        wallet={wallet}
+      />
 
       <main id="main" className="flex-1">
         {children}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { AccountMenu } from "@/components/layout/account-menu";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavLink } from "@/components/layout/nav-link";
@@ -9,6 +10,8 @@ import { SearchIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { CommonMessages, SearchMessages } from "@/i18n/messages";
 import { BRAND } from "@/lib/brand";
+import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
+import type { SessionSummary } from "@/lib/services/session.service";
 
 /**
  * Storefront header.
@@ -21,9 +24,18 @@ export type SiteHeaderProps = {
   locale: Locale;
   messages: CommonMessages;
   searchMessages: SearchMessages;
+  session: SessionSummary | null;
+  /** Supplier balance, shown to administrators only. */
+  wallet: G2BulkWalletSnapshot | null;
 };
 
-export function SiteHeader({ locale, messages, searchMessages }: SiteHeaderProps) {
+export function SiteHeader({
+  locale,
+  messages,
+  searchMessages,
+  session,
+  wallet,
+}: SiteHeaderProps) {
   const primaryItems = [
     { href: `/${locale}`, label: messages.navigation.home },
     { href: `/${locale}/games`, label: messages.navigation.games },
@@ -95,6 +107,8 @@ export function SiteHeader({ locale, messages, searchMessages }: SiteHeaderProps
             </Suspense>
 
             <ThemeToggle labels={messages.theme} />
+
+            <AccountMenu locale={locale} messages={messages} session={session} wallet={wallet} />
 
             <MobileNav
               labels={{

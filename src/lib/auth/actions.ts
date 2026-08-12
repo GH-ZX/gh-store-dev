@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import type { AuthActionState } from "@/lib/auth/action-state";
+import { formText } from "@/lib/forms/form-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -44,18 +45,17 @@ export async function signInAction(
   formData: FormData,
 ): Promise<AuthActionState> {
   const parsed = credentialsSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-    locale: formData.get("locale"),
-    redirectTo: formData.get("redirectTo"),
+    email: formText(formData, "email"),
+    password: formText(formData, "password"),
+    locale: formText(formData, "locale"),
+    redirectTo: formText(formData, "redirectTo"),
   });
-
-  const locale = resolveLocale(formData.get("locale"));
 
   if (!parsed.success) {
     return { error: "invalid_input", notice: null };
   }
 
+  const locale = resolveLocale(parsed.data.locale);
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
@@ -75,9 +75,9 @@ export async function signUpAction(
   formData: FormData,
 ): Promise<AuthActionState> {
   const parsed = credentialsSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-    locale: formData.get("locale"),
+    email: formText(formData, "email"),
+    password: formText(formData, "password"),
+    locale: formText(formData, "locale"),
   });
 
   if (!parsed.success) {
@@ -106,7 +106,7 @@ export async function signUpAction(
 }
 
 export async function signOutAction(formData: FormData): Promise<void> {
-  const locale = resolveLocale(formData.get("locale"));
+  const locale = resolveLocale(formText(formData, "locale"));
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
 

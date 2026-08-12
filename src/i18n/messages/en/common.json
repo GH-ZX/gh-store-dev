@@ -69,5 +69,14 @@
     "from": "From",
     "was": "Was",
     "discount": "{percent}% off"
+  },
+  "account": {
+    "signIn": "Sign in",
+    "account": "My account",
+    "adminBadge": "Admin",
+    "dashboard": "Dashboard",
+    "walletLabel": "Supplier balance",
+    "accountMenuLabel": "Account menu",
+    "signOut": "Sign out"
   }
 }

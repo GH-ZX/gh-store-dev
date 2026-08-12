@@ -1,0 +1,104 @@
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { UserIcon, WalletIcon } from "@/components/ui/icons";
+import type { Locale } from "@/i18n/config";
+import type { CommonMessages } from "@/i18n/messages";
+import { signOutAction } from "@/lib/auth/actions";
+import { formatPrice } from "@/lib/format/money";
+import type { SessionSummary } from "@/lib/services/session.service";
+import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
+
+/**
+ * Header account area.
+ *
+ * Server-rendered and JavaScript-free: a native `details` disclosure holds the
+ * menu, and sign-out is a form posting to a server action. The supplier wallet
+ * pill is admin-only — it is operational information, and fetching it for a
+ * visitor would call the provider for no reason.
+ */
+export type AccountMenuProps = {
+  locale: Locale;
+  messages: CommonMessages;
+  session: SessionSummary | null;
+  wallet: G2BulkWalletSnapshot | null;
+};
+
+export function AccountMenu({ locale, messages, session, wallet }: AccountMenuProps) {
+  if (!session) {
+    return (
+      <ButtonLink href={`/${locale}/login`} variant="secondary" size="sm" className="shrink-0">
+        {messages.account.signIn}
+      </ButtonLink>
+    );
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      {session.isAdmin && wallet ? (
+        <Link
+          href={`/${locale}/dashboard/providers`}
+          title={`${messages.account.walletLabel} · ${wallet.username}`}
+          className="hidden min-h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:text-[var(--ink)] md:flex"
+        >
+          <WalletIcon className="size-4 shrink-0 text-[var(--accent)]" />
+          <span className="sr-only">{messages.account.walletLabel}</span>
+          <span className="tabular-nums" dir="ltr">
+            {formatPrice(wallet.balance, "USD", locale)}
+          </span>
+        </Link>
+      ) : null}
+
+      <details className="relative">
+        <summary
+          className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+          aria-label={messages.account.accountMenuLabel}
+        >
+          <UserIcon className="size-4 shrink-0" />
+          <span className="hidden max-w-28 truncate sm:inline">{session.displayName}</span>
+        </summary>
+
+        <div className="absolute end-0 top-12 z-50 grid w-60 gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3 shadow-[var(--elevation-3)]">
+          <div className="min-w-0 px-1">
+            <p className="truncate text-sm font-semibold text-[var(--ink)]">{session.displayName}</p>
+            {session.email ? (
+              <p className="mt-0.5 truncate text-xs text-[var(--ink-muted)]" dir="ltr">
+                {session.email}
+              </p>
+            ) : null}
+            {session.isAdmin ? (
+              <Badge tone="accent" className="mt-2">
+                {messages.account.adminBadge}
+              </Badge>
+            ) : null}
+          </div>
+
+          {session.isAdmin ? (
+            <Link
+              href={`/${locale}/dashboard`}
+              className="rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"
+            >
+              {messages.account.dashboard}
+            </Link>
+          ) : null}
+
+          {session.isAdmin && wallet ? (
+            <p className="rounded-[var(--radius-control)] bg-[var(--shell)] px-3 py-2 text-xs text-[var(--ink-muted)] md:hidden">
+              {messages.account.walletLabel}:{" "}
+              <span className="tabular-nums" dir="ltr">
+                {formatPrice(wallet.balance, "USD", locale)}
+              </span>
+            </p>
+          ) : null}
+
+          <form action={signOutAction} className="border-t border-[var(--line)] pt-2">
+            <input type="hidden" name="locale" value={locale} />
+            <Button type="submit" variant="ghost" size="sm" fullWidth>
+              {messages.account.signOut}
+            </Button>
+          </form>
+        </div>
+      </details>
+    </div>
+  );
+}

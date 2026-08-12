@@ -69,5 +69,14 @@
     "from": "يبدأ من",
     "was": "كان",
     "discount": "خصم {percent}%"
+  },
+  "account": {
+    "signIn": "تسجيل الدخول",
+    "account": "حسابي",
+    "adminBadge": "مدير",
+    "dashboard": "لوحة الإدارة",
+    "walletLabel": "رصيد المورد",
+    "accountMenuLabel": "قائمة الحساب",
+    "signOut": "تسجيل الخروج"
   }
 }
