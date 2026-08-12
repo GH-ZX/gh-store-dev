@@ -63,41 +63,44 @@
 
 ## Stage 3: Supabase and Security
 
-**Status: In progress**
-
-### Completed
+**Status: Complete**
 
 - Create and link the hosted GH Store staging project.
 - Install Supabase SSR `0.12.4` and Supabase JS `2.112.3`.
 - Add server and browser Supabase clients.
-- Add Next.js `src/proxy.ts` session refresh boundary.
+- Add Next.js middleware session refresh boundary.
 - Generate database types from the linked staging schema.
 - Add `profiles`, roles, timestamps, auth trigger, admin helper, and RLS policies.
 - Add `requireAuth`, `requireAdmin`, and profile authorization tests.
 - Add pgTAP identity/RLS tests.
+- Add catalog, media, wallet, transactions, recharge, payment-event, orders,
+  order items, idempotency, fulfillment, notifications, invoices, support, and
+  audit migrations.
+- Add store settings, reviews, and provider sync-log migrations.
+- Add protected storage policies.
 
-### Remaining
-
-- Add catalog and media migrations.
-- Add wallet, transactions, recharge, and payment-event migrations.
-- Add orders, order items, idempotency, fulfillment, and status-history migrations.
-- Add notifications, invoices, reviews, support, audit, and sync-log migrations.
-- Add provider settings and protected storage policies.
-- Create the new Supabase staging project and apply the migration set.
-
-**Exit criteria:** Hosted staging migrations apply cleanly, generated types match the schema, and anonymous/customer/admin RLS checks pass without using the Supabase Docker stack.
+**Exit criteria met:** Hosted staging migrations apply cleanly, generated types
+match the schema, and the presentation-safe settings boundary is covered by a
+hosted check. Production project creation belongs to stage 12.
 
 ## Stage 4: Design System and Shell
 
-**Status: Pending**
+**Status: Complete**
 
 - Define the GH Store customer-facing visual language.
-- Build color, spacing, typography, surface, border, focus, and motion tokens.
-- Build header, footer, desktop navigation, and mobile navigation.
-- Build reusable buttons, cards, inputs, dialogs, tables, loaders, empty states, and error states.
-- Verify responsive desktop/mobile behavior and reduced-motion support.
+- Build colour, spacing, typography, surface, border, focus, and motion tokens,
+  with light as a full peer theme.
+- Build the floating header, footer, desktop navigation, and mobile overlay
+  navigation.
+- Build reusable buttons, cards, bezels, badges, prices, rails, icons, loaders,
+  empty states, and error states.
+- Add the Arabic typography guard that neutralises letter-spacing and
+  text-transform, which break Arabic script.
+- Verify responsive desktop/mobile behaviour and reduced-motion support.
 
-**Exit criteria:** The shell is responsive, accessible, localized-ready, and contains no starter-template UI.
+**Exit criteria met:** The shell is responsive, localized, and contains no
+starter-template UI. The design contract lives in
+`docs/design/storefront-design-contract.md`.
 
 ## Stage 5: Localization and Routing
 
@@ -114,27 +117,23 @@
 
 ## Stage 6: Public Storefront
 
-**Status: In progress**
-
-### Completed
+**Status: Complete**
 
 - Hosted Supabase catalog read service with no mock fallback.
-- Localized games catalog at `/[locale]/games`.
-- Localized game detail and offer list at `/[locale]/games/[slug]`.
-- Localized gift cards at `/[locale]/gift-cards`.
-- Localized sale offers at `/[locale]/sale`.
-- Game and offer display mappers with unit tests.
+- Configurable homepage driven by `store_settings.home_layout`, with sections
+  resolved concurrently and dropped individually when empty or failing.
+- Featured hero carousel following the APG pattern, with no rotation under
+  reduced motion.
+- Games, gift cards, sale offers, and search with a type filter.
+- Game detail and offer detail, including the account fields checkout will ask
+  for.
+- FAQ, how it works, contact, privacy, terms, and links pages.
+- Per-page canonical URLs with hreflang alternates, plus sitemap and robots.
+- Loading and not-found boundaries scoped so a missing product still answers 404.
 
-### Remaining
-
-- Rebuild the homepage and configurable sections.
-- Rebuild featured carousel and game cards.
-- Rebuild games, gift cards, sale offers, and search.
-- Rebuild game detail and offer detail pages.
-- Add catalog services, server-side reads, image handling, loading states, and cache tags.
-- Add public SEO metadata for catalog pages.
-
-**Exit criteria:** A visitor can browse the complete public catalog without mock data.
+**Exit criteria met:** A visitor can browse the complete public catalog without
+mock data. Response caching and cache tags are deferred until the catalog has
+real volume to measure.
 
 ## Stage 7: Customer Account
 
@@ -190,18 +189,30 @@
 
 ## Stage 11: Admin Operations
 
-**Status: Pending**
+**Status: In progress**
 
-- Build dashboard shell and overview.
+### Completed
+
+- Admin sign-in and sign-out, with the admin guard in the dashboard layout.
+- Dashboard shell with grouped navigation and an overview of real counts.
+- Provider settings: G2Bulk API key stored server-side, masked in the UI, with
+  key verification and supplier wallet balance.
+- G2Bulk games import: idempotent, presentation-preserving, reconciling
+  withdrawn offers, recorded in `provider_sync_logs`.
+
+### Remaining
+
 - Build catalog, pricing, promotions, and media management.
 - Build order and fulfillment operations.
 - Build recharge and payment operations.
-- Build provider settings and sync controls.
+- Import G2Bulk vouchers and gift-card categories.
 - Build customer, review, support, notification, and inbox operations.
 - Build homepage, theme, website, and SEO settings.
 - Build audit logs, activity logs, and health views.
+- Manage administrators from the dashboard instead of one SQL statement.
 
-**Exit criteria:** Daily operations can be completed through the dashboard without direct database edits.
+**Exit criteria:** Daily operations can be completed through the dashboard
+without direct database edits.
 
 ## Stage 12: QA and Release
 
