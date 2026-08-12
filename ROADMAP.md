@@ -15,8 +15,8 @@
 | 2. Clean foundation | Complete | Next.js, OpenNext, CI, Vitest, and quality gates working |
 | 3. Supabase and security | In progress | Identity, SSR clients, proxy, generated types, RLS migration, and pgTAP tests working |
 | 4. Design system | Pending | New GH Store visual system and shell |
-| 5. Localization and routing | Pending | Arabic RTL, English LTR, route shell, metadata |
-| 6. Public storefront | Pending | Home, catalog, search, products, offers |
+| 5. Localization and routing | Complete | Arabic RTL, English LTR, route shell, locale-aware document metadata |
+| 6. Public storefront | In progress | Games, gift cards, sale, game detail, and offer data path are live; search and homepage sections remain |
 | 7. Customer account | Pending | Auth UI, profile, wallet, notifications |
 | 8. Commerce core | Pending | Cart, checkout, orders, invoices |
 | 9. G2Bulk fulfillment | Pending | Sync, top-ups, redeem codes, webhooks, reconciliation |
@@ -101,7 +101,7 @@
 
 ## Stage 5: Localization and Routing
 
-**Status: Pending**
+**Status: Complete**
 
 - Add Arabic default locale with RTL direction.
 - Add English locale with LTR direction.
@@ -110,11 +110,22 @@
 - Add canonical metadata, alternate language links, sitemap, and robots policy.
 - Add compatibility redirects for old route shapes.
 
-**Exit criteria:** Arabic and English render the same capabilities with correct direction, metadata, and navigation.
+**Exit criteria:** Arabic and English render the same current capabilities with correct document direction, locale-aware navigation, and route handling.
 
 ## Stage 6: Public Storefront
 
-**Status: Pending**
+**Status: In progress**
+
+### Completed
+
+- Hosted Supabase catalog read service with no mock fallback.
+- Localized games catalog at `/[locale]/games`.
+- Localized game detail and offer list at `/[locale]/games/[slug]`.
+- Localized gift cards at `/[locale]/gift-cards`.
+- Localized sale offers at `/[locale]/sale`.
+- Game and offer display mappers with unit tests.
+
+### Remaining
 
 - Rebuild the homepage and configurable sections.
 - Rebuild featured carousel and game cards.
