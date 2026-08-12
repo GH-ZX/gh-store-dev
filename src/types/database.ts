@@ -39,6 +39,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: unknown
+          new_values: Json | null
+          old_values: Json | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: unknown
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: unknown
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -88,6 +135,115 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fulfillment_attempts: {
+        Row: {
+          attempt_number: number
+          completed_at: string | null
+          created_at: string
+          delivered_payload: Json | null
+          error_code: string | null
+          error_message: string | null
+          external_order_id: string | null
+          id: string
+          idempotency_key: string | null
+          last_checked_at: string | null
+          order_item_id: string
+          provider: string
+          request_payload: Json
+          response_payload: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_number?: number
+          completed_at?: string | null
+          created_at?: string
+          delivered_payload?: Json | null
+          error_code?: string | null
+          error_message?: string | null
+          external_order_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          last_checked_at?: string | null
+          order_item_id: string
+          provider: string
+          request_payload?: Json
+          response_payload?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_number?: number
+          completed_at?: string | null
+          created_at?: string
+          delivered_payload?: Json | null
+          error_code?: string | null
+          error_message?: string | null
+          external_order_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          last_checked_at?: string | null
+          order_item_id?: string
+          provider?: string
+          request_payload?: Json
+          response_payload?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fulfillment_attempts_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fulfillment_events: {
+        Row: {
+          external_event_id: string
+          fulfillment_attempt_id: string | null
+          id: string
+          payload: Json
+          processed_at: string | null
+          processing_error: string | null
+          provider: string
+          received_at: string
+          status: string | null
+        }
+        Insert: {
+          external_event_id: string
+          fulfillment_attempt_id?: string | null
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          provider: string
+          received_at?: string
+          status?: string | null
+        }
+        Update: {
+          external_event_id?: string
+          fulfillment_attempt_id?: string | null
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          provider?: string
+          received_at?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fulfillment_events_fulfillment_attempt_id_fkey"
+            columns: ["fulfillment_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "fulfillment_attempts"
             referencedColumns: ["id"]
           },
         ]
@@ -275,6 +431,147 @@ export type Database = {
           },
         ]
       }
+      idempotency_keys: {
+        Row: {
+          created_at: string
+          expires_at: string
+          key: string
+          operation: string
+          response_body: Json | null
+          response_status: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          key: string
+          operation: string
+          response_body?: Json | null
+          response_status?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          key?: string
+          operation?: string
+          response_body?: Json | null
+          response_status?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idempotency_keys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          created_at: string
+          currency: string
+          document_data: Json
+          entity_id: string
+          entity_type: string
+          id: string
+          invoice_number: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          document_data?: Json
+          entity_id: string
+          entity_type: string
+          id?: string
+          invoice_number?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          document_data?: Json
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          invoice_number?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body_ar: string
+          body_en: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          href: string | null
+          id: string
+          is_read: boolean
+          is_visible: boolean
+          notification_type: string
+          title_ar: string
+          title_en: string
+          user_id: string
+        }
+        Insert: {
+          body_ar: string
+          body_en: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          href?: string | null
+          id?: string
+          is_read?: boolean
+          is_visible?: boolean
+          notification_type: string
+          title_ar: string
+          title_en: string
+          user_id: string
+        }
+        Update: {
+          body_ar?: string
+          body_en?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          href?: string | null
+          id?: string
+          is_read?: boolean
+          is_visible?: boolean
+          notification_type?: string
+          title_ar?: string
+          title_en?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offers: {
         Row: {
           created_at: string
@@ -342,6 +639,145 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          created_at: string
+          dynamic_fields: Json
+          id: string
+          metadata: Json
+          name_ar_snapshot: string
+          name_en_snapshot: string
+          offer_id: string | null
+          order_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          dynamic_fields?: Json
+          id?: string
+          metadata?: Json
+          name_ar_snapshot: string
+          name_en_snapshot: string
+          offer_id?: string | null
+          order_id: string
+          quantity?: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          dynamic_fields?: Json
+          id?: string
+          metadata?: Json
+          name_ar_snapshot?: string
+          name_en_snapshot?: string
+          offer_id?: string | null
+          order_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          currency: string
+          customer_note: string | null
+          discount: number
+          id: string
+          metadata: Json
+          order_number: string
+          payment_attempt_id: string | null
+          payment_method: string | null
+          payment_status: string
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+          user_id: string
+          wallet_transaction_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          customer_note?: string | null
+          discount?: number
+          id?: string
+          metadata?: Json
+          order_number?: string
+          payment_attempt_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id: string
+          wallet_transaction_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          customer_note?: string | null
+          discount?: number
+          id?: string
+          metadata?: Json
+          order_number?: string
+          payment_attempt_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string
+          wallet_transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_payment_attempt_id_fkey"
+            columns: ["payment_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "payment_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_wallet_transaction_id_fkey"
+            columns: ["wallet_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -653,6 +1089,86 @@ export type Database = {
           },
           {
             foreignKeyName: "recharge_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string | null
+          sender_role: string
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          sender_role: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          sender_role?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "support_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_threads: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_threads_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
