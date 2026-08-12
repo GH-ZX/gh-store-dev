@@ -21,7 +21,7 @@
 | 8. Commerce core | Pending | Cart, checkout, orders, invoices |
 | 9. G2Bulk fulfillment | Pending | Sync, top-ups, redeem codes, webhooks, reconciliation |
 | 10. Payments | Pending | Manual recharge, Sam, SyriatelCash, Binance Pay |
-| 11. Admin operations | In progress | Dashboard shell, overview, admin sign-in, G2Bulk key and games import done; catalog editing, orders, payments, website settings remain |
+| 11. Admin operations | In progress | Sign-in, dashboard shell, overview, G2Bulk key, games and voucher imports, catalog editing, and website settings done; orders, payments, customers, reviews, and audit views remain |
 | 12. Release | Pending | QA, staging UAT, Cloudflare domain, production launch |
 
 ## Stage 0: Reset and Archive
@@ -196,19 +196,23 @@ real volume to measure.
 - Admin sign-in and sign-out, with the admin guard in the dashboard layout.
 - Dashboard shell with grouped navigation and an overview of real counts.
 - Provider settings: G2Bulk API key stored server-side, masked in the UI, with
-  key verification and supplier wallet balance.
-- G2Bulk games import: idempotent, presentation-preserving, reconciling
-  withdrawn offers, recorded in `provider_sync_logs`.
+  key verification and the supplier wallet balance in the header.
+- G2Bulk games import and gift-card/voucher import: idempotent,
+  presentation-preserving, reconciling withdrawn items, recorded in
+  `provider_sync_logs`.
+- Catalog editing: game list with search and filters, per-game bilingual fields,
+  artwork, carousel flags, publication, and per-package pricing.
+- Website settings: homepage section order, titles, and limits; social links;
+  contact channels; homepage SEO.
 
 ### Remaining
 
-- Build catalog, pricing, promotions, and media management.
 - Build order and fulfillment operations.
 - Build recharge and payment operations.
-- Import G2Bulk vouchers and gift-card categories.
 - Build customer, review, support, notification, and inbox operations.
-- Build homepage, theme, website, and SEO settings.
+- Build theme settings and per-page SEO beyond the homepage.
 - Build audit logs, activity logs, and health views.
+- Create games and offers by hand, and delete individual offers.
 - Manage administrators from the dashboard instead of one SQL statement.
 
 **Exit criteria:** Daily operations can be completed through the dashboard
