@@ -1,6 +1,7 @@
 import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
+import { safeFilterTerm } from "@/lib/supabase/filters";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { WalletTransaction, WalletTransactionType } from "@/lib/services/wallet.service";
 
@@ -63,7 +64,7 @@ export async function listAdminCustomers(options: { query?: string } = {}): Prom
   const term = options.query?.trim();
 
   if (term) {
-    const safe = term.replace(/[,()"'\\%_*]/g, " ").trim();
+    const safe = safeFilterTerm(term);
 
     if (safe) {
       request = request.or(

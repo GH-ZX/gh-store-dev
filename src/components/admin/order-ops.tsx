@@ -1,0 +1,136 @@
+"use client";
+
+import { useActionState } from "react";
+import { AdminCard, FormResult, TextAreaField } from "@/components/admin/admin-form";
+import { Button } from "@/components/ui/button";
+import { AlertIcon } from "@/components/ui/icons";
+import type { Locale } from "@/i18n/config";
+import type { AdminMessages } from "@/i18n/messages";
+import {
+  INITIAL_ORDER_OP_STATE,
+  type OrderOpState,
+} from "@/app/[locale]/dashboard/orders/action-state";
+import {
+  markDeliveredAction,
+  retryFulfillmentAction,
+} from "@/app/[locale]/dashboard/orders/actions";
+
+type Messages = AdminMessages["orders"];
+type ErrorKey = keyof Messages["errors"];
+type OutcomeKey = keyof Messages["retryOutcomes"];
+
+function resolveError(messages: Messages, key: string | null): string | null {
+  return key ? (messages.errors[key as ErrorKey] ?? messages.errors.unknown) : null;
+}
+
+export type OrderOpsProps = {
+  locale: Locale;
+  messages: Messages;
+  orderId: string;
+  /** True once the order is completed, refunded, or cancelled. */
+  settled: boolean;
+};
+
+/**
+ * The two ways an operator can move a stuck order.
+ *
+ * Each is its own form, so a stray Enter in the hand-delivery note can never
+ * submit a retry, and each keeps its own result banner — after pressing one, the
+ * operator should not have to work out which of the two the message belongs to.
+ *
+ * A settled order shows the panel with an explanation and no buttons. The server
+ * refuses these operations on a settled order regardless; hiding the controls
+ * means the refusal is read before the click rather than after it.
+ */
+export function OrderOps({ locale, messages, orderId, settled }: OrderOpsProps) {
+  const [retryState, retry, retrying] = useActionState<OrderOpState, FormData>(
+    retryFulfillmentAction,
+    INITIAL_ORDER_OP_STATE,
+  );
+  const [deliverState, deliver, delivering] = useActionState<OrderOpState, FormData>(
+    markDeliveredAction,
+    INITIAL_ORDER_OP_STATE,
+  );
+
+  const busy = retrying || delivering;
+
+  /*
+   * A retry reports what the supplier actually did, not just "done" — an order
+   * that came back "processing" still needs watching. An outcome the copy does
+   * not cover falls back to the processing wording, which asks the operator to
+   * refresh and look, rather than claiming a success or a failure we cannot see.
+   */
+  const retryNotice =
+    retryState.notice === "retried"
+      ? (messages.retryOutcomes[retryState.outcome as OutcomeKey] ??
+        messages.retryOutcomes.processing)
+      : null;
+
+  return (
+    <AdminCard title={messages.opsTitle} description={messages.opsDescription}>
+      {settled ? (
+        <p
+          className="flex items-start gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm leading-6 text-[var(--ink-muted)]"
+          role="note"
+        >
+          <AlertIcon className="mt-0.5 size-4 shrink-0 text-[var(--ink-faint)]" />
+          {messages.opsSettled}
+        </p>
+      ) : (
+        <div className="grid gap-6">
+          <form action={retry} className="grid gap-3">
+            <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="orderId" value={orderId} />
+
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--ink)]">{messages.retryTitle}</h3>
+              <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+                {messages.retryDescription}
+              </p>
+            </div>
+
+            <div>
+              <Button type="submit" disabled={busy}>
+                {messages.retryAction}
+              </Button>
+            </div>
+
+            <FormResult error={resolveError(messages, retryState.error)} notice={retryNotice} />
+          </form>
+
+          <form action={deliver} className="grid gap-3 border-t border-[var(--line)] pt-6">
+            <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="orderId" value={orderId} />
+
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--ink)]">{messages.deliverTitle}</h3>
+              <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+                {messages.deliverDescription}
+              </p>
+            </div>
+
+            <TextAreaField
+              label={messages.deliverNoteLabel}
+              hint={messages.deliverNoteHint}
+              name="note"
+              required
+              minLength={3}
+              maxLength={280}
+            />
+
+            <div>
+              <Button type="submit" variant="secondary" disabled={busy}>
+                {messages.deliverAction}
+              </Button>
+            </div>
+
+            <FormResult
+              error={resolveError(messages, deliverState.error)}
+              notice={deliverState.notice === "marked_delivered" ? messages.markedDelivered : null}
+            />
+          </form>
+        </div>
+      )}
+    </AdminCard>
+  );
+}

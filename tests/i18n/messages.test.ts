@@ -2,7 +2,24 @@ import { describe, expect, it } from "vitest";
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { formatMessage, getMessages, type MessageNamespace } from "@/i18n/messages";
 
-const NAMESPACES: MessageNamespace[] = ["common", "catalog", "home", "search", "content"];
+/**
+ * Every namespace, not a chosen few.
+ *
+ * TypeScript already forces English to match the Arabic *shape*, so what these
+ * cases add is the part types cannot see: that no key was left as an empty
+ * string in either language.
+ */
+const NAMESPACES: MessageNamespace[] = [
+  "common",
+  "admin",
+  "account",
+  "catalog",
+  "checkout",
+  "home",
+  "recharge",
+  "search",
+  "content",
+];
 
 /** Flatten a dictionary into sorted `a.b[0].c` key paths for comparison. */
 function keyPaths(value: unknown, prefix = ""): string[] {
