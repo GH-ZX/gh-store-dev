@@ -21,6 +21,14 @@ import {
   type G2BulkGameServers,
   type G2BulkProduct,
 } from "@/providers/g2bulk/schemas";
+import {
+  checkPlayerSchema,
+  gameOrderSchema,
+  gameOrdersListSchema,
+  voucherDeliverySchema,
+  voucherPurchaseSchema,
+  type G2BulkGameOrder,
+} from "@/providers/g2bulk/fulfillment-schemas";
 
 /**
  * G2Bulk main API client.
@@ -60,6 +68,13 @@ type RequestOptions = {
    * nothing.
    */
   auth?: boolean;
+  /**
+   * 36-character UUID sent as `X-Idempotency-Key`. The provider replays the
+   * original response for 30 minutes, which is what makes retrying a purchase
+   * safe. A key of any other length is rejected outright, so it is validated
+   * before the request rather than after a charge.
+   */
+  idempotencyKey?: string;
 };
 
 type RawResponse = { status: number; json: unknown };
@@ -69,7 +84,7 @@ function delay(ms: number): Promise<void> {
 }
 
 export class G2BulkClient {
-  private readonly apiKey: string | null;
+  protected readonly apiKey: string | null;
 
   constructor({ apiKey }: G2BulkClientOptions) {
     this.apiKey = apiKey?.trim() || null;
@@ -79,8 +94,12 @@ export class G2BulkClient {
     return this.apiKey !== null;
   }
 
-  private async request(path: string, options: RequestOptions = {}): Promise<RawResponse> {
-    const { method = "GET", body, tolerate = [], auth = false } = options;
+  protected async request(path: string, options: RequestOptions = {}): Promise<RawResponse> {
+    const { method = "GET", body, tolerate = [], auth = false, idempotencyKey } = options;
+
+    if (idempotencyKey !== undefined && idempotencyKey.length !== 36) {
+      throw new G2BulkError("request", "An idempotency key must be exactly 36 characters.");
+    }
     let lastError: G2BulkError | null = null;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
@@ -88,6 +107,10 @@ export class G2BulkClient {
 
       if (auth && this.apiKey) {
         headers["X-API-Key"] = this.apiKey;
+      }
+
+      if (idempotencyKey) {
+        headers["X-Idempotency-Key"] = idempotencyKey;
       }
 
       if (body !== undefined) {
@@ -150,6 +173,24 @@ export class G2BulkClient {
     }
 
     throw lastError ?? new G2BulkError("network", "G2Bulk request failed");
+  }
+
+  /** POST to a documented public endpoint (no key). */
+  protected async publicRequest(path: string, body: unknown): Promise<RawResponse> {
+    return this.request(path, { method: "POST", body });
+  }
+
+  /** POST to an authenticated endpoint that spends money. */
+  protected async authorizedRequest(
+    path: string,
+    body: unknown,
+    idempotencyKey: string,
+  ): Promise<RawResponse> {
+    if (!this.apiKey) {
+      throw new G2BulkAuthError("No G2Bulk API key is configured.");
+    }
+
+    return this.request(path, { method: "POST", body, auth: true, idempotencyKey });
   }
 
   private async parse<T>(schema: z.ZodType<T>, path: string, json: unknown): Promise<T> {
@@ -237,4 +278,144 @@ function messageFrom(json: unknown): string | null {
   const message = (json as { message?: unknown }).message;
 
   return typeof message === "string" && message.trim() ? message.trim() : null;
+}
+
+/**
+ * Fulfilment calls.
+ *
+ * Kept separate from the catalogue reads above because these spend money. Each
+ * one requires the API key, and the two purchase calls carry a 36-character
+ * `X-Idempotency-Key` — the provider honours it for 30 minutes, which is what
+ * makes a retry safe.
+ */
+export class G2BulkFulfillmentClient extends G2BulkClient {
+  /** Validate a player before charging. A missing `valid` marker means invalid. */
+  async checkPlayer(input: {
+    game: string;
+    userId: string;
+    serverId?: string;
+    charname?: string;
+  }): Promise<{ valid: boolean; name: string | null }> {
+    const { json } = await this.publicRequest("/games/checkPlayerId", {
+      game: input.game,
+      user_id: input.userId,
+      ...(input.serverId ? { server_id: input.serverId } : {}),
+      ...(input.charname ? { charname: input.charname } : {}),
+    });
+
+    const parsed = checkPlayerSchema.safeParse(json);
+
+    if (!parsed.success) {
+      return { valid: false, name: null };
+    }
+
+    return {
+      valid: parsed.data.valid?.trim().toLowerCase() === "valid",
+      name: parsed.data.name ?? null,
+    };
+  }
+
+  async placeGameOrder(
+    code: string,
+    body: {
+      catalogue_name: string;
+      player_id: string;
+      server_id?: string;
+      charname?: string;
+      remark?: string;
+      callback_url?: string;
+    },
+    idempotencyKey: string,
+  ): Promise<G2BulkGameOrder> {
+    const { json } = await this.authorizedRequest(
+      `/games/${encodeURIComponent(code)}/order`,
+      body,
+      idempotencyKey,
+    );
+    const parsed = gameOrderSchema.safeParse(json);
+
+    if (!parsed.success) {
+      throw new G2BulkContractError(
+        `G2Bulk /games/:code/order returned an unexpected shape: ${parsed.error.issues[0]?.message}`,
+      );
+    }
+
+    return parsed.data;
+  }
+
+  /**
+   * Current state of one of our top-up orders.
+   *
+   * Read from the documented order list rather than the status endpoint, whose
+   * request and response the contract does not specify — and guessing a provider
+   * payload is exactly how a "delivered" is misread.
+   */
+  async findGameOrderStatus(externalOrderId: string): Promise<{ status: string; refunded: boolean } | null> {
+    const { json } = await this.request("/games/orders?page=1&limit=100", { auth: true });
+    const parsed = gameOrdersListSchema.safeParse(json);
+
+    if (!parsed.success) {
+      throw new G2BulkContractError("G2Bulk /games/orders returned an unexpected shape");
+    }
+
+    const match = parsed.data.orders.find(
+      (order) => String(order.order_id) === String(externalOrderId),
+    );
+
+    if (!match) {
+      return null;
+    }
+
+    return { status: match.status, refunded: match.is_refunded === true };
+  }
+
+  async purchaseVoucher(
+    productId: string,
+    quantity: number,
+    idempotencyKey: string,
+  ): Promise<z.infer<typeof voucherPurchaseSchema>> {
+    const { json } = await this.authorizedRequest(
+      `/products/${encodeURIComponent(productId)}/purchase`,
+      { quantity },
+      idempotencyKey,
+    );
+    const parsed = voucherPurchaseSchema.safeParse(json);
+
+    if (!parsed.success) {
+      throw new G2BulkContractError("G2Bulk purchase returned an unexpected shape");
+    }
+
+    return parsed.data;
+  }
+
+  /**
+   * Poll a pending voucher order.
+   *
+   * The documented codes carry the meaning: 200 delivered, 202 still processing,
+   * 410 terminal failure already refunded by the provider, 404 not ours.
+   */
+  async pollVoucherDelivery(
+    externalOrderId: string,
+  ): Promise<{ state: "delivered" | "processing" | "failed" | "missing"; items: string[] }> {
+    const { status, json } = await this.request(
+      `/orders/${encodeURIComponent(externalOrderId)}/delivery`,
+      { auth: true, tolerate: [202, 404, 410] },
+    );
+
+    if (status === 202) {
+      return { state: "processing", items: [] };
+    }
+
+    if (status === 410) {
+      return { state: "failed", items: [] };
+    }
+
+    if (status === 404) {
+      return { state: "missing", items: [] };
+    }
+
+    const parsed = voucherDeliverySchema.safeParse(json);
+
+    return { state: "delivered", items: parsed.success ? (parsed.data.delivery_items ?? []) : [] };
+  }
 }

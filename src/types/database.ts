@@ -1501,6 +1501,34 @@ export type Database = {
       get_home_layout: { Args: never; Returns: Json }
       get_public_store_settings: { Args: never; Returns: Json }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
+      place_wallet_order: {
+        Args: {
+          p_customer_note?: string
+          p_dynamic_fields: Json
+          p_idempotency_key: string
+          p_offer_id: string
+          p_quantity: number
+        }
+        Returns: {
+          balance: number
+          idempotent: boolean
+          order_id: string
+          order_number: string
+          total: number
+        }[]
+      }
+      refund_failed_order: {
+        Args: {
+          p_idempotency_key: string
+          p_order_id: string
+          p_reason: string
+        }
+        Returns: {
+          balance: number
+          idempotent: boolean
+          refunded: boolean
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
