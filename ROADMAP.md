@@ -24,6 +24,30 @@
 | 11. Admin operations | In progress | Sign-in, dashboard shell, overview, G2Bulk key, games and voucher imports, catalog editing, website settings, customers, recharges, and order operations done; reviews, support, audit views, and manual catalog creation remain |
 | 12. Release | Pending | QA, staging UAT, Cloudflare domain, production launch |
 
+## Working Rules
+
+**Copy from `echocore-store` first.** It is a working store: its provider calls,
+payment flows, edge functions, and admin screens have been used against the real
+Sam, G2Bulk, and IGDB APIs, and they handle cases a reading of the API docs does
+not reveal. Before building anything that touches a provider, read how echocore
+does it and take that behaviour.
+
+Diverge only where this stack requires it — Next.js App Router instead of Vite
+and React Router, server components and server actions instead of client fetches,
+TypeScript and RLS-first services instead of edge functions for everything — or
+where echocore has a defect worth not repeating. When the shape must change, keep
+the behaviour and say in a comment what was kept and why.
+
+Never edit `echocore-store`. It is read-only reference.
+
+**Prove provider behaviour, do not infer it.** Where a provider's response is in
+question, call the provider and look. A guess about what an API returns, written
+into a schema, becomes a silent empty screen.
+
+**Never swallow a provider failure.** A blank balance, an empty history, or a
+missing list must say why it is blank. An owner cannot tell "nothing here" from
+"the call failed" unless the screen says so, and the two need different actions.
+
 ## Stage 0: Reset and Archive
 
 **Status: Complete**

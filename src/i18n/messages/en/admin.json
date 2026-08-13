@@ -148,6 +148,8 @@
       "historyTitle": "Recent transfers",
       "historyDescription": "The last movements Sam reports on this wallet, whether or not they came from this store.",
       "historyEmpty": "Sam reports no movements on this wallet yet.",
+      "balanceUnavailable": "Balance unavailable",
+      "historyUnavailable": "Sam could not read this wallet's transfers",
       "historyIn": "In",
       "historyOut": "Out",
       "webhookTitle": "Payment callback",
@@ -174,7 +176,7 @@
         "not_found": "Sam could not find that wallet. Use “Show wallets” and pick one from the list.",
         "expired": "The invoice expired.",
         "validation": "Sam rejected the request. Check the identifier and currency.",
-        "provider": "Sam is unavailable right now. Try again shortly.",
+        "provider": "Sam listed your wallet but could not reach the wallet provider to read it. This is on Sam's side, not your setup — it usually clears on its own, and re-linking the wallet in your Sam dashboard is the next step if it does not.",
         "network": "Could not reach Sam. Check the connection.",
         "contract": "Sam replied unexpectedly. Check your Sam dashboard.",
         "unknown": "Could not complete that. Try again."

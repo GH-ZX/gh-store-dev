@@ -34,6 +34,14 @@ export type SamLinkedWallet = {
   label: string | null;
   identifier: string | null;
   balances: { currency: string; amount: number }[];
+  /**
+   * Why the balance is missing, as a message key.
+   *
+   * Separate from an empty list on purpose. Sam can list a wallet and then fail
+   * to read its balance — it proxies that call on to ShamCash — and "no balance
+   * shown" then means something the owner needs to know, not zero.
+   */
+  balanceError: string | null;
   /** True when this is the wallet the store has configured to receive money. */
   selected: boolean;
 };
@@ -42,7 +50,9 @@ export type SamOverview = {
   /** Null when no key is stored: nothing to report rather than an error. */
   wallets: SamLinkedWallet[] | null;
   transactions: SamWalletTransaction[];
-  /** A provider failure, as a message key. */
+  /** Why the history is missing, as a message key; null when it simply is empty. */
+  transactionsError: string | null;
+  /** A failure listing the wallets at all, as a message key. */
   error: string | null;
   /** Shown without its secret, which stays on the server. */
   callbackUrl: string;
@@ -86,10 +96,16 @@ function emptyOverview(callbackUrl: string, error: string | null): SamOverview {
   return {
     wallets: null,
     transactions: [],
+    transactionsError: null,
     error,
     callbackUrl,
     callbackReachability: checkCallbackUrl(callbackUrl),
   };
+}
+
+/** A failure Sam reported, reduced to a message key the panel can word. */
+function reason(error: unknown): string {
+  return error instanceof SamError ? error.kind : "unknown";
 }
 
 /**
@@ -141,13 +157,26 @@ async function loadFromSam(
       const stored =
         wallet.provider === "shamcash" ? credentials.shamcashIdentifier : credentials.syriatelIdentifier;
 
+      /*
+       * Listing a wallet and reading its balance are separate calls to Sam, and
+       * the second one fails on its own — it is passed through to ShamCash,
+       * which can be unreachable while Sam itself answers fine. The reason is
+       * kept rather than swallowed: a blank balance with no explanation reads as
+       * "this store is broken" when the truth is "Sam cannot reach your wallet".
+       */
+      const balance = wallet.identifier
+        ? await client
+            .getWalletBalance(wallet.provider, wallet.identifier)
+            .then((balances) => ({ balances, error: null as string | null }))
+            .catch((error: unknown) => ({ balances: [], error: reason(error) }))
+        : { balances: [], error: "wallet" as string | null };
+
       return {
         provider: wallet.provider,
         label: wallet.label,
         identifier: wallet.identifier,
-        balances: wallet.identifier
-          ? await client.getWalletBalance(wallet.provider, wallet.identifier).catch(() => [])
-          : [],
+        balances: balance.balances,
+        balanceError: balance.error,
         selected: stored
           ? resolveSamWallet(linked, wallet.provider, stored)?.identifier === wallet.identifier
           : false,
@@ -165,16 +194,24 @@ async function loadFromSam(
     (wallet): wallet is SamLinkedWallet & { identifier: string } => Boolean(wallet.identifier),
   );
 
-  const transactions = (
-    await Promise.all(
-      targets.map((wallet) =>
-        client.listWalletTransactions(wallet.provider, wallet.identifier).catch(() => []),
-      ),
-    )
-  )
-    .flat()
-    .sort(byNewest)
-    .slice(0, TRANSACTION_LIMIT);
+  const histories = await Promise.all(
+    targets.map((wallet) =>
+      client
+        .listWalletTransactions(wallet.provider, wallet.identifier)
+        .then((items) => ({ items, error: null as string | null }))
+        .catch((error: unknown) => ({ items: [] as SamWalletTransaction[], error: reason(error) })),
+    ),
+  );
 
-  return { ...base, wallets, transactions };
+  return {
+    ...base,
+    wallets,
+    transactions: histories
+      .flatMap((history) => history.items)
+      .sort(byNewest)
+      .slice(0, TRANSACTION_LIMIT),
+    // The first reason is enough: the owner needs to know it failed and why, not
+    // once per wallet.
+    transactionsError: histories.find((history) => history.error)?.error ?? null,
+  };
 }

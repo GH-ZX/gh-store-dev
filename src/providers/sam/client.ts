@@ -398,7 +398,9 @@ export class SamClient {
     const parsed = transactionsSchema.safeParse(json);
 
     if (!parsed.success) {
-      return [];
+      // Not an empty history: an empty history and an unreadable reply look the
+      // same on screen, and only one of them is the owner's problem to act on.
+      throw new SamError("contract", "Sam API returned an unreadable transaction list.");
     }
 
     return parsed.data.map((entry, index) => {
@@ -427,7 +429,7 @@ export class SamClient {
     const parsed = balancesSchema.safeParse(json);
 
     if (!parsed.success) {
-      return [];
+      throw new SamError("contract", "Sam API returned an unreadable balance.");
     }
 
     return parsed.data.flatMap((entry) => {

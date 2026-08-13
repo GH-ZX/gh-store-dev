@@ -207,20 +207,31 @@ export function SamSettingsForm({ locale, messages, status, overview }: SamSetti
                     <p className="text-[0.6875rem] text-[var(--ink-faint)]">
                       {messages.balanceLabel}
                     </p>
-                    <div className="mt-0.5 grid gap-0.5" dir="ltr">
-                      {wallet.balances.length === 0 ? (
-                        <span className="text-sm text-[var(--ink-muted)]">—</span>
-                      ) : (
-                        wallet.balances.map((balance) => (
-                          <span
-                            key={balance.currency}
-                            className="text-sm font-semibold text-[var(--ink)] tabular-nums"
-                          >
-                            {formatPrice(balance.amount, balance.currency, locale)}
-                          </span>
-                        ))
-                      )}
-                    </div>
+                    {wallet.balanceError ? (
+                      <div className="mt-0.5 max-w-[16rem]">
+                        <p className="text-xs font-semibold text-[var(--warning)]">
+                          {messages.balanceUnavailable}
+                        </p>
+                        <p className="mt-0.5 text-[0.6875rem] leading-4 text-[var(--ink-muted)]">
+                          {resolveError(messages, wallet.balanceError)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-0.5 grid gap-0.5" dir="ltr">
+                        {wallet.balances.length === 0 ? (
+                          <span className="text-sm text-[var(--ink-muted)]">—</span>
+                        ) : (
+                          wallet.balances.map((balance) => (
+                            <span
+                              key={balance.currency}
+                              className="text-sm font-semibold text-[var(--ink)] tabular-nums"
+                            >
+                              {formatPrice(balance.amount, balance.currency, locale)}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -248,7 +259,16 @@ export function SamSettingsForm({ locale, messages, status, overview }: SamSetti
             {messages.historyDescription}
           </p>
 
-          {overview.transactions.length === 0 ? (
+          {overview.transactionsError ? (
+            <div className="mt-4 rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-4 py-3">
+              <p className="text-sm font-semibold text-[var(--ink)]">
+                {messages.historyUnavailable}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
+                {resolveError(messages, overview.transactionsError)}
+              </p>
+            </div>
+          ) : overview.transactions.length === 0 ? (
             <p className="mt-4 text-sm text-[var(--ink-muted)]">{messages.historyEmpty}</p>
           ) : (
             <ul className="mt-4 grid gap-2">
