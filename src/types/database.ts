@@ -1212,6 +1212,84 @@ export type Database = {
           },
         ]
       }
+      sam_invoices: {
+        Row: {
+          amount: number
+          charge_amount: number | null
+          charge_currency: string | null
+          created_at: string
+          credited_at: string | null
+          currency: string
+          expires_at: string | null
+          id: string
+          paid_at: string | null
+          payment_method: string
+          payment_url: string | null
+          provider_payload: Json
+          recharge_request_id: string
+          sam_invoice_id: string
+          status: string
+          transaction_ref: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          charge_amount?: number | null
+          charge_currency?: string | null
+          created_at?: string
+          credited_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          paid_at?: string | null
+          payment_method: string
+          payment_url?: string | null
+          provider_payload?: Json
+          recharge_request_id: string
+          sam_invoice_id: string
+          status?: string
+          transaction_ref?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          charge_amount?: number | null
+          charge_currency?: string | null
+          created_at?: string
+          credited_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          paid_at?: string | null
+          payment_method?: string
+          payment_url?: string | null
+          provider_payload?: Json
+          recharge_request_id?: string
+          sam_invoice_id?: string
+          status?: string
+          transaction_ref?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sam_invoices_recharge_request_id_fkey"
+            columns: ["recharge_request_id"]
+            isOneToOne: false
+            referencedRelation: "recharge_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sam_invoices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_settings: {
         Row: {
           contact: Json
@@ -1491,6 +1569,21 @@ export type Database = {
           idempotent: boolean
         }[]
       }
+      credit_sam_invoice: {
+        Args: {
+          p_charge_currency?: string
+          p_paid_amount?: number
+          p_payload?: Json
+          p_sam_invoice_id: string
+          p_transaction_ref?: string
+        }
+        Returns: {
+          balance: number
+          credited: number
+          idempotent: boolean
+          status: string
+        }[]
+      }
       credit_wallet: {
         Args: {
           p_amount: number
@@ -1523,12 +1616,31 @@ export type Database = {
           wallet_id: string
         }[]
       }
+      fail_sam_invoice: {
+        Args: { p_payload?: Json; p_sam_invoice_id: string; p_status?: string }
+        Returns: {
+          status: string
+        }[]
+      }
       get_home_layout: { Args: never; Returns: Json }
       get_public_store_settings: { Args: never; Returns: Json }
       get_recharge_methods: { Args: never; Returns: Json }
+      get_sam_payment_options: { Args: never; Returns: Json }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
       mark_recharge_paid: {
         Args: { p_request_id: string }
+        Returns: {
+          status: string
+        }[]
+      }
+      mark_sam_invoice_paid: {
+        Args: {
+          p_charge_currency?: string
+          p_paid_amount?: number
+          p_payload?: Json
+          p_sam_invoice_id: string
+          p_transaction_ref?: string
+        }
         Returns: {
           status: string
         }[]

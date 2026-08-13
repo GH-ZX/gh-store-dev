@@ -17,7 +17,7 @@ export default async function RechargesPage({
   const locale = await resolveLocaleParam(params);
   const messages = getMessages(locale, "admin").recharges;
   const rechargeCopy = getMessages(locale, "recharge");
-  const { open, settled, autoApprove, config } = await getRechargeQueues();
+  const { open, settled, config } = await getRechargeQueues();
 
   return (
     <div className="grid gap-8">
@@ -31,7 +31,6 @@ export default async function RechargesPage({
       <RechargeSettingsForm
         locale={locale}
         messages={messages}
-        autoApprove={autoApprove}
         minAmount={config.minAmount}
         maxAmount={config.maxAmount}
       />

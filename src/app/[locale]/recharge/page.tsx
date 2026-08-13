@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RechargeForm } from "@/components/recharge/recharge-form";
+import { SamTopUpForm } from "@/components/recharge/sam-topup-form";
 import { EmptyState } from "@/components/shared/states";
 import { AdminCard } from "@/components/admin/admin-form";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { getMessages } from "@/i18n/messages";
 import { formatPrice } from "@/lib/format/money";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getMyRechargeRequests, getRechargeConfig } from "@/lib/services/recharge.service";
+import { getSamPaymentOptions } from "@/lib/services/sam-recharge.service";
 import { getSessionSummary } from "@/lib/services/session.service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -27,7 +29,11 @@ export default async function RechargePage({ params }: PageProps<"/[locale]/rech
     redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/recharge`)}`);
   }
 
-  const [config, requests] = await Promise.all([getRechargeConfig(), getMyRechargeRequests()]);
+  const [config, requests, sam] = await Promise.all([
+    getRechargeConfig(),
+    getMyRechargeRequests(),
+    getSamPaymentOptions(),
+  ]);
   const hasMethods = config.methods.some((method) => method.enabled);
 
   return (
@@ -51,17 +57,39 @@ export default async function RechargePage({ params }: PageProps<"/[locale]/rech
       />
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
-        <AdminCard title={messages.title}>
+        <div className="grid gap-6">
+          {/*
+            * Instant first: it is the only route where a payment credits without
+            * waiting for the owner, so burying it under a manual form would push
+            * customers towards the slower path.
+            */}
+          {sam.enabled ? (
+            <AdminCard title={messages.sam.title} description={messages.sam.description}>
+              <SamTopUpForm
+                locale={locale}
+                messages={messages}
+                methods={sam.methods}
+                minAmount={config.minAmount}
+                maxAmount={config.maxAmount}
+                currency={config.currency}
+              />
+            </AdminCard>
+          ) : null}
+
           {hasMethods ? (
-            <RechargeForm locale={locale} messages={messages} config={config} />
-          ) : (
-            <EmptyState
-              icon={<WalletIcon />}
-              title={messages.noMethodsTitle}
-              description={messages.noMethodsDescription}
-            />
+            <AdminCard title={messages.title}>
+              <RechargeForm locale={locale} messages={messages} config={config} />
+            </AdminCard>
+          ) : sam.enabled ? null : (
+            <AdminCard title={messages.title}>
+              <EmptyState
+                icon={<WalletIcon />}
+                title={messages.noMethodsTitle}
+                description={messages.noMethodsDescription}
+              />
+            </AdminCard>
           )}
-        </AdminCard>
+        </div>
 
         <AdminCard title={messages.requestsTitle} description={messages.requestsDescription}>
           {requests.length === 0 ? (

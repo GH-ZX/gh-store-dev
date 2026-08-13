@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { AdminCard, CheckboxField, FormResult, TextField } from "@/components/admin/admin-form";
+import { AdminCard, FormResult, TextField } from "@/components/admin/admin-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertIcon } from "@/components/ui/icons";
@@ -133,22 +133,25 @@ export function RechargeReviewCard({
 }
 
 /**
- * Automatic crediting.
+ * Limits for manual top-up requests.
  *
- * The warning is not decoration. A manual method carries no proof that money
- * arrived, so turning this on lets anyone credit themselves for free. It is off
- * unless the owner deliberately enables it.
+ * There is no automatic-crediting switch here on purpose. A manual transfer
+ * carries no proof that money arrived — a customer saying they sent it is a
+ * claim — so every manual request is reviewed, and the panel says so rather than
+ * offering a toggle that would let anyone fund themselves for free.
+ *
+ * Automatic crediting exists only for Sam API payments, where the server can ask
+ * the provider whether the transfer really happened. That switch lives with the
+ * Sam API settings on the APIs page.
  */
 export function RechargeSettingsForm({
   locale,
   messages,
-  autoApprove,
   minAmount,
   maxAmount,
 }: {
   locale: Locale;
   messages: Messages;
-  autoApprove: boolean;
   minAmount: number;
   maxAmount: number;
 }) {
@@ -159,30 +162,20 @@ export function RechargeSettingsForm({
 
   return (
     <AdminCard
-      title={messages.autoTitle}
-      description={messages.autoDescription}
-      actions={
-        <Badge tone={autoApprove ? "warning" : "neutral"}>
-          {autoApprove ? messages.autoOn : messages.autoOff}
-        </Badge>
-      }
+      title={messages.limitsTitle}
+      description={messages.limitsDescription}
+      actions={<Badge tone="neutral">{messages.reviewAlways}</Badge>}
     >
       <form action={formAction} className="grid gap-4">
         <input type="hidden" name="locale" value={locale} />
 
         <p
-          className="flex items-start gap-2 rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--warning)_35%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-4 py-3 text-sm leading-6 text-[var(--warning)]"
+          className="flex items-start gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm leading-6 text-[var(--ink-muted)]"
           role="note"
         >
-          <AlertIcon className="mt-0.5 size-4 shrink-0" />
-          {messages.autoWarning}
+          <AlertIcon className="mt-0.5 size-4 shrink-0 text-[var(--ink-faint)]" />
+          {messages.manualReviewNote}
         </p>
-
-        <CheckboxField
-          label={messages.autoEnableLabel}
-          name="autoApprove"
-          defaultChecked={autoApprove}
-        />
 
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
@@ -211,12 +204,12 @@ export function RechargeSettingsForm({
 
         <FormResult
           error={resolveError(messages, state.error)}
-          notice={state.notice === "auto_saved" ? messages.autoSaved : null}
+          notice={state.notice === "auto_saved" ? messages.limitsSaved : null}
         />
 
         <div>
           <Button type="submit" disabled={pending}>
-            {messages.autoSaveAction}
+            {messages.limitsSaveAction}
           </Button>
         </div>
       </form>

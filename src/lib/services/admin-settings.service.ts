@@ -8,6 +8,14 @@ import {
   type G2BulkCredentials,
   type G2BulkStatus,
 } from "@/lib/settings/provider-settings";
+import {
+  mergeSamSettings,
+  readSamCredentials,
+  toSamStatus,
+  type SamCredentials,
+  type SamSettingsUpdate,
+  type SamStatus,
+} from "@/lib/settings/sam-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
@@ -73,6 +81,40 @@ export async function saveG2BulkSettings(update: {
   }
 
   return toG2BulkStatus(data.providers);
+}
+
+export async function getSamStatus(): Promise<SamStatus> {
+  await requireAdmin();
+
+  return toSamStatus(await readProviders());
+}
+
+/** Server-only: returns the plaintext Sam API key. Never pass the result to a client component. */
+export async function getSamCredentials(): Promise<SamCredentials> {
+  await requireAdmin();
+
+  return readSamCredentials(await readProviders());
+}
+
+export async function saveSamSettings(update: SamSettingsUpdate): Promise<SamStatus> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const providers = await readProviders();
+  const next = mergeSamSettings(providers, update, new Date().toISOString());
+
+  const { data, error } = await supabase
+    .from("store_settings")
+    .update({ providers: next })
+    .eq("id", SETTINGS_ID)
+    .select("providers")
+    .single();
+
+  if (error) {
+    throw new Error(`Saving Sam API settings failed: ${error.message}`);
+  }
+
+  return toSamStatus(data.providers);
 }
 
 export type ProviderSyncLogEntry = {

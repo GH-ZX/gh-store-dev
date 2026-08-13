@@ -111,14 +111,3 @@ export function getMethodLabel(method: RechargeMethod, locale: Locale): string {
 export function getMethodInstructions(method: RechargeMethod, locale: Locale): string {
   return locale === "ar" ? method.instructionsAr : method.instructionsEn;
 }
-
-/** Whether a submitted request is credited without review. */
-export function readAutoApprove(payments: unknown): boolean {
-  if (!payments || typeof payments !== "object" || Array.isArray(payments)) {
-    return false;
-  }
-
-  // Absent means off. Automatic crediting on an unverified manual payment lets
-  // anyone fund themselves, so it must never be the default.
-  return (payments as { recharge_auto_approve?: unknown }).recharge_auto_approve === true;
-}

@@ -137,8 +137,54 @@ adjustment that would leave a negative balance is refused.
 
 ### How customers add balance
 
-**Not built yet.** Right now only you can credit an account, from the page above.
-Customer-facing recharge is the next piece of work.
+Two routes, and the difference between them is the whole point.
+
+**Manual transfer — always waits for you.** You publish a payment method (a
+ShamCash number, for example) on **Dashboard → طلبات التعبئة**, along with the
+smallest and largest amount you accept. A customer submits a request, gets a
+reference like `RC-1F4B82249B`, and sends the money. Nothing is credited until you
+press approve. There is deliberately **no** setting to credit these
+automatically: a customer typing "I sent it" is a claim, not evidence, so
+switching that on would let anyone fund themselves for free.
+
+**Sam API — credits itself, because the money can be proved.** Set this up on
+**Dashboard → واجهات الـ APIs**. The customer presses تعبئة المحفظة, chooses an
+amount, and transfers to *your* ShamCash or Syriatel wallet through Sam. The
+server then asks Sam whether that transfer actually arrived, and only credits when
+Sam confirms it — for at least the amount invoiced, in the currency it was billed
+in. This is the one place in the store where money is credited without you.
+
+If you would rather see every payment first, tick **راجع كل دفعة بنفسي قبل إضافة
+الرصيد** in the Sam settings. A confirmed payment then lands in
+**Dashboard → طلبات التعبئة** as *processing*, with the payment already evidenced,
+and waits for your approval like a manual one.
+
+#### Setting up Sam API
+
+1. **Dashboard → واجهات الـ APIs** → the Sam API card.
+2. Paste your Sam key and save. The key is stored on the server and never shown
+   again — only its last four characters, so you can tell which key is saved.
+3. Press **اعرض المحافظ**. This proves the key works and lists the wallets linked
+   to your Sam account, with their balances.
+4. Copy the identifier of the wallet that should receive customers' money into the
+   matching field and save.
+5. Choose whether customers are billed in dollars or Syrian pounds. Pounds need an
+   exchange rate; their wallet is credited in dollars either way.
+
+You never have to configure a callback URL anywhere: it is sent to Sam with each
+invoice, carrying a secret this store generates and never displays.
+
+#### What protects the money here
+
+- The function that credits a Sam payment can only be called by the server. A
+  signed-in customer calling it directly gets `permission denied`.
+- The paid amount is compared against the amount billed. An underpayment is
+  refused rather than credited in full.
+- A payment is credited to the account recorded when the invoice was created,
+  never to whoever the provider's message names.
+- A repeated confirmation credits once. So does a repeated approval.
+- One wallet transaction reference cannot settle two invoices.
+- An invoice already closed as failed or expired is never flipped to paid.
 
 ---
 
@@ -233,7 +279,7 @@ page says exactly this.
 
 ## 10. Not built yet
 
-- Customer-facing recharge (ShamCash, SyriatelCash, Sam API, Binance Pay)
+- Binance Pay
 - Invoices as downloadable documents
 - Notifications page
 - Review moderation

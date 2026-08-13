@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { ForbiddenError, requireAdmin } from "@/lib/auth/guards";
-import { formFlag, formText } from "@/lib/forms/form-data";
+import { formText } from "@/lib/forms/form-data";
 import {
   approveRecharge,
   RechargeForbiddenError,
@@ -25,7 +25,6 @@ const reviewSchema = z.object({
 });
 
 const settingsSchema = z.object({
-  autoApprove: z.boolean(),
   minAmount: z.coerce.number().positive().max(100_000),
   maxAmount: z.coerce.number().positive().max(100_000),
   locale: z.string().optional(),
@@ -123,7 +122,6 @@ export async function saveRechargeSettingsAction(
   await requireAdmin();
 
   const parsed = settingsSchema.safeParse({
-    autoApprove: formFlag(formData, "autoApprove"),
     minAmount: formText(formData, "minAmount"),
     maxAmount: formText(formData, "maxAmount"),
     locale: formText(formData, "locale"),
@@ -139,7 +137,6 @@ export async function saveRechargeSettingsAction(
 
   try {
     await saveRechargeSettings({
-      autoApprove: parsed.data.autoApprove,
       minAmount: parsed.data.minAmount,
       maxAmount: parsed.data.maxAmount,
     });

@@ -1,21 +1,19 @@
 import "server-only";
 
 import { requireAuth } from "@/lib/auth/guards";
-import {
-  normalizeRechargeConfig,
-  readAutoApprove,
-  type RechargeConfig,
-} from "@/lib/settings/recharge-settings";
+import { normalizeRechargeConfig, type RechargeConfig } from "@/lib/settings/recharge-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 
 /**
- * Customer-facing recharge.
+ * Customer-facing recharge by a manual method.
  *
- * A request is a claim, not money: submitting one credits nothing. Crediting is
- * either an admin decision or — when the owner has turned automatic crediting on
- * — a decision this module makes with service authority. The customer's session
- * is never able to credit, including their own request.
+ * A request is a claim, not money: submitting one credits nothing, ever. Someone
+ * saying they sent a transfer is not evidence that they did, so a manual request
+ * is only ever credited by the owner approving it in the dashboard.
+ *
+ * Automatic crediting belongs to the Sam API path instead — see
+ * `sam-recharge.service.ts` — where the server can ask the payment provider
+ * whether the money actually arrived.
  */
 
 export type RechargeRequestStatus =
@@ -138,50 +136,7 @@ export async function submitRechargeRequest(input: {
     return { ok: false, reason: "unknown" };
   }
 
-  const credited = await maybeAutoCredit(data.request_id);
-
-  return { ok: true, requestId: data.request_id, reference: data.reference, credited };
-}
-
-/**
- * Credit immediately when the owner has asked for it.
- *
- * Deliberately a server decision using service authority: the crediting function
- * is not granted to `authenticated`, so a customer cannot reach it even by
- * calling the RPC directly.
- *
- * A manual method proves nothing about whether money arrived, so this only runs
- * when the owner has explicitly turned it on, having been warned in the
- * dashboard.
- */
-async function maybeAutoCredit(requestId: string): Promise<boolean> {
-  if (!hasServiceRoleKey()) {
-    return false;
-  }
-
-  const service = createSupabaseServiceClient();
-  const { data: settings } = await service
-    .from("store_settings")
-    .select("payments")
-    .eq("id", "global")
-    .maybeSingle();
-
-  if (!readAutoApprove(settings?.payments)) {
-    return false;
-  }
-
-  /*
-   * `p_credit_amount` omitted means "credit exactly what was requested", and
-   * there is no admin actor because the server made this call, not a person.
-   */
-  const { error } = await service.rpc("credit_recharge_request", {
-    p_request_id: requestId,
-    p_credit_amount: undefined,
-    p_note: "Credited automatically on submission",
-    p_actor: undefined,
-  });
-
-  return !error;
+  return { ok: true, requestId: data.request_id, reference: data.reference, credited: false };
 }
 
 export async function markRechargePaid(requestId: string): Promise<boolean> {

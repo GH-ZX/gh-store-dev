@@ -1,11 +1,7 @@
 import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
-import {
-  normalizeRechargeConfig,
-  readAutoApprove,
-  type RechargeConfig,
-} from "@/lib/settings/recharge-settings";
+import { normalizeRechargeConfig, type RechargeConfig } from "@/lib/settings/recharge-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 import type { RechargeRequestStatus } from "@/lib/services/recharge.service";
@@ -81,7 +77,6 @@ function toRequest(row: RequestRow): AdminRechargeRequest {
 export type RechargeQueues = {
   open: AdminRechargeRequest[];
   settled: AdminRechargeRequest[];
-  autoApprove: boolean;
   config: RechargeConfig;
 };
 
@@ -117,7 +112,6 @@ export async function getRechargeQueues(): Promise<RechargeQueues> {
   return {
     open: (open.data ?? []).map((row) => toRequest(row as unknown as RequestRow)),
     settled: (settled.data ?? []).map((row) => toRequest(row as unknown as RequestRow)),
-    autoApprove: readAutoApprove(settings.data?.payments),
     config: normalizeRechargeConfig({
       methods: (settings.data?.payments as { manual_methods?: unknown } | null)?.manual_methods,
       min_amount: (settings.data?.payments as { min_amount?: unknown } | null)?.min_amount,
@@ -210,11 +204,11 @@ export async function rejectRecharge(input: { requestId: string; note: string | 
 /**
  * Write recharge configuration.
  *
- * Merges into `payments` rather than replacing it, because that column will also
- * hold the Sam API credentials — a save here must never drop them.
+ * Merges into `payments` rather than replacing it, so a save here never drops a
+ * neighbouring key. There is no automatic-crediting setting: a manual request is
+ * always reviewed, and the Sam API switch lives in `providers.sam`.
  */
 export async function saveRechargeSettings(update: {
-  autoApprove?: boolean;
   methods?: {
     id: string;
     label_ar: string;
@@ -240,10 +234,6 @@ export async function saveRechargeSettings(update: {
     current?.payments && typeof current.payments === "object" && !Array.isArray(current.payments)
       ? { ...current.payments }
       : {};
-
-  if (update.autoApprove !== undefined) {
-    base.recharge_auto_approve = update.autoApprove;
-  }
 
   if (update.methods !== undefined) {
     base.manual_methods = update.methods;

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { G2BulkSettingsForm } from "@/components/admin/g2bulk-settings-form";
+import { SamSettingsForm } from "@/components/admin/sam-settings-form";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { ArrowIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
-import { getG2BulkStatus, getRecentSyncLogs } from "@/lib/services/admin-settings.service";
+import { getG2BulkStatus, getRecentSyncLogs, getSamStatus } from "@/lib/services/admin-settings.service";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -15,9 +16,11 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const locale = await resolveLocaleParam(params);
   const messages = getMessages(locale, "admin");
   const provider = messages.providers.g2bulk;
-  const [status, logs] = await Promise.all([
+  const sam = messages.providers.sam;
+  const [status, logs, samStatus] = await Promise.all([
     getG2BulkStatus(),
     getRecentSyncLogs(G2BULK_PROVIDER_NAME),
+    getSamStatus(),
   ]);
 
   return (
@@ -69,6 +72,33 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
 
         <div className="mt-8 border-t border-[var(--line)] pt-8">
           <G2BulkSettingsForm locale={locale} messages={provider} status={status} />
+        </div>
+      </section>
+
+      {/* Sam API is the customer-facing payment side, distinct from the supplier above. */}
+      <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-lg font-semibold text-[var(--ink)]">{sam.name}</h2>
+              <Badge tone={samStatus.configured ? "success" : "neutral"}>
+                {samStatus.configured ? sam.statusConfigured : sam.statusMissing}
+              </Badge>
+              {samStatus.configured && samStatus.manualReview ? (
+                <Badge tone="warning">{sam.manualReviewLabel}</Badge>
+              ) : null}
+            </div>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">{sam.summary}</p>
+            {samStatus.keyHint ? (
+              <p className="mt-3 text-xs text-[var(--ink-faint)]">
+                {sam.keyHintLabel}: <span dir="ltr">{samStatus.keyHint}</span>
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-8 border-t border-[var(--line)] pt-8">
+          <SamSettingsForm locale={locale} messages={sam} status={samStatus} />
         </div>
       </section>
 
