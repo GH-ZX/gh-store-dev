@@ -20,8 +20,8 @@
 | 7. Customer account | Pending | Auth UI, profile, wallet, notifications |
 | 8. Commerce core | Pending | Cart, checkout, orders, invoices |
 | 9. G2Bulk fulfillment | Pending | Sync, top-ups, redeem codes, webhooks, reconciliation |
-| 10. Payments | Pending | Manual recharge, Sam, SyriatelCash, Binance Pay |
-| 11. Admin operations | In progress | Sign-in, dashboard shell, overview, G2Bulk key, games and voucher imports, catalog editing, and website settings done; orders, payments, customers, reviews, and audit views remain |
+| 10. Payments | In progress | Manual recharge, Sam invoices, and SyriatelCash done; Binance Pay and admin reconciliation remain |
+| 11. Admin operations | In progress | Sign-in, dashboard shell, overview, G2Bulk key, games and voucher imports, catalog editing, website settings, customers, recharges, and order operations done; reviews, support, audit views, and manual catalog creation remain |
 | 12. Release | Pending | QA, staging UAT, Cloudflare domain, production launch |
 
 ## Stage 0: Reset and Archive
@@ -142,7 +142,10 @@ real volume to measure.
 - Build registration, login, logout, callback, and password recovery.
 - Build profile and account settings.
 - Build wallet balance and immutable transaction history.
-- Build notifications and customer inbox.
+- Build notifications and customer inbox. **Done:** delivery, failure, refund, and
+  top-up decisions reach the customer, with an unread count in the header. A
+  notification is written by the service client only, so nobody can invent one
+  for themselves, and a failed write can never fail the delivery it reports on.
 - Add ban/status handling where required by the reference behavior.
 
 **Exit criteria:** Customers can authenticate and access only their own profile, wallet, orders, and notifications.
@@ -175,15 +178,27 @@ real volume to measure.
 
 ## Stage 10: Payments and Recharge
 
-**Status: Pending**
+**Status: In progress**
 
-- Preserve manual ShamCash QR/pay-code recharge.
-- Add Sam API wallet discovery and invoice flow.
-- Add SyriatelCash support through the Sam provider boundary.
+### Completed
+
+- Manual ShamCash recharge, reviewed by the owner and never auto-credited.
+- Sam API wallet discovery, invoice creation, polling, and reference verification.
+- SyriatelCash and ShamCash both through the one Sam provider boundary.
+- Tokenized callback with constant-time comparison, re-checked against the stored
+  invoice for method, currency, and amount before any money moves. The payload's
+  figure is evidence, never an instruction.
+- Credit exactly once per payment, through a `service_role` RPC no customer
+  session can call; a replayed callback returns success without a second credit.
+- Sam operations panel: the linked wallets, their balances, and their recent
+  transfers are read on page load whenever a key is stored, so a saved key proves
+  itself immediately. Callback status is shown, and an address Sam cannot reach —
+  a local or plain-http one — is called out rather than failing silently.
+
+### Remaining
+
 - Add Binance Pay only behind explicit configuration.
-- Validate signed/tokenized callbacks and replay protection.
-- Credit the customer wallet exactly once per successful payment.
-- Add payment attempts, provider events, and admin reconciliation.
+- Add an admin reconciliation view over Sam invoices and payment events.
 
 **Exit criteria:** Every payment state maps to one auditable wallet result.
 
@@ -204,12 +219,24 @@ real volume to measure.
   artwork, carousel flags, publication, and per-package pricing.
 - Website settings: homepage section order, titles, and limits; social links;
   contact channels; homepage SEO.
+- Customers: search, balances, and audited wallet corrections through the
+  `admin_adjust_wallet` RPC rather than direct writes.
+- Recharges: the manual review queue, credited-amount entry, and request limits.
+  Manual transfers are never auto-credited, because a customer's claim that they
+  sent money is not proof that it arrived.
+- Orders and fulfilment: list filtered by status — including one "needs
+  attention" view for money taken and goods not out — searchable by order number
+  or customer, and a detail page showing purchase-time item snapshots, the
+  account fields the customer submitted, every delivery attempt with the
+  provider's raw request and response, and the wallet movements the order caused.
+- Order operations: retry a delivery, and record one completed by hand against a
+  required note. Both refuse a completed, refunded, or cancelled order in the
+  service as well as in the UI, because the cost of getting it wrong is giving
+  stock away.
 
 ### Remaining
 
-- Build order and fulfillment operations.
-- Build recharge and payment operations.
-- Build customer, review, support, notification, and inbox operations.
+- Build review, support, and notification-composing operations.
 - Build theme settings and per-page SEO beyond the homepage.
 - Build audit logs, activity logs, and health views.
 - Create games and offers by hand, and delete individual offers.
