@@ -7,6 +7,7 @@ import { ArrowIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
+import { getSamOverview } from "@/lib/services/admin-sam.service";
 import { getG2BulkStatus, getRecentSyncLogs, getSamStatus } from "@/lib/services/admin-settings.service";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 
@@ -17,10 +18,13 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const messages = getMessages(locale, "admin");
   const provider = messages.providers.g2bulk;
   const sam = messages.providers.sam;
-  const [status, logs, samStatus] = await Promise.all([
+  const [status, logs, samStatus, samOverview] = await Promise.all([
     getG2BulkStatus(),
     getRecentSyncLogs(G2BULK_PROVIDER_NAME),
     getSamStatus(),
+    // Reaches Sam when a key is stored, and answers with an error key rather
+    // than throwing, so a provider outage cannot take this page down.
+    getSamOverview(),
   ]);
 
   return (
@@ -98,7 +102,12 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
         </div>
 
         <div className="mt-8 border-t border-[var(--line)] pt-8">
-          <SamSettingsForm locale={locale} messages={sam} status={samStatus} />
+          <SamSettingsForm
+            locale={locale}
+            messages={sam}
+            status={samStatus}
+            overview={samOverview}
+          />
         </div>
       </section>
 

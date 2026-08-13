@@ -6,22 +6,26 @@ import { Button } from "@/components/ui/button";
 import { AlertIcon, CheckIcon, ShieldIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
+import { formatPrice } from "@/lib/format/money";
+import type { SamLinkedWallet, SamOverview } from "@/lib/services/admin-sam.service";
 import type { SamStatus } from "@/lib/settings/sam-settings";
 import {
   INITIAL_SAM_STATE,
   type SamActionState,
 } from "@/app/[locale]/dashboard/providers/sam-action-state";
 import {
+  refreshSamWalletsAction,
   saveSamSettingsAction,
-  testSamWalletsAction,
 } from "@/app/[locale]/dashboard/providers/sam-actions";
 
 /**
  * Sam API configuration.
  *
- * The order of the fields follows the order an owner has to do things in: put the
- * key in, list the wallets to find out what the identifiers are, paste the right
- * one in, then decide whether confirmed payments credit on their own.
+ * The wallets come first, because they are the answer to the only question an
+ * owner has after pasting a key: did it work? They are read on the server every
+ * time this page renders, so saving a key shows the wallet, its balance, and its
+ * recent transfers straight away rather than hiding them behind a button whose
+ * result vanished on the next render.
  *
  * The key field renders empty even when a key is stored — the saved secret is
  * represented by a masked tail only — so leaving it blank changes a wallet or the
@@ -31,11 +35,13 @@ export type SamSettingsFormProps = {
   locale: Locale;
   messages: AdminMessages["providers"]["sam"];
   status: SamStatus;
+  overview: SamOverview;
 };
 
-type ErrorKey = keyof AdminMessages["providers"]["sam"]["errors"];
+type Messages = AdminMessages["providers"]["sam"];
+type ErrorKey = keyof Messages["errors"];
 
-function resolveError(messages: AdminMessages["providers"]["sam"], key: string | null): string | null {
+function resolveError(messages: Messages, key: string | null): string | null {
   if (!key) {
     return null;
   }
@@ -46,24 +52,228 @@ function resolveError(messages: AdminMessages["providers"]["sam"], key: string |
 const fieldClass =
   "min-h-12 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 text-sm text-[var(--ink)] outline-none transition-colors duration-[var(--duration)] focus:border-[color-mix(in_srgb,var(--accent)_55%,transparent)]";
 
-export function SamSettingsForm({ locale, messages, status }: SamSettingsFormProps) {
+const cardClass = "rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5";
+
+/** A warning panel for a callback address Sam will never be able to call. */
+function CallbackWarning({ title, body }: { title: string; body: string }) {
+  return (
+    <div
+      role="note"
+      className="flex items-start gap-2.5 rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-4 py-3"
+    >
+      <AlertIcon className="mt-0.5 size-4 shrink-0 text-[var(--warning)]" />
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-[var(--ink)]">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+export function SamSettingsForm({ locale, messages, status, overview }: SamSettingsFormProps) {
   const [saveState, saveAction, saving] = useActionState<SamActionState, FormData>(
     saveSamSettingsAction,
     INITIAL_SAM_STATE,
   );
-  const [walletState, walletAction, testing] = useActionState<SamActionState, FormData>(
-    testSamWalletsAction,
+  const [refreshState, refreshAction, refreshing] = useActionState<SamActionState, FormData>(
+    refreshSamWalletsAction,
     INITIAL_SAM_STATE,
   );
 
   // Only relevant when invoicing in pounds, so the rate field follows the choice.
   const [currency, setCurrency] = useState(status.invoiceCurrency);
 
-  const error = resolveError(messages, saveState.error ?? walletState.error);
-  const wallets = walletState.wallets ?? [];
+  /*
+   * Controlled, so picking a wallet from the list below can fill them in. A
+   * ShamCash address is 32 characters of hex — exactly the kind of value that is
+   * mistyped when copied by hand, and a mistyped one fails as a customer's
+   * payment rather than as a form error.
+   */
+  const [shamcash, setShamcash] = useState(status.shamcashIdentifier ?? "");
+  const [syriatel, setSyriatel] = useState(status.syriatelIdentifier ?? "");
+
+  const error = resolveError(messages, saveState.error ?? refreshState.error ?? overview.error);
+  const wallets = overview.wallets;
+
+  // Not named `use…`: that prefix is reserved for hooks, and this is a click.
+  function fillIdentifier(wallet: SamLinkedWallet): void {
+    if (!wallet.identifier) {
+      return;
+    }
+
+    if (wallet.provider === "shamcash") {
+      setShamcash(wallet.identifier);
+    } else {
+      setSyriatel(wallet.identifier);
+    }
+  }
 
   return (
     <div className="grid gap-6">
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--danger)_35%,transparent)] bg-[var(--danger-surface)] px-4 py-3 text-sm leading-6 text-[var(--danger)]"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <section className={cardClass}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-[var(--ink)]">{messages.walletsTitle}</h3>
+            <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
+              {messages.walletsDescription}
+            </p>
+          </div>
+
+          {status.configured ? (
+            <form action={refreshAction}>
+              <input type="hidden" name="locale" value={locale} />
+              <Button
+                type="submit"
+                variant="secondary"
+                size="sm"
+                disabled={refreshing}
+                leadingIcon={<ShieldIcon />}
+              >
+                {messages.walletsRefresh}
+              </Button>
+            </form>
+          ) : null}
+        </div>
+
+        {wallets === null ? (
+          <p className="mt-4 text-sm leading-6 text-[var(--ink-muted)]">{messages.walletsNoKey}</p>
+        ) : wallets.length === 0 ? (
+          <p className="mt-4 flex items-start gap-2 text-sm leading-6 text-[var(--warning)]">
+            <AlertIcon className="mt-0.5 size-4 shrink-0" />
+            {messages.walletsEmpty}
+          </p>
+        ) : (
+          <ul className="mt-4 grid gap-2">
+            {wallets.map((wallet, index) => (
+              <li
+                key={`${wallet.provider}-${wallet.identifier ?? index}`}
+                className="rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-4 py-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone="neutral">
+                        {wallet.provider === "shamcash"
+                          ? messages.methodShamcash
+                          : messages.methodSyriatel}
+                      </Badge>
+                      {wallet.label ? (
+                        <span className="text-sm font-semibold text-[var(--ink)]">
+                          {wallet.label}
+                        </span>
+                      ) : null}
+                      {wallet.selected ? (
+                        <Badge tone="success" icon={<CheckIcon />}>
+                          {messages.walletSelected}
+                        </Badge>
+                      ) : null}
+                    </div>
+
+                    {/* The value the identifier field below needs. */}
+                    <p className="mt-1.5 truncate font-mono text-xs text-[var(--ink-muted)]" dir="ltr">
+                      {wallet.identifier ?? "—"}
+                    </p>
+                  </div>
+
+                  <div className="text-end">
+                    <p className="text-[0.6875rem] text-[var(--ink-faint)]">
+                      {messages.balanceLabel}
+                    </p>
+                    <div className="mt-0.5 grid gap-0.5" dir="ltr">
+                      {wallet.balances.length === 0 ? (
+                        <span className="text-sm text-[var(--ink-muted)]">—</span>
+                      ) : (
+                        wallet.balances.map((balance) => (
+                          <span
+                            key={balance.currency}
+                            className="text-sm font-semibold text-[var(--ink)] tabular-nums"
+                          >
+                            {formatPrice(balance.amount, balance.currency, locale)}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {wallet.identifier && !wallet.selected ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => fillIdentifier(wallet)}
+                  >
+                    {messages.walletUse}
+                  </Button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {wallets !== null && wallets.length > 0 ? (
+        <section className={cardClass}>
+          <h3 className="text-sm font-semibold text-[var(--ink)]">{messages.historyTitle}</h3>
+          <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
+            {messages.historyDescription}
+          </p>
+
+          {overview.transactions.length === 0 ? (
+            <p className="mt-4 text-sm text-[var(--ink-muted)]">{messages.historyEmpty}</p>
+          ) : (
+            <ul className="mt-4 grid gap-2">
+              {overview.transactions.map((transaction) => (
+                <li
+                  key={transaction.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-4 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={transaction.direction === "in" ? "success" : "neutral"}>
+                        {transaction.direction === "in" ? messages.historyIn : messages.historyOut}
+                      </Badge>
+                      {transaction.counterparty ? (
+                        <span className="truncate text-sm text-[var(--ink)]">
+                          {transaction.counterparty}
+                        </span>
+                      ) : null}
+                    </div>
+                    {transaction.occurredAt ? (
+                      <p
+                        className="mt-1 text-xs text-[var(--ink-faint)] tabular-nums"
+                        dir="ltr"
+                      >
+                        {transaction.occurredAt.slice(0, 16).replace("T", " ")}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <span
+                    className="text-sm font-semibold text-[var(--ink)] tabular-nums"
+                    dir="ltr"
+                  >
+                    {transaction.amount === null
+                      ? "—"
+                      : formatPrice(transaction.amount, transaction.currency ?? "USD", locale)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
       <form action={saveAction} className="grid gap-5">
         <input type="hidden" name="locale" value={locale} />
 
@@ -90,7 +300,8 @@ export function SamSettingsForm({ locale, messages, status }: SamSettingsFormPro
             <input
               type="text"
               name="shamcashIdentifier"
-              defaultValue={status.shamcashIdentifier ?? ""}
+              value={shamcash}
+              onChange={(event) => setShamcash(event.target.value)}
               autoComplete="off"
               spellCheck={false}
               dir="ltr"
@@ -105,7 +316,8 @@ export function SamSettingsForm({ locale, messages, status }: SamSettingsFormPro
             <input
               type="text"
               name="syriatelIdentifier"
-              defaultValue={status.syriatelIdentifier ?? ""}
+              value={syriatel}
+              onChange={(event) => setSyriatel(event.target.value)}
               autoComplete="off"
               spellCheck={false}
               dir="ltr"
@@ -183,6 +395,56 @@ export function SamSettingsForm({ locale, messages, status }: SamSettingsFormPro
           </label>
         </div>
 
+        <div className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-medium text-[var(--ink)]">{messages.webhookTitle}</h3>
+            {status.webhookConfigured ? (
+              <Badge tone="success" icon={<CheckIcon />}>
+                {messages.webhookReady}
+              </Badge>
+            ) : (
+              <Badge tone="warning">{messages.webhookMissing}</Badge>
+            )}
+          </div>
+
+          <p className="text-xs leading-5 text-[var(--ink-muted)]">{messages.webhookDescription}</p>
+
+          <p
+            className="overflow-x-auto rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-3 py-2 font-mono text-xs text-[var(--ink-soft)]"
+            dir="ltr"
+          >
+            {overview.callbackUrl}
+          </p>
+
+          {overview.callbackReachability === "local" ? (
+            <CallbackWarning title={messages.webhookLocalTitle} body={messages.webhookLocalBody} />
+          ) : null}
+
+          {overview.callbackReachability === "insecure" ||
+          overview.callbackReachability === "invalid" ? (
+            <CallbackWarning
+              title={messages.webhookInsecureTitle}
+              body={messages.webhookInsecureBody}
+            />
+          ) : null}
+
+          {status.webhookConfigured ? (
+            <label className="flex items-start gap-3 border-t border-[var(--line)] pt-3">
+              <input
+                type="checkbox"
+                name="regenerateSecret"
+                className="mt-0.5 size-4 accent-[var(--accent)]"
+              />
+              <span>
+                <span className="block text-sm text-[var(--ink)]">{messages.webhookRegenerate}</span>
+                <span className="mt-1 block text-xs leading-5 text-[var(--ink-muted)]">
+                  {messages.webhookRegenerateHelp}
+                </span>
+              </span>
+            </label>
+          ) : null}
+        </div>
+
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={saving}>
             {messages.saveAction}
@@ -194,79 +456,6 @@ export function SamSettingsForm({ locale, messages, status }: SamSettingsFormPro
           ) : null}
         </div>
       </form>
-
-      <form
-        action={walletAction}
-        className="grid gap-4 border-t border-[var(--line)] pt-6"
-      >
-        <input type="hidden" name="locale" value={locale} />
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="submit"
-            variant="secondary"
-            disabled={testing || !status.configured}
-            leadingIcon={<ShieldIcon />}
-          >
-            {messages.testAction}
-          </Button>
-          <span className="text-xs leading-5 text-[var(--ink-faint)]">{messages.testHelp}</span>
-        </div>
-
-        {walletState.notice === "wallets_loaded" ? (
-          wallets.length === 0 ? (
-            <p className="flex items-start gap-2 text-sm text-[var(--warning)]">
-              <AlertIcon className="mt-0.5 size-4 shrink-0" />
-              {messages.walletsEmpty}
-            </p>
-          ) : (
-            <ul className="grid gap-2">
-              {wallets.map((wallet, index) => (
-                <li
-                  key={`${wallet.provider}-${wallet.identifier ?? index}`}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge tone="neutral">
-                        {wallet.provider === "shamcash" ? messages.methodShamcash : messages.methodSyriatel}
-                      </Badge>
-                      {wallet.label ? (
-                        <span className="text-sm text-[var(--ink)]">{wallet.label}</span>
-                      ) : null}
-                    </div>
-                    {/* The value to paste into the field above. */}
-                    <p className="mt-1.5 truncate font-mono text-xs text-[var(--ink-muted)]" dir="ltr">
-                      {wallet.identifier ?? "—"}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 text-xs text-[var(--ink-muted)] tabular-nums" dir="ltr">
-                    {wallet.balances.length === 0 ? (
-                      <span>—</span>
-                    ) : (
-                      wallet.balances.map((balance) => (
-                        <span key={balance.currency}>
-                          {balance.amount} {balance.currency}
-                        </span>
-                      ))
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )
-        ) : null}
-      </form>
-
-      {error ? (
-        <p
-          role="alert"
-          className="rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--danger)_35%,transparent)] bg-[var(--danger-surface)] px-4 py-3 text-sm leading-6 text-[var(--danger)]"
-        >
-          {error}
-        </p>
-      ) : null}
     </div>
   );
 }

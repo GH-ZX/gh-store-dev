@@ -33,6 +33,7 @@ const samSettingsSchema = z.object({
   syriatel_identifier: z.string().nullish(),
   invoice_currency: z.string().nullish(),
   syp_per_usd: z.coerce.number().optional().catch(undefined),
+  webhook_secret: z.string().nullish(),
   updated_at: z.string().nullish(),
 });
 
@@ -67,6 +68,14 @@ export type SamStatus = {
   sypPerUsd: number;
   /** Which methods can actually be offered: enabled, keyed, and with a wallet. */
   availableMethods: SamMethod[];
+  /**
+   * Whether a callback secret exists.
+   *
+   * The secret itself never leaves the server — not even masked. What an owner
+   * needs to know is that one was generated, because without it the store
+   * refuses to open an invoice at all.
+   */
+  webhookConfigured: boolean;
   updatedAt: string | null;
 };
 
@@ -153,6 +162,7 @@ export function toSamStatus(providers: unknown): SamStatus {
     invoiceCurrency: credentials.invoiceCurrency,
     sypPerUsd: credentials.sypPerUsd,
     availableMethods: readAvailableSamMethods(credentials),
+    webhookConfigured: (settings?.webhook_secret?.trim().length ?? 0) > 0,
     updatedAt: settings?.updated_at ?? null,
   };
 }
@@ -178,6 +188,12 @@ export type SamSettingsUpdate = {
  *
  * `methods` is written alongside for the customer-facing RPC, which cannot see
  * the key and so cannot work out on its own which methods are usable.
+ *
+ * Fields this function does not manage are carried over rather than rebuilt.
+ * `webhook_secret` is the one that matters: it is generated elsewhere, and
+ * dropping it here would silently rotate the callback token on every save, so
+ * Sam would keep calling back with the token it was given at invoice time and be
+ * turned away as unauthorized — a payment taken and never credited.
  */
 export function mergeSamSettings(
   providers: Json | null | undefined,
@@ -211,7 +227,13 @@ export function mergeSamSettings(
     sypPerUsd: clampRate(update.sypPerUsd ?? current.sypPerUsd),
   };
 
+  const storedSam =
+    base.sam && typeof base.sam === "object" && !Array.isArray(base.sam)
+      ? (base.sam as Record<string, Json>)
+      : {};
+
   base.sam = {
+    ...storedSam,
     api_key: next.apiKey,
     enabled: next.enabled,
     manual_review: next.manualReview,

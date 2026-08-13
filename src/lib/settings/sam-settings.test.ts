@@ -121,6 +121,30 @@ describe("mergeSamSettings", () => {
     expect(merged.g2bulk?.api_key).toBe("supplier-key");
   });
 
+  it("keeps the callback secret, so a save cannot rotate it behind Sam's back", () => {
+    // Sam is told the callback URL when the invoice is created. Replacing the
+    // secret on an unrelated save turns away the callback for every invoice
+    // already in flight: the customer pays and is never credited.
+    const merged = mergeSamSettings(
+      { sam: { api_key: "sk_live", webhook_secret: "callback-secret" } },
+      { manualReview: true },
+      STAMP,
+    ) as { sam?: { webhook_secret?: string } };
+
+    expect(merged.sam?.webhook_secret).toBe("callback-secret");
+  });
+
+  it("keeps the callback secret even when the key is cleared", () => {
+    const merged = mergeSamSettings(
+      { sam: { api_key: "sk_live", webhook_secret: "callback-secret" } },
+      { apiKey: "" },
+      STAMP,
+    ) as { sam?: { webhook_secret?: string; api_key?: string | null } };
+
+    expect(merged.sam?.api_key).toBeNull();
+    expect(merged.sam?.webhook_secret).toBe("callback-secret");
+  });
+
   it("records which methods are usable so the customer RPC need not see the key", () => {
     const merged = mergeSamSettings(
       {},
@@ -150,6 +174,18 @@ describe("toSamStatus", () => {
 
     expect(status.keyHint).toBe("••••••••1234");
     expect(status.keyHint).not.toContain("sk_live");
+  });
+
+  it("reports whether a callback secret exists, without revealing it", () => {
+    const configured = toSamStatus({ sam: { api_key: "sk_live", webhook_secret: "s3cret" } });
+
+    expect(configured.webhookConfigured).toBe(true);
+    expect(JSON.stringify(configured)).not.toContain("s3cret");
+
+    expect(toSamStatus({ sam: { api_key: "sk_live" } }).webhookConfigured).toBe(false);
+    expect(toSamStatus({ sam: { api_key: "sk_live", webhook_secret: "  " } }).webhookConfigured).toBe(
+      false,
+    );
   });
 
   it("reports an unconfigured provider without inventing defaults", () => {

@@ -70,6 +70,18 @@ const walletSchema = z.object({
 });
 
 const walletsSchema = z.array(walletSchema);
+const transactionsSchema = z.array(
+  z.object({
+    id: z.union([z.string(), z.number()]).nullish(),
+    type: z.string().nullish(),
+    amount: z.union([z.string(), z.number()]).nullish(),
+    currency: z.string().nullish(),
+    counterparty: z.string().nullish(),
+    description: z.string().nullish(),
+    status: z.string().nullish(),
+    occurredAt: z.string().nullish(),
+  }),
+);
 const balancesSchema = z.array(
   z.object({
     currency: z.string().nullish(),
@@ -112,6 +124,19 @@ export type SamWallet = {
 };
 
 export type SamWalletBalance = { currency: string; amount: number };
+
+export type SamWalletTransaction = {
+  id: string;
+  /** `in` is money arriving, which is what a customer's top-up looks like. */
+  direction: "in" | "out";
+  amount: number | null;
+  currency: string | null;
+  /** Who sent or received it, as the wallet provider records them. */
+  counterparty: string | null;
+  description: string | null;
+  status: string | null;
+  occurredAt: string | null;
+};
 
 /** Sam bills whole pounds; anything else is billed to two decimals. */
 export function formatSamAmount(amount: number, currency: string): string {
@@ -347,6 +372,50 @@ export class SamClient {
           .map((value) => value?.trim())
           .filter((value): value is string => Boolean(value)),
         status: wallet.status ?? null,
+      };
+    });
+  }
+
+  /**
+   * Recent movements on one of the store's own wallets.
+   *
+   * This is the owner's evidence that money is actually arriving, independent of
+   * what this store recorded — a customer's transfer shows here whether or not
+   * the invoice callback ever reached us. An unreadable reply returns an empty
+   * list rather than throwing, because a missing history must not take the
+   * provider settings page down with it.
+   */
+  async listWalletTransactions(
+    provider: SamMethod,
+    identifier: string,
+    options: { direction?: "in" | "out" | "all" } = {},
+  ): Promise<SamWalletTransaction[]> {
+    const direction = options.direction ?? "all";
+    const query = direction === "all" ? "" : `?direction=${direction}`;
+    const { json } = await this.request(
+      `/v1/wallets/${provider}/${encodeURIComponent(identifier)}/transactions${query}`,
+    );
+    const parsed = transactionsSchema.safeParse(json);
+
+    if (!parsed.success) {
+      return [];
+    }
+
+    return parsed.data.map((entry, index) => {
+      const amount =
+        typeof entry.amount === "number" ? entry.amount : Number.parseFloat(String(entry.amount ?? ""));
+
+      return {
+        id: entry.id === null || entry.id === undefined ? `sam-${index}` : String(entry.id),
+        // Sam words these as credit and debit; the store thinks in money coming
+        // in versus going out, and only the former is a customer paying.
+        direction: entry.type?.trim().toLowerCase() === "debit" ? "out" : "in",
+        amount: Number.isFinite(amount) ? amount : null,
+        currency: entry.currency?.trim().toUpperCase() ?? null,
+        counterparty: entry.counterparty ?? null,
+        description: entry.description ?? null,
+        status: entry.status ?? null,
+        occurredAt: entry.occurredAt ?? null,
       };
     });
   }

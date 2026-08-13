@@ -6,15 +6,12 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formFlag, formText } from "@/lib/forms/form-data";
-import { getSamCredentials, saveSamSettings } from "@/lib/services/admin-settings.service";
+import { saveSamSettings } from "@/lib/services/admin-settings.service";
 import { isValidSamIdentifier, SAM_METHODS } from "@/lib/settings/sam-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { SamClient } from "@/providers/sam/client";
-import { SamError } from "@/providers/sam/errors";
 import {
   INITIAL_SAM_STATE,
   type SamActionState,
-  type SamWalletOption,
 } from "@/app/[locale]/dashboard/providers/sam-action-state";
 
 /**
@@ -40,10 +37,6 @@ const settingsSchema = z.object({
 
 function resolveLocale(value: unknown): Locale {
   return typeof value === "string" && isLocale(value) ? value : DEFAULT_LOCALE;
-}
-
-function errorKey(error: unknown): string {
-  return error instanceof SamError ? error.kind : "unknown";
 }
 
 /**
@@ -149,43 +142,20 @@ export async function saveSamSettingsAction(
 }
 
 /**
- * List the wallets linked to the stored key.
+ * Ask the page to read the wallets from Sam again.
  *
- * This is how an owner finds out what to put in the identifier fields, and it
- * doubles as the key test: reaching the wallet list at all proves the key works.
+ * The wallets, balances, and transfer history are loaded by the page itself, so
+ * this only has to invalidate the cached render. Fetching them here as well
+ * would be a second copy of the same provider calls, free to drift from the one
+ * the owner actually sees.
  */
-export async function testSamWalletsAction(
+export async function refreshSamWalletsAction(
   _state: SamActionState,
   formData: FormData,
 ): Promise<SamActionState> {
   await requireAdmin();
 
-  const locale = resolveLocale(formText(formData, "locale"));
-  const credentials = await getSamCredentials();
+  revalidatePath(`/${resolveLocale(formText(formData, "locale"))}/dashboard/providers`);
 
-  if (!credentials.apiKey) {
-    return { ...INITIAL_SAM_STATE, error: "not_configured" };
-  }
-
-  try {
-    const client = new SamClient(credentials.apiKey);
-    const wallets = await client.listWallets();
-
-    const options: SamWalletOption[] = await Promise.all(
-      wallets.map(async (wallet) => ({
-        provider: wallet.provider,
-        label: wallet.label,
-        identifier: wallet.identifier,
-        balances: wallet.identifier
-          ? await client.getWalletBalance(wallet.provider, wallet.identifier).catch(() => [])
-          : [],
-      })),
-    );
-
-    revalidatePath(`/${locale}/dashboard/providers`);
-
-    return { error: null, notice: "wallets_loaded", wallets: options };
-  } catch (error) {
-    return { ...INITIAL_SAM_STATE, error: errorKey(error) };
-  }
+  return { ...INITIAL_SAM_STATE, notice: "refreshed" };
 }
