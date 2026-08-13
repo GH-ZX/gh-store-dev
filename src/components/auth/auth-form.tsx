@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import type { AdminMessages } from "@/i18n/messages";
+import { getMessages, type AdminMessages } from "@/i18n/messages";
 import { INITIAL_AUTH_STATE, type AuthActionState } from "@/lib/auth/action-state";
 import { signInAction, signUpAction } from "@/lib/auth/actions";
 
@@ -117,6 +117,16 @@ export function AuthForm({ locale, messages, mode, redirectTo }: AuthFormProps) 
       >
         {isSignUp ? messages.toggleToSignIn : messages.toggleToSignUp}
       </Link>
+
+      {/* Recovery copy lives in the account namespace, read here so the login page keeps its single `auth` bundle. */}
+      {isSignUp ? null : (
+        <Link
+          href={`/${locale}/forgot-password`}
+          className="text-sm text-[var(--ink-muted)] underline-offset-4 transition-colors duration-[var(--duration)] hover:text-[var(--ink)] hover:underline"
+        >
+          {getMessages(locale, "account").recovery.forgotLink}
+        </Link>
+      )}
     </form>
   );
 }

@@ -31,13 +31,25 @@ function resolveLocale(value: unknown): Locale {
   return typeof value === "string" && isLocale(value) ? value : DEFAULT_LOCALE;
 }
 
-/** Only same-origin paths may be used as a post-login destination. */
+/**
+ * Where to land after signing in.
+ *
+ * Only a same-origin path is honoured, so a crafted `next` cannot bounce someone
+ * to another site with a fresh session. `//host` is rejected explicitly: it is
+ * protocol-relative and would leave the origin despite starting with a slash.
+ *
+ * The default is the account page, not the dashboard. Most people signing in are
+ * customers, and sending them to an admin route only to be told they lack access
+ * is both confusing and — because the guard redirects an unauthenticated request
+ * back to sign-in — a way to bounce between the two while the session cookie
+ * settles. An admin arriving from a guarded page still carries `next`.
+ */
 function safeRedirect(value: unknown, locale: Locale): string {
   if (typeof value === "string" && value.startsWith("/") && !value.startsWith("//")) {
     return value;
   }
 
-  return `/${locale}/dashboard`;
+  return `/${locale}/profile`;
 }
 
 export async function signInAction(

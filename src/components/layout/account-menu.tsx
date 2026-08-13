@@ -73,14 +73,28 @@ export function AccountMenu({ locale, messages, session, wallet }: AccountMenuPr
             ) : null}
           </div>
 
-          {session.isAdmin ? (
+          <div className="grid gap-0.5">
             <Link
-              href={`/${locale}/dashboard`}
+              href={`/${locale}/profile`}
               className="rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"
             >
-              {messages.account.dashboard}
+              {messages.account.account}
             </Link>
-          ) : null}
+            <Link
+              href={`/${locale}/wallet`}
+              className="rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"
+            >
+              {messages.account.walletLabel}
+            </Link>
+            {session.isAdmin ? (
+              <Link
+                href={`/${locale}/dashboard`}
+                className="rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"
+              >
+                {messages.account.dashboard}
+              </Link>
+            ) : null}
+          </div>
 
           {session.isAdmin && wallet ? (
             <p className="rounded-[var(--radius-control)] bg-[var(--shell)] px-3 py-2 text-xs text-[var(--ink-muted)] md:hidden">
