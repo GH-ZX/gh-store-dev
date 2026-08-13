@@ -90,12 +90,14 @@ export async function signUpAction(
     email: formText(formData, "email"),
     password: formText(formData, "password"),
     locale: formText(formData, "locale"),
+    redirectTo: formText(formData, "redirectTo"),
   });
 
   if (!parsed.success) {
     return { error: "invalid_input", notice: null };
   }
 
+  const locale = resolveLocale(parsed.data.locale);
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
@@ -106,15 +108,23 @@ export async function signUpAction(
     return { error: "signup_failed", notice: null };
   }
 
-  // With email confirmation enabled Supabase returns a user but no session, so
-  // the account is not usable until the link is followed.
+  /*
+   * With email confirmation enabled Supabase returns a user but no session, and
+   * the account cannot be used until the link is followed. It also reports a
+   * sign-in attempt on an unconfirmed account as "invalid credentials", so the
+   * only chance to explain the wait is here — afterwards the error is
+   * indistinguishable from a wrong password.
+   */
   if (!data.session) {
     return { error: null, notice: "confirm_email" };
   }
 
+  /*
+   * A session means the account is usable now, so carry on into it rather than
+   * leaving someone on the form to sign in again with details they just typed.
+   */
   revalidatePath("/", "layout");
-
-  return { error: null, notice: "signed_up" };
+  redirect(safeRedirect(parsed.data.redirectTo, locale));
 }
 
 export async function signOutAction(formData: FormData): Promise<void> {
