@@ -137,12 +137,16 @@ function storeIdentifier(credentials: SamCredentials, method: SamMethod): string
  * that receives it re-checks everything the callback claims.
  */
 function webhookUrl(secret: string): string {
-  const { url } = getSupabaseEnv();
-
-  return `${samCallbackUrl(url)}?token=${encodeURIComponent(secret)}`;
+  return samCallbackUrl(getSupabaseEnv().url, secret);
 }
 
-async function readWebhookSecret(): Promise<string | null> {
+/**
+ * The callback secret, read with service authority.
+ *
+ * Exported so the dashboard shows the owner the exact address Sam is given,
+ * token and all, rather than a second address assembled from the same parts.
+ */
+export async function readWebhookSecret(): Promise<string | null> {
   if (!hasServiceRoleKey()) {
     return null;
   }

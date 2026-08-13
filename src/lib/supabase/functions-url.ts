@@ -18,13 +18,21 @@ export function functionUrl(supabaseUrl: string, name: string): string {
 export const SAM_WEBHOOK_FUNCTION = "sam-webhook";
 
 /**
- * The callback address Sam is given, without its secret.
+ * The callback address Sam is given.
  *
- * One builder for both uses: the invoice attaches the secret to this, and the
- * dashboard shows it as-is. They were briefly built separately, and the panel
- * went on displaying an address no invoice pointed at any more — which is worse
- * than showing nothing, because it looks like an answer.
+ * One builder for every use — the invoice, and the copy of it the dashboard
+ * shows the owner. They were briefly built separately, and the panel went on
+ * displaying an address no invoice pointed at any more, which is worse than
+ * showing nothing because it looks like an answer.
+ *
+ * The secret is part of the address. Sam offers no other way to authenticate
+ * itself, so an owner checking or re-entering the callback needs the whole
+ * thing; a version with the token stripped is not the address and cannot be
+ * used as one. It is shown only to a signed-in administrator, and should be
+ * treated like a password.
  */
-export function samCallbackUrl(supabaseUrl: string): string {
-  return functionUrl(supabaseUrl, SAM_WEBHOOK_FUNCTION);
+export function samCallbackUrl(supabaseUrl: string, secret?: string | null): string {
+  const base = functionUrl(supabaseUrl, SAM_WEBHOOK_FUNCTION);
+
+  return secret ? `${base}?token=${encodeURIComponent(secret)}` : base;
 }

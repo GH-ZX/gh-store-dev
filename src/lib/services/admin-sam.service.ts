@@ -2,6 +2,7 @@ import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
 import { checkCallbackUrl, type CallbackReachability } from "@/lib/settings/callback-url";
+import { readWebhookSecret } from "@/lib/services/sam-recharge.service";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { samCallbackUrl } from "@/lib/supabase/functions-url";
 import { getSamCredentials } from "@/lib/services/admin-settings.service";
@@ -50,6 +51,11 @@ export type SamOverview = {
 
 const TRANSACTION_LIMIT = 12;
 
+/** The exact address Sam is handed, secret included, for the owner to check. */
+async function callbackAddress(): Promise<string> {
+  return samCallbackUrl(getSupabaseEnv().url, await readWebhookSecret());
+}
+
 /**
  * How long the whole panel may spend waiting on Sam.
  *
@@ -76,10 +82,7 @@ async function withinBudget<T>(work: () => Promise<T>, fallback: T): Promise<T> 
   }
 }
 
-function emptyOverview(error: string | null): SamOverview {
-  // The same address the invoice carries, minus its secret.
-  const callbackUrl = samCallbackUrl(getSupabaseEnv().url);
-
+function emptyOverview(callbackUrl: string, error: string | null): SamOverview {
   return {
     wallets: null,
     transactions: [],
@@ -103,8 +106,8 @@ function byNewest(a: SamWalletTransaction, b: SamWalletTransaction): number {
 export async function getSamOverview(): Promise<SamOverview> {
   await requireAdmin();
 
-  const credentials = await getSamCredentials();
-  const base = emptyOverview(null);
+  const [credentials, callbackUrl] = await Promise.all([getSamCredentials(), callbackAddress()]);
+  const base = emptyOverview(callbackUrl, null);
 
   if (!credentials.apiKey) {
     return base;
@@ -112,7 +115,10 @@ export async function getSamOverview(): Promise<SamOverview> {
 
   const apiKey = credentials.apiKey;
 
-  return withinBudget(() => loadFromSam(apiKey, credentials, base), emptyOverview("provider"));
+  return withinBudget(
+    () => loadFromSam(apiKey, credentials, base),
+    emptyOverview(callbackUrl, "provider"),
+  );
 }
 
 async function loadFromSam(
@@ -127,7 +133,7 @@ async function loadFromSam(
   try {
     linked = await client.listWallets();
   } catch (error) {
-    return emptyOverview(error instanceof SamError ? error.kind : "unknown");
+    return emptyOverview(base.callbackUrl, error instanceof SamError ? error.kind : "unknown");
   }
 
   const wallets: SamLinkedWallet[] = await Promise.all(

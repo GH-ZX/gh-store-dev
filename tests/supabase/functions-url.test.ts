@@ -29,18 +29,27 @@ describe("edge function URLs", () => {
     );
   });
 
-  it("shows the dashboard the same address the invoice carries", () => {
+  it("shows the dashboard the exact address the invoice carries", () => {
     /*
      * These were built in two places once, and the panel went on displaying the
      * store's own URL after invoices had moved to Supabase — an owner reading it
-     * would debug an address nothing used. Attaching the secret is the only
-     * difference allowed between them.
+     * would debug an address nothing used. One builder, one address.
      */
-    const shown = samCallbackUrl(PROJECT);
-    const sentToSam = `${samCallbackUrl(PROJECT)}?token=${encodeURIComponent("a-secret")}`;
+    expect(samCallbackUrl(PROJECT, "a-secret")).toBe(
+      `${PROJECT}/functions/v1/sam-webhook?token=a-secret`,
+    );
+  });
 
-    expect(sentToSam.startsWith(shown)).toBe(true);
-    expect(sentToSam.slice(shown.length)).toBe("?token=a-secret");
-    expect(shown).not.toContain("a-secret");
+  it("escapes a secret that would otherwise break the query string", () => {
+    expect(samCallbackUrl(PROJECT, "a b&c=d")).toBe(
+      `${PROJECT}/functions/v1/sam-webhook?token=a%20b%26c%3Dd`,
+    );
+  });
+
+  it("falls back to the bare address before a secret has been generated", () => {
+    // Nothing to authenticate with yet; the panel says so separately rather than
+    // showing a token-less address as if it were usable.
+    expect(samCallbackUrl(PROJECT, null)).toBe(`${PROJECT}/functions/v1/sam-webhook`);
+    expect(samCallbackUrl(PROJECT)).toBe(`${PROJECT}/functions/v1/sam-webhook`);
   });
 });

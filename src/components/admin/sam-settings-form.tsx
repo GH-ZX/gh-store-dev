@@ -96,6 +96,17 @@ export function SamSettingsForm({ locale, messages, status, overview }: SamSetti
    */
   const [shamcash, setShamcash] = useState(status.shamcashIdentifier ?? "");
   const [syriatel, setSyriatel] = useState(status.syriatelIdentifier ?? "");
+  const [copied, setCopied] = useState(false);
+
+  async function copyCallback(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(overview.callbackUrl);
+      setCopied(true);
+    } catch {
+      // A blocked clipboard is not worth an error: the field is selectable and
+      // focusing it selects the whole address.
+    }
+  }
 
   const error = resolveError(
     messages,
@@ -436,12 +447,32 @@ export function SamSettingsForm({ locale, messages, status, overview }: SamSetti
           {messages.webhookDescription}
         </p>
 
-        <p
-          className="mt-3 overflow-x-auto rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-3 py-2 font-mono text-xs text-[var(--ink-soft)]"
-          dir="ltr"
-        >
-          {overview.callbackUrl}
-        </p>
+        {/*
+          * The whole address, secret and all. Sam authenticates itself with
+          * nothing else, so a version with the token stripped is not the
+          * address — an owner checking it would be reading a different string
+          * from the one Sam is given. Read-only, and only ever rendered for a
+          * signed-in administrator.
+          */}
+        <div className="mt-3 flex gap-2">
+          <input
+            type="text"
+            readOnly
+            value={overview.callbackUrl}
+            onFocus={(event) => event.currentTarget.select()}
+            dir="ltr"
+            className="min-w-0 flex-1 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-3 py-2 font-mono text-xs text-[var(--ink-soft)] outline-none"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void copyCallback()}
+            leadingIcon={copied ? <CheckIcon /> : undefined}
+          >
+            {copied ? messages.webhookCopied : messages.webhookCopy}
+          </Button>
+        </div>
 
         {overview.callbackReachability === "local" ? (
           <div className="mt-3">
