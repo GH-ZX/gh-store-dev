@@ -1,0 +1,252 @@
+# GH Store — How It Works
+
+A plain-language guide to every flow that exists today, what each one guarantees,
+and where to go in the dashboard. Written for the store owner, not for a
+developer.
+
+Anything marked **not built yet** genuinely does not exist. Nothing in this
+document describes a feature that is only planned.
+
+---
+
+## 1. Getting in
+
+| Page | Who |
+|------|-----|
+| `/ar/login` | anyone — sign in or create an account |
+| `/ar/login?mode=sign-up` | create an account |
+| `/ar/forgot-password` | request a password reset link |
+| `/ar/dashboard` | administrators only |
+
+Signing in lands you on your account page. If you were sent to sign in from a
+page that required it, you return to that page instead.
+
+**Administrator access** comes from `profiles.role = 'admin'`. The first
+administrator is set with one SQL statement — see
+[connecting-g2bulk.md](operations/connecting-g2bulk.md). A signed-in customer who
+opens a dashboard URL is told they do not have access; they never see your data.
+
+**Password reset** needs one setting on your Supabase project: add your site URL
+to **Authentication → URL Configuration → Redirect URLs**. Until then, reset
+emails arrive but the link is refused.
+
+---
+
+## 2. Filling the catalog
+
+Everything a customer can buy comes from your G2Bulk account. The store ships
+with no sample products.
+
+**Dashboard → الموردون والـ API (Providers and API)**
+
+1. Paste your G2Bulk API key and set your markup, then save.
+2. Press **Verify key** — it shows your supplier username and wallet balance,
+   which proves the key works.
+3. **Import games** for top-ups, or **Import cards and codes** for gift cards.
+   Pick what you want; decide whether to publish immediately.
+
+Your key is stored in the settings row that also holds payment configuration, and
+that row is never readable by a visitor. After saving, the key is never shown
+again — only the last four characters, so you can tell two keys apart. It is only
+ever sent to G2Bulk from the server.
+
+If G2Bulk rejects the key, the store stops and says so. It does **not** retry:
+repeated rejections get your IP banned by G2Bulk.
+
+### What a re-import does
+
+Re-importing is how you refresh prices, and it is safe.
+
+- **Updated:** supplier cost, and the customer price *only* while an offer is on
+  automatic pricing and not on sale.
+- **Never touched:** names and translations you edited, artwork, whether a game
+  is published, sort order, sale prices, and any offer you moved to custom or
+  fixed pricing.
+- **Reconciled:** an item the supplier stopped listing is switched off, not
+  deleted, because orders and invoices point at it. If it comes back, it is
+  switched on again — but only if *the sync* switched it off. Anything **you**
+  hid stays hidden.
+
+### Pricing
+
+Customer price = supplier cost + your markup, rounded **up** to the cent, and
+never below cost. Supplier cost is never shown to customers.
+
+Provider prices move with exchange rates, so the cost recorded at import time is
+a snapshot. Fulfilment re-reads the live cost immediately before buying.
+
+---
+
+## 3. Editing the catalog
+
+**Dashboard → الألعاب (Games)**
+
+Search and filter your games, then open one to edit both languages' names, the
+URL slug, the in-game currency name, descriptions, artwork, the carousel badge,
+ordering, and whether it is published.
+
+> Setting the **currency name** is worth doing first. Suppliers name packages with
+> bare numbers — `60`, `18` — which mean nothing on a card. Set the currency name
+> once and every package reads properly: `60 UC`.
+
+Below that, each package shows its selling price, pre-discount price, pricing
+mode, sale flag, and publish flag. **Supplier cost and your margin are shown but
+cannot be typed over** — they are the provider's numbers.
+
+**Pricing modes:** *automatic* follows your markup on every import. *Custom* and
+*fixed* are yours and a sync never changes them. An offer on sale is also left
+alone.
+
+---
+
+## 4. The storefront
+
+**Dashboard → الموقع والواجهة (Website)** controls the homepage: which sections
+appear, in what order, their titles in both languages, and how many items each
+shows. Also social links, contact channels, and the homepage SEO text.
+
+Sections resolve independently. A section with nothing to show is dropped rather
+than rendered empty, and one that fails to load does not take the page down.
+
+The hero carousel shows games you flag with **Show in the hero carousel** in the
+game editor.
+
+Arabic is the default language and renders right-to-left; English renders
+left-to-right. Every page exists in both.
+
+---
+
+## 5. Wallet and balances
+
+The store is wallet-based: a customer holds a balance and spends it. There is no
+card payment at checkout.
+
+**Every movement is recorded and nothing can be edited or deleted.** A customer
+sees the full history on `/ar/wallet`.
+
+### Adjusting a balance yourself
+
+**Dashboard → الزبائن (Customers)** → pick the account → **تصحيح الرصيد**
+
+A positive amount adds, a negative one deducts, and a reason is required. Every
+change appears in the customer's own history as an *admin adjustment*, recording
+who made it.
+
+Two guarantees: submitting the form twice does **not** double-credit, and an
+adjustment that would leave a negative balance is refused.
+
+### How customers add balance
+
+**Not built yet.** Right now only you can credit an account, from the page above.
+Customer-facing recharge is the next piece of work.
+
+---
+
+## 6. Buying — what happens, in order
+
+1. Customer opens a package and presses buy.
+2. Checkout asks for exactly the account details the supplier requires for that
+   game — player ID, and server or character name when the game needs them.
+3. **The price is recalculated on the server.** The browser cannot influence the
+   total.
+4. The balance is checked and the money moved in a single database transaction.
+   Either the order exists and is paid, or nothing happened at all.
+5. Fulfilment starts.
+
+### Guarantees worth knowing
+
+- A customer can never spend another customer's balance.
+- Two purchases at once cannot both pass a balance check only one can afford.
+- A double-click cannot place two orders — the second attempt returns the first
+  order.
+- A failed purchase leaves no trace: no order, no charge.
+- A customer cannot create an order or change their own balance directly, even
+  with a crafted request. Both are blocked at the database.
+
+---
+
+## 7. Delivery, and what happens when it fails
+
+Fulfilment runs on the server with its own authority, never as the customer — so
+nobody can trigger their own refund.
+
+For a **top-up**: the player ID is validated with G2Bulk *before* any of your
+supplier balance is spent, the live cost is re-read, the order is placed, and then
+its state is polled.
+
+For a **gift card**: the code is bought and stored the moment it arrives. The
+provider only keeps codes for 30 days, so the copy in your database is the one
+that matters.
+
+### The three outcomes
+
+| Outcome | What the customer sees | What happens to the money |
+|---|---|---|
+| **Delivered** | order marked complete, with the code if there is one | charge stands |
+| **Still processing** | order marked in progress | charge stands, nothing is refunded |
+| **Failed** | order marked refunded, with the reason | **refunded automatically, exactly once** |
+
+**"Still processing" is not failure.** A supplier can finish minutes later, so the
+store waits rather than refunding — refunding something that then gets delivered
+would lose the money outright.
+
+A retry never buys twice: each purchase carries a key the provider honours for 30
+minutes, and the store's own record of the attempt makes a repeat a no-op.
+
+The reason a customer reads is the supplier's own wording. Internal
+classification is kept separately, for you.
+
+> **Your supplier balance must be funded.** If your G2Bulk wallet is empty,
+> orders will be charged, fail, and refund — which works correctly, but sells
+> nothing.
+
+---
+
+## 8. Customer accounts
+
+`/ar/profile` — name, username, password, wallet summary, and a link to orders.
+`/ar/wallet` — balance and full history.
+`/ar/orders` — order history; each order shows what was bought, the details
+submitted, the payment status, the delivery state, and any codes.
+
+A suspended account (`profiles.is_active = false`) can sign in but sees only an
+explanation, with nothing editable.
+
+**On deleting an account:** wallet history cannot be erased — it is the proof of
+your own transactions as much as the customer's. Closing an account means removing
+personal details and keeping the financial record without identity. The privacy
+page says exactly this.
+
+---
+
+## 9. Where to look when something goes wrong
+
+| Question | Where |
+|---|---|
+| Did my import work? | Dashboard → Providers → **Recent syncs** |
+| Why did this order fail? | Dashboard → Customers → the customer → their transactions; the order page shows the supplier's reason |
+| Was this customer charged twice? | their wallet history — every movement is there, in order |
+| Is my supplier balance low? | the balance pill in the header, or Providers → Verify key |
+| Is the key still valid? | Providers → **Verify key** |
+
+---
+
+## 10. Not built yet
+
+- Customer-facing recharge (ShamCash, SyriatelCash, Sam API, Binance Pay)
+- Invoices as downloadable documents
+- Notifications page
+- Review moderation
+- Support inbox
+- Order operations for you (manual retry, manual delivery)
+- Deployment to your own domain
+
+## 11. Two rules that keep the money honest
+
+1. **Never edit `wallets`, `wallet_transactions`, or `orders` directly in the
+   database.** Every balance change goes through a function that locks the row,
+   refuses a negative balance, and writes the audit record. A direct edit breaks
+   the agreement between the balance and its history.
+2. **Never share the service-role key or the G2Bulk key.** The service key
+   bypasses every protection described here. It belongs in server configuration
+   only, and never in a browser, a screenshot, or a chat message.

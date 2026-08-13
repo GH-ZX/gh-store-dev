@@ -13,9 +13,10 @@ GH-Store is a bilingual digital gaming store for game top-ups, redeem codes, and
 
 ## Getting Started
 
-Connect your G2Bulk account and import a real catalog:
-[docs/operations/connecting-g2bulk.md](operations/connecting-g2bulk.md). It also
-covers creating the first administrator.
+- **[How it works](owner-flows.md)** — every flow that exists today, what each one
+  guarantees, and where to find it in the dashboard. Start here.
+- **[Connecting G2Bulk](operations/connecting-g2bulk.md)** — your API key, the
+  first administrator, and importing a real catalog.
 
 ## Admin Areas
 
