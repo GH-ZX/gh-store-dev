@@ -33,6 +33,8 @@ const eslintConfig = defineConfig([
     ".open-next/**",
     ".wrangler/**",
     "next-env.d.ts",
+    // Deno, with its own imports and globals. Checked by the Supabase CLI.
+    "supabase/functions/**",
   ]),
 ]);
 

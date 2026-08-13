@@ -30,5 +30,8 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  // Edge Functions are Deno, not Node: they resolve `jsr:` imports and the Deno
+  // global, neither of which this compiler knows about. They are typechecked by
+  // `supabase functions deploy`.
+  "exclude": ["node_modules", "supabase/functions"]
 }

@@ -128,8 +128,9 @@ export async function saveSamSettingsAction(
     });
 
     // Sam cannot report a payment without a callback URL, so a saved key is
-    // useless until a secret exists.
-    await ensureWebhookSecret(formFlag(formData, "regenerateSecret"));
+    // useless until a secret exists. Replacing an existing one is a deliberate
+    // act with its own button, never a side effect of saving a wallet number.
+    await ensureWebhookSecret(false);
   } catch {
     return { ...INITIAL_SAM_STATE, error: "unknown" };
   }
@@ -139,6 +140,30 @@ export async function saveSamSettingsAction(
   revalidatePath(`/${locale}/recharge`);
 
   return { ...INITIAL_SAM_STATE, notice: "saved" };
+}
+
+/**
+ * Replace the callback secret.
+ *
+ * Its own action, because it is destructive in a way saving a setting is not:
+ * every invoice already waiting for payment was created with the old secret in
+ * its callback URL, and will be turned away once this runs.
+ */
+export async function regenerateSamSecretAction(
+  _state: SamActionState,
+  formData: FormData,
+): Promise<SamActionState> {
+  await requireAdmin();
+
+  try {
+    await ensureWebhookSecret(true);
+  } catch {
+    return { ...INITIAL_SAM_STATE, error: "unknown" };
+  }
+
+  revalidatePath(`/${resolveLocale(formText(formData, "locale"))}/dashboard/providers`);
+
+  return { ...INITIAL_SAM_STATE, notice: "secret_regenerated" };
 }
 
 /**

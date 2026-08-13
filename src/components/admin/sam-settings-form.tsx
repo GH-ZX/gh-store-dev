@@ -15,6 +15,7 @@ import {
 } from "@/app/[locale]/dashboard/providers/sam-action-state";
 import {
   refreshSamWalletsAction,
+  regenerateSamSecretAction,
   saveSamSettingsAction,
 } from "@/app/[locale]/dashboard/providers/sam-actions";
 
@@ -79,6 +80,10 @@ export function SamSettingsForm({ locale, messages, status, overview }: SamSetti
     refreshSamWalletsAction,
     INITIAL_SAM_STATE,
   );
+  const [regenerateState, regenerateAction, regenerating] = useActionState<SamActionState, FormData>(
+    regenerateSamSecretAction,
+    INITIAL_SAM_STATE,
+  );
 
   // Only relevant when invoicing in pounds, so the rate field follows the choice.
   const [currency, setCurrency] = useState(status.invoiceCurrency);
@@ -92,7 +97,10 @@ export function SamSettingsForm({ locale, messages, status, overview }: SamSetti
   const [shamcash, setShamcash] = useState(status.shamcashIdentifier ?? "");
   const [syriatel, setSyriatel] = useState(status.syriatelIdentifier ?? "");
 
-  const error = resolveError(messages, saveState.error ?? refreshState.error ?? overview.error);
+  const error = resolveError(
+    messages,
+    saveState.error ?? refreshState.error ?? regenerateState.error ?? overview.error,
+  );
   const wallets = overview.wallets;
 
   // Not named `use…`: that prefix is reserved for hooks, and this is a click.
@@ -395,56 +403,6 @@ export function SamSettingsForm({ locale, messages, status, overview }: SamSetti
           </label>
         </div>
 
-        <div className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-medium text-[var(--ink)]">{messages.webhookTitle}</h3>
-            {status.webhookConfigured ? (
-              <Badge tone="success" icon={<CheckIcon />}>
-                {messages.webhookReady}
-              </Badge>
-            ) : (
-              <Badge tone="warning">{messages.webhookMissing}</Badge>
-            )}
-          </div>
-
-          <p className="text-xs leading-5 text-[var(--ink-muted)]">{messages.webhookDescription}</p>
-
-          <p
-            className="overflow-x-auto rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-3 py-2 font-mono text-xs text-[var(--ink-soft)]"
-            dir="ltr"
-          >
-            {overview.callbackUrl}
-          </p>
-
-          {overview.callbackReachability === "local" ? (
-            <CallbackWarning title={messages.webhookLocalTitle} body={messages.webhookLocalBody} />
-          ) : null}
-
-          {overview.callbackReachability === "insecure" ||
-          overview.callbackReachability === "invalid" ? (
-            <CallbackWarning
-              title={messages.webhookInsecureTitle}
-              body={messages.webhookInsecureBody}
-            />
-          ) : null}
-
-          {status.webhookConfigured ? (
-            <label className="flex items-start gap-3 border-t border-[var(--line)] pt-3">
-              <input
-                type="checkbox"
-                name="regenerateSecret"
-                className="mt-0.5 size-4 accent-[var(--accent)]"
-              />
-              <span>
-                <span className="block text-sm text-[var(--ink)]">{messages.webhookRegenerate}</span>
-                <span className="mt-1 block text-xs leading-5 text-[var(--ink-muted)]">
-                  {messages.webhookRegenerateHelp}
-                </span>
-              </span>
-            </label>
-          ) : null}
-        </div>
-
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={saving}>
             {messages.saveAction}
@@ -456,6 +414,68 @@ export function SamSettingsForm({ locale, messages, status, overview }: SamSetti
           ) : null}
         </div>
       </form>
+
+      {/*
+        * Its own section, not a field on the form above. Replacing the secret
+        * breaks every invoice already waiting for payment, so it is a button
+        * pressed on purpose rather than a checkbox carried along by a save.
+        */}
+      <section className={cardClass}>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-semibold text-[var(--ink)]">{messages.webhookTitle}</h3>
+          {status.webhookConfigured ? (
+            <Badge tone="success" icon={<CheckIcon />}>
+              {messages.webhookReady}
+            </Badge>
+          ) : (
+            <Badge tone="warning">{messages.webhookMissing}</Badge>
+          )}
+        </div>
+
+        <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
+          {messages.webhookDescription}
+        </p>
+
+        <p
+          className="mt-3 overflow-x-auto rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-3 py-2 font-mono text-xs text-[var(--ink-soft)]"
+          dir="ltr"
+        >
+          {overview.callbackUrl}
+        </p>
+
+        {overview.callbackReachability === "local" ? (
+          <div className="mt-3">
+            <CallbackWarning title={messages.webhookLocalTitle} body={messages.webhookLocalBody} />
+          </div>
+        ) : null}
+
+        {overview.callbackReachability === "insecure" ||
+        overview.callbackReachability === "invalid" ? (
+          <div className="mt-3">
+            <CallbackWarning
+              title={messages.webhookInsecureTitle}
+              body={messages.webhookInsecureBody}
+            />
+          </div>
+        ) : null}
+
+        {status.webhookConfigured ? (
+          <form action={regenerateAction} className="mt-4 border-t border-[var(--line)] pt-4">
+            <input type="hidden" name="locale" value={locale} />
+            <Button type="submit" variant="secondary" size="sm" disabled={regenerating}>
+              {messages.webhookRegenerate}
+            </Button>
+            <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
+              {messages.webhookRegenerateHelp}
+            </p>
+            {regenerateState.notice === "secret_regenerated" ? (
+              <p className="mt-2 text-xs font-semibold text-[var(--success)]">
+                {messages.webhookRegenerated}
+              </p>
+            ) : null}
+          </form>
+        ) : null}
+      </section>
     </div>
   );
 }

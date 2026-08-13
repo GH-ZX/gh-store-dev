@@ -156,6 +156,7 @@
       "webhookMissing": "No secret yet — save your settings once to generate it.",
       "webhookRegenerate": "Generate a new secret",
       "webhookRegenerateHelp": "Only if you believe the current one leaked. Invoices already waiting for payment will stop crediting automatically.",
+      "webhookRegenerated": "A new secret is in place. Sam will use it for invoices from now on.",
       "webhookLocalTitle": "Sam cannot reach this address",
       "webhookLocalBody": "It points at this machine, so Sam's servers can never deliver a payment notification to it. Customer payments will not credit on their own until the store runs on its public address. Until then a customer can still confirm a payment from the payment page, and you can approve it from the top-up requests page.",
       "webhookInsecureTitle": "This address is not secured",

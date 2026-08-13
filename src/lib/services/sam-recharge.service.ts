@@ -2,12 +2,13 @@ import "server-only";
 
 import { requireAuth } from "@/lib/auth/guards";
 import { notify } from "@/lib/services/notification.service";
-import { getSiteUrl } from "@/lib/seo";
 import {
   readSamCredentials,
   type SamCredentials,
   type SamMethod,
 } from "@/lib/settings/sam-settings";
+import { getSupabaseEnv } from "@/lib/supabase/env";
+import { functionUrl, SAM_WEBHOOK_FUNCTION } from "@/lib/supabase/functions-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 import { SamClient, resolveSamWallet, sypForUsd } from "@/providers/sam/client";
@@ -126,12 +127,19 @@ function storeIdentifier(credentials: SamCredentials, method: SamMethod): string
 /**
  * Where Sam reports the outcome.
  *
+ * A Supabase Edge Function rather than a route on the store. Supabase is public
+ * and HTTPS wherever the store itself is running, so the callback works while
+ * developing instead of only after a deploy — pointing Sam at the site's own URL
+ * meant a payment taken locally was never reported, silently.
+ *
  * The secret travels in the query string because that is the only channel Sam
- * offers. It is generated per store, never shown to a customer, and the route
+ * offers. It is generated per store, never shown to a customer, and the function
  * that receives it re-checks everything the callback claims.
  */
 function webhookUrl(secret: string): string {
-  return `${getSiteUrl()}/api/webhooks/sam?token=${encodeURIComponent(secret)}`;
+  const { url } = getSupabaseEnv();
+
+  return `${functionUrl(url, SAM_WEBHOOK_FUNCTION)}?token=${encodeURIComponent(secret)}`;
 }
 
 async function readWebhookSecret(): Promise<string | null> {

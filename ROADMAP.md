@@ -188,6 +188,10 @@ real volume to measure.
 - Tokenized callback with constant-time comparison, re-checked against the stored
   invoice for method, currency, and amount before any money moves. The payload's
   figure is evidence, never an instruction.
+- The callback is a Supabase Edge Function, not a route on the store. Supabase is
+  public and HTTPS wherever the store is running, so payments are reported during
+  development instead of only after a deploy — pointing Sam at the site's own URL
+  made a local payment fail silently.
 - Credit exactly once per payment, through a `service_role` RPC no customer
   session can call; a replayed callback returns success without a second credit.
 - Sam operations panel: the linked wallets, their balances, and their recent
