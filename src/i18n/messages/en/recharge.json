@@ -1,0 +1,42 @@
+{
+  "eyebrow": "Add balance",
+  "title": "Add balance to your wallet",
+  "description": "Top up your wallet once, then buy any time without repeating payment steps.",
+  "amountLabel": "Amount",
+  "amountHint": "Between {min} and {max}.",
+  "methodLabel": "Payment method",
+  "methodPlaceholder": "Choose a method",
+  "submitAction": "Create a recharge request",
+  "submitting": "Creating…",
+  "noMethodsTitle": "No payment methods are enabled",
+  "noMethodsDescription": "The store has not enabled a recharge method yet. Contact support to add balance.",
+  "instructionsTitle": "How to pay",
+  "referenceLabel": "Reference",
+  "referenceHint": "Put this reference in your transfer note so we can match your payment.",
+  "markPaidAction": "I have sent the money",
+  "markedPaid": "Thank you. We will check the payment and credit your balance once confirmed.",
+  "requestsTitle": "Your recharge requests",
+  "requestsDescription": "The status of every request you created.",
+  "emptyTitle": "No recharge requests",
+  "emptyDescription": "Create one above to add balance to your wallet.",
+  "statuses": {
+    "pending": "Awaiting payment",
+    "payment_sent": "Awaiting review",
+    "processing": "Processing",
+    "approved": "Credited",
+    "rejected": "Rejected",
+    "expired": "Expired",
+    "cancelled": "Cancelled"
+  },
+  "creditedLabel": "Amount credited",
+  "noteLabel": "Admin note",
+  "backToWallet": "Back to the wallet",
+  "errors": {
+    "invalid_input": "Check the amount and payment method, then try again.",
+    "suspended": "This account is suspended. Contact support.",
+    "too_many": "You have too many open requests. Wait for them to be reviewed.",
+    "not_found": "We could not find that request.",
+    "not_signed_in": "Your session expired. Sign in and try again.",
+    "unknown": "We could not complete that. Please try again."
+  }
+}

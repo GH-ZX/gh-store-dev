@@ -54,7 +54,12 @@ export default async function WalletPage({ params, searchParams }: PageProps<"/[
       />
 
       <div className="mt-10 grid gap-8">
-        <WalletSummaryPanel locale={locale} messages={messages} wallet={wallet} />
+        <WalletSummaryPanel
+          locale={locale}
+          messages={messages}
+          wallet={wallet}
+          rechargeHref={`/${locale}/recharge`}
+        />
 
         <div>
           <h2 className="text-lg font-semibold text-[var(--ink)]">{messages.wallet.historyTitle}</h2>

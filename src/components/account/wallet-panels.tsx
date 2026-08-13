@@ -20,12 +20,15 @@ export function WalletSummaryPanel({
   messages,
   wallet,
   detailHref,
+  rechargeHref,
 }: {
   locale: Locale;
   messages: AccountMessages;
   wallet: WalletSummary | null;
   /** Omit on the wallet page itself. */
   detailHref?: string;
+  /** Present once recharge exists; otherwise an honest note is shown instead. */
+  rechargeHref?: string;
 }) {
   const currency = wallet?.currency ?? "USD";
 
@@ -53,11 +56,17 @@ export function WalletSummaryPanel({
         ) : null}
       </div>
 
-      {/*
-       * Recharge is a later stage. An informational note is honest; a button
-       * linking to a route that does not exist would not be.
-       */}
-      <NoticePanel className="mt-5" description={messages.wallet.rechargeSoon} />
+      {rechargeHref ? (
+        <Link
+          href={rechargeHref}
+          className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-ink)] transition-colors duration-[var(--duration)] hover:bg-[var(--accent-strong)]"
+        >
+          {messages.wallet.rechargeAction}
+          <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
+        </Link>
+      ) : (
+        <NoticePanel className="mt-5" description={messages.wallet.rechargeSoon} />
+      )}
     </div>
   );
 }

@@ -81,6 +81,7 @@ export default async function ProfilePage({ params }: PageProps<"/[locale]/profi
             messages={messages}
             wallet={wallet}
             detailHref={`/${locale}/wallet`}
+            rechargeHref={`/${locale}/recharge`}
           />
 
           <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6">

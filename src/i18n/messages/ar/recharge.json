@@ -1,0 +1,42 @@
+{
+  "eyebrow": "شحن الرصيد",
+  "title": "شحن رصيد المحفظة",
+  "description": "أضف رصيدًا إلى محفظتك ثم اشترِ في أي وقت بلا خطوات دفع متكررة.",
+  "amountLabel": "المبلغ المطلوب",
+  "amountHint": "بين {min} و {max}.",
+  "methodLabel": "طريقة الدفع",
+  "methodPlaceholder": "اختر طريقة",
+  "submitAction": "إنشاء طلب شحن",
+  "submitting": "جارٍ الإنشاء…",
+  "noMethodsTitle": "لا توجد طرق دفع مفعّلة",
+  "noMethodsDescription": "لم يفعّل المتجر أي طريقة شحن بعد. تواصل مع الدعم لإضافة رصيد.",
+  "instructionsTitle": "طريقة الدفع",
+  "referenceLabel": "رقم المرجع",
+  "referenceHint": "اكتب رقم المرجع في ملاحظة الحوالة حتى نتعرف على دفعتك.",
+  "markPaidAction": "أرسلت المبلغ",
+  "markedPaid": "شكرًا، سنراجع الدفعة ونضيف الرصيد بعد التأكد.",
+  "requestsTitle": "طلبات الشحن",
+  "requestsDescription": "حالة كل طلب أنشأته.",
+  "emptyTitle": "لا توجد طلبات شحن",
+  "emptyDescription": "أنشئ طلبًا أعلاه لإضافة رصيد إلى محفظتك.",
+  "statuses": {
+    "pending": "بانتظار الدفع",
+    "payment_sent": "بانتظار المراجعة",
+    "processing": "قيد المعالجة",
+    "approved": "تمت الإضافة",
+    "rejected": "مرفوض",
+    "expired": "منتهي",
+    "cancelled": "ملغى"
+  },
+  "creditedLabel": "المبلغ المضاف",
+  "noteLabel": "ملاحظة الإدارة",
+  "backToWallet": "عودة إلى المحفظة",
+  "errors": {
+    "invalid_input": "تحقق من المبلغ وطريقة الدفع ثم أعد المحاولة.",
+    "suspended": "هذا الحساب موقوف. تواصل مع الدعم.",
+    "too_many": "لديك طلبات مفتوحة كثيرة. انتظر مراجعتها أولًا.",
+    "not_found": "لم نجد هذا الطلب.",
+    "not_signed_in": "انتهت جلستك. سجّل الدخول ثم أعد المحاولة.",
+    "unknown": "تعذر إكمال العملية. أعد المحاولة."
+  }
+}

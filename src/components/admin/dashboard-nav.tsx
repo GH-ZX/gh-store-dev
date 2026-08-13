@@ -48,7 +48,7 @@ export function DashboardNav({ locale, messages }: DashboardNavProps) {
       key: "operations",
       items: [
         { key: "orders" },
-        { key: "recharges" },
+        { key: "recharges", href: `${base}/recharges` },
         { key: "customers", href: `${base}/customers` },
       ],
     },

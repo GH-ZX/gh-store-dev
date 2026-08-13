@@ -1466,6 +1466,31 @@ export type Database = {
           wallet_id: string
         }[]
       }
+      approve_recharge_request: {
+        Args: {
+          p_credit_amount?: number
+          p_note?: string
+          p_request_id: string
+        }
+        Returns: {
+          balance: number
+          credited: number
+          idempotent: boolean
+        }[]
+      }
+      credit_recharge_request: {
+        Args: {
+          p_actor?: string
+          p_credit_amount?: number
+          p_note?: string
+          p_request_id: string
+        }
+        Returns: {
+          balance: number
+          credited: number
+          idempotent: boolean
+        }[]
+      }
       credit_wallet: {
         Args: {
           p_amount: number
@@ -1500,7 +1525,14 @@ export type Database = {
       }
       get_home_layout: { Args: never; Returns: Json }
       get_public_store_settings: { Args: never; Returns: Json }
+      get_recharge_methods: { Args: never; Returns: Json }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
+      mark_recharge_paid: {
+        Args: { p_request_id: string }
+        Returns: {
+          status: string
+        }[]
+      }
       place_wallet_order: {
         Args: {
           p_customer_note?: string
@@ -1527,6 +1559,20 @@ export type Database = {
           balance: number
           idempotent: boolean
           refunded: boolean
+        }[]
+      }
+      reject_recharge_request: {
+        Args: { p_note?: string; p_request_id: string }
+        Returns: {
+          status: string
+        }[]
+      }
+      submit_recharge_request: {
+        Args: { p_amount: number; p_currency?: string; p_method: string }
+        Returns: {
+          reference: string
+          request_id: string
+          status: string
         }[]
       }
     }
