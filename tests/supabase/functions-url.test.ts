@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkCallbackUrl } from "@/lib/settings/callback-url";
-import { functionUrl, SAM_WEBHOOK_FUNCTION } from "@/lib/supabase/functions-url";
+import { functionUrl, samCallbackUrl, SAM_WEBHOOK_FUNCTION } from "@/lib/supabase/functions-url";
 
 const PROJECT = "https://njlzgfddfnnqujaodbta.supabase.co";
 
@@ -27,5 +27,20 @@ describe("edge function URLs", () => {
     expect(checkCallbackUrl(functionUrl("http://127.0.0.1:54321", SAM_WEBHOOK_FUNCTION))).toBe(
       "local",
     );
+  });
+
+  it("shows the dashboard the same address the invoice carries", () => {
+    /*
+     * These were built in two places once, and the panel went on displaying the
+     * store's own URL after invoices had moved to Supabase — an owner reading it
+     * would debug an address nothing used. Attaching the secret is the only
+     * difference allowed between them.
+     */
+    const shown = samCallbackUrl(PROJECT);
+    const sentToSam = `${samCallbackUrl(PROJECT)}?token=${encodeURIComponent("a-secret")}`;
+
+    expect(sentToSam.startsWith(shown)).toBe(true);
+    expect(sentToSam.slice(shown.length)).toBe("?token=a-secret");
+    expect(shown).not.toContain("a-secret");
   });
 });

@@ -8,7 +8,7 @@ import {
   type SamMethod,
 } from "@/lib/settings/sam-settings";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import { functionUrl, SAM_WEBHOOK_FUNCTION } from "@/lib/supabase/functions-url";
+import { samCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 import { SamClient, resolveSamWallet, sypForUsd } from "@/providers/sam/client";
@@ -139,7 +139,7 @@ function storeIdentifier(credentials: SamCredentials, method: SamMethod): string
 function webhookUrl(secret: string): string {
   const { url } = getSupabaseEnv();
 
-  return `${functionUrl(url, SAM_WEBHOOK_FUNCTION)}?token=${encodeURIComponent(secret)}`;
+  return `${samCallbackUrl(url)}?token=${encodeURIComponent(secret)}`;
 }
 
 async function readWebhookSecret(): Promise<string | null> {

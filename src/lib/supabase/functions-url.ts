@@ -16,3 +16,15 @@ export function functionUrl(supabaseUrl: string, name: string): string {
 
 /** The one function Sam calls when a payment lands or an invoice expires. */
 export const SAM_WEBHOOK_FUNCTION = "sam-webhook";
+
+/**
+ * The callback address Sam is given, without its secret.
+ *
+ * One builder for both uses: the invoice attaches the secret to this, and the
+ * dashboard shows it as-is. They were briefly built separately, and the panel
+ * went on displaying an address no invoice pointed at any more — which is worse
+ * than showing nothing, because it looks like an answer.
+ */
+export function samCallbackUrl(supabaseUrl: string): string {
+  return functionUrl(supabaseUrl, SAM_WEBHOOK_FUNCTION);
+}

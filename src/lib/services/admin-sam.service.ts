@@ -1,8 +1,9 @@
 import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
-import { getSiteUrl } from "@/lib/seo";
 import { checkCallbackUrl, type CallbackReachability } from "@/lib/settings/callback-url";
+import { getSupabaseEnv } from "@/lib/supabase/env";
+import { samCallbackUrl } from "@/lib/supabase/functions-url";
 import { getSamCredentials } from "@/lib/services/admin-settings.service";
 import type { SamMethod } from "@/lib/settings/sam-settings";
 import {
@@ -76,7 +77,8 @@ async function withinBudget<T>(work: () => Promise<T>, fallback: T): Promise<T> 
 }
 
 function emptyOverview(error: string | null): SamOverview {
-  const callbackUrl = `${getSiteUrl()}/api/webhooks/sam`;
+  // The same address the invoice carries, minus its secret.
+  const callbackUrl = samCallbackUrl(getSupabaseEnv().url);
 
   return {
     wallets: null,
