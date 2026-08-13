@@ -58,13 +58,16 @@
     "soonDescription": "سلة الشراء والدفع من المحفظة قادمان في المرحلة التالية."
   },
   "notifications": {
-    "eyebrow": "التنبيهات",
-    "title": "التنبيهات",
-    "description": "تحديثات طلباتك ورصيدك.",
-    "emptyTitle": "لا توجد تنبيهات",
-    "emptyDescription": "سنخبرك هنا عند تغيّر حالة طلب أو رصيد.",
-    "markAllRead": "تحديد الكل كمقروء",
-    "unreadBadge": "جديد"
+    "eyebrow": "الإشعارات",
+    "title": "الإشعارات",
+    "description": "كل ما يخص طلباتك وتعبئة رصيدك في مكان واحد.",
+    "emptyTitle": "لا إشعارات بعد",
+    "emptyDescription": "سنخبرك هنا عند تنفيذ طلب أو إضافة رصيد إلى محفظتك.",
+    "unreadLabel": "غير مقروء",
+    "unreadCount": "{count} غير مقروء",
+    "markAllAction": "تحديد الكل كمقروء",
+    "openAction": "عرض التفاصيل",
+    "badgeLabel": "الإشعارات"
   },
   "banned": {
     "title": "الحساب موقوف",

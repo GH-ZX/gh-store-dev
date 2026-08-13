@@ -1,6 +1,7 @@
 import "server-only";
 
 import { requireAuth } from "@/lib/auth/guards";
+import { notify } from "@/lib/services/notification.service";
 import { getSiteUrl } from "@/lib/seo";
 import {
   readSamCredentials,
@@ -441,7 +442,62 @@ export async function settleSamInvoice(input: {
     return { ok: false, reason: "expired" };
   }
 
+  /*
+   * This path credits without an owner, so the customer is the only person who
+   * finds out — and `idempotent` guards against a replayed callback announcing
+   * the same top-up twice.
+   */
+  if (!data.idempotent) {
+    await announceCredit(input.samInvoiceId, data.credited);
+  }
+
   return { ok: true, status: "credited", credited: data.credited, balance: data.balance };
+}
+
+/**
+ * Tell the customer their payment landed.
+ *
+ * Reads the invoice back for its owner and reference rather than trusting a
+ * caller to pass them: this runs from the callback route as well as from a poll,
+ * and the row is the only shared source of truth.
+ */
+async function announceCredit(samInvoiceId: string, credited: number): Promise<void> {
+  if (!hasServiceRoleKey()) {
+    return;
+  }
+
+  const service = createSupabaseServiceClient();
+  const { data } = await service
+    .from("sam_invoices")
+    .select("user_id, recharge_requests (reference)")
+    .eq("sam_invoice_id", samInvoiceId)
+    .maybeSingle();
+
+  if (!data) {
+    return;
+  }
+
+  const request = Array.isArray(data.recharge_requests)
+    ? (data.recharge_requests[0] as { reference?: string } | undefined)
+    : (data.recharge_requests as { reference?: string } | null);
+  const reference = request?.reference ?? null;
+  const amount = credited.toFixed(2);
+
+  await notify({
+    userId: data.user_id,
+    type: "recharge_approved",
+    titleAr: "تمت إضافة الرصيد",
+    titleEn: "Your balance was topped up",
+    bodyAr: reference
+      ? `أضفنا ${amount} دولار إلى محفظتك (${reference}). يمكنك الشراء به الآن.`
+      : `أضفنا ${amount} دولار إلى محفظتك. يمكنك الشراء به الآن.`,
+    bodyEn: reference
+      ? `We added ${amount} USD to your wallet (${reference}). It is ready to spend.`
+      : `We added ${amount} USD to your wallet. It is ready to spend.`,
+    href: "/wallet",
+    entityType: "recharge",
+    entityId: null,
+  });
 }
 
 /** Close an invoice Sam will not settle. */

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
+import { notify } from "@/lib/services/notification.service";
 import { normalizeRechargeConfig, type RechargeConfig } from "@/lib/settings/recharge-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
@@ -184,6 +185,15 @@ export async function approveRecharge(input: {
     throw new Error("The approval returned no result.");
   }
 
+  /*
+   * Only announce a credit that actually happened here. A re-approval reports
+   * `idempotent`, and telling someone twice that their balance arrived reads as
+   * two separate top-ups.
+   */
+  if (!data.idempotent) {
+    await notifyRechargeOutcome(input.requestId, "approved", data.credited, input.note);
+  }
+
   return { credited: data.credited, balance: data.balance, idempotent: data.idempotent };
 }
 
@@ -199,6 +209,69 @@ export async function rejectRecharge(input: { requestId: string; note: string | 
   if (error) {
     raiseFor(error.message);
   }
+
+  await notifyRechargeOutcome(input.requestId, "rejected", null, input.note);
+}
+
+/**
+ * Tell the customer what the owner decided.
+ *
+ * Reads the request back for its reference and owner, because a customer
+ * identifies a top-up by the reference they were given, not by a row id. Runs
+ * after the decision has been committed, and `notify` cannot throw, so a failure
+ * here never undoes an approval.
+ */
+async function notifyRechargeOutcome(
+  requestId: string,
+  outcome: "approved" | "rejected",
+  credited: number | null,
+  note: string | null,
+): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("recharge_requests")
+    .select("user_id, reference, requested_amount")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (!data) {
+    return;
+  }
+
+  const amount = (credited ?? data.requested_amount).toFixed(2);
+  const reason = note?.trim();
+
+  if (outcome === "approved") {
+    await notify({
+      userId: data.user_id,
+      type: "recharge_approved",
+      titleAr: "تمت إضافة الرصيد",
+      titleEn: "Your balance was topped up",
+      bodyAr: `أضفنا ${amount} دولار إلى محفظتك (${data.reference}). يمكنك الشراء به الآن.`,
+      bodyEn: `We added ${amount} USD to your wallet (${data.reference}). It is ready to spend.`,
+      href: "/wallet",
+      entityType: "recharge",
+      entityId: requestId,
+    });
+
+    return;
+  }
+
+  await notify({
+    userId: data.user_id,
+    type: "recharge_rejected",
+    titleAr: "لم نتمكّن من تأكيد طلب التعبئة",
+    titleEn: "We could not confirm your top-up",
+    bodyAr: reason
+      ? `طلب ${data.reference}: ${reason}`
+      : `لم نتمكّن من تأكيد وصول المبلغ لطلب ${data.reference}. تواصل معنا مع إثبات التحويل.`,
+    bodyEn: reason
+      ? `Request ${data.reference}: ${reason}`
+      : `We could not confirm the transfer for ${data.reference}. Contact us with proof of payment.`,
+    href: "/recharge",
+    entityType: "recharge",
+    entityId: requestId,
+  });
 }
 
 /**

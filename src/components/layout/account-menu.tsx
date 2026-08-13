@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { UserIcon, WalletIcon } from "@/components/ui/icons";
+import { BellIcon, UserIcon, WalletIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { CommonMessages } from "@/i18n/messages";
 import { signOutAction } from "@/lib/auth/actions";
@@ -22,9 +22,19 @@ export type AccountMenuProps = {
   messages: CommonMessages;
   session: SessionSummary | null;
   wallet: G2BulkWalletSnapshot | null;
+  /** Unread notifications; the bell is hidden entirely at zero. */
+  unreadCount: number;
+  notificationsLabel: string;
 };
 
-export function AccountMenu({ locale, messages, session, wallet }: AccountMenuProps) {
+export function AccountMenu({
+  locale,
+  messages,
+  session,
+  wallet,
+  unreadCount,
+  notificationsLabel,
+}: AccountMenuProps) {
   if (!session) {
     return (
       <ButtonLink href={`/${locale}/login`} variant="secondary" size="sm" className="shrink-0">
@@ -45,6 +55,24 @@ export function AccountMenu({ locale, messages, session, wallet }: AccountMenuPr
           <span className="sr-only">{messages.account.walletLabel}</span>
           <span className="tabular-nums" dir="ltr">
             {formatPrice(wallet.balance, "USD", locale)}
+          </span>
+        </Link>
+      ) : null}
+
+      {/*
+        * Shown only when there is something to read. A permanently visible bell
+        * with a zero is noise, and the menu below always carries the link.
+        */}
+      {unreadCount > 0 ? (
+        <Link
+          href={`/${locale}/notifications`}
+          title={notificationsLabel}
+          className="relative flex min-h-10 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-3 text-sm text-[var(--ink)] transition-colors duration-[var(--duration)] hover:border-[var(--accent)]"
+        >
+          <BellIcon className="size-4 shrink-0 text-[var(--accent)]" />
+          <span className="sr-only">{notificationsLabel}</span>
+          <span className="tabular-nums" dir="ltr">
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         </Link>
       ) : null}
@@ -85,6 +113,17 @@ export function AccountMenu({ locale, messages, session, wallet }: AccountMenuPr
               className="rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"
             >
               {messages.account.walletLabel}
+            </Link>
+            <Link
+              href={`/${locale}/notifications`}
+              className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"
+            >
+              {notificationsLabel}
+              {unreadCount > 0 ? (
+                <Badge tone="accent" className="shrink-0 tabular-nums">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Badge>
+              ) : null}
             </Link>
             {session.isAdmin ? (
               <Link

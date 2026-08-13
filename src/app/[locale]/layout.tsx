@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { getLocaleDirection, isLocale, type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getG2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
+import { getUnreadNotificationCount } from "@/lib/services/notification.service";
 import { getSessionSummary } from "@/lib/services/session.service";
 import { getPublicStoreSettings } from "@/lib/services/settings.service";
 
@@ -25,9 +26,15 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
   const common = getMessages(locale, "common");
   const search = getMessages(locale, "search");
   const [settings, session] = await Promise.all([getPublicStoreSettings(), getSessionSummary()]);
-  // Only an administrator sees the supplier balance, so only their render pays
-  // for the provider call.
-  const wallet = session?.isAdmin ? await getG2BulkWalletSnapshot() : null;
+  /*
+   * Only an administrator sees the supplier balance, so only their render pays
+   * for the provider call. The unread count is one indexed count and is needed
+   * for every signed-in reader, so the two run together.
+   */
+  const [wallet, unreadCount] = await Promise.all([
+    session?.isAdmin ? getG2BulkWalletSnapshot() : Promise.resolve(null),
+    getUnreadNotificationCount(session?.userId ?? null),
+  ]);
 
   return (
     <div lang={locale} dir={getLocaleDirection(locale)} className="flex min-h-screen flex-col">
@@ -44,6 +51,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
         searchMessages={search}
         session={session}
         wallet={wallet}
+        unreadCount={unreadCount}
+        notificationsLabel={getMessages(locale, "account").notifications.badgeLabel}
       />
 
       <main id="main" className="flex-1">

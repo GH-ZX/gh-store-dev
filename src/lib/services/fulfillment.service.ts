@@ -4,6 +4,7 @@ import { G2BulkError } from "@/providers/g2bulk/errors";
 import { G2BulkFulfillmentClient } from "@/providers/g2bulk/client";
 import { classifyProviderStatus } from "@/providers/g2bulk/fulfillment-schemas";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
+import { notify } from "@/lib/services/notification.service";
 import { readG2BulkCredentials } from "@/lib/settings/provider-settings";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 import type { Json } from "@/types/database";
@@ -602,6 +603,82 @@ export async function fulfillOrder(orderId: string): Promise<FulfillmentOutcome>
   }
 
   const client = new G2BulkFulfillmentClient({ apiKey });
+  const outcome =
+    context.offerType === "topup"
+      ? await fulfillTopup(client, context)
+      : await fulfillVoucher(client, context);
 
-  return context.offerType === "topup" ? fulfillTopup(client, context) : fulfillVoucher(client, context);
+  await announceOutcome(context, outcome);
+
+  return outcome;
+}
+
+/**
+ * Tell the customer how it went.
+ *
+ * At this boundary rather than inside each branch, so every caller — a checkout
+ * and an operator's retry alike — produces exactly one message per outcome. It
+ * only speaks for terminal states: a `pending` order has nothing to report yet,
+ * and `skipped` is a configuration problem for the owner, not news for a customer.
+ *
+ * `notify` cannot throw, so a notification failure leaves the delivery alone.
+ */
+async function announceOutcome(
+  context: FulfillmentContext,
+  outcome: FulfillmentOutcome,
+): Promise<void> {
+  if (outcome.state !== "completed" && outcome.state !== "failed") {
+    return;
+  }
+
+  const supabase = createSupabaseServiceClient();
+  const { data: order } = await supabase
+    .from("orders")
+    .select("user_id")
+    .eq("id", context.orderId)
+    .maybeSingle();
+
+  if (!order) {
+    return;
+  }
+
+  // Stored without a locale prefix; the page that renders it adds the reader's.
+  const href = `/orders/${context.orderId}`;
+
+  if (outcome.state === "completed") {
+    await notify({
+      userId: order.user_id,
+      type: "order_delivered",
+      titleAr: "تم تنفيذ طلبك",
+      titleEn: "Your order is delivered",
+      bodyAr: `طلب ${context.orderNumber} جاهز. افتح الطلب لعرض التفاصيل.`,
+      bodyEn: `Order ${context.orderNumber} is ready. Open it to see the details.`,
+      href,
+      entityType: "order",
+      entityId: context.orderId,
+    });
+
+    return;
+  }
+
+  /*
+   * The refund is the part the customer cares about, so it leads. `outcome.reason`
+   * is already the provider's customer-facing wording — the jargon went to
+   * `error_code` — so it is safe to repeat here.
+   */
+  await notify({
+    userId: order.user_id,
+    type: "order_failed",
+    titleAr: outcome.refunded ? "تعذّر تنفيذ طلبك وأعدنا المبلغ" : "تعذّر تنفيذ طلبك",
+    titleEn: outcome.refunded ? "Your order failed and was refunded" : "Your order failed",
+    bodyAr: outcome.refunded
+      ? `طلب ${context.orderNumber}: ${outcome.reason} أعدنا المبلغ إلى محفظتك.`
+      : `طلب ${context.orderNumber}: ${outcome.reason} تواصل معنا وسنعالج الأمر.`,
+    bodyEn: outcome.refunded
+      ? `Order ${context.orderNumber}: ${outcome.reason} The amount is back in your wallet.`
+      : `Order ${context.orderNumber}: ${outcome.reason} Contact us and we will sort it out.`,
+    href,
+    entityType: "order",
+    entityId: context.orderId,
+  });
 }

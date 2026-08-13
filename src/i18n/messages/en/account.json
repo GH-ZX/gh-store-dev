@@ -60,11 +60,14 @@
   "notifications": {
     "eyebrow": "Notifications",
     "title": "Notifications",
-    "description": "Updates about your orders and balance.",
-    "emptyTitle": "No notifications",
-    "emptyDescription": "We will tell you here when an order or your balance changes.",
-    "markAllRead": "Mark all as read",
-    "unreadBadge": "New"
+    "description": "Everything about your orders and top-ups, in one place.",
+    "emptyTitle": "Nothing yet",
+    "emptyDescription": "We will tell you here when an order is delivered or your wallet is topped up.",
+    "unreadLabel": "Unread",
+    "unreadCount": "{count} unread",
+    "markAllAction": "Mark all as read",
+    "openAction": "View details",
+    "badgeLabel": "Notifications"
   },
   "banned": {
     "title": "Account suspended",

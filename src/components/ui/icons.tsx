@@ -123,6 +123,15 @@ export function WalletIcon(props: IconProps) {
   );
 }
 
+export function BellIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 3.1.7 4.6 1.3 5.4.3.4 0 1-.5 1H5.7c-.5 0-.8-.6-.5-1 .6-.8 1.3-2.3 1.3-5.4Z" />
+      <path d="M10 19.2a2.2 2.2 0 0 0 4 0" />
+    </Icon>
+  );
+}
+
 export function GamepadIcon(props: IconProps) {
   return (
     <Icon {...props}>

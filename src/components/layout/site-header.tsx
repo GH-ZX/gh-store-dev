@@ -27,6 +27,9 @@ export type SiteHeaderProps = {
   session: SessionSummary | null;
   /** Supplier balance, shown to administrators only. */
   wallet: G2BulkWalletSnapshot | null;
+  /** Unread notifications for the signed-in reader; 0 for a visitor. */
+  unreadCount: number;
+  notificationsLabel: string;
 };
 
 export function SiteHeader({
@@ -35,6 +38,8 @@ export function SiteHeader({
   searchMessages,
   session,
   wallet,
+  unreadCount,
+  notificationsLabel,
 }: SiteHeaderProps) {
   const primaryItems = [
     { href: `/${locale}`, label: messages.navigation.home },
@@ -108,7 +113,14 @@ export function SiteHeader({
 
             <ThemeToggle labels={messages.theme} />
 
-            <AccountMenu locale={locale} messages={messages} session={session} wallet={wallet} />
+            <AccountMenu
+              locale={locale}
+              messages={messages}
+              session={session}
+              wallet={wallet}
+              unreadCount={unreadCount}
+              notificationsLabel={notificationsLabel}
+            />
 
             <MobileNav
               labels={{
