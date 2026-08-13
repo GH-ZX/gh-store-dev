@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PasswordForm, ProfileForm } from "@/components/account/profile-forms";
 import { WalletSummaryPanel } from "@/components/account/wallet-panels";
-import { EmptyState, ErrorState, NoticePanel } from "@/components/shared/states";
+import { EmptyState, ErrorState } from "@/components/shared/states";
 import { ButtonLink } from "@/components/ui/button";
 import { GamepadIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
@@ -96,15 +96,14 @@ export default async function ProfilePage({ params }: PageProps<"/[locale]/profi
               description={messages.orders.emptyDescription}
             />
 
-            <NoticePanel
-              className="mt-4"
-              title={messages.orders.soonTitle}
-              description={messages.orders.soonDescription}
-            />
-
-            <ButtonLink href={`/${locale}/games`} variant="secondary" className="mt-5" fullWidth>
-              {messages.orders.browseAction}
-            </ButtonLink>
+            <div className="mt-5 grid gap-2">
+              <ButtonLink href={`/${locale}/orders`} variant="secondary" fullWidth>
+                {messages.orders.title}
+              </ButtonLink>
+              <ButtonLink href={`/${locale}/games`} variant="ghost" fullWidth>
+                {messages.orders.browseAction}
+              </ButtonLink>
+            </div>
           </div>
         </div>
       </div>

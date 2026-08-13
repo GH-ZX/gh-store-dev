@@ -36,8 +36,6 @@
     "typeLabel": "Type",
     "priceLabel": "Price",
     "relatedHeading": "Other packages for this game",
-    "checkoutSoonTitle": "Checkout is being built",
-    "checkoutSoonDescription": "The cart and wallet payment arrive in the next build stage.",
     "notFoundTitle": "This package is unavailable",
     "notFoundDescription": "It may have been changed or disabled. Browse the remaining packages instead."
   },

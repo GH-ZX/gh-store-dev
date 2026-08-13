@@ -1,6 +1,7 @@
 import arAccount from "@/i18n/messages/ar/account.json";
 import arAdmin from "@/i18n/messages/ar/admin.json";
 import arCatalog from "@/i18n/messages/ar/catalog.json";
+import arCheckout from "@/i18n/messages/ar/checkout.json";
 import arCommon from "@/i18n/messages/ar/common.json";
 import arContent from "@/i18n/messages/ar/content.json";
 import arHome from "@/i18n/messages/ar/home.json";
@@ -8,6 +9,7 @@ import arSearch from "@/i18n/messages/ar/search.json";
 import enAccount from "@/i18n/messages/en/account.json";
 import enAdmin from "@/i18n/messages/en/admin.json";
 import enCatalog from "@/i18n/messages/en/catalog.json";
+import enCheckout from "@/i18n/messages/en/checkout.json";
 import enCommon from "@/i18n/messages/en/common.json";
 import enContent from "@/i18n/messages/en/content.json";
 import enHome from "@/i18n/messages/en/home.json";
@@ -26,6 +28,7 @@ const AR = {
   admin: arAdmin,
   account: arAccount,
   catalog: arCatalog,
+  checkout: arCheckout,
   home: arHome,
   search: arSearch,
   content: arContent,
@@ -38,6 +41,7 @@ const EN: Dictionary = {
   admin: enAdmin,
   account: enAccount,
   catalog: enCatalog,
+  checkout: enCheckout,
   home: enHome,
   search: enSearch,
   content: enContent,
@@ -58,6 +62,7 @@ export type SearchMessages = Messages<"search">;
 export type ContentMessages = Messages<"content">;
 export type AdminMessages = Messages<"admin">;
 export type AccountMessages = Messages<"account">;
+export type CheckoutMessages = Messages<"checkout">;
 
 export function getMessages<N extends MessageNamespace>(locale: Locale, namespace: N): Messages<N> {
   return MESSAGES[locale][namespace];

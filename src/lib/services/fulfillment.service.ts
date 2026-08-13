@@ -50,12 +50,32 @@ function providerIdempotencyKey(orderItemId: string): string {
   return orderItemId;
 }
 
-function describe(error: unknown): string {
+/**
+ * Split a failure into what the customer reads and what an operator needs.
+ *
+ * The provider's own wording ("Invalid player ID. Please check and try again.")
+ * is genuinely useful to a shopper, but our internal classification is not — a
+ * refund note reading "request: Invalid player ID" leaks jargon onto the
+ * customer's order page. The kind is kept alongside in `error_code`, where an
+ * operator can still see it.
+ */
+function describe(error: unknown): { customer: string; code: string | null } {
   if (error instanceof G2BulkError) {
-    return `${error.kind}: ${error.message}`;
+    const provider = error.message.trim();
+    // Only a rejected request or a rejected key carries a message meant for a
+    // person; a network or contract fault is machine detail.
+    const usable = error.kind === "request" || error.kind === "auth" ? provider : "";
+
+    return {
+      customer: usable || "The supplier could not complete this order.",
+      code: error.kind,
+    };
   }
 
-  return error instanceof Error ? error.message : "Unknown fulfilment error";
+  return {
+    customer: "The supplier could not complete this order.",
+    code: error instanceof Error ? error.name : null,
+  };
 }
 
 type FulfillmentContext = {
@@ -222,6 +242,7 @@ async function recordAttempt(
     response?: unknown;
     delivered?: unknown;
     errorMessage?: string | null;
+    errorCode?: string | null;
   },
 ): Promise<void> {
   const supabase = createSupabaseServiceClient();
@@ -233,6 +254,7 @@ async function recordAttempt(
       ...(patch.response !== undefined ? { response_payload: patch.response as never } : {}),
       ...(patch.delivered !== undefined ? { delivered_payload: patch.delivered as never } : {}),
       ...(patch.errorMessage !== undefined ? { error_message: patch.errorMessage } : {}),
+      ...(patch.errorCode !== undefined ? { error_code: patch.errorCode } : {}),
       last_checked_at: new Date().toISOString(),
       ...(patch.status === "completed" ? { completed_at: new Date().toISOString() } : {}),
     })
@@ -249,10 +271,11 @@ async function failAndRefund(
   context: FulfillmentContext,
   attemptId: string,
   reason: string,
+  code: string | null = null,
 ): Promise<FulfillmentOutcome> {
   const supabase = createSupabaseServiceClient();
 
-  await recordAttempt(attemptId, { status: "failed", errorMessage: reason });
+  await recordAttempt(attemptId, { status: "failed", errorMessage: reason, errorCode: code });
   await setOrderStatus(context.orderId, "failed");
 
   const { error } = await supabase.rpc("refund_failed_order", {
@@ -268,7 +291,7 @@ async function failAndRefund(
     return { state: "failed", reason, refunded: false };
   }
 
-  await recordAttempt(attemptId, { status: "refunded", errorMessage: reason });
+  await recordAttempt(attemptId, { status: "refunded", errorMessage: reason, errorCode: code });
 
   return { state: "failed", reason, refunded: true };
 }
@@ -354,7 +377,12 @@ async function fulfillTopup(
   } catch (error) {
     // A validation outage is not proof the player is wrong, so this does not
     // fail the order on its own — the order attempt below is the real test.
-    await recordAttempt(attempt.id, { status: "processing", errorMessage: describe(error) });
+    const detail = describe(error);
+    await recordAttempt(attempt.id, {
+      status: "processing",
+      errorMessage: detail.customer,
+      errorCode: detail.code,
+    });
   }
 
   const cost = await currentSupplierCost(client, context);
@@ -394,7 +422,9 @@ async function fulfillTopup(
         return { state: "completed", deliveredItems: [] };
       }
     } catch (error) {
-      return failAndRefund(context, attempt.id, describe(error));
+      const detail = describe(error);
+
+      return failAndRefund(context, attempt.id, detail.customer, detail.code);
     }
   }
 
@@ -424,7 +454,12 @@ async function fulfillTopup(
         return failAndRefund(context, attempt.id, "The supplier could not complete this order.");
       }
     } catch (error) {
-      await recordAttempt(attempt.id, { status: "processing", errorMessage: describe(error) });
+      const detail = describe(error);
+      await recordAttempt(attempt.id, {
+        status: "processing",
+        errorMessage: detail.customer,
+        errorCode: detail.code,
+      });
     }
   }
 
@@ -493,7 +528,9 @@ async function fulfillVoucher(
         response: purchase,
       });
     } catch (error) {
-      return failAndRefund(context, attempt.id, describe(error));
+      const detail = describe(error);
+
+      return failAndRefund(context, attempt.id, detail.customer, detail.code);
     }
   }
 
@@ -519,7 +556,12 @@ async function fulfillVoucher(
         return failAndRefund(context, attempt.id, "The supplier could not deliver this card.");
       }
     } catch (error) {
-      await recordAttempt(attempt.id, { status: "processing", errorMessage: describe(error) });
+      const detail = describe(error);
+      await recordAttempt(attempt.id, {
+        status: "processing",
+        errorMessage: detail.customer,
+        errorCode: detail.code,
+      });
     }
   }
 

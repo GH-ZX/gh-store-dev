@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { NoticePanel } from "@/components/shared/states";
 import { OfferGrid } from "@/components/store/collections";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge, Eyebrow } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { CheckIcon, ChevronIcon, ShieldIcon } from "@/components/ui/icons";
 import { Price } from "@/components/ui/price";
 import { Section, SectionHeader } from "@/components/ui/section";
@@ -70,6 +69,7 @@ export default async function OfferDetailPage({
   const { slug, offerSlug } = await params;
   const common = getMessages(locale, "common");
   const messages = getMessages(locale, "catalog");
+  const checkout = getMessages(locale, "checkout");
   const detail = await getOfferBySlug(locale, slug, offerSlug);
 
   if (!detail) {
@@ -174,13 +174,17 @@ export default async function OfferDetailPage({
                     size="lg"
                   />
 
-                  <Button disabled aria-disabled="true" fullWidth size="lg">
+                  <ButtonLink
+                    href={`/${locale}/checkout/${game.slug}/${offer.slug}`}
+                    fullWidth
+                    size="lg"
+                  >
                     {common.actions.buyNow}
-                  </Button>
+                  </ButtonLink>
 
                   <p className="flex items-start gap-2 text-xs leading-5 text-[var(--ink-muted)]">
                     <ShieldIcon className="mt-0.5 size-4 shrink-0 text-[var(--accent)]" />
-                    {messages.offerDetail.checkoutSoonDescription}
+                    {checkout.offerPromise}
                   </p>
                 </div>
               </div>
@@ -226,11 +230,6 @@ export default async function OfferDetailPage({
           </ul>
         )}
 
-        <NoticePanel
-          className="mt-6"
-          title={messages.offerDetail.checkoutSoonTitle}
-          description={messages.offerDetail.checkoutSoonDescription}
-        />
       </Section>
 
       {relatedOffers.length > 0 ? (
