@@ -88,11 +88,11 @@
       },
       {
         "heading": "Retention",
-        "body": "Order and invoice data is kept as long as accounting and dispute resolution require, then deleted or anonymised."
+        "body": "Order, wallet, and invoice records are kept for as long as accounting and dispute resolution require. That financial history is append-only and is not deleted — erasing it would also destroy the proof of your own transactions."
       },
       {
         "heading": "Your rights",
-        "body": "You can request a copy of your data, ask for corrections, or request account deletion by contacting support."
+        "body": "You can ask for a copy of your data or have it corrected at any time. When you ask us to close your account we remove your personal details — name, email, and in-game account data — and keep the financial record without identity, for accounting reasons. Contact support to arrange it."
       }
     ],
     "reviewNote": "This page is an initial draft and needs legal review before launch."
