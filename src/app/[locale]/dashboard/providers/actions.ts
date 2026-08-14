@@ -13,6 +13,7 @@ import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
   getG2BulkCredentials,
   getMaxStoreCredentials,
+  saveBinanceSettings,
   regenerateG2BulkCallbackSecret,
   saveG2BulkSettings,
   saveMaxStoreSettings,
@@ -318,4 +319,58 @@ export async function verifyMaxStoreTokenAction(
   } catch (error) {
     return { ...INITIAL_PROVIDER_STATE, error: errorKey(error) };
   }
+}
+
+const binanceSchema = z.object({
+  apiKey: z.string().max(400).optional(),
+  apiSecret: z.string().max(400).optional(),
+  currency: z.string().max(10).optional(),
+  enabled: z.boolean(),
+  locale: z.string().optional(),
+});
+
+/**
+ * Save Binance Pay.
+ *
+ * The enable flag is read from the form every time rather than left alone when
+ * absent, because an unchecked checkbox sends nothing — treating that as "no
+ * change" would make the switch impossible to turn off.
+ */
+export async function saveBinanceSettingsAction(
+  _state: ProviderActionState,
+  formData: FormData,
+): Promise<ProviderActionState> {
+  await requireAdmin();
+
+  const parsed = binanceSchema.safeParse({
+    apiKey: formText(formData, "apiKey"),
+    apiSecret: formText(formData, "apiSecret"),
+    currency: formText(formData, "currency"),
+    enabled: formFlag(formData, "enabled"),
+    locale: formText(formData, "locale"),
+  });
+
+  if (!parsed.success) {
+    return { ...INITIAL_PROVIDER_STATE, error: "invalid_input" };
+  }
+
+  const locale = resolveLocale(parsed.data.locale);
+
+  try {
+    await saveBinanceSettings({
+      // Empty means "keep what is stored", for both halves independently.
+      apiKey: parsed.data.apiKey?.trim() ? parsed.data.apiKey : undefined,
+      apiSecret: parsed.data.apiSecret?.trim() ? parsed.data.apiSecret : undefined,
+      currency: parsed.data.currency,
+      enabled: parsed.data.enabled,
+    });
+  } catch (error) {
+    logFailure("admin.providers", "binance_settings_save_failed", error);
+
+    return { ...INITIAL_PROVIDER_STATE, error: "unknown" };
+  }
+
+  revalidatePath(`/${locale}/dashboard/providers`);
+
+  return { ...INITIAL_PROVIDER_STATE, notice: "saved" };
 }

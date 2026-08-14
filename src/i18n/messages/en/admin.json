@@ -268,6 +268,25 @@
       "emptyTitle": "Nothing to import",
       "emptyDescription": "MaxStore returned no products for this token.",
       "viewCatalog": "Open the catalog"
+    },
+    "binance": {
+      "name": "Binance Pay",
+      "summary": "Crypto payments, for customers who would rather pay in USDT than through a transfer.",
+      "statusConfigured": "Credentials saved",
+      "statusMissing": "Not configured",
+      "offLabel": "Not offered to customers",
+      "keyHintLabel": "Saved API key",
+      "apiKeyLabel": "API key",
+      "apiSecretLabel": "API secret",
+      "credentialsHelp": "From Binance Merchant, both stored server-side. The secret is never shown again.",
+      "credentialsKeepHelp": "Leave either empty to keep what is saved.",
+      "currencyLabel": "Invoice currency",
+      "currencyHelp": "The store prices in dollars, so a dollar-pegged coin keeps the amounts honest.",
+      "enableLabel": "Offer Binance Pay at checkout",
+      "enableHelp": "Off until you say otherwise, even once credentials are saved. Turning it off keeps them.",
+      "saveAction": "Save",
+      "saved": "Saved",
+      "pendingWork": "Credentials and signing are built and tested. Taking an actual payment — the invoice record, the checkout hand-off, and the callback that credits a wallet — is not finished, so turning this on does not yet put it in front of customers."
     }
   },
   "import": {

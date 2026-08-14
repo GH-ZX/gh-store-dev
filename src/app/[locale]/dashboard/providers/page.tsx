@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AxiomSettingsForm } from "@/components/admin/axiom-settings-form";
+import { BinanceSettingsForm } from "@/components/admin/binance-settings-form";
 import { G2BulkSettingsForm } from "@/components/admin/g2bulk-settings-form";
 import { MaxStoreSettingsForm } from "@/components/admin/maxstore-settings-form";
 import { ProviderGroup, ProviderSection } from "@/components/admin/provider-section";
@@ -13,6 +14,7 @@ import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getSamOverview } from "@/lib/services/admin-sam.service";
 import {
   getAxiomStatus,
+  getBinanceStatus,
   getG2BulkCallback,
   getG2BulkStatus,
   getMaxStoreStatus,
@@ -41,15 +43,17 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const provider = messages.providers.g2bulk;
   const maxstore = messages.providers.maxstore;
   const sam = messages.providers.sam;
+  const binance = messages.providers.binance;
   const logging = messages.providers.logging;
   const groups = messages.providers.groups;
-  const [status, callback, maxstoreStatus, logs, samStatus, samOverview, axiomStatus] =
+  const [status, callback, maxstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus] =
     await Promise.all([
       getG2BulkStatus(),
       getG2BulkCallback(),
       getMaxStoreStatus(),
       getRecentSyncLogs(G2BULK_PROVIDER_NAME),
       getSamStatus(),
+      getBinanceStatus(),
       // Reaches Sam when a key is stored, and answers with an error key rather
       // than throwing, so a provider outage cannot take this page down.
       getSamOverview(),
@@ -166,6 +170,33 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             messages={sam}
             status={samStatus}
             overview={samOverview}
+          />
+        </ProviderSection>
+
+        <ProviderSection
+          name={binance.name}
+          summary={binance.summary}
+          defaultOpen={!binanceStatus.configured}
+          badges={[
+            {
+              label: binanceStatus.configured ? binance.statusConfigured : binance.statusMissing,
+              tone: binanceStatus.configured ? "success" : "neutral",
+            },
+            // Configured and offered are different things here, and the badge
+            // has to say which one this is.
+            ...(binanceStatus.configured && !binanceStatus.enabled
+              ? [{ label: binance.offLabel, tone: "warning" as const }]
+              : []),
+          ]}
+          hint={
+            binanceStatus.keyHint ? { label: binance.keyHintLabel, value: binanceStatus.keyHint } : null
+          }
+        >
+          <BinanceSettingsForm
+            locale={locale}
+            messages={binance}
+            errors={provider.errors}
+            status={binanceStatus}
           />
         </ProviderSection>
       </ProviderGroup>

@@ -9,6 +9,13 @@ import {
   type AxiomSettingsUpdate,
   type AxiomStatus,
 } from "@/lib/settings/axiom-settings";
+import {
+  mergeBinanceSettings,
+  readBinanceCredentials,
+  toBinanceStatus,
+  type BinanceCredentials,
+  type BinanceStatus,
+} from "@/lib/settings/binance-settings";
 import { checkCallbackUrl, type CallbackReachability } from "@/lib/settings/callback-url";
 import {
   mergeMaxStoreSettings,
@@ -320,4 +327,43 @@ export async function saveMaxStoreSettings(update: {
   }
 
   return toMaxStoreStatus(data.providers);
+}
+
+export async function getBinanceStatus(): Promise<BinanceStatus> {
+  await requireAdmin();
+
+  return toBinanceStatus(await readProviders());
+}
+
+/** Server-only: returns the plaintext merchant credentials. Never hand these to a component. */
+export async function getBinanceCredentials(): Promise<BinanceCredentials> {
+  await requireAdmin();
+
+  return readBinanceCredentials(await readProviders());
+}
+
+export async function saveBinanceSettings(update: {
+  apiKey?: string;
+  apiSecret?: string;
+  currency?: string;
+  enabled?: boolean;
+}): Promise<BinanceStatus> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const providers = await readProviders();
+  const next = mergeBinanceSettings(providers, update, new Date().toISOString());
+
+  const { data, error } = await supabase
+    .from("store_settings")
+    .update({ providers: next })
+    .eq("id", SETTINGS_ID)
+    .select("providers")
+    .single();
+
+  if (error) {
+    throw new Error(`Saving Binance Pay settings failed: ${error.message}`);
+  }
+
+  return toBinanceStatus(data.providers);
 }
