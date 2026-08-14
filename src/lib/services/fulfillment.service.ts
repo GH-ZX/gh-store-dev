@@ -5,6 +5,12 @@ import { G2BulkFulfillmentClient } from "@/providers/g2bulk/client";
 import { classifyProviderStatus } from "@/providers/g2bulk/fulfillment-schemas";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 import { notify } from "@/lib/services/notification.service";
+import {
+  decideReconciliation,
+  GRACE_MINUTES,
+  minutesSince,
+  type ProviderState,
+} from "@/lib/orders/reconciliation-policy";
 import { readG2BulkCredentials } from "@/lib/settings/provider-settings";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 import type { Json } from "@/types/database";
@@ -42,8 +48,28 @@ export type FulfillmentOutcome =
   | { state: "failed"; reason: string; refunded: boolean }
   | { state: "skipped"; reason: string };
 
+/** What a reconciliation pass did to one order. */
+export type ReconcileOutcome = {
+  action: "completed" | "refunded" | "escalated" | "wait" | "skipped";
+  reason?: string;
+};
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** The stored supplier key, or null when the provider is off or unconfigured. */
+async function readCredentials(): Promise<string | null> {
+  const supabase = createSupabaseServiceClient();
+  const { data } = await supabase
+    .from("store_settings")
+    .select("providers")
+    .eq("id", "global")
+    .maybeSingle();
+
+  const { apiKey, enabled } = readG2BulkCredentials(data?.providers ?? {});
+
+  return apiKey && enabled ? apiKey : null;
 }
 
 /** Provider keys must be exactly 36 characters, so a UUID is used verbatim. */
@@ -589,16 +615,9 @@ export async function fulfillOrder(orderId: string): Promise<FulfillmentOutcome>
     return { state: "skipped", reason: "Order not found." };
   }
 
-  const supabase = createSupabaseServiceClient();
-  const { data: settings } = await supabase
-    .from("store_settings")
-    .select("providers")
-    .eq("id", "global")
-    .maybeSingle();
+  const apiKey = await readCredentials();
 
-  const { apiKey, enabled } = readG2BulkCredentials(settings?.providers ?? {});
-
-  if (!apiKey || !enabled) {
+  if (!apiKey) {
     return { state: "skipped", reason: "The G2Bulk provider is not configured." };
   }
 
@@ -611,6 +630,123 @@ export async function fulfillOrder(orderId: string): Promise<FulfillmentOutcome>
   await announceOutcome(context, outcome);
 
   return outcome;
+}
+
+/**
+ * Settle an order the supplier never finished in front of the customer.
+ *
+ * Checkout gives the supplier about ten seconds and then leaves the order at
+ * `fulfilling`; this is what eventually goes back and asks how it turned out.
+ *
+ * It never buys. The purchase path is reached only from checkout and from an
+ * operator's explicit retry, both of which a person is waiting on. A background
+ * sweep that could place an order would be one bug away from buying a second
+ * time for every order it looked at, so it is not given the option: when there
+ * is no supplier order to poll, the answer is a question for a human rather
+ * than a purchase or a refund.
+ */
+export async function reconcileOrder(orderId: string, now = Date.now()): Promise<ReconcileOutcome> {
+  if (!hasServiceRoleKey()) {
+    return { action: "skipped", reason: "Service role key is not configured." };
+  }
+
+  const context = await loadContext(orderId);
+
+  if (!context) {
+    return { action: "skipped", reason: "Order not found." };
+  }
+
+  const supabase = createSupabaseServiceClient();
+  const { data: attempt } = await supabase
+    .from("fulfillment_attempts")
+    .select("id, status, external_order_id, created_at")
+    .eq("provider", G2BULK_PROVIDER_NAME)
+    .eq("idempotency_key", providerIdempotencyKey(context.orderItemId))
+    .maybeSingle();
+
+  if (!attempt) {
+    // Nothing was ever attempted, so nothing was bought and nothing is owed to
+    // the supplier — but the customer has paid, so this needs a person.
+    return { action: "escalated", reason: "No fulfilment was ever attempted for this order." };
+  }
+
+  if (attempt.status === "completed" || attempt.status === "refunded") {
+    return { action: "skipped", reason: "Already settled." };
+  }
+
+  const ageMinutes = minutesSince(attempt.created_at, now);
+
+  /*
+   * Ask the supplier first, but only when there is something to ask about. The
+   * policy needs the answer to decide, and a missing supplier id short-circuits
+   * to escalation without spending a request.
+   */
+  let providerState: ProviderState = null;
+  let refunded = false;
+
+  if (attempt.external_order_id && ageMinutes >= GRACE_MINUTES) {
+    const credentials = await readCredentials();
+
+    if (!credentials) {
+      return { action: "skipped", reason: "The G2Bulk provider is not configured." };
+    }
+
+    try {
+      const status = await new G2BulkFulfillmentClient({ apiKey: credentials }).findGameOrderStatus(
+        attempt.external_order_id,
+      );
+
+      providerState = status ? classifyProviderStatus(status.status) : null;
+      refunded = status?.refunded === true;
+    } catch (error) {
+      // An unreachable supplier is not an answer about the order. Record why the
+      // check failed and leave the order where it is.
+      const detail = describe(error);
+      await recordAttempt(attempt.id, {
+        status: attempt.status === "pending" ? "pending" : "processing",
+        errorMessage: detail.customer,
+        errorCode: detail.code,
+      });
+
+      return { action: "wait", reason: detail.customer };
+    }
+  }
+
+  const decision = decideReconciliation({
+    providerState,
+    refunded,
+    hasExternalOrderId: Boolean(attempt.external_order_id),
+    ageMinutes,
+  });
+
+  if (decision.action === "wait") {
+    return { action: "wait" };
+  }
+
+  if (decision.action === "complete") {
+    await recordAttempt(attempt.id, { status: "completed" });
+    await setOrderStatus(context.orderId, "completed");
+    await announceOutcome(context, { state: "completed", deliveredItems: [] });
+
+    return { action: "completed" };
+  }
+
+  if (decision.action === "fail") {
+    const outcome = await failAndRefund(context, attempt.id, decision.reason);
+    await announceOutcome(context, outcome);
+
+    return { action: "refunded", reason: decision.reason };
+  }
+
+  /*
+   * `reconcile` is the state the schema has always declared and nothing has ever
+   * written: the supplier's answer does not settle this, and guessing either way
+   * risks giving away goods or taking money for nothing. The order stays as it
+   * is, and the dashboard already renders this state as needing attention.
+   */
+  await recordAttempt(attempt.id, { status: "reconcile", errorMessage: decision.reason });
+
+  return { action: "escalated", reason: decision.reason };
 }
 
 /**

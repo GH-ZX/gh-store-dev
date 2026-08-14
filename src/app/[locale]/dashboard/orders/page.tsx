@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FulfillmentBadge, OrderStatusBadge } from "@/components/admin/order-badges";
+import { ReconcilePanel } from "@/components/admin/reconcile-panel";
 import { EmptyState } from "@/components/shared/states";
 import { ArrowIcon, SearchIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
@@ -12,6 +13,7 @@ import {
   ATTENTION_FILTER,
   getOrders,
 } from "@/lib/services/admin-orders.service";
+import { getLastReconcileRun } from "@/lib/services/reconciliation.service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -25,7 +27,10 @@ export default async function OrdersPage({
   const query = await searchParams;
   const term = typeof query.q === "string" ? query.q : "";
   const status = typeof query.status === "string" ? query.status : "";
-  const orders = await getOrders({ search: term, status });
+  const [orders, lastRun] = await Promise.all([
+    getOrders({ search: term, status }),
+    getLastReconcileRun(),
+  ]);
   const filtered = Boolean(term || status);
 
   return (
@@ -36,6 +41,8 @@ export default async function OrdersPage({
         title={messages.title}
         subtitle={messages.description}
       />
+
+      <ReconcilePanel locale={locale} messages={messages} lastRun={lastRun} />
 
       {/* A real GET form, so a filtered view is a shareable URL and needs no JavaScript. */}
       <form method="get" className="flex flex-wrap items-center gap-3">

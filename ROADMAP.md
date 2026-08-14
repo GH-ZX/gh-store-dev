@@ -19,7 +19,7 @@
 | 6. Public storefront | Complete | Configurable homepage, carousel, catalog, search, game and offer detail, static pages, SEO, sitemap, robots |
 | 7. Customer account | Pending | Auth UI, profile, wallet, notifications |
 | 8. Commerce core | Pending | Cart, checkout, orders, invoices |
-| 9. G2Bulk fulfillment | Pending | Sync, top-ups, redeem codes, webhooks, reconciliation |
+| 9. G2Bulk fulfillment | In progress | Sync, top-ups, redeem codes, and reconciliation done; supplier webhook remains |
 | 10. Payments | In progress | Manual recharge, Sam invoices, and SyriatelCash done; Binance Pay and admin reconciliation remain |
 | 11. Admin operations | In progress | Sign-in, dashboard shell, overview, G2Bulk key, games and voucher imports, catalog editing, website settings, customers, recharges, and order operations done; reviews, support, audit views, and manual catalog creation remain |
 | 12. Release | Pending | QA, staging UAT, Cloudflare domain, production launch |
@@ -189,14 +189,35 @@ real volume to measure.
 
 ## Stage 9: G2Bulk Fulfillment
 
-**Status: Pending**
+**Status: In progress**
 
-- Implement typed G2Bulk provider adapter.
-- Implement catalog sync, pricing mapping, and media preservation.
-- Implement player validation and dynamic top-up fields.
-- Implement UID top-up and redeem-code purchase flows.
-- Implement polling, webhook handling, retry classification, and reconciliation.
-- Persist supplier references and delivery data safely.
+### Completed
+
+- Typed G2Bulk provider adapter, catalog sync, pricing mapping, media
+  preservation, player validation, dynamic top-up fields, and both the UID
+  top-up and redeem-code purchase flows.
+- Supplier references and delivered codes persisted the moment they arrive.
+- Reconciliation. Checkout waits about ten seconds for the supplier and then
+  leaves the order at `fulfilling`; nothing used to go back for it, so an order
+  the supplier finished a minute later stayed unfinished until an operator
+  noticed. A sweep now re-asks the supplier and settles the outcome.
+
+  The sweep never buys. The purchase path is reached only from checkout and from
+  an operator's explicit retry, both of which a person is waiting on; a
+  background job that could place an order would be one bug away from buying
+  again for every order it looked at. Where there is no supplier order to poll —
+  the purchase either never happened or its reply was lost — it settles nothing
+  in either direction and marks the attempt `reconcile` for a human, which is
+  the state the schema declared from the start and nothing had ever written.
+
+  Completing or failing requires the supplier to have said so. Age alone only
+  ever escalates to a person, never settles.
+
+### Remaining
+
+- Accept G2Bulk's own callback so a finished order is known immediately rather
+  than at the next sweep. `fulfillment_events` already carries the
+  `(provider, external_event_id)` uniqueness a duplicate-safe receiver needs.
 
 **Exit criteria:** Success, pending, delayed, failed, duplicate-callback, and reconciliation scenarios pass in staging.
 

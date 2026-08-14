@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DropdownAutoClose } from "@/components/layout/dropdown-auto-close";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { BellIcon, UserIcon, WalletIcon } from "@/components/ui/icons";
@@ -12,10 +13,15 @@ import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service"
 /**
  * Header account area.
  *
- * Server-rendered and JavaScript-free: a native `details` disclosure holds the
- * menu, and sign-out is a form posting to a server action. The supplier wallet
- * pill is admin-only — it is operational information, and fetching it for a
- * visitor would call the provider for no reason.
+ * Server-rendered: a native `details` disclosure holds the menu, and sign-out is
+ * a form posting to a server action, so the menu works before any JavaScript
+ * arrives. {@link DropdownAutoClose} is the one client island, and only to
+ * dismiss the panel once a link or button in it is used — the router swaps the
+ * page without touching this element, so an open menu would otherwise sit on
+ * top of wherever the click led.
+ *
+ * The supplier wallet pill is admin-only — it is operational information, and
+ * fetching it for a visitor would call the provider for no reason.
  */
 export type AccountMenuProps = {
   locale: Locale;
@@ -85,6 +91,8 @@ export function AccountMenu({
           <UserIcon className="size-4 shrink-0" />
           <span className="hidden max-w-28 truncate sm:inline">{session.displayName}</span>
         </summary>
+
+        <DropdownAutoClose />
 
         <div className="absolute end-0 top-12 z-50 grid w-60 gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3 shadow-[var(--elevation-3)]">
           <div className="min-w-0 px-1">
