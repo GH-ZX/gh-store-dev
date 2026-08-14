@@ -4,7 +4,7 @@
 **Technical repository name:** `gh-store`  
 **Reference repository:** `echocore-store`  
 **Archive:** `gh-store-old`  
-**Current status:** Stage 6 complete; Stage 11 started (providers and catalog import)
+**Current status:** Stage 6 complete; stages 9, 10, and 11 in progress
 
 ## Progress Snapshot
 
@@ -21,7 +21,7 @@
 | 8. Commerce core | Pending | Cart, checkout, orders, invoices |
 | 9. G2Bulk fulfillment | In progress | Sync, top-ups, redeem codes, and reconciliation done; supplier webhook remains |
 | 10. Payments | In progress | Manual recharge, Sam invoices, and SyriatelCash done; Binance Pay and admin reconciliation remain |
-| 11. Admin operations | In progress | Sign-in, dashboard shell, overview, G2Bulk key, games and voucher imports, catalog editing, website settings, customers, recharges, and order operations done; reviews, support, audit views, and manual catalog creation remain |
+| 11. Admin operations | In progress | Sign-in, dashboard shell, overview, G2Bulk key, games and voucher imports, catalog editing, website settings, customers, recharges, order operations, access control, activity log, review moderation, and the support queue done; owner-composed notifications, theme settings, per-page SEO, and manual catalog creation remain |
 | 12. Release | Pending | QA, staging UAT, Cloudflare domain, production launch |
 
 ## Working Rules
@@ -299,12 +299,26 @@ wallet transaction with the request id — rather than a match on amount and tim
   that would leave no active administrator.
 - Activity log. `audit_logs` had been written since the first hand-made order
   change and read by nothing. Every hand-made change now shows with the name of
-  whoever made it, alongside the provider sync and reconciliation runs.
+  whoever made it, alongside the provider sync and reconciliation runs. It shares
+  a page with the provider sync runs and the store's own Axiom events, each of
+  the three paged rather than truncated at whatever the first screen held.
+
+- Support. `support_threads` and `support_messages` had existed since the orders
+  migration with nothing on either side of them. Customers open threads and
+  reply; the owner answers from a queue ordered by most recent activity. The
+  rules stayed in the database, where they already were: a customer cannot post
+  as the store, and cannot resolve their own ticket out of the queue.
+
+- Reviews. Customers can now write one, and only against a delivered order of
+  their own — a testimonial strip is worth believing only if the people in it
+  bought something. One review per order is enforced by a partial unique index
+  rather than a read-then-write. Nothing reaches the storefront until an
+  administrator approves it.
 
 ### Remaining
 
-- Build review, support, and notification-composing operations. Reviews are
-  read-only today — customers cannot post — so moderation is not yet load-bearing.
+- Compose and send a notification to a customer by hand. Delivery, refund, and
+  top-up decisions already notify; an owner-written message does not.
 - Build theme settings and per-page SEO beyond the homepage.
 - Create games and offers by hand, and delete individual offers.
 
