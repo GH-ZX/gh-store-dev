@@ -100,6 +100,27 @@ export function toAxiomStatus(providers: unknown): AxiomStatus {
   };
 }
 
+/**
+ * Where to POST events, which depends on which Axiom host is configured.
+ *
+ * Axiom exposes ingest at two different paths. The API host takes
+ * `/v1/datasets/{dataset}/ingest`; an edge deployment host — the
+ * `…edge.axiom.co` address shown on a dataset's own page — takes
+ * `/v1/ingest/{dataset}`. Sending the edge path to the API host answers 404
+ * with "path not found", which reads like a missing dataset and is not one.
+ *
+ * Both are accepted here because an owner copying an address out of Axiom may
+ * reasonably arrive with either.
+ */
+export function axiomIngestUrl(domain: string, dataset: string): string {
+  const host = domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const name = encodeURIComponent(dataset.trim() || AXIOM_DEFAULTS.dataset);
+
+  return /(^|\.)edge\.axiom\.co$/i.test(host)
+    ? `https://${host}/v1/ingest/${name}`
+    : `https://${host}/v1/datasets/${name}/ingest`;
+}
+
 export type AxiomSettingsUpdate = {
   apiToken?: string;
   dataset?: string;

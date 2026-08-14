@@ -2,7 +2,12 @@ import "server-only";
 
 import { after } from "next/server";
 import { redact } from "@/lib/logging/redact";
-import { LOG_LEVELS, readAxiomCredentials, type LogLevel } from "@/lib/settings/axiom-settings";
+import {
+  axiomIngestUrl,
+  LOG_LEVELS,
+  readAxiomCredentials,
+  type LogLevel,
+} from "@/lib/settings/axiom-settings";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 
 /**
@@ -52,7 +57,7 @@ async function destination(): Promise<Destination> {
       if (credentials.apiToken && credentials.enabled) {
         value = {
           token: credentials.apiToken,
-          url: `https://${credentials.domain}/v1/ingest/${encodeURIComponent(credentials.dataset)}`,
+          url: axiomIngestUrl(credentials.domain, credentials.dataset),
           minLevel: credentials.minLevel,
         };
       }

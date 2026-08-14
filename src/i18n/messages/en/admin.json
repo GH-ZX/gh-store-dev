@@ -196,7 +196,7 @@
       "datasetLabel": "Dataset",
       "datasetHelp": "The Axiom dataset events are written to. Create it in Axiom first.",
       "domainLabel": "Axiom domain",
-      "domainHelp": "api.axiom.co for a US workspace. An EU workspace uses a different domain.",
+      "domainHelp": "The API host: api.axiom.co for a US workspace, api.eu.axiom.co for an EU one. A dataset's own edge address (…edge.axiom.co) also works.",
       "levelLabel": "Send events from",
       "levelHelp": "Lower levels mean more detail and more volume. Warnings and errors are what you want to be told about.",
       "levels": {
