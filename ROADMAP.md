@@ -4,9 +4,7 @@
 **Technical repository name:** `gh-store`  
 **Reference repository:** `echocore-store`  
 **Archive:** `gh-store-old`  
-**Current status:** Stages 0–7, 9, and 11 complete; stage 8 has invoices
-outstanding and a cart to decide on; stage 10 has Binance Pay outstanding;
-stage 12 not started
+**Current status:** Stages 0–11 complete; stage 12 is the remaining work
 
 ## Progress Snapshot
 
@@ -20,9 +18,9 @@ stage 12 not started
 | 5. Localization and routing | Complete | Arabic RTL, English LTR, route shell, locale-aware document metadata |
 | 6. Public storefront | Complete | Configurable homepage, carousel, catalog, search, game and offer detail, static pages, SEO, sitemap, robots |
 | 7. Customer account | Complete | Auth, recovery, profile, wallet history, notifications, suspension handling |
-| 8. Commerce core | In progress | Server-validated checkout, atomic debit, idempotency, and order views done; invoices remain, and a cart is undecided |
+| 8. Commerce core | Complete | Server-validated checkout, atomic debit, idempotency, order views, and invoices; no cart, by decision |
 | 9. G2Bulk fulfillment | Complete | Sync, top-ups, redeem codes, reconciliation, and the supplier callback done |
-| 10. Payments | In progress | Manual recharge, Sam invoices, and SyriatelCash done; Binance Pay and admin reconciliation remain |
+| 10. Payments | Complete | Manual recharge, Sam invoices, SyriatelCash, ShamCash, payments reconciliation, and Binance Pay |
 | 11. Admin operations | Complete | Every daily operation runs from the dashboard: catalog import and hand-built catalog, pricing, orders and fulfilment, recharges, payments, customers, access, support, reviews, notifications, activity log, website content, theme, and SEO |
 | 12. Release | Pending | QA, staging UAT, Cloudflare domain, production launch |
 
@@ -188,7 +186,7 @@ so RLS decides what a customer can see; the policies are covered by
 
 ## Stage 8: Commerce Core
 
-**Status: In progress**
+**Status: Complete**
 
 ### Completed
 
@@ -206,18 +204,19 @@ so RLS decides what a customer can see; the policies are covered by
 - Order history, order detail, success, and delivery views, including the
   account fields submitted and the codes delivered.
 
-### Remaining
+- Invoices. An order that was paid for has a document, snapshotted at issue so
+  it keeps saying what was bought and what it cost even after the catalog moves.
+  Saved with the browser's own print-to-PDF rather than a rasteriser shipped to
+  every visitor.
 
-- Invoice rendering and export. The `invoices` table has existed since the
-  orders migration and nothing writes an order invoice to it — the only invoice
-  in the store today is the Sam payment one, which is a different document.
-- A cart, if one is wanted at all. Checkout is one offer at a time, which is how
-  every flow above is built and how top-ups are actually bought; a cart would be
-  a product decision rather than a missing piece, and it should be made
-  deliberately rather than inherited from this list.
+**Decided: no cart.** Checkout is one offer at a time, which is how every flow
+here is built and how top-ups are actually bought — and the supplier cannot buy
+many products in one call anyway, so a basket would be several orders wearing
+one button. Recorded as a decision rather than left on the list, so nobody
+builds one because a list said so.
 
-**Exit criteria met for what exists:** checkout cannot be manipulated from the
-browser and cannot double-charge. Neither remaining item touches that.
+**Exit criteria met:** checkout cannot be manipulated from the browser and
+cannot double-charge.
 
 ## Stage 8: Commerce Core
 
@@ -283,7 +282,7 @@ is exactly how they settled before.
 
 ## Stage 10: Payments and Recharge
 
-**Status: In progress**
+**Status: Complete**
 
 ### Completed
 
@@ -311,9 +310,14 @@ is exactly how they settled before.
   "paid but not credited" is a disagreement between two statuses and no status
   filter can ask for it.
 
-### Remaining
-
-- Add Binance Pay only behind explicit configuration.
+- Binance Pay, behind explicit configuration. Credentials and the switch that
+  offers it to customers are separate: saving a key must not put a new payment
+  method in front of anybody by itself. The callback is never trusted — its body
+  shape is the one part of that API the published documentation would not give
+  up — so a notification only causes the store to ask Binance about the order,
+  and that answer decides. Crediting refuses a short payment, credits once, and
+  reports a replay as idempotent; all four rules were exercised against hosted
+  staging inside a transaction that was rolled back.
 
 **Exit criteria met:** Every payment state maps to one auditable wallet result,
 and the payments screen is where that mapping is checked. The link is an exact
