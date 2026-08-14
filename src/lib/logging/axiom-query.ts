@@ -57,12 +57,21 @@ function toEvent(raw: unknown): AppEvent | null {
     return null;
   }
 
+  /*
+   * Axiom returns every column the dataset has ever seen, nulled where this
+   * event did not set it, so an event with three fields comes back with thirty.
+   * Only what this event actually carried is worth showing.
+   */
+  const fields = Object.fromEntries(
+    Object.entries(rest).filter(([, value]) => value !== null && value !== undefined),
+  );
+
   return {
     time: typeof time === "string" ? time : String(row._time ?? ""),
     level,
     area,
     event: typeof event === "string" ? event : "",
-    fields: rest,
+    fields,
   };
 }
 

@@ -95,9 +95,16 @@ async function ship(event: Record<string, unknown>, level: LogLevel): Promise<vo
         Authorization: `Bearer ${target.token}`,
         "Content-Type": "application/json",
       },
-      // Axiom takes an array of events; one at a time keeps a failure local to
-      // the event that caused it.
-      body: JSON.stringify([{ _time: event.time, data: event }]),
+      /*
+       * The event's own fields, flat. Axiom stores the posted object as the
+       * row, so wrapping it in `data` buries every field one level down — the
+       * event still arrives, but `level` and `area` become `data.level` and
+       * `data.area`, and a query written against the obvious names compiles to
+       * "invalid field".
+       *
+       * `_time` is the row's timestamp; anything else is a field.
+       */
+      body: JSON.stringify([{ ...event, _time: event.time }]),
       signal: AbortSignal.timeout(5_000),
       cache: "no-store",
     });
