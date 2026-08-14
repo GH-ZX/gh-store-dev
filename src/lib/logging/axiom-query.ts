@@ -1,5 +1,6 @@
 import "server-only";
 
+import { hasContent } from "@/lib/logging/fields";
 import { readAxiomCredentials } from "@/lib/settings/axiom-settings";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 
@@ -61,10 +62,12 @@ function toEvent(raw: unknown): AppEvent | null {
    * Axiom returns every column the dataset has ever seen, nulled where this
    * event did not set it, so an event with three fields comes back with thirty.
    * Only what this event actually carried is worth showing.
+   *
+   * Emptiness has to be checked through nested objects, not just at the top:
+   * a dataset keeps columns written by an earlier event shape, and those arrive
+   * as an object of nothing but nulls rather than as a null.
    */
-  const fields = Object.fromEntries(
-    Object.entries(rest).filter(([, value]) => value !== null && value !== undefined),
-  );
+  const fields = Object.fromEntries(Object.entries(rest).filter(([, value]) => hasContent(value)));
 
   return {
     time: typeof time === "string" ? time : String(row._time ?? ""),
