@@ -4,6 +4,7 @@ import { SectionEditor } from "@/components/live-edit/section-editor";
 import { ReviewCard } from "@/components/store/review-card";
 import { GameGrid, OfferGrid } from "@/components/store/collections";
 import { ButtonLink } from "@/components/ui/button";
+import { SocialIcon } from "@/components/ui/brand-icons";
 import { ArrowIcon } from "@/components/ui/icons";
 import { Rail, RailItem } from "@/components/ui/rail";
 import { Section, SectionHeader } from "@/components/ui/section";
@@ -209,13 +210,13 @@ export function HomeSections({
                           href={link.url}
                           target="_blank"
                           rel="noreferrer noopener"
-                          className="inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--surface)] px-4 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+                          className="group inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--surface)] px-4 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
                         >
-                          {getSocialLinkLabel(link, locale)}
-                          <ArrowIcon
-                            direction="end"
-                            className="size-3.5 -rotate-45 text-[var(--ink-faint)] rtl:rotate-[225deg]"
+                          <SocialIcon
+                            platform={link.platform}
+                            className="size-4 shrink-0 text-[var(--ink-faint)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)]"
                           />
+                          {getSocialLinkLabel(link, locale)}
                         </a>
                       </li>
                     ))}

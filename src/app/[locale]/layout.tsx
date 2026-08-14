@@ -39,6 +39,16 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
 
   return (
     <div lang={locale} dir={getLocaleDirection(locale)} className="flex min-h-screen flex-col">
+      {/*
+       * The owner's ambient layer, and nothing at all when they chose none —
+       * the default. Decorative, so it is never announced, and it sits behind
+       * the whole storefront rather than inside any section, which is what lets
+       * it stay still while the page scrolls.
+       */}
+      {settings.theme.backdrop === "none" ? null : (
+        <div className="gh-backdrop" data-backdrop={settings.theme.backdrop} aria-hidden="true" />
+      )}
+
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:start-4 focus:z-50 focus:rounded-[var(--radius-control)] focus:bg-[var(--accent)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--accent-ink)]"

@@ -27,7 +27,12 @@ import {
   type SocialLinkInput,
 } from "@/lib/services/admin-website.service";
 import { isSeoPagePath } from "@/lib/settings/page-seo";
-import { safeColour, THEME_MODES, type ThemeMode } from "@/lib/settings/theme-settings";
+import {
+  readBackdrop,
+  safeColour,
+  THEME_MODES,
+  type ThemeMode,
+} from "@/lib/settings/theme-settings";
 import {
   CONTACT_FIELD_PREFIX,
   CONTACT_KIND_OPTIONS,
@@ -458,6 +463,7 @@ const themeSchema = z.object({
   accent: z.string().trim().max(9).optional(),
   accent_2: z.string().trim().max(9).optional(),
   default_mode: z.string().optional(),
+  backdrop: z.string().optional(),
 });
 
 function resolveMode(value: string | undefined): ThemeMode {
@@ -474,6 +480,7 @@ export async function saveThemeAction(
     accent: formText(formData, "accent"),
     accent_2: formText(formData, "accent_2"),
     default_mode: formText(formData, "default_mode"),
+    backdrop: formText(formData, "backdrop"),
   });
 
   if (!parsed.success) {
@@ -492,6 +499,7 @@ export async function saveThemeAction(
       accent: accent ? accent : null,
       accent2: accent2 ? accent2 : null,
       defaultMode: resolveMode(parsed.data.default_mode),
+      backdrop: readBackdrop(parsed.data.backdrop),
     });
   } catch (error) {
     logFailure("admin.website", "theme_save_failed", error);

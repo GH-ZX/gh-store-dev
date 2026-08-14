@@ -12,6 +12,7 @@ import {
 } from "@/app/[locale]/dashboard/website/action-state";
 import { saveSocialLinksAction } from "@/app/[locale]/dashboard/website/actions";
 import { FormResult, SelectField, TextField } from "@/components/admin/admin-form";
+import { SocialIcon } from "@/components/ui/brand-icons";
 import { Button } from "@/components/ui/button";
 import type { AdminMessages } from "@/i18n/messages";
 import type { SocialLink, SocialPlatform } from "@/lib/settings/public-settings";
@@ -83,6 +84,15 @@ export function SocialLinksEditor({ links, messages, errors }: SocialLinksEditor
     setRows((current) => current.filter((row) => row.key !== key));
   }
 
+  /*
+   * Mirrors the select into state for the preview only — the field itself stays
+   * uncontrolled, so a row can still be removed from the middle of the list
+   * without React re-using the neighbour's DOM node and its typing with it.
+   */
+  function setPlatform(key: string, platform: SocialPlatform) {
+    setRows((current) => current.map((row) => (row.key === key ? { ...row, platform } : row)));
+  }
+
   return (
     <form action={formAction} className="grid gap-4">
       {rows.length === 0 ? (
@@ -94,11 +104,25 @@ export function SocialLinksEditor({ links, messages, errors }: SocialLinksEditor
               key={row.key}
               className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4"
             >
+              {/*
+               * The mark the storefront will show, following the select as it
+               * changes. Which platform a link belongs to is otherwise a word
+               * in a dropdown, and a row set to the wrong one looks identical
+               * to a right one until someone visits the page.
+               */}
+              <div className="mb-3 flex items-center gap-2 text-[var(--ink-soft)]">
+                <SocialIcon platform={row.platform} className="size-5 shrink-0" />
+                <span className="text-xs font-medium tracking-[0.08em] uppercase" dir="ltr">
+                  {row.platform}
+                </span>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <SelectField
                   label={messages.platform}
                   name={rowField(SOCIAL_FIELD_PREFIX, index, "platform")}
                   defaultValue={row.platform}
+                  onChange={(event) => setPlatform(row.key, event.target.value as SocialPlatform)}
                   options={PLATFORM_OPTIONS}
                   dir="ltr"
                 />

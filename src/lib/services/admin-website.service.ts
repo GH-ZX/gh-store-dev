@@ -11,7 +11,12 @@ import {
   type SocialPlatform,
 } from "@/lib/settings/public-settings";
 import type { PageSeo, SeoPagePath } from "@/lib/settings/page-seo";
-import { safeColour, type ThemeMode, type ThemeSettings } from "@/lib/settings/theme-settings";
+import {
+  safeColour,
+  type Backdrop,
+  type ThemeMode,
+  type ThemeSettings,
+} from "@/lib/settings/theme-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
@@ -365,11 +370,16 @@ export async function saveTheme(input: {
   accent: string | null;
   accent2: string | null;
   defaultMode: ThemeMode;
+  backdrop: Backdrop;
 }): Promise<void> {
   await requireAdmin();
 
   const row = await readPresentationRow();
-  const next: JsonObject = { ...toJsonObject(row.theme), default_mode: input.defaultMode };
+  const next: JsonObject = {
+    ...toJsonObject(row.theme),
+    default_mode: input.defaultMode,
+    backdrop: input.backdrop,
+  };
   const accent = safeColour(input.accent);
   const accent2 = safeColour(input.accent2);
 

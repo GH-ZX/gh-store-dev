@@ -11,6 +11,8 @@ import { FieldShell, FormResult, SelectField } from "@/components/admin/admin-fo
 import { Button } from "@/components/ui/button";
 import { AlertIcon } from "@/components/ui/icons";
 import type { AdminMessages } from "@/i18n/messages";
+import { cn } from "@/lib/cn";
+import { matchThemePreset, THEME_PRESETS } from "@/lib/settings/theme-presets";
 import {
   ACCENT_INK,
   accentIsReadable,
@@ -97,9 +99,51 @@ export function ThemeForm({ theme, messages, errors }: ThemeFormProps) {
   const chosen = safeColour(accent);
   const ratio = chosen ? contrastRatio(chosen, ACCENT_INK) : null;
   const unreadable = chosen !== null && !accentIsReadable(chosen);
+  const active = matchThemePreset({ ...theme, accent: chosen, accent2: safeColour(accent2) });
 
   return (
     <form action={formAction} className="grid gap-4">
+      <FieldShell label={messages.presetsLabel} hint={messages.presetsHint}>
+        <ul className="flex flex-wrap gap-2">
+          {THEME_PRESETS.map((preset) => {
+            const selected = active?.id === preset.id;
+
+            return (
+              <li key={preset.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAccent(preset.accent);
+                    setAccent2(preset.accent2);
+                  }}
+                  aria-pressed={selected}
+                  className={cn(
+                    "flex min-h-11 items-center gap-2.5 rounded-[var(--radius-pill)] border px-3 text-sm transition-colors duration-[var(--duration)]",
+                    selected
+                      ? "border-[color-mix(in_srgb,var(--accent)_55%,transparent)] bg-[var(--surface-strong)] text-[var(--ink)]"
+                      : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]",
+                  )}
+                >
+                  {/*
+                   * The pair itself, drawn rather than named. A colour is the
+                   * one thing a label cannot convey, and these two are shown
+                   * touching because that is how they meet in a gradient.
+                   */}
+                  <span
+                    className="size-5 shrink-0 rounded-full border border-[var(--line-strong)]"
+                    style={{
+                      backgroundImage: `linear-gradient(135deg, ${preset.accent} 0 50%, ${preset.accent2} 50% 100%)`,
+                    }}
+                    aria-hidden="true"
+                  />
+                  {messages.presets[preset.id as keyof typeof messages.presets]}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </FieldShell>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <ColourField
           name="accent"

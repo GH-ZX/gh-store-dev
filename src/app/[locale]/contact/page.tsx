@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/shared/states";
 import { Badge } from "@/components/ui/badge";
+import { ContactIcon } from "@/components/ui/brand-icons";
 import { ArrowIcon, InfoIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
@@ -59,9 +60,23 @@ export default async function ContactPage({ params }: PageProps<"/[locale]/conta
 
                 const body = (
                   <>
-                    <span className="text-sm font-semibold text-[var(--ink)]">{label}</span>
-                    <span className="mt-1 block truncate text-sm text-[var(--ink-muted)]" dir="ltr">
-                      {channel.value}
+                    {/*
+                     * The mark carries the kind, so a customer scanning the
+                     * grid finds WhatsApp by its shape rather than by reading
+                     * four labels. It is not the label: the name is right
+                     * beside it, which is what a screen reader announces.
+                     */}
+                    <span
+                      className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--line)] bg-[var(--shell)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)] [&>svg]:size-4.5"
+                      aria-hidden="true"
+                    >
+                      <ContactIcon kind={channel.kind} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[var(--ink)]">{label}</span>
+                      <span className="mt-1 block truncate text-sm text-[var(--ink-muted)]" dir="ltr">
+                        {channel.value}
+                      </span>
                     </span>
                   </>
                 );
@@ -74,7 +89,7 @@ export default async function ContactPage({ params }: PageProps<"/[locale]/conta
                         rel="noreferrer noopener"
                         className="group flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4 transition-colors duration-[var(--duration)] hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)]"
                       >
-                        <span className="min-w-0">{body}</span>
+                        <span className="flex min-w-0 items-center gap-3">{body}</span>
                         <span
                           className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
                           aria-hidden="true"
@@ -83,7 +98,7 @@ export default async function ContactPage({ params }: PageProps<"/[locale]/conta
                         </span>
                       </a>
                     ) : (
-                      <div className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4">
+                      <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4">
                         {body}
                       </div>
                     )}

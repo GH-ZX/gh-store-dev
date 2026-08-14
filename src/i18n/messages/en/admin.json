@@ -527,6 +527,18 @@
     "theme": {
       "title": "Theme",
       "description": "The brand colours the storefront is built from, and what a first-time visitor sees.",
+      "presetsLabel": "Ready-made pairs",
+      "presetsHint": "Fills both colours below. Nothing is saved until you press save, and you can edit either colour afterwards.",
+      "presetsCustom": "Your own colours",
+      "presets": {
+        "signal": "Signal teal",
+        "indigo": "Indigo",
+        "emerald": "Emerald",
+        "violet": "Violet",
+        "ember": "Ember",
+        "crimson": "Crimson",
+        "graphite": "Graphite"
+      },
       "accentLabel": "Accent colour",
       "accentHint": "Buttons, links, and highlights. Leave empty for the built-in colour.",
       "accent2Label": "Second accent",

@@ -21,24 +21,40 @@ const HEX_COLOUR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 export const THEME_MODES = ["system", "dark", "light"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
+/**
+ * The ambient layer behind the whole storefront.
+ *
+ * One fixed element and one CSS rule per option: no canvas, no animation frame,
+ * no second element per blob. The reference store animates three blurred blobs
+ * for the same effect, which is a compositor running for as long as the tab is
+ * open — on a phone that is battery spent on something nobody is looking at.
+ * These hold still, and everything they are drawn from is already a token, so
+ * each one follows the owner's accents and both themes for free.
+ */
+export const BACKDROPS = ["none", "aurora", "mesh", "grid"] as const;
+export type Backdrop = (typeof BACKDROPS)[number];
+
 export type ThemeSettings = {
   /** Null means "use the token file's own value". */
   accent: string | null;
   accent2: string | null;
   /** What a first-time visitor gets before they have chosen for themselves. */
   defaultMode: ThemeMode;
+  backdrop: Backdrop;
 };
 
 export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   accent: null,
   accent2: null,
   defaultMode: "system",
+  backdrop: "none",
 };
 
 const themeSchema = z.object({
   accent: z.string().nullish(),
   accent_2: z.string().nullish(),
   default_mode: z.string().nullish(),
+  backdrop: z.string().nullish(),
 });
 
 /** A colour we are willing to write into a stylesheet, or null. */
@@ -58,6 +74,12 @@ function readMode(value: unknown): ThemeMode {
     : "system";
 }
 
+export function readBackdrop(value: unknown): Backdrop {
+  return typeof value === "string" && (BACKDROPS as readonly string[]).includes(value)
+    ? (value as Backdrop)
+    : "none";
+}
+
 export function normalizeTheme(value: unknown): ThemeSettings {
   const parsed = themeSchema.safeParse(value ?? {});
 
@@ -69,6 +91,7 @@ export function normalizeTheme(value: unknown): ThemeSettings {
     accent: safeColour(parsed.data.accent),
     accent2: safeColour(parsed.data.accent_2),
     defaultMode: readMode(parsed.data.default_mode),
+    backdrop: readBackdrop(parsed.data.backdrop),
   };
 }
 

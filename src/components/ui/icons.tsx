@@ -171,6 +171,40 @@ export function PencilIcon(props: IconProps) {
   );
 }
 
+export function MailIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="5.5" width="18" height="13" rx="2.5" />
+      <path d="m3.8 7.5 7.1 5a2 2 0 0 0 2.2 0l7.1-5" />
+    </Icon>
+  );
+}
+
+/**
+ * A handset, tilted the same way in both languages.
+ *
+ * A phone is held at an angle rather than pointed somewhere, so mirroring it in
+ * Arabic would say nothing and only make the row of channel marks disagree with
+ * itself about which way is up.
+ */
+export function PhoneIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M7.4 3.5H5.2A1.7 1.7 0 0 0 3.5 5.2c0 8.4 6.9 15.3 15.3 15.3a1.7 1.7 0 0 0 1.7-1.7v-2.2a1.2 1.2 0 0 0-.9-1.16l-3.1-.78a1.2 1.2 0 0 0-1.2.4l-.9 1.1a12.6 12.6 0 0 1-5.4-5.4l1.1-.9a1.2 1.2 0 0 0 .4-1.2l-.78-3.1a1.2 1.2 0 0 0-1.16-.9Z" />
+    </Icon>
+  );
+}
+
+/** Two links of a chain, for an address that is only ever an address. */
+export function LinkIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M10.4 13.6a3.7 3.7 0 0 0 5.3 0l2.9-2.9a3.75 3.75 0 0 0-5.3-5.3l-1.5 1.5" />
+      <path d="M13.6 10.4a3.7 3.7 0 0 0-5.3 0l-2.9 2.9a3.75 3.75 0 0 0 5.3 5.3l1.5-1.5" />
+    </Icon>
+  );
+}
+
 export function BellIcon(props: IconProps) {
   return (
     <Icon {...props}>

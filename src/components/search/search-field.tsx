@@ -69,7 +69,6 @@ export function SearchField({
         className,
       )}
     >
-      <SearchIcon className="size-4.5 shrink-0 text-[var(--ink-muted)]" />
       <input
         ref={inputRef}
         type="search"
@@ -96,6 +95,18 @@ export function SearchField({
           <CloseIcon />
         </button>
       ) : null}
+      {/*
+       * The one magnifier in the field, and it is on the button.
+       *
+       * There used to be a second, decorative one at the head of the input. Two
+       * copies of the same glyph a few pixels apart read as a mistake, and of
+       * the two this is the one worth keeping: it labels the control that does
+       * something. A direction-aware arrow was the other candidate and is a
+       * trap — this field also sits in the header bar, which is pinned LTR so
+       * the mark does not change sides, and every way CSS has of asking "which
+       * way does text run" answers for the Arabic document rather than for the
+       * box, so the arrow would point back into the field it submits.
+       */}
       <button
         type="submit"
         aria-label={labels.submit}

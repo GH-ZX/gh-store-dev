@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
-import { ArrowIcon } from "@/components/ui/icons";
+import { SocialIcon } from "@/components/ui/brand-icons";
 import type { Locale } from "@/i18n/config";
 import type { CommonMessages } from "@/i18n/messages";
 import { BRAND } from "@/lib/brand";
@@ -115,11 +115,18 @@ export function SiteFooter({ locale, messages, socialLinks, year }: SiteFooterPr
                     rel="noreferrer noopener"
                     className="group inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] px-4 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
                   >
-                    {getSocialLinkLabel(link, locale)}
-                    <ArrowIcon
-                      direction="end"
-                      className="size-3.5 -rotate-45 text-[var(--ink-faint)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)] rtl:rotate-[225deg]"
+                    {/*
+                     * The mark leads and nothing trails. A pill this size can
+                     * carry one glyph before it starts looking like a toolbar,
+                     * and the mark is the more useful of the two: it says which
+                     * app opens, where an arrow only repeats that a link is a
+                     * link.
+                     */}
+                    <SocialIcon
+                      platform={link.platform}
+                      className="size-4 shrink-0 text-[var(--ink-faint)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)]"
                     />
+                    {getSocialLinkLabel(link, locale)}
                   </a>
                 </li>
               ))}

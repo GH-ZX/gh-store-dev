@@ -12,6 +12,7 @@ import {
 } from "@/app/[locale]/dashboard/website/action-state";
 import { saveContactChannelsAction } from "@/app/[locale]/dashboard/website/actions";
 import { FormResult, SelectField, TextAreaField, TextField } from "@/components/admin/admin-form";
+import { ContactIcon } from "@/components/ui/brand-icons";
 import { Button } from "@/components/ui/button";
 import type { AdminMessages } from "@/i18n/messages";
 import type { ContactChannel, ContactChannelKind } from "@/lib/settings/public-settings";
@@ -82,6 +83,15 @@ export function ContactChannelsEditor({
     setRows((current) => current.filter((row) => row.key !== key));
   }
 
+  /*
+   * Mirrors the select into state for the preview only — the field itself stays
+   * uncontrolled, so a row can still be removed from the middle of the list
+   * without React re-using the neighbour's DOM node and its typing with it.
+   */
+  function setKind(key: string, kind: ContactChannelKind) {
+    setRows((current) => current.map((row) => (row.key === key ? { ...row, kind } : row)));
+  }
+
   return (
     <form action={formAction} className="grid gap-4">
       <ul className="grid gap-3">
@@ -90,11 +100,24 @@ export function ContactChannelsEditor({
             key={row.key}
             className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4"
           >
+            {/*
+             * The mark the contact page will show, following the select as it
+             * changes — and with it the shape of the link, since the kind is
+             * what turns a value into a `mailto:`, a `tel:` or a deep link.
+             */}
+            <div className="mb-3 flex items-center gap-2 text-[var(--ink-soft)]">
+              <ContactIcon kind={row.kind} className="size-5 shrink-0" />
+              <span className="text-xs font-medium text-[var(--ink-muted)]">
+                {messages.kinds[row.kind]}
+              </span>
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <SelectField
                 label={messages.kind}
                 name={rowField(CONTACT_FIELD_PREFIX, index, "kind")}
                 defaultValue={row.kind}
+                onChange={(event) => setKind(row.key, event.target.value as ContactChannelKind)}
                 options={kindOptions}
               />
               <TextField
