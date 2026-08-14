@@ -3,7 +3,7 @@ import "server-only";
 import { requireAuth, UnauthorizedError } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fulfillOrder } from "@/lib/services/fulfillment.service";
-import { logFailure } from "@/lib/logging/logger";
+import { logFailure, logOutcome } from "@/lib/logging/logger";
 
 /**
  * Placing an order.
@@ -69,7 +69,35 @@ function reasonFromError(message: string): PlaceOrderResult {
   return { ok: false, reason: "unknown" };
 }
 
+/**
+ * Place an order, and say so.
+ *
+ * The attempt is a separate function purely so there is one exit to log rather
+ * than seven. The event is named for the attempt, not the success, because a
+ * refused checkout is the same event with a reason attached — and counting both
+ * under one name is what makes "how often does insufficient_balance happen"
+ * answerable.
+ *
+ * The customer's account fields are deliberately not among the logged fields.
+ * They are the player ids and server names the supplier needs, `redact` has no
+ * way to know they are sensitive, and no debugging question needs them.
+ */
 export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
+  const result = await attemptOrder(input);
+
+  logOutcome("checkout", "checkout_attempted", result, {
+    gameSlug: input.gameSlug,
+    offerSlug: input.offerSlug,
+    quantity: input.quantity,
+    ...(result.ok
+      ? { orderId: result.orderId, orderNumber: result.orderNumber, total: result.total }
+      : {}),
+  });
+
+  return result;
+}
+
+async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   try {
     await requireAuth();
   } catch (error) {

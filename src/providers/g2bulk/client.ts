@@ -1,6 +1,8 @@
 import "server-only";
 
 import { z } from "zod";
+import { log, logFailure } from "@/lib/logging/logger";
+import { sanitisePath } from "@/lib/logging/outcome";
 import {
   classifyStatus,
   G2BulkAuthError,
@@ -102,7 +104,12 @@ export class G2BulkClient {
     }
     let lastError: G2BulkError | null = null;
 
+    // Every G2Bulk call comes through here, retries included. The path carries
+    // game codes and order ids, so it is grouped rather than logged raw.
+    const route = sanitisePath(path);
+
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      const startedAt = Date.now();
       const headers: Record<string, string> = { Accept: "application/json" };
 
       if (auth && this.apiKey) {
@@ -134,8 +141,30 @@ export class G2BulkClient {
         );
 
         if (attempt === MAX_ATTEMPTS) {
+          logFailure("provider.g2bulk", "provider_unreachable", error, {
+            provider: "g2bulk",
+            method,
+            path: route,
+            attempt,
+            ms: Date.now() - startedAt,
+          });
+
           throw lastError;
         }
+
+        /*
+         * The retry itself is worth a line. A supplier degrading into "slow but
+         * eventually fine" succeeds from the caller's point of view and leaves
+         * no other trace, which is precisely when it is worth knowing.
+         */
+        log.warn("provider.g2bulk", "provider_retry", {
+          provider: "g2bulk",
+          method,
+          path: route,
+          attempt,
+          ms: Date.now() - startedAt,
+          kind: "network",
+        });
 
         await delay(BACKOFF_BASE_MS * attempt);
         continue;
@@ -152,11 +181,20 @@ export class G2BulkClient {
         }
       }
 
-      if (tolerate.includes(response.status)) {
-        return { status: response.status, json };
-      }
+      const ms = Date.now() - startedAt;
 
-      if (response.ok) {
+      if (tolerate.includes(response.status) || response.ok) {
+        // Debug for the same reason as Sam: a healthy call at info would bury
+        // the stream. `minLevel` on the Providers page turns this on.
+        log.debug("provider.g2bulk", "provider_call", {
+          provider: "g2bulk",
+          method,
+          path: route,
+          status: response.status,
+          attempt,
+          ms,
+        });
+
         return { status: response.status, json };
       }
 
@@ -165,8 +203,29 @@ export class G2BulkClient {
 
       // Never retry an auth failure: repeated 401s get the IP banned.
       if (!error.retryable || attempt === MAX_ATTEMPTS) {
+        log.error("provider.g2bulk", "provider_call_failed", {
+          provider: "g2bulk",
+          method,
+          path: route,
+          status: response.status,
+          attempt,
+          ms,
+          kind: error.kind,
+          retryable: error.retryable,
+        });
+
         throw error;
       }
+
+      log.warn("provider.g2bulk", "provider_retry", {
+        provider: "g2bulk",
+        method,
+        path: route,
+        status: response.status,
+        attempt,
+        ms,
+        kind: error.kind,
+      });
 
       lastError = error;
       await delay(BACKOFF_BASE_MS * 2 ** (attempt - 1));

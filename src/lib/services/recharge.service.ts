@@ -1,6 +1,7 @@
 import "server-only";
 
 import { requireAuth } from "@/lib/auth/guards";
+import { logOutcome } from "@/lib/logging/logger";
 import { normalizeRechargeConfig, type RechargeConfig } from "@/lib/settings/recharge-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -107,6 +108,21 @@ export async function submitRechargeRequest(input: {
   amount: number;
   method: string;
 }): Promise<SubmitResult> {
+  const result = await attemptRechargeRequest(input);
+
+  logOutcome("recharge", "recharge_requested", result, {
+    amount: input.amount,
+    method: input.method,
+    ...(result.ok ? { requestId: result.requestId } : {}),
+  });
+
+  return result;
+}
+
+async function attemptRechargeRequest(input: {
+  amount: number;
+  method: string;
+}): Promise<SubmitResult> {
   const supabase = await createSupabaseServerClient();
   const config = await getRechargeConfig();
 
@@ -142,6 +158,15 @@ export async function submitRechargeRequest(input: {
 export async function markRechargePaid(requestId: string): Promise<boolean> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("mark_recharge_paid", { p_request_id: requestId });
+
+  // A customer saying they have paid is the start of a money trail, so it is
+  // recorded whether or not the write landed.
+  logOutcome(
+    "recharge",
+    "recharge_marked_paid",
+    error ? { ok: false, reason: "write_failed" } : { ok: true },
+    { requestId, ...(error ? { error: error.message } : {}) },
+  );
 
   return !error;
 }

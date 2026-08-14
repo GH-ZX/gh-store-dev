@@ -17,6 +17,8 @@
  * enough to recognise and not enough to use.
  */
 
+import { createHash } from "node:crypto";
+
 const SECRET_KEY = /(?:token|secret|password|authorization|cookie|api[-_]?key|credential|signature)/i;
 
 /** A 32-character hex run: ShamCash addresses, and most opaque provider ids. */
@@ -27,6 +29,30 @@ export const REDACTED = "[redacted]";
 /** Keep enough of a long identifier to match it against another log line. */
 function shorten(value: string): string {
   return value.replace(LONG_HEX, (match) => `${match.slice(0, 4)}…${match.slice(-3)}`);
+}
+
+/**
+ * An email address as something a log may carry.
+ *
+ * A failed sign-in is worth recording — ten failures against one account in a
+ * minute is credential stuffing, and ten failures across ten accounts is a
+ * different problem — but neither question needs the address itself, and logs
+ * leave the building.
+ *
+ * This is an identifier, not a secret. Anyone already holding an address can
+ * confirm a match by hashing it, and that is fine: the goal is that Axiom does
+ * not accumulate a list of customer email addresses in plaintext, not that the
+ * value is unguessable. Lowercased and trimmed first, so the same person
+ * produces the same hash whatever they typed.
+ */
+export function hashEmail(email: string): string {
+  const normalized = email.trim().toLowerCase();
+
+  if (normalized.length === 0) {
+    return "";
+  }
+
+  return createHash("sha256").update(normalized, "utf8").digest("hex").slice(0, 8);
 }
 
 export function redact(value: unknown, depth = 0): unknown {

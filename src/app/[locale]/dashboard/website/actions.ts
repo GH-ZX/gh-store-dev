@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formFlag, formText } from "@/lib/forms/form-data";
+import { logFailure } from "@/lib/logging/logger";
 import {
   createHomeSection,
   DEFAULT_HOME_LAYOUT,
@@ -51,6 +52,8 @@ function isSafeUrl(value: string): boolean {
   try {
     return SAFE_URL_SCHEMES.includes(new URL(value).protocol);
   } catch {
+    // Silent on purpose: the throw is how `URL` says "not a URL", which is the
+    // answer this function was asked for and not a failure to record.
     return false;
   }
 }
@@ -62,6 +65,7 @@ function looksLikeUrl(value: string): boolean {
 
     return true;
   } catch {
+    // As above: not parsing is the answer, not an error.
     return false;
   }
 }
@@ -158,7 +162,9 @@ export async function saveHomeLayoutAction(
     });
 
     await saveHomeLayout(sections);
-  } catch {
+  } catch (error) {
+    logFailure("admin.website", "home_layout_save_failed", error);
+
     return failure("unknown");
   }
 
@@ -175,7 +181,9 @@ export async function resetHomeLayoutAction(
 
   try {
     await saveHomeLayout(DEFAULT_HOME_LAYOUT);
-  } catch {
+  } catch (error) {
+    logFailure("admin.website", "home_layout_reset_failed", error);
+
     return failure("unknown");
   }
 
@@ -248,7 +256,9 @@ export async function saveSocialLinksAction(
 
   try {
     await saveSocialLinks(links);
-  } catch {
+  } catch (error) {
+    logFailure("admin.website", "social_links_save_failed", error);
+
     return failure("unknown");
   }
 
@@ -337,7 +347,9 @@ export async function saveContactChannelsAction(
       noteAr: parsed.data.note_ar ?? "",
       noteEn: parsed.data.note_en ?? "",
     });
-  } catch {
+  } catch (error) {
+    logFailure("admin.website", "contact_channels_save_failed", error);
+
     return failure("unknown");
   }
 
@@ -386,7 +398,9 @@ export async function saveSeoAction(
       descriptionEn: parsed.data.description_en ?? "",
       ogImageUrl: ogImageUrl ?? null,
     });
-  } catch {
+  } catch (error) {
+    logFailure("admin.website", "seo_save_failed", error);
+
     return failure("unknown");
   }
 

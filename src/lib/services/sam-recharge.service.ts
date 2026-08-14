@@ -1,6 +1,7 @@
 import "server-only";
 
 import { requireAuth } from "@/lib/auth/guards";
+import { logOutcome } from "@/lib/logging/logger";
 import { notify } from "@/lib/services/notification.service";
 import {
   readSamCredentials,
@@ -221,6 +222,14 @@ function reasonForSam(error: unknown): StartTopUpResult {
  * manual path uses, so a crafted form cannot invent a figure.
  */
 export async function startSamTopUp(input: { amount: number; method: SamMethod }): Promise<StartTopUpResult> {
+  const result = await attemptSamTopUp(input);
+
+  logOutcome("recharge", "topup_started", result, { amount: input.amount, method: input.method });
+
+  return result;
+}
+
+async function attemptSamTopUp(input: { amount: number; method: SamMethod }): Promise<StartTopUpResult> {
   const user = await requireAuth();
   const credentials = await readCredentials();
 
@@ -368,6 +377,33 @@ export async function getMySamInvoice(samInvoiceId: string): Promise<SamInvoiceV
  * credit an invoice that was underpaid.
  */
 export async function settleSamInvoice(input: {
+  samInvoiceId: string;
+  paidAmount: number | null;
+  chargeCurrency?: string | null;
+  transactionRef?: string | null;
+  payload?: Json;
+}): Promise<SettleResult> {
+  const result = await attemptSettle(input);
+
+  /*
+   * Money arriving is the single most important thing this store does, and every
+   * route into it — the callback, a poll, an explicit verification — lands here.
+   * `payload` is not logged: it is Sam's raw body and carries the callback
+   * secret's context.
+   */
+  logOutcome("recharge", "invoice_settled", result, {
+    samInvoiceId: input.samInvoiceId,
+    paidAmount: input.paidAmount,
+    chargeCurrency: input.chargeCurrency ?? null,
+    ...(result.ok
+      ? { status: result.status, ...(result.status === "credited" ? { credited: result.credited } : {}) }
+      : { message: result.message ?? null }),
+  });
+
+  return result;
+}
+
+async function attemptSettle(input: {
   samInvoiceId: string;
   paidAmount: number | null;
   chargeCurrency?: string | null;

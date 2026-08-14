@@ -6,6 +6,7 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formFlag, formText } from "@/lib/forms/form-data";
+import { logFailure } from "@/lib/logging/logger";
 import { saveSamSettings } from "@/lib/services/admin-settings.service";
 import { isValidSamIdentifier, SAM_METHODS } from "@/lib/settings/sam-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -131,7 +132,9 @@ export async function saveSamSettingsAction(
     // useless until a secret exists. Replacing an existing one is a deliberate
     // act with its own button, never a side effect of saving a wallet number.
     await ensureWebhookSecret(false);
-  } catch {
+  } catch (error) {
+    logFailure("admin.providers", "sam_settings_save_failed", error);
+
     return { ...INITIAL_SAM_STATE, error: "unknown" };
   }
 
@@ -157,7 +160,9 @@ export async function regenerateSamSecretAction(
 
   try {
     await ensureWebhookSecret(true);
-  } catch {
+  } catch (error) {
+    logFailure("admin.providers", "sam_secret_regenerate_failed", error);
+
     return { ...INITIAL_SAM_STATE, error: "unknown" };
   }
 

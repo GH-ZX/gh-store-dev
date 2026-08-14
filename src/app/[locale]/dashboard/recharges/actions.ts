@@ -5,6 +5,7 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { ForbiddenError, requireAdmin } from "@/lib/auth/guards";
 import { formText } from "@/lib/forms/form-data";
+import { logFailure } from "@/lib/logging/logger";
 import {
   approveRecharge,
   RechargeForbiddenError,
@@ -140,7 +141,9 @@ export async function saveRechargeSettingsAction(
       minAmount: parsed.data.minAmount,
       maxAmount: parsed.data.maxAmount,
     });
-  } catch {
+  } catch (error) {
+    logFailure("admin.recharge", "recharge_settings_save_failed", error);
+
     return { error: "unknown", notice: null };
   }
 

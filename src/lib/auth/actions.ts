@@ -6,6 +6,8 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import type { AuthActionState } from "@/lib/auth/action-state";
 import { formText } from "@/lib/forms/form-data";
+import { log } from "@/lib/logging/logger";
+import { hashEmail } from "@/lib/logging/redact";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -64,6 +66,8 @@ export async function signInAction(
   });
 
   if (!parsed.success) {
+    log.warn("auth", "sign_in_rejected", { reason: "invalid_input" });
+
     return { error: "invalid_input", notice: null };
   }
 
@@ -74,9 +78,22 @@ export async function signInAction(
     password: parsed.data.password,
   });
 
+  /*
+   * The address is hashed rather than written down. Ten failures against one
+   * hash is someone locked out; ten failures across ten hashes is someone
+   * working through a list — and both questions are answerable without Axiom
+   * holding a copy of the store's customer emails. The password is never a
+   * field, and `redact` would blank it by name if it ever became one.
+   */
   if (error) {
+    log.warn("auth", "sign_in_failed", { emailHash: hashEmail(parsed.data.email) });
+
     return { error: "invalid_credentials", notice: null };
   }
+
+  // Before the redirect, always: `redirect` works by throwing, so anything after
+  // it is unreachable.
+  log.info("auth", "signed_in", { emailHash: hashEmail(parsed.data.email) });
 
   revalidatePath("/", "layout");
   redirect(safeRedirect(parsed.data.redirectTo, locale));
@@ -94,6 +111,8 @@ export async function signUpAction(
   });
 
   if (!parsed.success) {
+    log.warn("auth", "sign_up_rejected", { reason: "invalid_input" });
+
     return { error: "invalid_input", notice: null };
   }
 
@@ -105,6 +124,11 @@ export async function signUpAction(
   });
 
   if (error) {
+    log.warn("auth", "sign_up_failed", {
+      emailHash: hashEmail(parsed.data.email),
+      error: error.message,
+    });
+
     return { error: "signup_failed", notice: null };
   }
 
@@ -116,8 +140,18 @@ export async function signUpAction(
    * indistinguishable from a wrong password.
    */
   if (!data.session) {
+    log.info("auth", "signed_up", {
+      emailHash: hashEmail(parsed.data.email),
+      awaitingConfirmation: true,
+    });
+
     return { error: null, notice: "confirm_email" };
   }
+
+  log.info("auth", "signed_up", {
+    emailHash: hashEmail(parsed.data.email),
+    awaitingConfirmation: false,
+  });
 
   /*
    * A session means the account is usable now, so carry on into it rather than
@@ -131,6 +165,8 @@ export async function signOutAction(formData: FormData): Promise<void> {
   const locale = resolveLocale(formText(formData, "locale"));
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
+
+  log.info("auth", "signed_out", {});
 
   revalidatePath("/", "layout");
   redirect(`/${locale}`);

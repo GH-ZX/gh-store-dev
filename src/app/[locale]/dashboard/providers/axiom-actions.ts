@@ -5,7 +5,7 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formFlag, formText } from "@/lib/forms/form-data";
-import { log } from "@/lib/logging/logger";
+import { log, logFailure } from "@/lib/logging/logger";
 import { getAxiomStatus, saveAxiomSettings } from "@/lib/services/admin-settings.service";
 import {
   INITIAL_AXIOM_STATE,
@@ -52,7 +52,13 @@ export async function saveAxiomSettingsAction(
       minLevel: parsed.data.minLevel,
       enabled: parsed.data.enabled,
     });
-  } catch {
+  } catch (error) {
+    /*
+     * Logged even though it is the logging settings that failed to save: the
+     * destination that is live right now is the old one, which is still working.
+     */
+    logFailure("admin.logging", "axiom_settings_save_failed", error);
+
     return { ...INITIAL_AXIOM_STATE, error: "unknown" };
   }
 

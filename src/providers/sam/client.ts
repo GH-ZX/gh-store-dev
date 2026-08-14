@@ -1,6 +1,8 @@
 import "server-only";
 
 import { z } from "zod";
+import { log, logFailure } from "@/lib/logging/logger";
+import { sanitisePath } from "@/lib/logging/outcome";
 import { classifySam, SamError } from "@/providers/sam/errors";
 import type { SamMethod } from "@/lib/settings/sam-settings";
 
@@ -215,6 +217,14 @@ export class SamClient {
       headers["Content-Type"] = "application/json";
     }
 
+    /*
+     * Every Sam call passes through here, so this is the one place that has to
+     * know how to report one. The path is sanitised because Sam addresses a
+     * wallet by putting its identifier in the URL, and that identifier is a
+     * phone number or a wallet address.
+     */
+    const route = sanitisePath(path);
+    const startedAt = Date.now();
     let response: Response;
 
     try {
@@ -227,6 +237,13 @@ export class SamClient {
       });
     } catch (error) {
       const reason = error instanceof Error ? error.message : "request failed";
+
+      logFailure("provider.sam", "provider_unreachable", error, {
+        provider: "sam",
+        method,
+        path: route,
+        ms: Date.now() - startedAt,
+      });
 
       throw new SamError("network", `Could not reach Sam API: ${reason}`);
     }
@@ -241,7 +258,22 @@ export class SamClient {
       json = { raw: text.slice(0, 300) };
     }
 
+    const ms = Date.now() - startedAt;
+
     if (response.ok || options.tolerate?.includes(response.status)) {
+      /*
+       * Debug, not info: a healthy call is only interesting when something else
+       * is being chased, and at info every catalogue page would ship events.
+       * Lower `minLevel` on the Providers page to turn this stream on.
+       */
+      log.debug("provider.sam", "provider_call", {
+        provider: "sam",
+        method,
+        path: route,
+        status: response.status,
+        ms,
+      });
+
       return { status: response.status, json };
     }
 
@@ -253,7 +285,19 @@ export class SamClient {
       (typeof body.raw === "string" && body.raw) ||
       `Sam API responded with HTTP ${response.status}`;
 
-    throw classifySam(response.status, code, message);
+    const failure = classifySam(response.status, code, message);
+
+    log.warn("provider.sam", "provider_call_failed", {
+      provider: "sam",
+      method,
+      path: route,
+      status: response.status,
+      ms,
+      kind: failure.kind,
+      code,
+    });
+
+    throw failure;
   }
 
   /**

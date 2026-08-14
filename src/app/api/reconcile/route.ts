@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { log } from "@/lib/logging/logger";
 import { reconcileStuckOrders } from "@/lib/services/reconciliation.service";
 
 /**
@@ -40,6 +41,17 @@ function authorized(request: Request): boolean {
 
 export async function POST(request: Request): Promise<NextResponse> {
   if (!authorized(request)) {
+    /*
+     * This secret is the only gate on the endpoint, so someone trying it is
+     * worth seeing. The presented value is never logged — only that there was
+     * one, which is enough to tell a misconfigured scheduler (no header at all)
+     * from a probe (a wrong one).
+     */
+    log.warn("fulfilment", "reconcile_unauthorized", {
+      presented: request.headers.has("authorization"),
+      configured: Boolean(process.env.RECONCILE_CRON_SECRET?.trim()),
+    });
+
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 

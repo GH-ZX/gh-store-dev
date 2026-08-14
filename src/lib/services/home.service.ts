@@ -2,6 +2,7 @@ import type { Locale } from "@/i18n/config";
 import type { StoreGame } from "@/lib/catalog/game-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import type { HomeSection } from "@/lib/home/layout";
+import { logFailure } from "@/lib/logging/logger";
 import {
   getActiveGames,
   getCarouselGames,
@@ -34,10 +35,21 @@ export type HomeCarousel = {
   games: StoreGame[];
 };
 
-async function safely<T>(read: () => Promise<T>, fallback: T): Promise<T> {
+/**
+ * Read something for the home page, and let the page survive if it fails.
+ *
+ * A broken section must not take the storefront down — an empty row is a far
+ * better outcome than an error page. But the section silently vanishing was the
+ * only symptom, which made "why is the sale row gone?" unanswerable. The
+ * fallback still happens; it is now recorded on the way past, named by section
+ * so the log says which read failed rather than that one did.
+ */
+async function safely<T>(label: string, read: () => Promise<T>, fallback: T): Promise<T> {
   try {
     return await read();
-  } catch {
+  } catch (error) {
+    logFailure("home", "home_section_unreadable", error, { section: label });
+
     return fallback;
   }
 }
@@ -48,31 +60,36 @@ async function resolveSection(
 ): Promise<ResolvedHomeSection | null> {
   switch (section.type) {
     case "games": {
-      const games = await safely(() => getActiveGames(locale, section.limit), []);
+      const games = await safely(section.type, () => getActiveGames(locale, section.limit), []);
       return games.length > 0 ? { kind: "games", section, games } : null;
     }
     case "game_picks": {
-      const games = await safely(() => getGamesByIds(locale, section.gameIds), []);
+      const games = await safely(section.type, () => getGamesByIds(locale, section.gameIds), []);
       return games.length > 0 ? { kind: "games", section, games } : null;
     }
     case "gift_cards": {
-      const offers = await safely(() => getOffersByType(locale, "gift_card", section.limit), []);
+      const offers = await safely(
+        section.type,
+        () => getOffersByType(locale, "gift_card", section.limit),
+        [],
+      );
       return offers.length > 0 ? { kind: "offers", section, offers } : null;
     }
     case "sale_offers": {
-      const offers = await safely(() => getSaleOffers(locale, section.limit), []);
+      const offers = await safely(section.type, () => getSaleOffers(locale, section.limit), []);
       return offers.length > 0 ? { kind: "offers", section, offers } : null;
     }
     case "suggested_offers": {
-      const offers = await safely(() => getSuggestedOffers(locale, section.limit), []);
+      const offers = await safely(section.type, () => getSuggestedOffers(locale, section.limit), []);
       return offers.length > 0 ? { kind: "offers", section, offers } : null;
     }
     case "offer_picks": {
-      const offers = await safely(() => getOffersByIds(locale, section.offerIds), []);
+      const offers = await safely(section.type, () => getOffersByIds(locale, section.offerIds), []);
       return offers.length > 0 ? { kind: "offers", section, offers } : null;
     }
     case "customer_reviews": {
       const reviews = await safely(
+        section.type,
         () => getPublishedReviews(locale, section.limit, section.reviewIds),
         [],
       );
@@ -122,6 +139,6 @@ export async function getHomeCarousel(locale: Locale, layout: HomeSection[]): Pr
 
   return {
     section,
-    games: await safely(() => getCarouselGames(locale, section.limit), []),
+    games: await safely("carousel", () => getCarouselGames(locale, section.limit), []),
   };
 }

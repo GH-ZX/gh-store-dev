@@ -1,6 +1,7 @@
 import "server-only";
 
 import { after } from "next/server";
+import { outcomeFields, outcomeLevel, type Outcome } from "@/lib/logging/outcome";
 import { redact } from "@/lib/logging/redact";
 import {
   axiomIngestUrl,
@@ -161,8 +162,11 @@ export const log = {
 /**
  * Log a caught error without having to unwrap it at every call site.
  *
- * The 27 silent `catch {}` blocks this replaces each threw away the only
- * evidence of what went wrong.
+ * Written for the bare `catch {}` blocks that threw away the only evidence of
+ * what went wrong. Not all of them: a `new URL()` inside a validator throws to
+ * answer a question, and a `JSON.parse` with a documented fallback has already
+ * handled its failure. Those stay silent on purpose. This is for the ones where
+ * a write failed and nobody found out.
  */
 export function logFailure(area: string, event: string, error: unknown, fields: LogFields = {}): void {
   log.error(area, event, {
@@ -170,4 +174,21 @@ export function logFailure(area: string, event: string, error: unknown, fields: 
     error: error instanceof Error ? error.message : String(error),
     errorName: error instanceof Error ? error.name : "unknown",
   });
+}
+
+/**
+ * Log the result of an operation that answers `{ ok, reason }`.
+ *
+ * One call at the end of a service function instead of one at each `return`, so
+ * every flow reports itself the same way and the reasons stay countable. See
+ * {@link import("./outcome").outcomeLevel} for why a handled failure is `warn`
+ * and not `error`.
+ */
+export function logOutcome(
+  area: string,
+  event: string,
+  result: Outcome,
+  fields: LogFields = {},
+): void {
+  emit(outcomeLevel(result), area, event, { ...fields, ...outcomeFields(result) });
 }

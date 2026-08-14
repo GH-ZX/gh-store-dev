@@ -6,6 +6,7 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { G2BulkClient } from "@/providers/g2bulk/client";
 import { G2BulkError } from "@/providers/g2bulk/errors";
 import { requireAdmin } from "@/lib/auth/guards";
+import { logFailure } from "@/lib/logging/logger";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
   getG2BulkCredentials,
@@ -70,7 +71,9 @@ export async function saveG2BulkSettingsAction(
       apiKey: parsed.data.apiKey?.trim() ? parsed.data.apiKey : undefined,
       markupPercent: parsed.data.markupPercent,
     });
-  } catch {
+  } catch (error) {
+    logFailure("admin.providers", "g2bulk_settings_save_failed", error);
+
     return { ...INITIAL_PROVIDER_STATE, error: "unknown" };
   }
 

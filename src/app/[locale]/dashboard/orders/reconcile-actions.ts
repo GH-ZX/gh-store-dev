@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formText } from "@/lib/forms/form-data";
+import { logFailure } from "@/lib/logging/logger";
 import { reconcileStuckOrders } from "@/lib/services/reconciliation.service";
 import {
   INITIAL_RECONCILE_STATE,
@@ -47,7 +48,9 @@ export async function runReconciliationAction(
         escalated: run.escalated,
       },
     };
-  } catch {
+  } catch (error) {
+    logFailure("fulfilment", "manual_reconcile_failed", error);
+
     return { ...INITIAL_RECONCILE_STATE, error: "unknown" };
   }
 }

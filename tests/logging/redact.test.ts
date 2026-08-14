@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { redact, REDACTED } from "@/lib/logging/redact";
+import { hashEmail, redact, REDACTED } from "@/lib/logging/redact";
 
 describe("redaction", () => {
   it("removes anything whose name suggests a credential", () => {
@@ -65,5 +65,28 @@ describe("redaction", () => {
 
     expect(JSON.stringify(redact(deep))).toContain("[truncated]");
     expect((redact(Array.from({ length: 200 }, (_, i) => i)) as unknown[]).length).toBe(50);
+  });
+});
+
+describe("hashEmail", () => {
+  it("does not carry the address, or any part of it", () => {
+    const hash = hashEmail("Someone@Example.com");
+
+    expect(hash).not.toContain("someone");
+    expect(hash).not.toContain("example");
+    expect(hash).not.toContain("@");
+  });
+
+  it("gives the same answer whatever case or padding was typed", () => {
+    // Otherwise repeated failures by one person would look like several people.
+    expect(hashEmail("  Someone@Example.com ")).toBe(hashEmail("someone@example.com"));
+  });
+
+  it("separates different addresses", () => {
+    expect(hashEmail("a@example.com")).not.toBe(hashEmail("b@example.com"));
+  });
+
+  it("answers empty for an empty address rather than hashing nothing", () => {
+    expect(hashEmail("   ")).toBe("");
   });
 });
