@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Locale } from "@/i18n/config";
+import { normalizePageSeo, type PageSeoMap } from "@/lib/settings/page-seo";
 import {
   DEFAULT_THEME_SETTINGS,
   normalizeTheme,
@@ -74,6 +75,8 @@ const publicSettingsSchema = z.object({
       description_ar: z.string().trim().max(320).optional(),
       description_en: z.string().trim().max(320).optional(),
       og_image_url: safeUrl.optional(),
+      // Per-page overrides ride along in the same column, keyed by route path.
+      pages: z.unknown().optional(),
     })
     .optional(),
   contact: z
@@ -119,6 +122,7 @@ export type PublicStoreSettings = {
     descriptionAr: string;
     descriptionEn: string;
     ogImageUrl: string | null;
+    pages: PageSeoMap;
   };
   theme: ThemeSettings;
   maintenanceMode: boolean;
@@ -137,6 +141,7 @@ export const EMPTY_PUBLIC_SETTINGS: PublicStoreSettings = {
     descriptionAr: "",
     descriptionEn: "",
     ogImageUrl: null,
+    pages: {},
   },
   theme: DEFAULT_THEME_SETTINGS,
   maintenanceMode: false,
@@ -243,6 +248,7 @@ export function normalizePublicSettings(value: unknown): PublicStoreSettings {
       descriptionAr: settings.seo?.description_ar ?? "",
       descriptionEn: settings.seo?.description_en ?? "",
       ogImageUrl: settings.seo?.og_image_url ?? null,
+      pages: normalizePageSeo(settings.seo?.pages),
     },
     theme: normalizeTheme(settings.theme),
     maintenanceMode: settings.maintenance_mode ?? false,

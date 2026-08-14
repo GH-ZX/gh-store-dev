@@ -5,7 +5,7 @@ import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { getOfferCardLabels } from "@/lib/catalog/labels";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildStorePageMetadata } from "@/lib/seo-settings";
 import { getOffersByType, tryCatalogRead } from "@/lib/services/catalog.service";
 
 export async function generateMetadata({
@@ -14,7 +14,7 @@ export async function generateMetadata({
   const locale = await resolveLocaleParam(params);
   const messages = getMessages(locale, "catalog");
 
-  return buildPageMetadata({
+  return buildStorePageMetadata({
     locale,
     path: "/gift-cards",
     title: messages.giftCards.title,

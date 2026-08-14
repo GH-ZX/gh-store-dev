@@ -16,12 +16,14 @@ import {
   getWebsiteSettings,
   saveContactChannels,
   saveHomeLayout,
+  savePageSeo,
   saveSeo,
   saveSocialLinks,
   saveTheme,
   type ContactChannelInput,
   type SocialLinkInput,
 } from "@/lib/services/admin-website.service";
+import { isSeoPagePath } from "@/lib/settings/page-seo";
 import { safeColour, THEME_MODES, type ThemeMode } from "@/lib/settings/theme-settings";
 import {
   CONTACT_FIELD_PREFIX,
@@ -466,6 +468,59 @@ export async function saveThemeAction(
   }
 
   // Every page carries these variables, so the whole tree is stale.
+  revalidatePath("/", "layout");
+
+  return saved();
+}
+
+/**
+ * One page's search listing.
+ *
+ * Saved a page at a time rather than all ten together: an owner edits the page
+ * they are thinking about, and a single form covering forty fields would make
+ * every save a chance to overwrite the nine they were not looking at.
+ */
+const pageSeoSchema = z.object({
+  path: z.string(),
+  title_ar: z.string().trim().max(160).optional(),
+  title_en: z.string().trim().max(160).optional(),
+  description_ar: z.string().trim().max(320).optional(),
+  description_en: z.string().trim().max(320).optional(),
+});
+
+export async function savePageSeoAction(
+  _state: WebsiteActionState,
+  formData: FormData,
+): Promise<WebsiteActionState> {
+  await requireAdmin();
+
+  const parsed = pageSeoSchema.safeParse({
+    path: formText(formData, "path"),
+    title_ar: formText(formData, "title_ar"),
+    title_en: formText(formData, "title_en"),
+    description_ar: formText(formData, "description_ar"),
+    description_en: formText(formData, "description_en"),
+  });
+
+  // The path decides which settings key is written, so an unrecognised one is
+  // refused rather than allowed to create an entry no page will ever read.
+  if (!parsed.success || !isSeoPagePath(parsed.data.path)) {
+    return failure("invalid_input");
+  }
+
+  try {
+    await savePageSeo(parsed.data.path, {
+      titleAr: parsed.data.title_ar ?? "",
+      titleEn: parsed.data.title_en ?? "",
+      descriptionAr: parsed.data.description_ar ?? "",
+      descriptionEn: parsed.data.description_en ?? "",
+    });
+  } catch (error) {
+    logFailure("admin.website", "page_seo_save_failed", error);
+
+    return failure("unknown");
+  }
+
   revalidatePath("/", "layout");
 
   return saved();

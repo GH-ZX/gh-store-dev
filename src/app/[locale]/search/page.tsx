@@ -9,14 +9,14 @@ import { formatMessage, getMessages } from "@/i18n/messages";
 import { getGameCardLabels, getOfferCardLabels } from "@/lib/catalog/labels";
 import { parseSearchParams } from "@/lib/catalog/search";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildStorePageMetadata } from "@/lib/seo-settings";
 import { CatalogReadError, searchCatalog } from "@/lib/services/catalog.service";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/search">): Promise<Metadata> {
   const locale = await resolveLocaleParam(params);
   const messages = getMessages(locale, "search");
 
-  return buildPageMetadata({
+  return buildStorePageMetadata({
     locale,
     path: "/search",
     title: messages.title,

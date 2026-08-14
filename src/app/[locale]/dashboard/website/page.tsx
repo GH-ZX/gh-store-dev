@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AdminCard } from "@/components/admin/admin-form";
 import { ContactChannelsEditor } from "@/components/admin/contact-channels-editor";
 import { HomeLayoutEditor } from "@/components/admin/home-layout-editor";
+import { PageSeoEditor } from "@/components/admin/page-seo-editor";
 import { SeoForm } from "@/components/admin/seo-form";
 import { ThemeForm } from "@/components/admin/theme-form";
 import { SocialLinksEditor } from "@/components/admin/social-links-editor";
@@ -68,6 +69,15 @@ export default async function WebsiteSettingsPage({
 
       <AdminCard title={messages.seo.title} description={messages.seo.description}>
         <SeoForm seo={settings.seo} messages={messages.seo} errors={messages.errors} />
+      </AdminCard>
+
+      <AdminCard title={messages.pageSeo.title} description={messages.pageSeo.description}>
+        <PageSeoEditor
+          pages={settings.seo.pages}
+          messages={messages.pageSeo}
+          seoMessages={messages.seo}
+          errors={messages.errors}
+        />
       </AdminCard>
     </div>
   );

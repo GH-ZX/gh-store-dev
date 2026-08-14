@@ -5,10 +5,12 @@ import { normalizeHomeLayout, type HomeSection } from "@/lib/home/layout";
 import {
   normalizePublicSettings,
   type ContactChannel,
+  type PublicStoreSettings,
   type ContactChannelKind,
   type SocialLink,
   type SocialPlatform,
 } from "@/lib/settings/public-settings";
+import type { PageSeo, SeoPagePath } from "@/lib/settings/page-seo";
 import { safeColour, type ThemeMode, type ThemeSettings } from "@/lib/settings/theme-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
@@ -49,13 +51,12 @@ export type WebsiteSettings = {
   contactChannels: ContactChannel[];
   contactNoteAr: string;
   contactNoteEn: string;
-  seo: {
-    titleAr: string;
-    titleEn: string;
-    descriptionAr: string;
-    descriptionEn: string;
-    ogImageUrl: string | null;
-  };
+  /*
+   * The storefront's own shape rather than a copy of it: the editor must show
+   * exactly what a visitor gets, and a second declaration of the same fields is
+   * a second place to forget one.
+   */
+  seo: PublicStoreSettings["seo"];
   theme: ThemeSettings;
 };
 
@@ -284,4 +285,35 @@ export async function saveTheme(input: {
   }
 
   await updateColumn({ theme: next });
+}
+
+/**
+ * Save one page's title and description.
+ *
+ * Stored under the route path, beside the homepage's own SEO in the same
+ * column. An entry whose fields are all empty is removed rather than stored
+ * blank, so "never set" and "cleared" stay the same thing — the page falls back
+ * to its own wording either way, and a row of empty strings in the settings
+ * would only suggest otherwise.
+ */
+export async function savePageSeo(path: SeoPagePath, seo: PageSeo): Promise<void> {
+  await requireAdmin();
+
+  const row = await readPresentationRow();
+  const stored = toJsonObject(row.seo);
+  const pages: JsonObject = toJsonObject(stored.pages ?? {});
+  const entry: JsonObject = {
+    title_ar: seo.titleAr.trim(),
+    title_en: seo.titleEn.trim(),
+    description_ar: seo.descriptionAr.trim(),
+    description_en: seo.descriptionEn.trim(),
+  };
+
+  if (Object.values(entry).some((value) => typeof value === "string" && value.length > 0)) {
+    pages[path] = entry;
+  } else {
+    delete pages[path];
+  }
+
+  await updateColumn({ seo: { ...stored, pages } });
 }

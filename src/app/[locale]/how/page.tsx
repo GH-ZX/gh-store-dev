@@ -5,13 +5,13 @@ import { ArrowIcon, CheckIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildStorePageMetadata } from "@/lib/seo-settings";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/how">): Promise<Metadata> {
   const locale = await resolveLocaleParam(params);
   const messages = getMessages(locale, "content");
 
-  return buildPageMetadata({
+  return buildStorePageMetadata({
     locale,
     path: "/how",
     title: messages.how.title,

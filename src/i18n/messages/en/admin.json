@@ -434,6 +434,25 @@
       },
       "saveAction": "Save theme",
       "saved": "Theme saved."
+    },
+    "pageSeo": {
+      "title": "Page listings",
+      "description": "How each page appears in search results and when its link is shared. Blank keeps the page's own wording.",
+      "emptyHint": "Only pages worth finding are listed. Game and offer pages take their titles from the product itself.",
+      "stateSet": "Custom",
+      "stateDefault": "Page default",
+      "pages": {
+        "/games": "Games",
+        "/gift-cards": "Gift cards",
+        "/sale": "Offers",
+        "/search": "Search",
+        "/faq": "FAQ",
+        "/how": "How it works",
+        "/contact": "Contact",
+        "/privacy": "Privacy policy",
+        "/terms": "Terms",
+        "/links": "Links"
+      }
     }
   },
   "vouchers": {

@@ -5,14 +5,14 @@ import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { getOfferCardLabels } from "@/lib/catalog/labels";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildStorePageMetadata } from "@/lib/seo-settings";
 import { getSaleOffers, tryCatalogRead } from "@/lib/services/catalog.service";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/sale">): Promise<Metadata> {
   const locale = await resolveLocaleParam(params);
   const messages = getMessages(locale, "catalog");
 
-  return buildPageMetadata({
+  return buildStorePageMetadata({
     locale,
     path: "/sale",
     title: messages.sale.title,
