@@ -3,6 +3,7 @@ import { AdminCard } from "@/components/admin/admin-form";
 import { ContactChannelsEditor } from "@/components/admin/contact-channels-editor";
 import { HomeLayoutEditor } from "@/components/admin/home-layout-editor";
 import { SeoForm } from "@/components/admin/seo-form";
+import { ThemeForm } from "@/components/admin/theme-form";
 import { SocialLinksEditor } from "@/components/admin/social-links-editor";
 import { SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
@@ -59,6 +60,10 @@ export default async function WebsiteSettingsPage({
           messages={messages.contact}
           errors={messages.errors}
         />
+      </AdminCard>
+
+      <AdminCard title={messages.theme.title} description={messages.theme.description}>
+        <ThemeForm theme={settings.theme} messages={messages.theme} errors={messages.errors} />
       </AdminCard>
 
       <AdminCard title={messages.seo.title} description={messages.seo.description}>

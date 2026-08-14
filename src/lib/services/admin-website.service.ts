@@ -9,6 +9,7 @@ import {
   type SocialLink,
   type SocialPlatform,
 } from "@/lib/settings/public-settings";
+import { safeColour, type ThemeMode, type ThemeSettings } from "@/lib/settings/theme-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
@@ -32,13 +33,14 @@ import type { Json } from "@/types/database";
 const SETTINGS_ID = "global";
 
 /** Presentation columns only: `payments` and `providers` are deliberately absent. */
-const PRESENTATION_COLUMNS = "home_layout, social_links, seo, contact";
+const PRESENTATION_COLUMNS = "home_layout, social_links, seo, contact, theme";
 
 type PresentationRow = {
   home_layout: Json;
   social_links: Json;
   seo: Json;
   contact: Json;
+  theme: Json;
 };
 
 export type WebsiteSettings = {
@@ -54,6 +56,7 @@ export type WebsiteSettings = {
     descriptionEn: string;
     ogImageUrl: string | null;
   };
+  theme: ThemeSettings;
 };
 
 export type SocialLinkInput = {
@@ -114,12 +117,13 @@ async function readPresentationRow(): Promise<PresentationRow> {
     social_links: data?.social_links ?? [],
     seo: data?.seo ?? {},
     contact: data?.contact ?? {},
+    theme: data?.theme ?? {},
   };
 }
 
 /** Write one presentation column, leaving every other column untouched. */
 async function updateColumn(
-  update: Partial<Pick<PresentationRow, "home_layout" | "social_links" | "seo" | "contact">>,
+  update: Partial<Pick<PresentationRow, "home_layout" | "social_links" | "seo" | "contact" | "theme">>,
 ): Promise<void> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -142,6 +146,7 @@ export async function getWebsiteSettings(): Promise<WebsiteSettings> {
     social_links: toJsonArray(row.social_links),
     seo: toJsonObject(row.seo),
     contact: toJsonObject(row.contact),
+    theme: toJsonObject(row.theme),
   });
 
   return {
@@ -151,6 +156,7 @@ export async function getWebsiteSettings(): Promise<WebsiteSettings> {
     contactNoteAr: settings.contactNoteAr,
     contactNoteEn: settings.contactNoteEn,
     seo: settings.seo,
+    theme: settings.theme,
   };
 }
 
@@ -243,4 +249,39 @@ export async function saveSeo(seo: SeoInput): Promise<void> {
   }
 
   await updateColumn({ seo: next });
+}
+
+/**
+ * Save the theme.
+ *
+ * A colour that is not a plain hex value is stored as absent rather than as
+ * itself, so the storefront falls back to the token file. The same check runs
+ * again on read, because this column is hand-editable and the database is not
+ * required to trust what an earlier version of this code wrote.
+ */
+export async function saveTheme(input: {
+  accent: string | null;
+  accent2: string | null;
+  defaultMode: ThemeMode;
+}): Promise<void> {
+  await requireAdmin();
+
+  const row = await readPresentationRow();
+  const next: JsonObject = { ...toJsonObject(row.theme), default_mode: input.defaultMode };
+  const accent = safeColour(input.accent);
+  const accent2 = safeColour(input.accent2);
+
+  if (accent) {
+    next.accent = accent;
+  } else {
+    delete next.accent;
+  }
+
+  if (accent2) {
+    next.accent_2 = accent2;
+  } else {
+    delete next.accent_2;
+  }
+
+  await updateColumn({ theme: next });
 }

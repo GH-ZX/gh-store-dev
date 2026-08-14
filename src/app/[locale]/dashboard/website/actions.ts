@@ -18,9 +18,11 @@ import {
   saveHomeLayout,
   saveSeo,
   saveSocialLinks,
+  saveTheme,
   type ContactChannelInput,
   type SocialLinkInput,
 } from "@/lib/services/admin-website.service";
+import { safeColour, THEME_MODES, type ThemeMode } from "@/lib/settings/theme-settings";
 import {
   CONTACT_FIELD_PREFIX,
   CONTACT_KIND_OPTIONS,
@@ -404,6 +406,66 @@ export async function saveSeoAction(
     return failure("unknown");
   }
 
+  revalidatePath("/", "layout");
+
+  return saved();
+}
+
+/**
+ * Theme.
+ *
+ * An empty colour field means "use the built-in accent", which is why a blank is
+ * a valid save rather than an error — clearing the field is how an owner backs
+ * out of a colour they no longer want. A value that is not a plain hex colour is
+ * refused outright instead of quietly ignored: silently dropping what someone
+ * typed leaves them looking at a saved form that does not do what it says.
+ */
+const themeSchema = z.object({
+  accent: z.string().trim().max(9).optional(),
+  accent_2: z.string().trim().max(9).optional(),
+  default_mode: z.string().optional(),
+});
+
+function resolveMode(value: string | undefined): ThemeMode {
+  return value && (THEME_MODES as readonly string[]).includes(value) ? (value as ThemeMode) : "system";
+}
+
+export async function saveThemeAction(
+  _state: WebsiteActionState,
+  formData: FormData,
+): Promise<WebsiteActionState> {
+  await requireAdmin();
+
+  const parsed = themeSchema.safeParse({
+    accent: formText(formData, "accent"),
+    accent_2: formText(formData, "accent_2"),
+    default_mode: formText(formData, "default_mode"),
+  });
+
+  if (!parsed.success) {
+    return failure("invalid_input");
+  }
+
+  const accent = parsed.data.accent ?? "";
+  const accent2 = parsed.data.accent_2 ?? "";
+
+  if ((accent && !safeColour(accent)) || (accent2 && !safeColour(accent2))) {
+    return failure("invalid_colour");
+  }
+
+  try {
+    await saveTheme({
+      accent: accent ? accent : null,
+      accent2: accent2 ? accent2 : null,
+      defaultMode: resolveMode(parsed.data.default_mode),
+    });
+  } catch (error) {
+    logFailure("admin.website", "theme_save_failed", error);
+
+    return failure("unknown");
+  }
+
+  // Every page carries these variables, so the whole tree is stale.
   revalidatePath("/", "layout");
 
   return saved();

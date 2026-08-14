@@ -1,5 +1,10 @@
 import { z } from "zod";
 import type { Locale } from "@/i18n/config";
+import {
+  DEFAULT_THEME_SETTINGS,
+  normalizeTheme,
+  type ThemeSettings,
+} from "@/lib/settings/theme-settings";
 
 /**
  * Presentation settings an admin controls, as returned by
@@ -78,6 +83,7 @@ const publicSettingsSchema = z.object({
       note_en: z.string().trim().max(400).optional(),
     })
     .optional(),
+  theme: z.unknown().optional(),
   maintenance_mode: z.boolean().optional(),
   maintenance_message_ar: z.string().trim().max(400).nullish(),
   maintenance_message_en: z.string().trim().max(400).nullish(),
@@ -114,6 +120,7 @@ export type PublicStoreSettings = {
     descriptionEn: string;
     ogImageUrl: string | null;
   };
+  theme: ThemeSettings;
   maintenanceMode: boolean;
   maintenanceMessageAr: string;
   maintenanceMessageEn: string;
@@ -131,6 +138,7 @@ export const EMPTY_PUBLIC_SETTINGS: PublicStoreSettings = {
     descriptionEn: "",
     ogImageUrl: null,
   },
+  theme: DEFAULT_THEME_SETTINGS,
   maintenanceMode: false,
   maintenanceMessageAr: "",
   maintenanceMessageEn: "",
@@ -236,6 +244,7 @@ export function normalizePublicSettings(value: unknown): PublicStoreSettings {
       descriptionEn: settings.seo?.description_en ?? "",
       ogImageUrl: settings.seo?.og_image_url ?? null,
     },
+    theme: normalizeTheme(settings.theme),
     maintenanceMode: settings.maintenance_mode ?? false,
     maintenanceMessageAr: settings.maintenance_message_ar ?? "",
     maintenanceMessageEn: settings.maintenance_message_en ?? "",

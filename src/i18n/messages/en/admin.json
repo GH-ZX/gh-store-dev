@@ -412,7 +412,28 @@
     "errors": {
       "invalid_input": "Check the values you entered, then try again.",
       "invalid_url": "One of the URLs is not valid. Use https.",
-      "unknown": "We could not save. Please try again."
+      "unknown": "We could not save. Please try again.",
+      "invalid_colour": "A colour must be a hex value such as #06607b."
+    },
+    "theme": {
+      "title": "Theme",
+      "description": "The brand colours the storefront is built from, and what a first-time visitor sees.",
+      "accentLabel": "Accent colour",
+      "accentHint": "Buttons, links, and highlights. Leave empty for the built-in colour.",
+      "accent2Label": "Second accent",
+      "accent2Hint": "Used sparingly, for gradients and glow.",
+      "contrastLabel": "Contrast with the text on it",
+      "contrastOk": "readable at any size.",
+      "contrastWarning": "button labels on this colour fall below the accessibility minimum of 4.5:1. A darker shade fixes it.",
+      "modeLabel": "Default theme",
+      "modeHint": "Only applies to visitors who have not chosen for themselves.",
+      "modes": {
+        "system": "Follow the visitor's device",
+        "dark": "Dark",
+        "light": "Light"
+      },
+      "saveAction": "Save theme",
+      "saved": "Theme saved."
     }
   },
   "vouchers": {

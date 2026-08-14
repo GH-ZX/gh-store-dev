@@ -4,7 +4,9 @@ import { Geist, Geist_Mono, Tektur } from "next/font/google";
 import { getLocaleDirection, isLocale } from "@/i18n/config";
 import { APP_NAME } from "@/lib/config/app";
 import { getSiteUrl } from "@/lib/seo";
-import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { getPublicStoreSettings } from "@/lib/services/settings.service";
+import { themeStyle } from "@/lib/settings/theme-settings";
+import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -50,6 +52,16 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const requestHeaders = await headers();
   const locale = requestHeaders.get("x-gh-store-locale") ?? "ar";
   const resolvedLocale = isLocale(locale) ? locale : "ar";
+  /*
+   * The theme belongs to the document, so it is read here rather than in the
+   * locale layout: the default mode has to reach the pre-paint script, and the
+   * accents have to cover the dashboard as well as the storefront. The read is
+   * deduplicated per request, so the footer asking for the same settings costs
+   * nothing. A failed read returns defaults rather than throwing — a colour
+   * choice must never be able to take the site down.
+   */
+  const { theme } = await getPublicStoreSettings();
+  const accents = themeStyle(theme);
 
   return (
     <html
@@ -64,7 +76,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
          * never sees the dark default flash. suppressHydrationWarning above
          * covers the attribute this script adds.
          */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript(theme.defaultMode) }} />
+
+        {/*
+          * The owner's accents, over the token defaults. Rendered only when
+          * something is actually set, and every value is a hex colour that
+          * cleared `safeColour` — nothing here can carry a brace.
+          */}
+        {accents ? <style dangerouslySetInnerHTML={{ __html: accents }} /> : null}
       </head>
       <body className="min-h-full bg-[var(--canvas)] text-[var(--ink)]">{children}</body>
     </html>
