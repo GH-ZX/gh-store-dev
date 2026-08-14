@@ -317,3 +317,69 @@ export function PauseIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function GridIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+    </Icon>
+  );
+}
+
+export function PackageIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m3.5 7.5 8.5-4 8.5 4v9l-8.5 4-8.5-4Z" />
+      <path d="m3.5 7.5 8.5 4 8.5-4" />
+      <path d="M12 11.5v9" />
+    </Icon>
+  );
+}
+
+export function GearIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9 19 19M19 5l-2.1 2.1M7.1 16.9 5 19" />
+    </Icon>
+  );
+}
+
+export function ReceiptIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5.5 3.5h13v17l-2.17-1.5L14 20.5l-2-1.5-2 1.5-2.33-1.5L5.5 20.5Z" />
+      <path d="M9 8.5h6M9 12h6M9 15.5h4" />
+    </Icon>
+  );
+}
+
+export function DepositIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4v9M8.5 9.5 12 13l3.5-3.5" />
+      <path d="M4 15.5v2A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5v-2" />
+    </Icon>
+  );
+}
+
+export function CableIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6.5 3.5v5a5.5 5.5 0 0 0 11 0v-5" />
+      <path d="M12 14v6M9.5 20h5" />
+    </Icon>
+  );
+}
+
+export function ScrollIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6.5 3.5h11v17l-2.75-2-2.75 2-2.75-2L6.5 20.5Z" />
+      <path d="M9.5 8h5M9.5 11.5h5M9.5 15h3" />
+    </Icon>
+  );
+}
