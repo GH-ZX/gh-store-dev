@@ -8,6 +8,8 @@ import { logFailure } from "@/lib/logging/logger";
 import {
   createHomeSection,
   DEFAULT_HOME_LAYOUT,
+  HOME_CAROUSEL_INTERVAL_MAX_SECONDS,
+  HOME_CAROUSEL_INTERVAL_MIN_SECONDS,
   HOME_SECTION_LIMIT_MAX,
   HOME_SECTION_LIMIT_MIN,
   HOME_SECTION_TYPES,
@@ -15,6 +17,7 @@ import {
 import {
   getWebsiteSettings,
   saveContactChannels,
+  saveCarouselSettings,
   saveHomeLayout,
   savePageSeo,
   saveSeo,
@@ -517,6 +520,59 @@ export async function savePageSeoAction(
     });
   } catch (error) {
     logFailure("admin.website", "page_seo_save_failed", error);
+
+    return failure("unknown");
+  }
+
+  revalidatePath("/", "layout");
+
+  return saved();
+}
+
+/**
+ * Carousel behaviour.
+ *
+ * Its own form because these are settings for a component rather than for the
+ * list of sections: the layout editor decides which sections exist and in what
+ * order, and this decides how one of them behaves.
+ */
+const carouselSchema = z.object({
+  autoplay: z.boolean(),
+  loop: z.boolean(),
+  align: z.enum(["start", "center"]),
+  interval_seconds: z.coerce
+    .number()
+    .int()
+    .min(HOME_CAROUSEL_INTERVAL_MIN_SECONDS)
+    .max(HOME_CAROUSEL_INTERVAL_MAX_SECONDS),
+});
+
+export async function saveCarouselAction(
+  _state: WebsiteActionState,
+  formData: FormData,
+): Promise<WebsiteActionState> {
+  await requireAdmin();
+
+  const parsed = carouselSchema.safeParse({
+    autoplay: formFlag(formData, "autoplay"),
+    loop: formFlag(formData, "loop"),
+    align: formText(formData, "align") ?? "center",
+    interval_seconds: formText(formData, "interval_seconds") ?? "6",
+  });
+
+  if (!parsed.success) {
+    return failure("invalid_input");
+  }
+
+  try {
+    await saveCarouselSettings({
+      autoplay: parsed.data.autoplay,
+      loop: parsed.data.loop,
+      align: parsed.data.align,
+      intervalSeconds: parsed.data.interval_seconds,
+    });
+  } catch (error) {
+    logFailure("admin.website", "carousel_save_failed", error);
 
     return failure("unknown");
   }

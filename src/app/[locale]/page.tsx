@@ -51,6 +51,9 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             games={carousel.games}
             locale={locale}
             intervalSeconds={carousel.section?.intervalSeconds ?? 6}
+            autoplay={carousel.section?.autoplay ?? true}
+            loop={carousel.section?.loop ?? true}
+            align={carousel.section?.align ?? "center"}
             labels={{
               regionLabel: home.carousel.regionLabel,
               slideLabel: home.carousel.slideLabel,

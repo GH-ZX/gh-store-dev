@@ -179,6 +179,9 @@ function toStoredSection(section: HomeSection): JsonObject {
     subtitle_en: section.subtitleEn,
     limit: section.limit,
     interval_seconds: section.intervalSeconds,
+    autoplay: section.autoplay,
+    loop: section.loop,
+    align: section.align,
     game_ids: [...section.gameIds],
     offer_ids: [...section.offerIds],
     review_ids: [...section.reviewIds],
@@ -316,4 +319,36 @@ export async function savePageSeo(path: SeoPagePath, seo: PageSeo): Promise<void
   }
 
   await updateColumn({ seo: { ...stored, pages } });
+}
+
+/**
+ * Carousel behaviour.
+ *
+ * Its own writer rather than four more columns on the layout editor: the
+ * carousel is one section among nine there, and rotation, looping and alignment
+ * are settings for a component rather than for a list of sections. It edits the
+ * carousel section in place and leaves the other eight exactly as they were.
+ */
+export async function saveCarouselSettings(input: {
+  autoplay: boolean;
+  intervalSeconds: number;
+  loop: boolean;
+  align: "start" | "center";
+}): Promise<void> {
+  await requireAdmin();
+
+  const row = await readPresentationRow();
+  const sections = normalizeHomeLayout(row.home_layout).map((section) =>
+    section.type === "carousel"
+      ? {
+          ...section,
+          autoplay: input.autoplay,
+          intervalSeconds: input.intervalSeconds,
+          loop: input.loop,
+          align: input.align,
+        }
+      : section,
+  );
+
+  await updateColumn({ home_layout: sections.map(toStoredSection) });
 }

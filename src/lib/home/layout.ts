@@ -58,6 +58,9 @@ const homeSectionInputSchema = z.object({
   subtitle_en: localizedText,
   limit: looseInteger,
   interval_seconds: looseInteger,
+  autoplay: z.boolean().optional().catch(undefined),
+  loop: z.boolean().optional().catch(undefined),
+  align: z.enum(["start", "center"]).optional().catch(undefined),
   game_ids: looseList,
   offer_ids: looseList,
   review_ids: looseList,
@@ -89,6 +92,11 @@ export type HomeSection = {
   subtitleEn: string;
   limit: number;
   intervalSeconds: number;
+  /** Carousel only. Rotation is off under reduced motion whatever this says. */
+  autoplay: boolean;
+  loop: boolean;
+  /** Where a slide settles: `center` reads as a showcase, `start` as a shelf. */
+  align: "start" | "center";
   gameIds: string[];
   offerIds: string[];
   reviewIds: string[];
@@ -145,6 +153,9 @@ export function createHomeSection(type: HomeSectionType, id: string): HomeSectio
     subtitleEn: defaults.subtitleEn ?? "",
     limit: defaults.limit,
     intervalSeconds: 6,
+    autoplay: true,
+    loop: true,
+    align: "center",
     gameIds: [],
     offerIds: [],
     reviewIds: [],
@@ -227,6 +238,11 @@ export function normalizeHomeLayout(value: unknown): HomeSection[] {
               HOME_CAROUSEL_INTERVAL_MIN_SECONDS,
               HOME_CAROUSEL_INTERVAL_MAX_SECONDS,
             ),
+      // Defaults chosen to match what the carousel did before it was settable,
+      // so an existing layout renders identically until somebody changes it.
+      autoplay: input.autoplay !== false,
+      loop: input.loop !== false,
+      align: input.align ?? "center",
       gameIds: toIdList(input.game_ids),
       offerIds: toIdList(input.offer_ids),
       reviewIds: toIdList(input.review_ids),

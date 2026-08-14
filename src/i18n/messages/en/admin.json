@@ -550,6 +550,24 @@
         "/terms": "Terms",
         "/links": "Links"
       }
+    },
+    "carousel": {
+      "title": "Carousel",
+      "description": "How the featured games at the top of the homepage behave.",
+      "missing": "The homepage has no carousel section. Add one in the layout above.",
+      "autoplayLabel": "Move by itself",
+      "autoplayHint": "Slides advance on their own until a visitor touches or hovers the carousel.",
+      "intervalLabel": "Seconds per slide",
+      "intervalHint": "Between 3 and 30.",
+      "loopLabel": "Loop around",
+      "loopHint": "After the last slide, continue to the first instead of stopping.",
+      "alignLabel": "Slide position",
+      "alignHint": "Where a slide settles in the frame.",
+      "alignCenter": "Centred",
+      "alignStart": "Aligned to the start",
+      "reducedMotionNote": "A visitor whose device asks for reduced motion always gets a still carousel they can move themselves, whatever is set here.",
+      "saveAction": "Save carousel",
+      "saved": "Carousel saved."
     }
   },
   "vouchers": {
