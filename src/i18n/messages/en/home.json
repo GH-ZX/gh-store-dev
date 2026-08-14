@@ -8,7 +8,9 @@
     "slideLabel": "Slide {index} of {total}",
     "goToSlide": "Go to slide {index}",
     "pause": "Pause automatic rotation",
-    "play": "Resume automatic rotation"
+    "play": "Resume automatic rotation",
+    "previous": "Previous game",
+    "next": "Next game"
   },
   "sections": {
     "gamesSubtitle": "Pick your game and start topping up.",

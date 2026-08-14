@@ -58,6 +58,8 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
               regionLabel: home.carousel.regionLabel,
               slideLabel: home.carousel.slideLabel,
               goToSlide: home.carousel.goToSlide,
+              previous: home.carousel.previous,
+              next: home.carousel.next,
               details: common.actions.details,
               featured: common.badges.featured,
             }}

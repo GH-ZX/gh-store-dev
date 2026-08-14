@@ -49,6 +49,8 @@ export type HeroCarouselProps = {
     regionLabel: string;
     slideLabel: string;
     goToSlide: string;
+    previous: string;
+    next: string;
     details: string;
     featured: string;
   };
@@ -128,32 +130,52 @@ export function HeroCarousel({
   );
 
   const [selected, setSelected] = useState(0);
+  /*
+   * One entry per snap, which is not always one per slide — `scrollSnapList` is
+   * the only thing that knows, and it is what the library's own dot guide uses.
+   * Mapping the games array instead would silently render the wrong number of
+   * dots the day this groups slides.
+   */
+  const [snaps, setSnaps] = useState<number[]>([]);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
 
   const onSelect = useCallback(() => {
     if (emblaApi) {
       setSelected(emblaApi.selectedScrollSnap());
+      setCanPrev(emblaApi.canScrollPrev());
+      setCanNext(emblaApi.canScrollNext());
     }
   }, [emblaApi]);
+
+  const onReInit = useCallback(() => {
+    if (emblaApi) {
+      setSnaps(emblaApi.scrollSnapList());
+      onSelect();
+    }
+  }, [emblaApi, onSelect]);
 
   useEffect(() => {
     if (!emblaApi) {
       return;
     }
 
-    emblaApi.on("select", onSelect);
     /*
-     * `reInit` fires when the slide list or the options change, and the selected
-     * index can move under us when it does. Both are subscriptions rather than a
-     * read on mount: the initial index is Embla's own `startIndex`, which is 0,
-     * and that is what this state already holds.
+     * Embla emits `reInit` once on init, so subscribing is enough to seed the
+     * snap list and the selected index — no read on mount, which is what kept
+     * this component free of state written from an effect.
+     *
+     * `reInit` also fires when the slides or the options change, and both the
+     * snap list and the selected index can move under us when they do.
      */
-    emblaApi.on("reInit", onSelect);
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onReInit);
 
     return () => {
       emblaApi.off("select", onSelect);
-      emblaApi.off("reInit", onSelect);
+      emblaApi.off("reInit", onReInit);
     };
-  }, [emblaApi, onSelect]);
+  }, [emblaApi, onSelect, onReInit]);
 
   if (total === 0) {
     return null;
@@ -190,6 +212,10 @@ export function HeroCarousel({
                     { index: slideIndex + 1, total },
                     locale,
                   )}
+                  // Every slide is in the DOM side by side, so the ones nobody
+                  // can see have to be hidden from a screen reader explicitly —
+                  // otherwise the page reads out all of them in a row.
+                  aria-hidden={!isActive}
                   // `min-w-0` is required: without it a flex item refuses to
                   // shrink below its content and every slide overflows.
                   className="relative min-w-0 shrink-0 grow-0 basis-full"
@@ -252,17 +278,52 @@ export function HeroCarousel({
       </div>
 
       {/*
-        * Dots only. On a phone the slide is dragged and on a pointer it is
-        * hovered, which stops rotation anyway — arrows and a pause button were
-        * chrome that earned nothing. The dots stay because they say how many
-        * slides there are, which nothing else does, and they remain the
-        * keyboard-reachable way to jump.
+        * Arrows for a pointer, and only for a pointer. A phone drags the slide
+        * and has no room to spare; a mouse has no drag habit and nothing else to
+        * click. `pointer:fine` is the honest test for that — a narrow window on
+        * a laptop still gets them, and a large tablet does not.
+        *
+        * Outside the element handed to Embla, as the library requires: the
+        * viewport responds to pointer events, and a click landing inside it can
+        * be read as the start of a drag.
+        *
+        * The icons follow reading order rather than the screen, so in Arabic
+        * "next" points left — the same `rtl:rotate-180` rule every other
+        * directional icon in this codebase uses.
         */}
-      {total > 1 ? (
+      {snaps.length > 1 ? (
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 justify-between px-3 [@media(pointer:fine)]:flex">
+          <button
+            type="button"
+            onClick={() => emblaApi?.scrollPrev()}
+            disabled={!canPrev}
+            aria-label={labels.previous}
+            className="pointer-events-auto grid size-11 place-items-center rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_82%,transparent)] text-[var(--ink-soft)] backdrop-blur-md transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] disabled:opacity-30"
+          >
+            <ArrowIcon direction="start" className="size-4 rtl:rotate-180" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => emblaApi?.scrollNext()}
+            disabled={!canNext}
+            aria-label={labels.next}
+            className="pointer-events-auto grid size-11 place-items-center rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_82%,transparent)] text-[var(--ink-soft)] backdrop-blur-md transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] disabled:opacity-30"
+          >
+            <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
+          </button>
+        </div>
+      ) : null}
+
+      {/*
+        * Dots say how many slides there are, which nothing else does, and they
+        * are the keyboard-reachable way to jump to one.
+        */}
+      {snaps.length > 1 ? (
         <div className="mt-3 flex items-center justify-center sm:mt-4">
           <ul className="flex items-center" role="list">
-            {games.map((game, slideIndex) => (
-              <li key={game.id}>
+            {snaps.map((_, slideIndex) => (
+              <li key={slideIndex}>
                 {/*
                   * The bar is 6px tall; the button around it is 44, the smallest
                   * thing a thumb should be asked to hit. The padding is the
