@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AccountMenu } from "@/components/layout/account-menu";
+import { BrandWordmark } from "@/components/layout/brand-wordmark";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavLink } from "@/components/layout/nav-link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SearchField } from "@/components/search/search-field";
+import { Button } from "@/components/ui/button";
 import { SearchIcon } from "@/components/ui/icons";
-import type { Locale } from "@/i18n/config";
+import { getLocaleDirection, type Locale } from "@/i18n/config";
 import type { CommonMessages, SearchMessages } from "@/i18n/messages";
+import { signOutAction } from "@/lib/auth/actions";
 import { BRAND } from "@/lib/brand";
 import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
 import type { SessionSummary } from "@/lib/services/session.service";
@@ -48,17 +51,52 @@ export function SiteHeader({
     { href: `/${locale}/sale`, label: messages.navigation.offers },
   ];
 
+  // Search is not among them: the bar already carries a search button at every
+  // width, so a second entry inside the drawer is the same door twice.
   const secondaryItems = [
-    { href: `/${locale}/search`, label: messages.links.search },
     { href: `/${locale}/faq`, label: messages.links.faq },
     { href: `/${locale}/how`, label: messages.links.how },
     { href: `/${locale}/contact`, label: messages.links.contact },
   ];
 
+  /*
+   * The account rows inside the mobile drawer. Below `lg` the dropdown in the
+   * bar is hidden, so this is the only way to an account on a phone — which is
+   * also what keeps the bar down to a logo, a search and the menu.
+   *
+   * Neither the profile nor notifications is here: the identity block at the top
+   * of the drawer already is the profile link, and notifications sit beside it
+   * as a bell. Repeating either as a row would be the same destination twice.
+   */
+  const accountLinks = session
+    ? [
+        { href: `/${locale}/wallet`, label: messages.account.walletLabel },
+        { href: `/${locale}/support`, label: messages.links.support },
+        ...(session.isAdmin
+          ? [{ href: `/${locale}/dashboard`, label: messages.account.dashboard }]
+          : []),
+      ]
+    : [];
+
   return (
     <header className="sticky top-0 z-40 pt-3 sm:pt-5">
       <div className="gh-page">
-        <div className="gh-sheen flex min-h-16 items-center gap-3 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[color-mix(in_srgb,var(--canvas-raised)_82%,transparent)] px-3 shadow-[var(--elevation-2)] backdrop-blur-2xl sm:gap-4 sm:px-4">
+        {/*
+          * The bar does not mirror. `dir="ltr"` pins the physical order — mark on
+          * the left, controls on the right — in both languages, so switching to
+          * Arabic does not throw the logo and the menu button to opposite sides
+          * of the screen from where the eye left them. Only the box order is
+          * pinned; Arabic words inside still shape and read right-to-left.
+          *
+          * Anything positioned relative to the viewport rather than to this bar
+          * has to opt back out, or it would inherit a direction that is a layout
+          * decision about the header and nothing else. The drawer does exactly
+          * that below.
+          */}
+        <div
+          dir="ltr"
+          className="gh-sheen flex min-h-16 items-center gap-3 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[color-mix(in_srgb,var(--canvas-raised)_82%,transparent)] px-3 shadow-[var(--elevation-2)] backdrop-blur-2xl sm:gap-4 sm:px-4"
+        >
           <Link href={`/${locale}`} className="flex shrink-0 items-center gap-2.5" aria-label={BRAND.name}>
             <span
               className="grid size-9 place-items-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[linear-gradient(140deg,color-mix(in_srgb,var(--accent)_28%,var(--surface-strong)),var(--surface-strong))] text-xs font-bold text-[var(--accent-strong)]"
@@ -66,9 +104,7 @@ export function SiteHeader({
             >
               GH
             </span>
-            <span className="hidden text-[0.9375rem] font-semibold tracking-tight text-[var(--ink)] sm:inline">
-              {BRAND.name}
-            </span>
+            <BrandWordmark />
           </Link>
 
           <nav className="hidden items-center gap-0.5 lg:flex" aria-label={messages.navigation.primaryLabel}>
@@ -106,23 +142,29 @@ export function SiteHeader({
              * boundary keeps that out of the static shell.
              */}
             <Suspense fallback={null}>
-              <div className="hidden sm:block">
+              <div className="hidden lg:block">
                 <LocaleSwitcher locale={locale} labels={messages.locale} />
               </div>
             </Suspense>
 
             <ThemeToggle labels={messages.theme} />
 
-            <AccountMenu
-              locale={locale}
-              messages={messages}
-              session={session}
-              wallet={wallet}
-              unreadCount={unreadCount}
-              notificationsLabel={notificationsLabel}
-            />
+            {/* Below `lg` the same links live inside the menu panel instead. */}
+            <div className="hidden lg:block">
+              <AccountMenu
+                locale={locale}
+                messages={messages}
+                session={session}
+                wallet={wallet}
+                unreadCount={unreadCount}
+                notificationsLabel={notificationsLabel}
+              />
+            </div>
 
             <MobileNav
+              // The bar is pinned to `ltr`; the drawer belongs to the document,
+              // so it is handed the reading direction back explicitly.
+              dir={getLocaleDirection(locale)}
               labels={{
                 menu: messages.navigation.menu,
                 close: messages.navigation.close,
@@ -130,6 +172,34 @@ export function SiteHeader({
               }}
               items={primaryItems}
               footerItems={secondaryItems}
+              account={{
+                name: session?.displayName ?? null,
+                email: session?.email ?? null,
+                avatarUrl: session?.avatarUrl ?? null,
+                href: `/${locale}/profile`,
+                notifications: {
+                  href: `/${locale}/notifications`,
+                  label: notificationsLabel,
+                  count: unreadCount,
+                },
+                links: accountLinks,
+                signIn: { href: `/${locale}/login`, label: messages.account.signIn },
+              }}
+              localeSwitcher={
+                <Suspense fallback={null}>
+                  <LocaleSwitcher locale={locale} labels={messages.locale} variant="toggle" />
+                </Suspense>
+              }
+              signOut={
+                session ? (
+                  <form action={signOutAction}>
+                    <input type="hidden" name="locale" value={locale} />
+                    <Button type="submit" variant="dangerGhost" size="sm">
+                      {messages.account.signOut}
+                    </Button>
+                  </form>
+                ) : null
+              }
             />
           </div>
         </div>
