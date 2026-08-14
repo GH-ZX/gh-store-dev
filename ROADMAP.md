@@ -4,10 +4,9 @@
 **Technical repository name:** `gh-store`  
 **Reference repository:** `echocore-store`  
 **Archive:** `gh-store-old`  
-**Current status:** Stages 9 and 11 complete; stage 10 has Binance Pay
-outstanding; stages 7 and 8 still read Pending although the work they list is
-built, and want a deliberate pass against their own exit criteria rather than
-being ticked off from the side; stage 12 not started
+**Current status:** Stages 0–7, 9, and 11 complete; stage 8 has invoices
+outstanding and a cart to decide on; stage 10 has Binance Pay outstanding;
+stage 12 not started
 
 ## Progress Snapshot
 
@@ -20,8 +19,8 @@ being ticked off from the side; stage 12 not started
 | 4. Design system | Complete | Tokens, primitives, glass shell, theme switch, RTL guards |
 | 5. Localization and routing | Complete | Arabic RTL, English LTR, route shell, locale-aware document metadata |
 | 6. Public storefront | Complete | Configurable homepage, carousel, catalog, search, game and offer detail, static pages, SEO, sitemap, robots |
-| 7. Customer account | Pending | Auth UI, profile, wallet, notifications |
-| 8. Commerce core | Pending | Cart, checkout, orders, invoices |
+| 7. Customer account | Complete | Auth, recovery, profile, wallet history, notifications, suspension handling |
+| 8. Commerce core | In progress | Server-validated checkout, atomic debit, idempotency, and order views done; invoices remain, and a cart is undecided |
 | 9. G2Bulk fulfillment | Complete | Sync, top-ups, redeem codes, reconciliation, and the supplier callback done |
 | 10. Payments | In progress | Manual recharge, Sam invoices, and SyriatelCash done; Binance Pay and admin reconciliation remain |
 | 11. Admin operations | Complete | Every daily operation runs from the dashboard: catalog import and hand-built catalog, pricing, orders and fulfilment, recharges, payments, customers, access, support, reviews, notifications, activity log, website content, theme, and SEO |
@@ -164,18 +163,61 @@ real volume to measure.
 
 ## Stage 7: Customer Account
 
-**Status: Pending**
+**Status: Complete**
 
-- Build registration, login, logout, callback, and password recovery.
-- Build profile and account settings.
-- Build wallet balance and immutable transaction history.
-- Build notifications and customer inbox. **Done:** delivery, failure, refund, and
-  top-up decisions reach the customer, with an unread count in the header. A
+This stage had been left marked pending long after its work landed, so each item
+was walked against the code before the status moved.
+
+- Registration, sign-in, sign-out, and password recovery. Sign-up and sign-in
+  share one form at `/login`, switched by `?mode=sign-up`. There is deliberately
+  no `/auth/callback` route: Supabase delivers recovery as a URL *fragment*,
+  which a server route cannot read, so the reset panel is client-side and
+  establishes the session in the browser.
+- Profile and account settings, including a password change.
+- Wallet balance and an immutable transaction history, paged.
+- Notifications and customer inbox: delivery, failure, refund, and top-up
+  decisions reach the customer, with an unread count in the header. A
   notification is written by the service client only, so nobody can invent one
   for themselves, and a failed write can never fail the delivery it reports on.
-- Add ban/status handling where required by the reference behavior.
+- Status handling. A suspended account is refused at checkout by the RPC itself
+  rather than by the page, and `is_active` gates administrator access.
 
-**Exit criteria:** Customers can authenticate and access only their own profile, wallet, orders, and notifications.
+**Exit criteria met:** every one of these reads through the caller's own session,
+so RLS decides what a customer can see; the policies are covered by
+`supabase/tests/rls/identity.sql` against hosted staging.
+
+## Stage 8: Commerce Core
+
+**Status: In progress**
+
+### Completed
+
+- Server-side validation of product, offer, dynamic fields, price, and
+  availability. The price is re-read inside the transaction, so a figure edited
+  in the browser is never what gets charged.
+- Atomic wallet debit and order creation in one RPC (`place_wallet_order`):
+  it locks the wallet, debits, and writes the order together, so there is no
+  window in which a customer is charged without an order or holds one they did
+  not pay for.
+- Checkout idempotency and duplicate-submit protection. The key is claimed
+  before any money moves; a repeat with the same key returns the stored response
+  instead of buying again, and a repeat that arrives while the first is still
+  running is refused rather than allowed to start a second order.
+- Order history, order detail, success, and delivery views, including the
+  account fields submitted and the codes delivered.
+
+### Remaining
+
+- Invoice rendering and export. The `invoices` table has existed since the
+  orders migration and nothing writes an order invoice to it — the only invoice
+  in the store today is the Sam payment one, which is a different document.
+- A cart, if one is wanted at all. Checkout is one offer at a time, which is how
+  every flow above is built and how top-ups are actually bought; a cart would be
+  a product decision rather than a missing piece, and it should be made
+  deliberately rather than inherited from this list.
+
+**Exit criteria met for what exists:** checkout cannot be manipulated from the
+browser and cannot double-charge. Neither remaining item touches that.
 
 ## Stage 8: Commerce Core
 
