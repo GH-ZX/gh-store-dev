@@ -15,7 +15,15 @@ const geistSans = Geist({
   display: "swap",
 });
 
+/*
+ * Not preloaded. The mono face is a dashboard typeface — API keys, slugs, order
+ * references — and outside the dashboard it appears on exactly one storefront
+ * page. Preloading it put a font file on the critical path of every visit that
+ * would never render a glyph of it; it still downloads wherever it is actually
+ * used.
+ */
 const geistMono = Geist_Mono({
+  preload: false,
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
@@ -48,6 +56,26 @@ export const viewport: Viewport = {
   ],
 };
 
+/**
+ * The origin catalog images come from, or null when it is not configured.
+ *
+ * Read once at module scope: it is an environment value, not a per-request one.
+ */
+const imageOrigin = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+
+  if (!url) {
+    return null;
+  }
+
+  try {
+    return new URL(url).origin;
+  } catch {
+    // A malformed URL is a configuration problem, not a reason to fail a render.
+    return null;
+  }
+})();
+
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const requestHeaders = await headers();
   const locale = requestHeaders.get("x-gh-store-locale") ?? "ar";
@@ -71,6 +99,20 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <head>
+        {/*
+          * Every piece of catalog artwork is served from Supabase, so the first
+          * image on the page otherwise waits on a DNS lookup, a TCP handshake
+          * and a TLS negotiation to an origin the browser has never seen. On a
+          * slow, high-latency connection that is the single longest thing
+          * between a visitor and their first image — and it is all avoidable
+          * before the HTML has finished parsing.
+          */}
+        {imageOrigin ? (
+          <>
+            <link rel="preconnect" href={imageOrigin} crossOrigin="" />
+            <link rel="dns-prefetch" href={imageOrigin} />
+          </>
+        ) : null}
         {/*
          * Applies the stored theme before first paint, so a light-theme visitor
          * never sees the dark default flash. suppressHydrationWarning above
