@@ -6,9 +6,7 @@
   "carousel": {
     "regionLabel": "الألعاب المميزة",
     "slideLabel": "الشريحة {index} من {total}",
-    "goToSlide": "انتقل إلى الشريحة {index}",
-    "pause": "إيقاف التبديل التلقائي",
-    "play": "تشغيل التبديل التلقائي",
+    "goToGame": "انتقل إلى {name}",
     "previous": "اللعبة السابقة",
     "next": "اللعبة التالية"
   },

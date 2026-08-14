@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { preload } from "react-dom";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { HomeFallbackLinks, HomeSections } from "@/components/home/home-sections";
 import { Section } from "@/components/ui/section";
@@ -37,6 +38,24 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
     resolveHomeSections(locale, layout, { hasSocialLinks: settings.socialLinks.length > 0 }),
   ]);
 
+  /*
+   * The first slide's artwork is the largest thing on the page and the last
+   * thing to arrive: it is discovered only once the browser has parsed the HTML
+   * and reached the image, and supplier image hosts are not fast — one measured
+   * here took eleven seconds to hand over 178 KB. Naming it in the head starts
+   * the connection and the download while the rest of the document is still
+   * being read, which is most of that time back on a slow line.
+   *
+   * React deduplicates this against the `img` that renders it, so the browser
+   * makes one request and not two — and the connection it opens is reused by
+   * the remaining slides, which come from the same host.
+   */
+  const heroImage = carousel.games[0]?.imageUrl;
+
+  if (heroImage) {
+    preload(heroImage, { as: "image", fetchPriority: "high" });
+  }
+
   return (
     <>
       {/*
@@ -57,7 +76,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             labels={{
               regionLabel: home.carousel.regionLabel,
               slideLabel: home.carousel.slideLabel,
-              goToSlide: home.carousel.goToSlide,
+              goToGame: home.carousel.goToGame,
               previous: home.carousel.previous,
               next: home.carousel.next,
               details: common.actions.details,

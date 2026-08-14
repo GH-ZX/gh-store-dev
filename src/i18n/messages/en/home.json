@@ -6,9 +6,7 @@
   "carousel": {
     "regionLabel": "Featured games",
     "slideLabel": "Slide {index} of {total}",
-    "goToSlide": "Go to slide {index}",
-    "pause": "Pause automatic rotation",
-    "play": "Resume automatic rotation",
+    "goToGame": "Go to {name}",
     "previous": "Previous game",
     "next": "Next game"
   },
