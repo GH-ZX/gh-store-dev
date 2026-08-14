@@ -39,6 +39,12 @@ jobs:
       - name: Approve dependency build scripts
         run: pnpm approve-builds --all
 
+      # Before `check`, and its own step: a failing assertion should be named as
+      # a failing test rather than found at the bottom of a lint-and-build log.
+      # This ran nowhere until now — the suite existed and gated nothing.
+      - name: Run tests
+        run: pnpm test
+
       - name: Check application
         run: pnpm check
 
