@@ -95,8 +95,13 @@ Note this also means the schema is sticky: fields written by an earlier, wrong s
 Add it to Claude Code with:
 
 ```
-claude mcp add --transport http axiom https://mcp.axiom.co/mcp
+claude mcp add --transport http --scope user axiom https://mcp.axiom.co/mcp
 ```
+
+User scope, not a repo `.mcp.json`: a project-scoped file is only read when its own
+directory is the session root, and this repo is usually opened from its parent — so
+the file sits there looking configured while `/mcp` reports nothing. Authenticate
+afterwards with `/mcp`; it is browser OAuth, so the agent never sees a token.
 
 Worth having: querying this store's logs directly is much faster than writing a curl probe, which is how every fact in this file was established. Revoke under **Settings → Profile → Sessions**.
 
