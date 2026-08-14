@@ -1,16 +1,7 @@
 {
   "hero": {
-    "eyebrow": "GH Store",
     "title": "Top up your game in minutes.",
-    "description": "Top-up packages and digital cards at clear prices, with a wallet balance that makes every purchase faster.",
-    "primaryAction": "Browse games",
-    "secondaryAction": "See offers",
-    "statsDelivery": "Automated delivery",
-    "statsDeliveryValue": "Within minutes",
-    "statsCatalog": "Catalog",
-    "statsCatalogValue": "Games and cards",
-    "statsSupport": "Support",
-    "statsSupportValue": "Arabic and English"
+    "description": "Top-up packages and digital cards at clear prices, with a wallet balance that makes every purchase faster."
   },
   "carousel": {
     "regionLabel": "Featured games",

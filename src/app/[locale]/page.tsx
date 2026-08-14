@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { HeroCarousel } from "@/components/home/hero-carousel";
 import { HomeFallbackLinks, HomeSections } from "@/components/home/home-sections";
-import { HomeHero } from "@/components/home/home-hero";
 import { Section } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
@@ -39,15 +39,28 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
 
   return (
     <>
-      <Section spacing="page" mesh>
-        <HomeHero
-          locale={locale}
-          common={common}
-          messages={home}
-          carouselGames={carousel.games}
-          carouselIntervalSeconds={carousel.section?.intervalSeconds ?? 6}
-        />
-      </Section>
+      {/*
+        * The carousel leads. There used to be a pitch above it — a headline, two
+        * buttons and three stat tiles — which pushed the actual games below the
+        * fold on a phone and told a visitor nothing they had not already assumed
+        * by arriving. The games are the pitch.
+        */}
+      {carousel.games.length > 0 ? (
+        <Section spacing="page" mesh>
+          <HeroCarousel
+            games={carousel.games}
+            locale={locale}
+            intervalSeconds={carousel.section?.intervalSeconds ?? 6}
+            labels={{
+              regionLabel: home.carousel.regionLabel,
+              slideLabel: home.carousel.slideLabel,
+              goToSlide: home.carousel.goToSlide,
+              details: common.actions.details,
+              featured: common.badges.featured,
+            }}
+          />
+        </Section>
+      ) : null}
 
       {sections.length > 0 ? (
         <HomeSections

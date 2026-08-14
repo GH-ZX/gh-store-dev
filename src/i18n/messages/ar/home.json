@@ -1,16 +1,7 @@
 {
   "hero": {
-    "eyebrow": "GH Store",
     "title": "اشحن لعبتك في دقائق.",
-    "description": "باقات شحن وبطاقات رقمية بأسعار واضحة، ورصيد محفظة يجعل كل عملية شراء أسرع.",
-    "primaryAction": "تصفح الألعاب",
-    "secondaryAction": "شاهد العروض",
-    "statsDelivery": "تسليم مؤتمت",
-    "statsDeliveryValue": "خلال دقائق",
-    "statsCatalog": "الكتالوج",
-    "statsCatalogValue": "ألعاب وبطاقات",
-    "statsSupport": "الدعم",
-    "statsSupportValue": "عربي وإنجليزي"
+    "description": "باقات شحن وبطاقات رقمية بأسعار واضحة، ورصيد محفظة يجعل كل عملية شراء أسرع."
   },
   "carousel": {
     "regionLabel": "الألعاب المميزة",
