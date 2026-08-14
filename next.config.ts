@@ -25,6 +25,37 @@ function lanOrigins(): string[] {
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: lanOrigins(),
+
+  /**
+   * The reference store addressed a game as `/game/:slug`; this one uses the
+   * plural, matching `/games`. Both spellings will be typed and both will be
+   * pasted, so the singular resolves instead of answering 404 — and it resolves
+   * permanently, so a search engine that meets one stops asking.
+   *
+   * The locale prefix is left to the middleware, which sends an unprefixed path
+   * to Arabic: adding it here would mean writing the default locale into a
+   * redirect that has no idea what the visitor reads.
+   */
+  async redirects() {
+    return [
+      { source: "/game/:slug", destination: "/games/:slug", permanent: true },
+      {
+        source: "/game/:slug/:offerSlug",
+        destination: "/games/:slug/:offerSlug",
+        permanent: true,
+      },
+      {
+        source: "/:locale(ar|en)/game/:slug",
+        destination: "/:locale/games/:slug",
+        permanent: true,
+      },
+      {
+        source: "/:locale(ar|en)/game/:slug/:offerSlug",
+        destination: "/:locale/games/:slug/:offerSlug",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

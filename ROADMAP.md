@@ -137,7 +137,14 @@ starter-template UI. The design contract lives in
 - Move public routes under the locale route shell.
 - Add shared and domain message namespaces.
 - Add canonical metadata, alternate language links, sitemap, and robots policy.
-- Add compatibility redirects for old route shapes.
+- Add compatibility redirects for old route shapes. An unprefixed path is sent to
+  the Arabic one by the middleware, and the reference contract's singular
+  `/game/:slug` and `/game/:gameSlug/:offerSlug` are permanent redirects to the
+  plural routes this store uses. The rest of the old shapes are deliberately
+  absent: `/cart` has no destination because there is no cart, and `/success`,
+  `/invoice/:kind/:id` and `/dashboard/operations` describe pages that were
+  rebuilt under different addresses on a domain that has never served the old
+  ones. A redirect nobody can arrive at is a claim, not a compatibility measure.
 
 **Exit criteria:** Arabic and English render the same current capabilities with correct document direction, locale-aware navigation, and route handling.
 
@@ -223,19 +230,6 @@ builds one because a list said so.
 
 **Exit criteria met:** checkout cannot be manipulated from the browser and
 cannot double-charge.
-
-## Stage 8: Commerce Core
-
-**Status: Pending**
-
-- Build client cart state as a convenience layer only.
-- Validate product, offer, dynamic fields, price, and availability on the server.
-- Add atomic wallet debit and order creation RPCs.
-- Add checkout idempotency and duplicate-submit protection.
-- Build order history, order detail, success, and delivery views.
-- Build invoice rendering and lazy PNG/PDF export.
-
-**Exit criteria:** Checkout cannot be manipulated from the browser and cannot double-charge a customer.
 
 ## Stage 9: G2Bulk Fulfillment
 
