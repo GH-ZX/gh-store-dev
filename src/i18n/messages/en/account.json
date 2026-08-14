@@ -69,6 +69,40 @@
     "openAction": "View details",
     "badgeLabel": "Notifications"
   },
+  "support": {
+    "eyebrow": "Support",
+    "title": "Get help",
+    "description": "Ask us about an order, a top-up, or anything else. Replies arrive here and in your notifications.",
+    "threadsTitle": "Your requests",
+    "noThreads": "You have not asked us anything yet.",
+    "unavailable": "Your requests could not be loaded. Nothing has been lost — try again in a moment.",
+    "newTitle": "Ask a question",
+    "newDescription": "Tell us what happened and we will come back to you.",
+    "subjectLabel": "Subject",
+    "bodyLabel": "What happened?",
+    "bodyHint": "Include the order number if it is about an order.",
+    "openAction": "Send request",
+    "replyLabel": "Reply",
+    "replyAction": "Send reply",
+    "sending": "Sending…",
+    "opened": "Sent. We will reply here.",
+    "closedNotice": "This request is closed. Send a new one if you still need help.",
+    "missingTitle": "Request not found",
+    "missingDescription": "This request does not exist, or it is not yours.",
+    "statuses": {
+      "open": "Waiting for us",
+      "pending": "We replied",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "errors": {
+      "invalid_input": "Please fill in both the subject and the message.",
+      "too_many": "You already have several open requests. We will answer those first.",
+      "not_found": "That request no longer exists.",
+      "closed": "This request is closed, so it cannot take a reply.",
+      "unknown": "Something went wrong. Nothing was sent — please try again."
+    }
+  },
   "banned": {
     "title": "Account suspended",
     "description": "This account has been suspended. Contact support to find out why and to restore it."

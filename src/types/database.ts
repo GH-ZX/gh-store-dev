@@ -1388,6 +1388,7 @@ export type Database = {
           created_at: string
           id: string
           last_message_at: string | null
+          message_count: number
           status: string
           subject: string
           updated_at: string
@@ -1397,6 +1398,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_message_at?: string | null
+          message_count?: number
           status?: string
           subject: string
           updated_at?: string
@@ -1406,6 +1408,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_message_at?: string | null
+          message_count?: number
           status?: string
           subject?: string
           updated_at?: string

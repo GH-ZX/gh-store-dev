@@ -38,6 +38,13 @@ export function SiteFooter({ locale, messages, socialLinks, year }: SiteFooterPr
         { href: `/${locale}/how`, label: messages.links.how },
         { href: `/${locale}/faq`, label: messages.links.faq },
         { href: `/${locale}/contact`, label: messages.links.contact },
+        /*
+         * Beside Contact rather than instead of it. Contact is the public
+         * address book — WhatsApp, Telegram, whoever is on the other end. This
+         * is a thread against the customer's own account, which is the one that
+         * leaves a record, so it needs a sign-in and cannot replace the other.
+         */
+        { href: `/${locale}/support`, label: messages.links.support },
         { href: `/${locale}/links`, label: messages.links.social },
       ],
     },

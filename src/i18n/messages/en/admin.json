@@ -44,6 +44,7 @@
       "recharges": "Recharges",
       "payments": "Payments",
       "customers": "Customers",
+      "support": "Support",
       "providers": "Providers and API",
       "website": "Website",
       "operations": "Logs"
@@ -636,6 +637,43 @@
       "not_credited": "The money arrived but the wallet was never credited. The customer has paid and has nothing to show for it — credit them from their customer page, or find out why the credit did not land.",
       "unbacked": "This wallet was credited with no payment behind it. It costs the store rather than the customer, so check whether it was a deliberate correction.",
       "short_paid": "Less arrived than was requested. Decide whether to credit the smaller amount or ask the customer for the difference."
+    }
+  },
+  "support": {
+    "eyebrow": "Support",
+    "title": "Customer requests",
+    "description": "Everything customers have asked, newest activity first.",
+    "queueTitle": "Queue",
+    "filtersLabel": "Which requests",
+    "filterAll": "All",
+    "empty": "No requests at this status.",
+    "unavailable": "The queue could not be read, so nothing is shown rather than an empty list that would look like no one has written in.",
+    "customerLabel": "Customer",
+    "unknownCustomer": "A deleted account",
+    "messagesLabel": "{count} messages",
+    "replyLabel": "Reply to the customer",
+    "replyAction": "Send reply",
+    "sending": "Sending…",
+    "selectPrompt": "Choose a request to read it.",
+    "missingTitle": "Request not found",
+    "missingDescription": "This request no longer exists.",
+    "statusActionLabel": "Move to",
+    "statuses": {
+      "open": "Needs an answer",
+      "pending": "Awaiting customer",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "roles": {
+      "customer": "Customer",
+      "admin": "Store",
+      "system": "Automatic"
+    },
+    "errors": {
+      "invalid_input": "A reply cannot be empty.",
+      "not_found": "That request no longer exists.",
+      "closed": "This request is closed.",
+      "unknown": "Something went wrong. Nothing was sent — please try again."
     }
   },
   "logs": {

@@ -25,7 +25,8 @@ export type NotificationType =
   | "order_delivered"
   | "order_failed"
   | "recharge_approved"
-  | "recharge_rejected";
+  | "recharge_rejected"
+  | "support_reply";
 
 export type CustomerNotification = {
   id: string;

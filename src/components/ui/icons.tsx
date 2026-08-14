@@ -123,6 +123,22 @@ export function WalletIcon(props: IconProps) {
   );
 }
 
+/**
+ * A speech bubble, for support.
+ *
+ * The tail points straight down from the centre rather than off to one side, so
+ * the glyph is symmetric and needs no RTL treatment — the rule at the top of this
+ * file, applied rather than worked around.
+ */
+export function SupportIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20 5.5H4A1.5 1.5 0 0 0 2.5 7v8A1.5 1.5 0 0 0 4 16.5h5l3 3 3-3h5a1.5 1.5 0 0 0 1.5-1.5V7A1.5 1.5 0 0 0 20 5.5Z" />
+      <path d="M8.5 11h.01M12 11h.01M15.5 11h.01" />
+    </Icon>
+  );
+}
+
 export function BellIcon(props: IconProps) {
   return (
     <Icon {...props}>

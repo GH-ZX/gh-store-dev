@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SupportFab } from "@/components/support/support-fab";
 import { getLocaleDirection, isLocale, type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getG2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
@@ -65,6 +66,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
         socialLinks={settings.socialLinks}
         year={new Date().getFullYear()}
       />
+
+      {/* Last in the DOM so it comes after the footer in reading order. */}
+      <SupportFab locale={locale} label={common.links.support} signedIn={Boolean(session)} />
     </div>
   );
 }
