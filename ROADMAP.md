@@ -4,7 +4,10 @@
 **Technical repository name:** `gh-store`  
 **Reference repository:** `echocore-store`  
 **Archive:** `gh-store-old`  
-**Current status:** Stage 6 complete; stages 9, 10, and 11 in progress
+**Current status:** Stages 9 and 11 complete; stage 10 has Binance Pay
+outstanding; stages 7 and 8 still read Pending although the work they list is
+built, and want a deliberate pass against their own exit criteria rather than
+being ticked off from the side; stage 12 not started
 
 ## Progress Snapshot
 
@@ -19,9 +22,9 @@
 | 6. Public storefront | Complete | Configurable homepage, carousel, catalog, search, game and offer detail, static pages, SEO, sitemap, robots |
 | 7. Customer account | Pending | Auth UI, profile, wallet, notifications |
 | 8. Commerce core | Pending | Cart, checkout, orders, invoices |
-| 9. G2Bulk fulfillment | In progress | Sync, top-ups, redeem codes, and reconciliation done; supplier webhook remains |
+| 9. G2Bulk fulfillment | Complete | Sync, top-ups, redeem codes, reconciliation, and the supplier callback done |
 | 10. Payments | In progress | Manual recharge, Sam invoices, and SyriatelCash done; Binance Pay and admin reconciliation remain |
-| 11. Admin operations | In progress | Sign-in, dashboard shell, overview, G2Bulk key, games and voucher imports, catalog editing, website settings, customers, recharges, order operations, access control, activity log, review moderation, and the support queue done; owner-composed notifications, theme settings, per-page SEO, and manual catalog creation remain |
+| 11. Admin operations | Complete | Every daily operation runs from the dashboard: catalog import and hand-built catalog, pricing, orders and fulfilment, recharges, payments, customers, access, support, reviews, notifications, activity log, website content, theme, and SEO |
 | 12. Release | Pending | QA, staging UAT, Cloudflare domain, production launch |
 
 ## Working Rules
@@ -189,7 +192,7 @@ real volume to measure.
 
 ## Stage 9: G2Bulk Fulfillment
 
-**Status: In progress**
+**Status: Complete**
 
 ### Completed
 
@@ -213,13 +216,28 @@ real volume to measure.
   Completing or failing requires the supplier to have said so. Age alone only
   ever escalates to a person, never settles.
 
-### Remaining
+- The supplier callback. Every top-up order now carries an address G2Bulk
+  reports its outcome to, so a delivery that finishes after checkout gave up is
+  settled at once rather than at the next sweep. It is an edge function beside
+  the payment callback, for the same reason: the supplier calls from its own
+  network, and the store has no public address until it is deployed.
 
-- Accept G2Bulk's own callback so a finished order is known immediately rather
-  than at the next sweep. `fulfillment_events` already carries the
-  `(provider, external_event_id)` uniqueness a duplicate-safe receiver needs.
+  The payload is a claim, not an instruction. A `FAILED` for an order already
+  completed, or a `COMPLETED` for one already refunded, settles nothing and is
+  recorded where an operator will see it — reversing either automatically is
+  worse than a wait. Repeats are absorbed by `(provider, external_event_id)`,
+  and an event claimed but not processed is retried rather than discarded.
 
-**Exit criteria:** Success, pending, delayed, failed, duplicate-callback, and reconciliation scenarios pass in staging.
+  The sweep remains the backstop for everything that never arrives.
+
+**Exit criteria met, with one caveat:** delivered, failed, duplicate, unknown
+supplier order, and both contradictions were exercised against hosted staging.
+Those runs used synthetic supplier orders — a live G2Bulk purchase reporting
+back through the callback belongs to stage 12's UAT.
+
+The callback is inert until an owner generates its secret on the Providers page.
+Until then no `callback_url` is sent and orders settle through the sweep, which
+is exactly how they settled before.
 
 ## Stage 10: Payments and Recharge
 
@@ -262,7 +280,7 @@ wallet transaction with the request id — rather than a match on amount and tim
 
 ## Stage 11: Admin Operations
 
-**Status: In progress**
+**Status: Complete**
 
 ### Completed
 
@@ -315,15 +333,32 @@ wallet transaction with the request id — rather than a match on amount and tim
   rather than a read-then-write. Nothing reaches the storefront until an
   administrator approves it.
 
-### Remaining
+- Owner-written messages. The automatic notifications had covered deliveries,
+  refunds and top-up decisions since stage 7, but a message with a person behind
+  it had nowhere to be written. One subject and one body, from the customer's own
+  page, stored in both languages as typed — the alternative was asking for every
+  message twice, or showing half the customers an empty one. Audited with its
+  text, because a message signed by the store may need attributing later.
 
-- Compose and send a notification to a customer by hand. Delivery, refund, and
-  top-up decisions already notify; an owner-written message does not.
-- Build theme settings and per-page SEO beyond the homepage.
-- Create games and offers by hand, and delete individual offers.
+- Theme. `store_settings.theme` had been declared and unused since the settings
+  migration. Two accents and a default mode, with the supporting shades derived
+  rather than asked for, and a contrast reading that warns when button labels on
+  the chosen accent would fall below AA. Only plain hex is accepted, because
+  these values are written into a `<style>` element.
 
-**Exit criteria:** Daily operations can be completed through the dashboard
-without direct database edits.
+- Per-page SEO. Ten pages beyond the homepage — the catalog lists, search, and
+  the static content — each with its own title and description, falling back
+  field by field to the page's own wording. Detail pages are deliberately absent:
+  their metadata comes from the product they show.
+
+- Manual catalog. A game and its packages can be created without a supplier
+  import, and a single package removed. Both are created unpublished; a package
+  with no provider mapping cannot be delivered automatically, so it goes on sale
+  only when its owner has said they will fulfil it by hand.
+
+**Exit criteria met:** every daily operation — pricing, orders, refunds,
+recharges, customers, support, reviews, catalog, and the store's own appearance —
+is reachable from the dashboard without a SQL statement.
 
 ## Stage 12: QA and Release
 
