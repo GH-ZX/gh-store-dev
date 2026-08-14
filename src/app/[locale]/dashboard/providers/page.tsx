@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { AxiomSettingsForm } from "@/components/admin/axiom-settings-form";
 import { G2BulkSettingsForm } from "@/components/admin/g2bulk-settings-form";
+import { MaxStoreSettingsForm } from "@/components/admin/maxstore-settings-form";
+import { ProviderGroup, ProviderSection } from "@/components/admin/provider-section";
 import { SamSettingsForm } from "@/components/admin/sam-settings-form";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -13,6 +15,7 @@ import {
   getAxiomStatus,
   getG2BulkCallback,
   getG2BulkStatus,
+  getMaxStoreStatus,
   getRecentSyncLogs,
   getSamStatus,
 } from "@/lib/services/admin-settings.service";
@@ -20,25 +23,41 @@ import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
+/**
+ * Every outside service the store talks to.
+ *
+ * Grouped by the job each one does and folded away individually. Three
+ * always-open panels was a readable page; a store ends up with a supplier per
+ * catalogue it resells and a processor per payment method, and at that length
+ * the open list becomes something nobody scrolls. The summary row carries the
+ * state, so the page is scanned rather than read.
+ *
+ * Every read here is admin-gated in its own service, and nothing that reaches a
+ * component carries a secret — only masked hints.
+ */
 export default async function ProvidersPage({ params }: PageProps<"/[locale]/dashboard/providers">) {
   const locale = await resolveLocaleParam(params);
   const messages = getMessages(locale, "admin");
   const provider = messages.providers.g2bulk;
+  const maxstore = messages.providers.maxstore;
   const sam = messages.providers.sam;
   const logging = messages.providers.logging;
-  const [status, callback, logs, samStatus, samOverview, axiomStatus] = await Promise.all([
-    getG2BulkStatus(),
-    getG2BulkCallback(),
-    getRecentSyncLogs(G2BULK_PROVIDER_NAME),
-    getSamStatus(),
-    // Reaches Sam when a key is stored, and answers with an error key rather
-    // than throwing, so a provider outage cannot take this page down.
-    getSamOverview(),
-    getAxiomStatus(),
-  ]);
+  const groups = messages.providers.groups;
+  const [status, callback, maxstoreStatus, logs, samStatus, samOverview, axiomStatus] =
+    await Promise.all([
+      getG2BulkStatus(),
+      getG2BulkCallback(),
+      getMaxStoreStatus(),
+      getRecentSyncLogs(G2BULK_PROVIDER_NAME),
+      getSamStatus(),
+      // Reaches Sam when a key is stored, and answers with an error key rather
+      // than throwing, so a provider outage cannot take this page down.
+      getSamOverview(),
+      getAxiomStatus(),
+    ]);
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-10">
       <SectionHeader
         as="h1"
         eyebrow={messages.providers.eyebrow}
@@ -46,111 +65,122 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
         subtitle={messages.providers.description}
       />
 
-      <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-lg font-semibold text-[var(--ink)]">{provider.name}</h2>
-              <Badge tone={status.configured ? "success" : "neutral"}>
-                {status.configured ? provider.statusConfigured : provider.statusMissing}
-              </Badge>
-            </div>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
-              {provider.summary}
-            </p>
-            {status.keyHint ? (
-              <p className="mt-3 text-xs text-[var(--ink-faint)]">
-                {provider.keyHintLabel}: <span dir="ltr">{status.keyHint}</span>
-              </p>
-            ) : null}
-          </div>
-
-          {/* Two import lanes: game top-ups, and gift cards and codes. */}
-          <div className="flex flex-wrap gap-2">
-            <ButtonLink
-              href={`/${locale}/dashboard/providers/g2bulk/import`}
-              variant={status.configured ? "primary" : "secondary"}
-              trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
-            >
-              {provider.importAction}
-            </ButtonLink>
-            <ButtonLink
-              href={`/${locale}/dashboard/providers/g2bulk/vouchers`}
-              variant="secondary"
-              trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
-            >
-              {messages.vouchers.title}
-            </ButtonLink>
-          </div>
-        </div>
-
-        <div className="mt-8 border-t border-[var(--line)] pt-8">
+      <ProviderGroup title={groups.suppliers} description={groups.suppliersDescription}>
+        <ProviderSection
+          name={provider.name}
+          summary={provider.summary}
+          defaultOpen={!status.configured}
+          badges={[
+            {
+              label: status.configured ? provider.statusConfigured : provider.statusMissing,
+              tone: status.configured ? "success" : "neutral",
+            },
+            ...(status.webhookConfigured
+              ? [{ label: provider.callbackOn, tone: "success" as const }]
+              : []),
+          ]}
+          hint={status.keyHint ? { label: provider.keyHintLabel, value: status.keyHint } : null}
+          actions={
+            <>
+              {/* Two import lanes: game top-ups, and gift cards and codes. */}
+              <ButtonLink
+                href={`/${locale}/dashboard/providers/g2bulk/import`}
+                variant={status.configured ? "primary" : "secondary"}
+                trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
+              >
+                {provider.importAction}
+              </ButtonLink>
+              <ButtonLink
+                href={`/${locale}/dashboard/providers/g2bulk/vouchers`}
+                variant="secondary"
+                trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
+              >
+                {messages.vouchers.title}
+              </ButtonLink>
+            </>
+          }
+        >
           <G2BulkSettingsForm
             locale={locale}
             messages={provider}
             status={status}
             callback={callback}
           />
-        </div>
-      </section>
+        </ProviderSection>
 
-      {/* Sam API is the customer-facing payment side, distinct from the supplier above. */}
-      <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-lg font-semibold text-[var(--ink)]">{sam.name}</h2>
-              <Badge tone={samStatus.configured ? "success" : "neutral"}>
-                {samStatus.configured ? sam.statusConfigured : sam.statusMissing}
-              </Badge>
-              {samStatus.configured && samStatus.manualReview ? (
-                <Badge tone="warning">{sam.manualReviewLabel}</Badge>
-              ) : null}
-            </div>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">{sam.summary}</p>
-            {samStatus.keyHint ? (
-              <p className="mt-3 text-xs text-[var(--ink-faint)]">
-                {sam.keyHintLabel}: <span dir="ltr">{samStatus.keyHint}</span>
-              </p>
-            ) : null}
-          </div>
-        </div>
+        <ProviderSection
+          name={maxstore.name}
+          summary={maxstore.summary}
+          defaultOpen={!maxstoreStatus.configured}
+          badges={[
+            {
+              label: maxstoreStatus.configured ? maxstore.statusConfigured : maxstore.statusMissing,
+              tone: maxstoreStatus.configured ? "success" : "neutral",
+            },
+            // Said in the summary, not only inside: a supplier that cannot yet
+            // sell anything should not look finished from the outside.
+            { label: maxstore.partialLabel, tone: "warning" },
+          ]}
+          hint={
+            maxstoreStatus.tokenHint
+              ? { label: maxstore.keyHintLabel, value: maxstoreStatus.tokenHint }
+              : null
+          }
+        >
+          <MaxStoreSettingsForm
+            locale={locale}
+            messages={maxstore}
+            errors={provider.errors}
+            status={maxstoreStatus}
+          />
+        </ProviderSection>
+      </ProviderGroup>
 
-        <div className="mt-8 border-t border-[var(--line)] pt-8">
+      <ProviderGroup title={groups.payments} description={groups.paymentsDescription}>
+        <ProviderSection
+          name={sam.name}
+          summary={sam.summary}
+          defaultOpen={!samStatus.configured}
+          badges={[
+            {
+              label: samStatus.configured ? sam.statusConfigured : sam.statusMissing,
+              tone: samStatus.configured ? "success" : "neutral",
+            },
+            ...(samStatus.configured && samStatus.manualReview
+              ? [{ label: sam.manualReviewLabel, tone: "warning" as const }]
+              : []),
+          ]}
+          hint={samStatus.keyHint ? { label: sam.keyHintLabel, value: samStatus.keyHint } : null}
+        >
           <SamSettingsForm
             locale={locale}
             messages={sam}
             status={samStatus}
             overview={samOverview}
           />
-        </div>
-      </section>
+        </ProviderSection>
+      </ProviderGroup>
 
-      {/* Not a supplier: this is where the store reports on itself. */}
-      <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-lg font-semibold text-[var(--ink)]">{logging.name}</h2>
-              <Badge tone={axiomStatus.enabled ? "success" : "neutral"}>
-                {axiomStatus.enabled ? logging.statusConfigured : logging.statusMissing}
-              </Badge>
-            </div>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
-              {logging.summary}
-            </p>
-            {axiomStatus.tokenHint ? (
-              <p className="mt-3 text-xs text-[var(--ink-faint)]">
-                {logging.tokenHint}: <span dir="ltr">{axiomStatus.tokenHint}</span>
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="mt-8 border-t border-[var(--line)] pt-8">
+      <ProviderGroup title={groups.monitoring} description={groups.monitoringDescription}>
+        <ProviderSection
+          name={logging.name}
+          summary={logging.summary}
+          defaultOpen={!axiomStatus.enabled}
+          badges={[
+            {
+              label: axiomStatus.enabled ? logging.statusConfigured : logging.statusMissing,
+              tone: axiomStatus.enabled ? "success" : "neutral",
+            },
+          ]}
+          hint={
+            axiomStatus.tokenHint
+              ? { label: logging.tokenHint, value: axiomStatus.tokenHint }
+              : null
+          }
+        >
           <AxiomSettingsForm locale={locale} messages={logging} status={axiomStatus} />
-        </div>
-      </section>
+        </ProviderSection>
+      </ProviderGroup>
 
       <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6">
         <h2 className="text-sm font-semibold text-[var(--ink)]">{provider.logsHeading}</h2>
@@ -173,19 +203,18 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
                         ? "success"
                         : log.status === "failed"
                           ? "danger"
-                          : log.status === "partial"
-                            ? "warning"
-                            : "neutral"
+                          : "warning"
                     }
                   >
                     {log.status}
                   </Badge>
-                  <span className="text-[var(--ink-muted)] tabular-nums" dir="ltr">
+                  <span className="text-[var(--ink-soft)]">{log.kind}</span>
+                  <time className="text-xs text-[var(--ink-faint)] tabular-nums" dateTime={log.startedAt} dir="ltr">
                     {log.startedAt.slice(0, 16).replace("T", " ")}
-                  </span>
+                  </time>
                 </div>
 
-                <div className="flex flex-wrap gap-3 text-xs text-[var(--ink-muted)] tabular-nums">
+                <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--ink-muted)] tabular-nums">
                   <span>
                     {provider.logRequested}: {log.requestedCount}
                   </span>

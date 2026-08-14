@@ -10,6 +10,13 @@ import {
   type AxiomStatus,
 } from "@/lib/settings/axiom-settings";
 import { checkCallbackUrl, type CallbackReachability } from "@/lib/settings/callback-url";
+import {
+  mergeMaxStoreSettings,
+  readMaxStoreCredentials,
+  toMaxStoreStatus,
+  type MaxStoreCredentials,
+  type MaxStoreStatus,
+} from "@/lib/settings/maxstore-settings";
 import { newCallbackSecret } from "@/lib/settings/callback-secret";
 import {
   mergeG2BulkSettings,
@@ -275,4 +282,42 @@ export async function getRecentSyncLogs(
   }));
 
   return { ok: true, runs, total: count ?? runs.length };
+}
+
+export async function getMaxStoreStatus(): Promise<MaxStoreStatus> {
+  await requireAdmin();
+
+  return toMaxStoreStatus(await readProviders());
+}
+
+/** Server-only: returns the plaintext MaxStore token. Never pass this to a client component. */
+export async function getMaxStoreCredentials(): Promise<MaxStoreCredentials> {
+  await requireAdmin();
+
+  return readMaxStoreCredentials(await readProviders());
+}
+
+export async function saveMaxStoreSettings(update: {
+  apiToken?: string;
+  markupPercent?: number;
+  enabled?: boolean;
+}): Promise<MaxStoreStatus> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const providers = await readProviders();
+  const next = mergeMaxStoreSettings(providers, update, new Date().toISOString());
+
+  const { data, error } = await supabase
+    .from("store_settings")
+    .update({ providers: next })
+    .eq("id", SETTINGS_ID)
+    .select("providers")
+    .single();
+
+  if (error) {
+    throw new Error(`Saving provider settings failed: ${error.message}`);
+  }
+
+  return toMaxStoreStatus(data.providers);
 }

@@ -230,6 +230,35 @@
         "not_configured": "Add a token and turn sending on first.",
         "unknown": "We could not save that. Please try again."
       }
+    },
+    "groups": {
+      "suppliers": "Suppliers",
+      "suppliersDescription": "Where the store buys what it sells.",
+      "payments": "Payments",
+      "paymentsDescription": "How customers pay, and how the money is reported back.",
+      "monitoring": "Monitoring",
+      "monitoringDescription": "Where the store reports on itself."
+    },
+    "maxstore": {
+      "name": "MaxStore",
+      "summary": "A second supplier: game top-ups, numbers, social media services, support apps, and recharge accounts.",
+      "statusConfigured": "Token saved",
+      "statusMissing": "No token",
+      "partialLabel": "Catalogue not connected",
+      "keyHintLabel": "Saved token",
+      "apiTokenLabel": "API token",
+      "apiTokenPlaceholder": "From the MaxStore Mini App, Account → API Keys",
+      "apiTokenHelp": "Stored server-side and never shown again.",
+      "apiTokenKeepHelp": "Leave empty to keep the saved token.",
+      "markupLabel": "Markup (%)",
+      "markupHelp": "Added to the supplier's price when its products are imported.",
+      "saveAction": "Save",
+      "saved": "Saved",
+      "testAction": "Test the token",
+      "verified": "Token works",
+      "accountLabel": "Account",
+      "balanceLabel": "Balance",
+      "pendingWork": "The token and this check are built. Importing MaxStore's catalogue and buying through it are not yet — until then, saving a token here changes nothing a customer can see."
     }
   },
   "import": {

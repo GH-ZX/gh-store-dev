@@ -5,13 +5,17 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { G2BulkClient } from "@/providers/g2bulk/client";
 import { G2BulkError } from "@/providers/g2bulk/errors";
+import { MaxStoreClient } from "@/providers/maxstore/client";
+import { MaxStoreError } from "@/providers/maxstore/errors";
 import { requireAdmin } from "@/lib/auth/guards";
 import { logFailure } from "@/lib/logging/logger";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
   getG2BulkCredentials,
+  getMaxStoreCredentials,
   regenerateG2BulkCallbackSecret,
   saveG2BulkSettings,
+  saveMaxStoreSettings,
 } from "@/lib/services/admin-settings.service";
 import { removeImportedGame, type RemoveImportedResult } from "@/lib/services/admin-catalog.service";
 import { importG2BulkGames } from "@/lib/services/g2bulk-import.service";
@@ -42,7 +46,9 @@ function resolveLocale(value: unknown): Locale {
 
 /** Map a provider failure onto a message key the page can localize. */
 function errorKey(error: unknown): string {
-  if (error instanceof G2BulkError) {
+  if (error instanceof G2BulkError || error instanceof MaxStoreError) {
+    // Both suppliers classify failures with the same vocabulary, so one message
+    // catalogue serves both and a third supplier costs nothing here.
     return error.kind;
   }
 
@@ -235,4 +241,81 @@ export async function removeImportedGameAction(input: {
   }
 
   return result;
+}
+
+const maxstoreSettingsSchema = z.object({
+  apiToken: z.string().max(400).optional(),
+  markupPercent: z.coerce.number().min(0).max(500),
+  locale: z.string().optional(),
+});
+
+export async function saveMaxStoreSettingsAction(
+  _state: ProviderActionState,
+  formData: FormData,
+): Promise<ProviderActionState> {
+  await requireAdmin();
+
+  const parsed = maxstoreSettingsSchema.safeParse({
+    apiToken: formText(formData, "apiToken"),
+    markupPercent: formText(formData, "markupPercent"),
+    locale: formText(formData, "locale"),
+  });
+
+  if (!parsed.success) {
+    return { ...INITIAL_PROVIDER_STATE, error: "invalid_input" };
+  }
+
+  const locale = resolveLocale(parsed.data.locale);
+
+  try {
+    await saveMaxStoreSettings({
+      // An empty field means "keep the saved token", so it is not forwarded.
+      apiToken: parsed.data.apiToken?.trim() ? parsed.data.apiToken : undefined,
+      markupPercent: parsed.data.markupPercent,
+    });
+  } catch (error) {
+    logFailure("admin.providers", "maxstore_settings_save_failed", error);
+
+    return { ...INITIAL_PROVIDER_STATE, error: "unknown" };
+  }
+
+  revalidatePath(`/${locale}/dashboard/providers`);
+
+  return { ...INITIAL_PROVIDER_STATE, notice: "saved" };
+}
+
+/**
+ * Prove the token, and say what it belongs to.
+ *
+ * `/profile` is the cheapest call MaxStore documents and returns the balance,
+ * which is the number an owner actually wants to see. Nothing about this
+ * integration has been checked against a live key yet, so this button is also
+ * the first real test of `docs/providers/maxstore-api.md`.
+ */
+export async function verifyMaxStoreTokenAction(
+  _state: ProviderActionState,
+  _formData: FormData,
+): Promise<ProviderActionState> {
+  await requireAdmin();
+
+  const { apiToken } = await getMaxStoreCredentials();
+
+  if (!apiToken) {
+    return { ...INITIAL_PROVIDER_STATE, error: "missing_key" };
+  }
+
+  try {
+    const profile = await new MaxStoreClient({ apiToken }).getProfile();
+
+    return {
+      error: null,
+      notice: "verified",
+      account: {
+        username: profile.username ?? profile.userId ?? "—",
+        balance: profile.balance,
+      },
+    };
+  } catch (error) {
+    return { ...INITIAL_PROVIDER_STATE, error: errorKey(error) };
+  }
 }
