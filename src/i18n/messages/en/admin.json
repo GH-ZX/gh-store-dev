@@ -569,6 +569,19 @@
       "not_found": "We could not find that account.",
       "invalid_input": "Check the values and try again.",
       "unknown": "We could not apply that change. Please try again."
+    },
+    "messageTitle": "Send a message",
+    "messageDescription": "Reaches this customer in their notifications, with the store as the sender.",
+    "messageSubjectLabel": "Subject",
+    "messageBodyLabel": "Message",
+    "messageBodyHint": "Written once and shown exactly as typed, whichever language the customer is browsing in.",
+    "messageAction": "Send",
+    "messageSending": "Sending…",
+    "messageSent": "Sent. It is in their notifications now.",
+    "messageErrors": {
+      "invalid_input": "Write a subject and a message before sending.",
+      "not_found": "This account no longer exists.",
+      "unknown": "Something went wrong. Nothing was sent — please try again."
     }
   },
   "recharges": {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CustomerAccessForm } from "@/components/admin/customer-access-form";
+import { CustomerMessageForm } from "@/components/admin/customer-message-form";
 import { WalletAdjustForm } from "@/components/admin/wallet-adjust-form";
 import { Badge } from "@/components/ui/badge";
 import { ChevronIcon } from "@/components/ui/icons";
@@ -66,6 +67,8 @@ export default async function CustomerDetailPage({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
         <div className="grid gap-6">
           <WalletAdjustForm locale={locale} messages={messages} userId={customer.id} />
+
+          <CustomerMessageForm locale={locale} messages={messages} userId={customer.id} />
 
           <CustomerAccessForm
             locale={locale}

@@ -2,7 +2,9 @@ import "server-only";
 
 import { refuseActiveChange, refuseRoleChange } from "@/lib/auth/admin-changes";
 import { requireAdmin } from "@/lib/auth/guards";
+import { logOutcome } from "@/lib/logging/logger";
 import { recordAudit } from "@/lib/services/admin-audit.service";
+import { notify } from "@/lib/services/notification.service";
 import { safeFilterTerm } from "@/lib/supabase/filters";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -347,4 +349,97 @@ export async function adjustCustomerBalance(input: {
   }
 
   return { balance: data.balance, idempotent: data.idempotent };
+}
+
+export type CustomerMessageResult = { ok: true } | { ok: false; reason: "not_found" | "unknown" };
+
+/** Long enough for an explanation, short enough to stay a notification. */
+const MESSAGE_TITLE_MAX = 120;
+const MESSAGE_BODY_MAX = 1000;
+
+/**
+ * Write to one customer, by hand.
+ *
+ * Deliveries, refunds and top-up decisions already notify on their own. What had
+ * no home was the message with a person behind it — "your top-up needs a
+ * reference number", "we are out of stock until Sunday" — which until now meant
+ * an owner had no way to reach a customer inside the store at all.
+ *
+ * The text is stored into both language columns as written. A notification's
+ * schema wants Arabic and English, and asking for both every time would mean
+ * writing each message twice; the alternative — one language stored and the
+ * other blank — shows a customer an empty message. So the owner writes once, in
+ * whichever language they and that customer share, and the panel says plainly
+ * that it is shown as typed either way.
+ *
+ * Sent with service authority, like every other notification: the customer must
+ * not be able to author one, and an admin's own session deliberately cannot
+ * write this table. Audited, because a message signed by the store is something
+ * that may later need attributing to a person.
+ */
+export async function sendCustomerMessage(input: {
+  userId: string;
+  title: string;
+  body: string;
+}): Promise<CustomerMessageResult> {
+  const admin = await requireAdmin();
+
+  const title = input.title.trim();
+  const body = input.body.trim();
+
+  if (!UUID_PATTERN.test(input.userId)) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  if (
+    title.length === 0 ||
+    title.length > MESSAGE_TITLE_MAX ||
+    body.length === 0 ||
+    body.length > MESSAGE_BODY_MAX
+  ) {
+    return { ok: false, reason: "unknown" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", input.userId)
+    .maybeSingle();
+
+  if (!target) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const sent = await notify({
+    userId: input.userId,
+    type: "admin_message",
+    titleAr: title,
+    titleEn: title,
+    bodyAr: body,
+    bodyEn: body,
+    // Nowhere to go: the message is the whole thing, and a link to the list the
+    // reader is already on is a dead end dressed as an action.
+    href: null,
+    entityType: "profile",
+    entityId: input.userId,
+  });
+
+  const result: CustomerMessageResult = sent ? { ok: true } : { ok: false, reason: "unknown" };
+
+  if (sent) {
+    await recordAudit({
+      actorId: admin.id,
+      action: "customer.message_sent",
+      entityType: "profile",
+      entityId: input.userId,
+      // The message itself, so the audit row says what was sent and not merely
+      // that something was.
+      values: { title, body },
+    });
+  }
+
+  logOutcome("admin.customers", "customer_message_sent", result, { userId: input.userId });
+
+  return result;
 }
