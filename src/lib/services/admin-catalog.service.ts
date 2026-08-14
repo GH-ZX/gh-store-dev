@@ -510,3 +510,170 @@ export async function deleteAdminGame(gameId: string): Promise<void> {
     throw new GameNotFoundError();
   }
 }
+
+/** Raised when a package slug is already used by another package of the same game. */
+export class OfferSlugTakenError extends Error {
+  constructor() {
+    super("That slug already belongs to another package of this game.");
+    this.name = "OfferSlugTakenError";
+  }
+}
+
+/** Raised when the package being removed is not one this game owns. */
+export class OfferNotFoundError extends Error {
+  constructor() {
+    super("That package no longer exists.");
+    this.name = "OfferNotFoundError";
+  }
+}
+
+/**
+ * Create a game by hand.
+ *
+ * Until now the catalog could only come from a supplier import, which made
+ * anything G2Bulk does not carry — a card the owner sources themselves, a game
+ * added ahead of its mapping — impossible to sell.
+ *
+ * Three fields, then the existing editor. Everything else about a game is an
+ * edit, and asking for artwork and descriptions before the row exists would be a
+ * second, longer copy of a form that already works.
+ *
+ * Created unpublished, always. A game with no packages is an empty page, and the
+ * moment to decide it is ready is after its packages exist — not while typing
+ * its name.
+ */
+export async function createAdminGame(input: {
+  nameAr: string;
+  nameEn: string;
+  slug: string;
+}): Promise<string> {
+  await requireAdmin();
+
+  const client = await createSupabaseServerClient();
+  const { data, error } = await client
+    .from("games")
+    .insert({
+      name_ar: input.nameAr,
+      name_en: input.nameEn,
+      slug: input.slug,
+      is_active: false,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === UNIQUE_VIOLATION) {
+      throw new SlugTakenError();
+    }
+
+    throw new Error(`Creating the game failed: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error("Creating the game returned no row.");
+  }
+
+  return data.id;
+}
+
+/**
+ * Add a package to a game by hand.
+ *
+ * Created inactive, and that is not caution for its own sake: a package with no
+ * provider mapping cannot be delivered automatically. Fulfilment reports it as
+ * unmapped and the order sits paid until somebody settles it, so a manual
+ * package goes on sale only when its owner has said they will handle it — which
+ * is what publishing it from the editor means.
+ */
+export async function createAdminOffer(
+  gameId: string,
+  input: { nameAr: string; nameEn: string; slug: string; price: number; offerType: string },
+): Promise<string> {
+  await requireAdmin();
+
+  if (!UUID_PATTERN.test(gameId)) {
+    throw new GameNotFoundError();
+  }
+
+  const client = await createSupabaseServerClient();
+  const { data: game, error: gameError } = await client
+    .from("games")
+    .select("id")
+    .eq("id", gameId)
+    .maybeSingle();
+
+  if (gameError) {
+    throw new Error(`Reading the game failed: ${gameError.message}`);
+  }
+
+  if (!game) {
+    throw new GameNotFoundError();
+  }
+
+  const { data, error } = await client
+    .from("offers")
+    .insert({
+      game_id: gameId,
+      name_ar: input.nameAr,
+      name_en: input.nameEn,
+      slug: input.slug,
+      price: input.price,
+      offer_type: input.offerType,
+      is_active: false,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    // Unique is `(game_id, slug)`: the same package name under another game is
+    // fine, and only a clash within this one is an error.
+    if (error.code === UNIQUE_VIOLATION) {
+      throw new OfferSlugTakenError();
+    }
+
+    throw new Error(`Creating the package failed: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error("Creating the package returned no row.");
+  }
+
+  return data.id;
+}
+
+/**
+ * Remove one package.
+ *
+ * Scoped by game as well as by id, so a forged id cannot reach another game's
+ * catalog. Orders that bought it are unaffected: `order_items.offer_id` is
+ * `on delete set null` and every item carries a purchase-time name snapshot, so
+ * an old order still reads as what was actually sold.
+ *
+ * An imported package can be deleted too, and will come back on the next sync
+ * that still lists it — deleting is not how a supplier's product is retired, and
+ * the import is the thing that owns that decision.
+ */
+export async function deleteAdminOffer(gameId: string, offerId: string): Promise<void> {
+  await requireAdmin();
+
+  if (!UUID_PATTERN.test(gameId) || !UUID_PATTERN.test(offerId)) {
+    throw new OfferNotFoundError();
+  }
+
+  const client = await createSupabaseServerClient();
+  const { data, error } = await client
+    .from("offers")
+    .delete()
+    .eq("id", offerId)
+    .eq("game_id", gameId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Deleting the package failed: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new OfferNotFoundError();
+  }
+}

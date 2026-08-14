@@ -7,8 +7,13 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
+  createAdminGame,
+  createAdminOffer,
   deleteAdminGame,
+  deleteAdminOffer,
   GameNotFoundError,
+  OfferNotFoundError,
+  OfferSlugTakenError,
   PRICING_MODES,
   SlugTakenError,
   updateAdminGame,
@@ -99,6 +104,14 @@ function errorKey(error: unknown): string {
 
   if (error instanceof GameNotFoundError) {
     return "not_found";
+  }
+
+  if (error instanceof OfferSlugTakenError) {
+    return "offer_slug_taken";
+  }
+
+  if (error instanceof OfferNotFoundError) {
+    return "offer_not_found";
   }
 
   return "unknown";
@@ -226,4 +239,121 @@ export async function updateOffersAction(
   revalidateCatalog(locale, parsed.data.gameId);
 
   return { ...INITIAL_CATALOG_STATE, notice: "saved" };
+}
+
+/**
+ * Create a game, then hand over to the editor that already exists.
+ *
+ * Three fields here and everything else there. A create form that asked for
+ * artwork, descriptions, and carousel flags would be a second copy of the edit
+ * form, and the second copy is the one that falls behind.
+ */
+const createGameSchema = z.object({
+  nameAr: z.string().trim().min(1).max(160),
+  nameEn: z.string().trim().min(1).max(160),
+  slug: z.string().trim().min(1).max(80).regex(SLUG_PATTERN),
+});
+
+export async function createGameAction(
+  _state: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  await requireAdmin();
+
+  const parsed = createGameSchema.safeParse({
+    nameAr: formText(formData, "nameAr"),
+    nameEn: formText(formData, "nameEn"),
+    slug: formText(formData, "slug"),
+  });
+
+  if (!parsed.success) {
+    return failed("invalid_input");
+  }
+
+  const locale = resolveLocale(formText(formData, "locale"));
+  let gameId: string;
+
+  try {
+    gameId = await createAdminGame(parsed.data);
+  } catch (error) {
+    return failed(errorKey(error));
+  }
+
+  revalidateCatalog(locale, gameId);
+
+  // `redirect` throws, so nothing below it runs and the state above is never
+  // returned on success — the new game's editor is the answer.
+  redirect(`/${locale}/dashboard/catalog/${gameId}`);
+}
+
+const createOfferSchema = z.object({
+  gameId: z.uuid(),
+  nameAr: z.string().trim().min(1).max(160),
+  nameEn: z.string().trim().min(1).max(160),
+  slug: z.string().trim().min(1).max(80).regex(SLUG_PATTERN),
+  price: z.coerce.number().min(0).max(100_000),
+  offerType: z.enum(["topup", "gift_card", "redeem_code"]),
+});
+
+export async function createOfferAction(
+  _state: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  await requireAdmin();
+
+  const parsed = createOfferSchema.safeParse({
+    gameId: formText(formData, "gameId"),
+    nameAr: formText(formData, "nameAr"),
+    nameEn: formText(formData, "nameEn"),
+    slug: formText(formData, "slug"),
+    price: formText(formData, "price"),
+    offerType: formText(formData, "offerType"),
+  });
+
+  if (!parsed.success) {
+    return failed("invalid_input");
+  }
+
+  const locale = resolveLocale(formText(formData, "locale"));
+  const { gameId, ...fields } = parsed.data;
+
+  try {
+    await createAdminOffer(gameId, fields);
+  } catch (error) {
+    return failed(errorKey(error));
+  }
+
+  revalidateCatalog(locale, gameId);
+
+  return { ...INITIAL_CATALOG_STATE, notice: "offer_added" };
+}
+
+const deleteOfferSchema = z.object({ gameId: z.uuid(), offerId: z.uuid() });
+
+export async function deleteOfferAction(
+  _state: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  await requireAdmin();
+
+  const parsed = deleteOfferSchema.safeParse({
+    gameId: formText(formData, "gameId"),
+    offerId: formText(formData, "offerId"),
+  });
+
+  if (!parsed.success) {
+    return failed("invalid_input");
+  }
+
+  const locale = resolveLocale(formText(formData, "locale"));
+
+  try {
+    await deleteAdminOffer(parsed.data.gameId, parsed.data.offerId);
+  } catch (error) {
+    return failed(errorKey(error));
+  }
+
+  revalidateCatalog(locale, parsed.data.gameId);
+
+  return { ...INITIAL_CATALOG_STATE, notice: "offer_removed" };
 }

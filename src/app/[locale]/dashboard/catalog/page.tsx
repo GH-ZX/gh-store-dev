@@ -5,7 +5,7 @@ import { TextField } from "@/components/admin/admin-form";
 import { EmptyState } from "@/components/shared/states";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { ChevronIcon, GamepadIcon, SearchIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import type { Locale } from "@/i18n/config";
@@ -82,12 +82,19 @@ export default async function CatalogPage({
 
   return (
     <div className="grid gap-8">
-      <SectionHeader
-        as="h1"
-        eyebrow={messages.eyebrow}
-        title={messages.title}
-        subtitle={messages.description}
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <SectionHeader
+          as="h1"
+          eyebrow={messages.eyebrow}
+          title={messages.title}
+          subtitle={messages.description}
+        />
+
+        {/* Beside the list, not inside it: creating is a different errand. */}
+        <ButtonLink href={`/${locale}/dashboard/catalog/new`} variant="secondary">
+          {messages.create.action}
+        </ButtonLink>
+      </div>
 
       <div className="grid gap-4 rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-5 sm:p-6">
         <form method="get" action={`/${locale}/dashboard/catalog`} className="flex flex-wrap items-end gap-3">

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminCard } from "@/components/admin/admin-form";
 import { GameEditForm } from "@/components/admin/game-edit-form";
+import { OfferManageForm } from "@/components/admin/offer-manage-form";
 import { OfferRowsForm } from "@/components/admin/offer-rows-form";
 import { Badge } from "@/components/ui/badge";
 import { ChevronIcon } from "@/components/ui/icons";
@@ -76,6 +78,20 @@ export default async function CatalogGamePage({
         gameId={game.id}
         offers={offers}
       />
+
+      <AdminCard
+        title={messages.manageOffers.title}
+        description={messages.manageOffers.description}
+      >
+        <OfferManageForm
+          locale={locale}
+          gameId={game.id}
+          offers={offers}
+          messages={messages.manageOffers}
+          errors={messages.errors}
+          offerTypeLabels={getMessages(locale, "catalog").offerTypes}
+        />
+      </AdminCard>
     </div>
   );
 }

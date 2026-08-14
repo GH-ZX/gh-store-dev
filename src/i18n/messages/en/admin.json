@@ -332,7 +332,41 @@
       "invalid_input": "Check the values you entered, then try again.",
       "slug_taken": "That slug already belongs to another game.",
       "not_found": "We could not find that game.",
-      "unknown": "We could not save. Please try again."
+      "unknown": "We could not save. Please try again.",
+      "offer_slug_taken": "Another package of this game already uses that address.",
+      "offer_not_found": "That package no longer exists."
+    },
+    "create": {
+      "action": "New game",
+      "title": "New game",
+      "description": "For anything the supplier import does not carry.",
+      "formTitle": "Name and address",
+      "formDescription": "The rest — artwork, description, packages — is edited once the game exists.",
+      "nameArLabel": "Name (Arabic)",
+      "nameEnLabel": "Name (English)",
+      "slugLabel": "Address",
+      "slugHint": "Appears in the game's URL. Letters, numbers, and dashes.",
+      "submitAction": "Create and continue",
+      "draftNote": "Created unpublished. Publish it from the editor once it has packages."
+    },
+    "manageOffers": {
+      "title": "Add or remove a package",
+      "description": "Packages the supplier import does not provide.",
+      "nameArLabel": "Name (Arabic)",
+      "nameEnLabel": "Name (English)",
+      "slugLabel": "Address",
+      "slugHint": "Unique within this game.",
+      "priceLabel": "Price (USD)",
+      "typeLabel": "Kind",
+      "manualNote": "A hand-added package has no supplier behind it, so nothing can deliver it automatically. It is created unpublished — publish it only once you are ready to fulfil it yourself.",
+      "addAction": "Add package",
+      "added": "Package added, unpublished.",
+      "removeLabel": "Package to remove",
+      "removeHint": "Orders that bought it keep their records. An imported package returns on the next sync.",
+      "removeAction": "Remove package",
+      "removeConfirmAction": "Yes, remove it",
+      "cancelAction": "Cancel",
+      "removed": "Package removed."
     }
   },
   "website": {
