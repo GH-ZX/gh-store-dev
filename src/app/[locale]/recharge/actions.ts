@@ -4,8 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { formText } from "@/lib/forms/form-data";
+import { startBinanceTopUp } from "@/lib/services/binance-recharge.service";
 import { markRechargePaid, submitRechargeRequest } from "@/lib/services/recharge.service";
-import type { RechargeActionState } from "@/app/[locale]/recharge/action-state";
+import type {
+  BinanceTopUpState,
+  RechargeActionState,
+} from "@/app/[locale]/recharge/action-state";
 
 const submitSchema = z.object({
   amount: z.coerce.number().positive().max(100_000),
@@ -80,4 +84,42 @@ export async function markPaidAction(
   revalidatePath(`/${resolveLocale(parsed.data.locale)}/recharge`);
 
   return { error: null, notice: "marked_paid", reference: null, credited: false };
+}
+
+/**
+ * Open a Binance Pay invoice and hand back where to pay it.
+ *
+ * The URL is returned rather than redirected to, because it leaves the store
+ * entirely: a server redirect to a third party makes the back button ambiguous
+ * and hides which step failed when one does.
+ */
+const binanceSchema = z.object({
+  amount: z.coerce.number().positive().max(100000),
+  locale: z.string().optional(),
+});
+
+export async function startBinanceTopUpAction(
+  _state: BinanceTopUpState,
+  formData: FormData,
+): Promise<BinanceTopUpState> {
+  const parsed = binanceSchema.safeParse({
+    amount: formText(formData, "amount"),
+    locale: formText(formData, "locale"),
+  });
+
+  if (!parsed.success) {
+    return { error: "invalid_input", checkoutUrl: null };
+  }
+
+  const locale = resolveLocale(parsed.data.locale);
+  const result = await startBinanceTopUp({ amount: parsed.data.amount });
+
+  if (!result.ok) {
+    return { error: result.reason, checkoutUrl: null };
+  }
+
+  // The request exists now, so the customer's own recharge history is stale.
+  revalidatePath(`/${locale}/recharge`);
+
+  return { error: null, checkoutUrl: result.checkoutUrl };
 }

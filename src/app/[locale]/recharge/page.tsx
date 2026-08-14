@@ -5,6 +5,7 @@ import { RechargeForm } from "@/components/recharge/recharge-form";
 import { SamTopUpForm } from "@/components/recharge/sam-topup-form";
 import { EmptyState } from "@/components/shared/states";
 import { AdminCard } from "@/components/admin/admin-form";
+import { BinanceTopUpForm } from "@/components/recharge/binance-top-up-form";
 import { Badge } from "@/components/ui/badge";
 import { ChevronIcon, WalletIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
@@ -12,6 +13,7 @@ import { getMessages } from "@/i18n/messages";
 import { formatPrice } from "@/lib/format/money";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getMyRechargeRequests, getRechargeConfig } from "@/lib/services/recharge.service";
+import { getBinancePaymentOptions } from "@/lib/services/binance-recharge.service";
 import { getSamPaymentOptions } from "@/lib/services/sam-recharge.service";
 import { getSessionSummary } from "@/lib/services/session.service";
 
@@ -29,10 +31,11 @@ export default async function RechargePage({ params }: PageProps<"/[locale]/rech
     redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/recharge`)}`);
   }
 
-  const [config, requests, sam] = await Promise.all([
+  const [config, requests, sam, binance] = await Promise.all([
     getRechargeConfig(),
     getMyRechargeRequests(),
     getSamPaymentOptions(),
+    getBinancePaymentOptions(),
   ]);
   const hasMethods = config.methods.some((method) => method.enabled);
 
@@ -72,6 +75,21 @@ export default async function RechargePage({ params }: PageProps<"/[locale]/rech
                 minAmount={config.minAmount}
                 maxAmount={config.maxAmount}
                 currency={config.currency}
+              />
+            </AdminCard>
+          ) : null}
+
+          {binance.enabled ? (
+            <AdminCard
+              title={messages.binance.title}
+              description={messages.binance.description}
+            >
+              <BinanceTopUpForm
+                locale={locale}
+                messages={messages}
+                currency={binance.currency}
+                minAmount={config.minAmount}
+                maxAmount={config.maxAmount}
               />
             </AdminCard>
           ) : null}

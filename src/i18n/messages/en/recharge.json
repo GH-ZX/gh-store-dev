@@ -80,5 +80,22 @@
       "short_payment": "The transferred amount is less than the invoice. Contact us to settle the difference.",
       "unknown": "Could not complete that. Try again."
     }
+  },
+  "binance": {
+    "title": "Pay with crypto",
+    "description": "Pay in USDT through Binance Pay. The balance is added as soon as Binance confirms it.",
+    "amountHint": "Billed in {currency}. One dollar of balance for one {currency}.",
+    "payAction": "Pay with Binance",
+    "starting": "Opening…",
+    "redirecting": "Taking you to Binance.",
+    "openCheckout": "Open the payment page",
+    "errors": {
+      "not_configured": "Crypto payments are not available right now.",
+      "invalid_input": "Check the amount and try again.",
+      "too_many": "You have several top-ups waiting already. We will settle those first.",
+      "suspended": "This account cannot top up at the moment.",
+      "provider": "Binance could not open the payment. Nothing was charged — please try again.",
+      "unknown": "Something went wrong. Nothing was charged — please try again."
+    }
   }
 }

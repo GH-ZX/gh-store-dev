@@ -18,3 +18,17 @@ export const INITIAL_RECHARGE_STATE: RechargeActionState = {
   reference: null,
   credited: false,
 };
+
+/**
+ * Binance Pay hand-off state.
+ *
+ * `checkoutUrl` rather than a redirect: the destination is a third-party page,
+ * and the client follows it once the invoice exists so a failure to create one
+ * is still readable on the store's own screen.
+ */
+export type BinanceTopUpState = {
+  error: string | null;
+  checkoutUrl: string | null;
+};
+
+export const INITIAL_BINANCE_STATE: BinanceTopUpState = { error: null, checkoutUrl: null };

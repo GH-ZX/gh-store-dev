@@ -404,6 +404,11 @@ verify_jwt = false
 [functions.g2bulk-webhook]
 verify_jwt = false
 
+# Binance signs its notifications with RSA against its own certificate, which the
+# function verifies before reading anything.
+[functions.binance-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

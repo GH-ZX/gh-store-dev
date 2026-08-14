@@ -86,6 +86,84 @@ export type Database = {
           },
         ]
       }
+      binance_invoices: {
+        Row: {
+          amount: number
+          charge_amount: number
+          charge_currency: string
+          checkout_url: string | null
+          created_at: string
+          credited_at: string | null
+          currency: string
+          expires_at: string | null
+          id: string
+          merchant_trade_no: string
+          paid_at: string | null
+          prepay_id: string | null
+          provider_payload: Json
+          recharge_request_id: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          charge_amount: number
+          charge_currency: string
+          checkout_url?: string | null
+          created_at?: string
+          credited_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          merchant_trade_no: string
+          paid_at?: string | null
+          prepay_id?: string | null
+          provider_payload?: Json
+          recharge_request_id: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          charge_amount?: number
+          charge_currency?: string
+          checkout_url?: string | null
+          created_at?: string
+          credited_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          merchant_trade_no?: string
+          paid_at?: string | null
+          prepay_id?: string | null
+          provider_payload?: Json
+          recharge_request_id?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "binance_invoices_recharge_request_id_fkey"
+            columns: ["recharge_request_id"]
+            isOneToOne: false
+            referencedRelation: "recharge_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "binance_invoices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -1559,6 +1637,20 @@ export type Database = {
           idempotent: boolean
         }[]
       }
+      credit_binance_invoice: {
+        Args: {
+          p_merchant_trade_no: string
+          p_paid_amount?: number
+          p_payload?: Json
+          p_transaction_id?: string
+        }
+        Returns: {
+          balance: number
+          credited: number
+          idempotent: boolean
+          status: string
+        }[]
+      }
       credit_recharge_request: {
         Args: {
           p_actor?: string
@@ -1617,6 +1709,16 @@ export type Database = {
           idempotent: boolean
           transaction_id: string
           wallet_id: string
+        }[]
+      }
+      fail_binance_invoice: {
+        Args: {
+          p_merchant_trade_no: string
+          p_payload?: Json
+          p_status?: string
+        }
+        Returns: {
+          status: string
         }[]
       }
       fail_sam_invoice: {
