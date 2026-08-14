@@ -1,6 +1,13 @@
 import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
+import { resetLogDestination } from "@/lib/logging/logger";
+import {
+  mergeAxiomSettings,
+  toAxiomStatus,
+  type AxiomSettingsUpdate,
+  type AxiomStatus,
+} from "@/lib/settings/axiom-settings";
 import {
   mergeG2BulkSettings,
   readG2BulkCredentials,
@@ -115,6 +122,41 @@ export async function saveSamSettings(update: SamSettingsUpdate): Promise<SamSta
   }
 
   return toSamStatus(data.providers);
+}
+
+export async function getAxiomStatus(): Promise<AxiomStatus> {
+  await requireAdmin();
+
+  return toAxiomStatus(await readProviders());
+}
+
+/**
+ * Save the logging destination.
+ *
+ * The cached destination is dropped afterwards so a corrected token takes effect
+ * on the next event rather than up to a minute later, which is the difference
+ * between "I fixed it and nothing happened" and "I fixed it".
+ */
+export async function saveAxiomSettings(update: AxiomSettingsUpdate): Promise<AxiomStatus> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const next = mergeAxiomSettings(await readProviders(), update, new Date().toISOString());
+
+  const { data, error } = await supabase
+    .from("store_settings")
+    .update({ providers: next })
+    .eq("id", SETTINGS_ID)
+    .select("providers")
+    .single();
+
+  if (error) {
+    throw new Error(`Saving the logging settings failed: ${error.message}`);
+  }
+
+  resetLogDestination();
+
+  return toAxiomStatus(data.providers);
 }
 
 export type ProviderSyncLogEntry = {

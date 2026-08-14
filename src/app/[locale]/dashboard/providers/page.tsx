@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AxiomSettingsForm } from "@/components/admin/axiom-settings-form";
 import { G2BulkSettingsForm } from "@/components/admin/g2bulk-settings-form";
 import { SamSettingsForm } from "@/components/admin/sam-settings-form";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,12 @@ import { SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getSamOverview } from "@/lib/services/admin-sam.service";
-import { getG2BulkStatus, getRecentSyncLogs, getSamStatus } from "@/lib/services/admin-settings.service";
+import {
+  getAxiomStatus,
+  getG2BulkStatus,
+  getRecentSyncLogs,
+  getSamStatus,
+} from "@/lib/services/admin-settings.service";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -18,13 +24,15 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const messages = getMessages(locale, "admin");
   const provider = messages.providers.g2bulk;
   const sam = messages.providers.sam;
-  const [status, logs, samStatus, samOverview] = await Promise.all([
+  const logging = messages.providers.logging;
+  const [status, logs, samStatus, samOverview, axiomStatus] = await Promise.all([
     getG2BulkStatus(),
     getRecentSyncLogs(G2BULK_PROVIDER_NAME),
     getSamStatus(),
     // Reaches Sam when a key is stored, and answers with an error key rather
     // than throwing, so a provider outage cannot take this page down.
     getSamOverview(),
+    getAxiomStatus(),
   ]);
 
   return (
@@ -108,6 +116,32 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             status={samStatus}
             overview={samOverview}
           />
+        </div>
+      </section>
+
+      {/* Not a supplier: this is where the store reports on itself. */}
+      <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-lg font-semibold text-[var(--ink)]">{logging.name}</h2>
+              <Badge tone={axiomStatus.enabled ? "success" : "neutral"}>
+                {axiomStatus.enabled ? logging.statusConfigured : logging.statusMissing}
+              </Badge>
+            </div>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
+              {logging.summary}
+            </p>
+            {axiomStatus.tokenHint ? (
+              <p className="mt-3 text-xs text-[var(--ink-faint)]">
+                {logging.tokenHint}: <span dir="ltr">{axiomStatus.tokenHint}</span>
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-8 border-t border-[var(--line)] pt-8">
+          <AxiomSettingsForm locale={locale} messages={logging} status={axiomStatus} />
         </div>
       </section>
 

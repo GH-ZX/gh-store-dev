@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/guards";
 import type { Locale } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
+import { logFailure } from "@/lib/logging/logger";
 
 /**
  * Customer notifications.
@@ -68,8 +69,16 @@ export async function notify(input: NotifyInput): Promise<boolean> {
       entity_id: input.entityId ?? null,
     });
 
+    if (error) {
+      logFailure("notifications", "insert_failed", error, {
+        userId: input.userId,
+        type: input.type,
+      });
+    }
+
     return !error;
-  } catch {
+  } catch (error) {
+    logFailure("notifications", "insert_threw", error, { userId: input.userId, type: input.type });
     // Never rethrow: see the note above about not breaking the money path.
     return false;
   }

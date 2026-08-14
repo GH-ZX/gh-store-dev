@@ -3,6 +3,7 @@ import "server-only";
 import { requireAuth, UnauthorizedError } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fulfillOrder } from "@/lib/services/fulfillment.service";
+import { logFailure } from "@/lib/logging/logger";
 
 /**
  * Placing an order.
@@ -121,7 +122,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
    */
   try {
     await fulfillOrder(data.order_id);
-  } catch {
+  } catch (error) {
+    logFailure("fulfilment", "checkout_fulfilment_threw", error, { orderId: data.order_id });
     // Intentionally swallowed; the order page shows the real state.
   }
 

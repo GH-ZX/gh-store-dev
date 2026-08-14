@@ -182,6 +182,41 @@
         "contract": "Sam replied unexpectedly. Check your Sam dashboard.",
         "unknown": "Could not complete that. Try again."
       }
+    },
+    "logging": {
+      "name": "Logging — Axiom",
+      "summary": "Where the store sends its own logs: every order, payment, provider call and failure, as searchable events. Without a destination the store still runs and still logs to the server console; nothing is stored where you can search it later.",
+      "statusConfigured": "Sending logs",
+      "statusMissing": "Not configured",
+      "tokenHint": "Saved token",
+      "tokenLabel": "Axiom API token",
+      "tokenPlaceholder": "xaat-...",
+      "tokenHelp": "Create an API token with ingest permission in your Axiom settings. Stored on the server and never shown again.",
+      "tokenKeepHelp": "Leave blank to keep the current token.",
+      "datasetLabel": "Dataset",
+      "datasetHelp": "The Axiom dataset events are written to. Create it in Axiom first.",
+      "domainLabel": "Axiom domain",
+      "domainHelp": "api.axiom.co for a US workspace. An EU workspace uses a different domain.",
+      "levelLabel": "Send events from",
+      "levelHelp": "Lower levels mean more detail and more volume. Warnings and errors are what you want to be told about.",
+      "levels": {
+        "debug": "Debug and above",
+        "info": "Info and above",
+        "warn": "Warnings and errors",
+        "error": "Errors only"
+      },
+      "enabledLabel": "Send logs to Axiom",
+      "enabledHelp": "Turn off to stop sending without deleting the token. The console log is unaffected.",
+      "saveAction": "Save logging settings",
+      "saved": "Saved.",
+      "testAction": "Send a test event",
+      "testHelp": "Writes one event to the dataset. If it appears in Axiom, the token and dataset are right.",
+      "tested": "Test event sent. It should appear in your Axiom dataset within a few seconds.",
+      "errors": {
+        "invalid_input": "Check the values you entered, then try again.",
+        "not_configured": "Add a token and turn sending on first.",
+        "unknown": "We could not save that. Please try again."
+      }
     }
   },
   "import": {

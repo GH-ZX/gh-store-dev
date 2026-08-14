@@ -14,6 +14,7 @@ import {
 import { readG2BulkCredentials } from "@/lib/settings/provider-settings";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 import type { Json } from "@/types/database";
+import { log, logFailure } from "@/lib/logging/logger";
 
 /**
  * Fulfilment.
@@ -313,12 +314,27 @@ async function failAndRefund(
   });
 
   if (error) {
-    // The order stays `failed` with the money still debited; reconciliation is
-    // an operator's job, and leaving it visible is better than hiding it.
+    /*
+     * The order stays `failed` with the money still debited. This is the single
+     * worst state the store can be in — a customer charged for nothing — so it
+     * is logged at error level even though the function returns normally.
+     */
+    logFailure("fulfilment", "refund_failed", error, {
+      orderId: context.orderId,
+      orderNumber: context.orderNumber,
+      reason,
+    });
+
     return { state: "failed", reason, refunded: false };
   }
 
   await recordAttempt(attemptId, { status: "refunded", errorMessage: reason, errorCode: code });
+
+  log.info("fulfilment", "order_refunded", {
+    orderId: context.orderId,
+    orderNumber: context.orderNumber,
+    reason,
+  });
 
   return { state: "failed", reason, refunded: true };
 }
@@ -337,7 +353,12 @@ async function currentSupplierCost(
     const item = catalogue.catalogues.find((entry) => entry.name === context.catalogueName);
 
     return item?.amount ?? null;
-  } catch {
+  } catch (error) {
+    // Returning null makes the order fail and refund, so the reason matters.
+    logFailure("fulfilment", "supplier_cost_unreadable", error, {
+      orderId: context.orderId,
+      game: context.gameCode,
+    });
     return null;
   }
 }
@@ -745,6 +766,15 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
    * is, and the dashboard already renders this state as needing attention.
    */
   await recordAttempt(attempt.id, { status: "reconcile", errorMessage: decision.reason });
+
+  // Warn, not info: this one needs a person, and nobody is watching the order.
+  log.warn("fulfilment", "order_escalated", {
+    orderId: context.orderId,
+    orderNumber: context.orderNumber,
+    reason: decision.reason,
+    ageMinutes: Math.round(ageMinutes),
+    hasExternalOrderId: Boolean(attempt.external_order_id),
+  });
 
   return { action: "escalated", reason: decision.reason };
 }

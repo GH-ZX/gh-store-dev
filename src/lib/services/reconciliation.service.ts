@@ -1,5 +1,6 @@
 import "server-only";
 
+import { log } from "@/lib/logging/logger";
 import { GRACE_MINUTES } from "@/lib/orders/reconciliation-policy";
 import { reconcileOrder, type ReconcileOutcome } from "@/lib/services/fulfillment.service";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
@@ -144,6 +145,13 @@ export async function reconcileStuckOrders(limit = DEFAULT_BATCH): Promise<Recon
 
   if (run.checked > 0) {
     await recordRun(run, startedAt);
+    log.info("fulfilment", "reconciliation_run", {
+      checked: run.checked,
+      completed: run.completed,
+      refunded: run.refunded,
+      escalated: run.escalated,
+      waiting: run.waiting,
+    });
   }
 
   return run;
