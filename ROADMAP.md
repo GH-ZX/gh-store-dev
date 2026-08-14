@@ -244,12 +244,21 @@ real volume to measure.
   itself immediately. Callback status is shown, and an address Sam cannot reach —
   a local or plain-http one — is called out rather than failing silently.
 
+- Payments reconciliation. Every top-up is shown next to the wallet credit it
+  produced, and the disagreements are named rather than collapsed into a status:
+  money taken and never credited, a wallet credited with no payment behind it,
+  and less arriving than was billed. The default view is what is wrong, because
+  "paid but not credited" is a disagreement between two statuses and no status
+  filter can ask for it.
+
 ### Remaining
 
 - Add Binance Pay only behind explicit configuration.
-- Add an admin reconciliation view over Sam invoices and payment events.
 
-**Exit criteria:** Every payment state maps to one auditable wallet result.
+**Exit criteria met:** Every payment state maps to one auditable wallet result,
+and the payments screen is where that mapping is checked. The link is an exact
+key — every top-up credits through `credit_recharge_request`, which stamps the
+wallet transaction with the request id — rather than a match on amount and time.
 
 ## Stage 11: Admin Operations
 
