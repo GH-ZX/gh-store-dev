@@ -1,8 +1,10 @@
 import "server-only";
 
+import { refuseActiveChange, refuseRoleChange } from "@/lib/auth/admin-changes";
 import { requireAdmin } from "@/lib/auth/guards";
 import { safeFilterTerm } from "@/lib/supabase/filters";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { WalletTransaction, WalletTransactionType } from "@/lib/services/wallet.service";
 
 /**
@@ -94,6 +96,151 @@ export async function listAdminCustomers(options: { query?: string } = {}): Prom
       balance: wallet?.balance ?? 0,
       currency: wallet?.currency ?? "USD",
     };
+  });
+}
+
+export class AdminChangeRefusedError extends Error {
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(`Change refused: ${reason}`);
+    this.name = "AdminChangeRefusedError";
+    this.reason = reason;
+  }
+}
+
+/** Active administrators, for the rules that refuse to remove the last one. */
+async function countActiveAdmins(): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const { count } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "admin")
+    .eq("is_active", true);
+
+  return count ?? 0;
+}
+
+/** Record who changed what, so an access change is never anonymous. */
+async function auditPeopleChange(
+  actorId: string,
+  action: string,
+  targetId: string,
+  values: Record<string, unknown>,
+): Promise<void> {
+  const service = createSupabaseServiceClient();
+  await service.from("audit_logs").insert({
+    actor_user_id: actorId,
+    action,
+    entity_type: "profile",
+    entity_id: targetId,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsonb column
+    new_values: values as any,
+  });
+}
+
+/**
+ * Promote or demote an administrator.
+ *
+ * Until now this was a SQL statement run by hand, which the roadmap names as one
+ * of the things standing between the dashboard and running the store without
+ * touching the database.
+ *
+ * Written with service authority rather than the admin's own session: the
+ * profiles policy deliberately does not let one row edit another's role, and
+ * widening it would let any future bug in a customer-facing query do the same.
+ * The refusals that protect the last way in are checked here and are covered by
+ * their own tests.
+ */
+export async function setCustomerRole(userId: string, nextRole: string): Promise<void> {
+  const admin = await requireAdmin();
+
+  if (!UUID_PATTERN.test(userId)) {
+    throw new CustomerNotFoundError();
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("id, role, is_active")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!target) {
+    throw new CustomerNotFoundError();
+  }
+
+  const refusal = refuseRoleChange({
+    actorId: admin.id,
+    targetId: userId,
+    nextRole,
+    targetIsAdmin: target.role === "admin",
+    activeAdminCount: await countActiveAdmins(),
+  });
+
+  if (refusal) {
+    throw new AdminChangeRefusedError(refusal);
+  }
+
+  const service = createSupabaseServiceClient();
+  const { error } = await service
+    .from("profiles")
+    .update({ role: nextRole })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error(`Changing the role failed: ${error.message}`);
+  }
+
+  await auditPeopleChange(admin.id, "profile.role_changed", userId, {
+    from: target.role,
+    to: nextRole,
+  });
+}
+
+/** Suspend or reactivate an account. */
+export async function setCustomerActive(userId: string, nextActive: boolean): Promise<void> {
+  const admin = await requireAdmin();
+
+  if (!UUID_PATTERN.test(userId)) {
+    throw new CustomerNotFoundError();
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("id, role, is_active")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!target) {
+    throw new CustomerNotFoundError();
+  }
+
+  const refusal = refuseActiveChange({
+    actorId: admin.id,
+    targetId: userId,
+    nextActive,
+    targetIsAdmin: target.role === "admin",
+    activeAdminCount: await countActiveAdmins(),
+  });
+
+  if (refusal) {
+    throw new AdminChangeRefusedError(refusal);
+  }
+
+  const service = createSupabaseServiceClient();
+  const { error } = await service
+    .from("profiles")
+    .update({ is_active: nextActive })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error(`Changing the account status failed: ${error.message}`);
+  }
+
+  await auditPeopleChange(admin.id, nextActive ? "profile.reactivated" : "profile.suspended", userId, {
+    is_active: nextActive,
   });
 }
 

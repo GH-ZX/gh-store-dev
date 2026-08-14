@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CustomerAccessForm } from "@/components/admin/customer-access-form";
 import { WalletAdjustForm } from "@/components/admin/wallet-adjust-form";
 import { Badge } from "@/components/ui/badge";
 import { ChevronIcon } from "@/components/ui/icons";
@@ -9,6 +10,7 @@ import { getMessages } from "@/i18n/messages";
 import { formatPrice } from "@/lib/format/money";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getAdminCustomer } from "@/lib/services/admin-customers.service";
+import { getSessionSummary } from "@/lib/services/session.service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -19,7 +21,9 @@ export default async function CustomerDetailPage({
   const { userId } = await params;
   const messages = getMessages(locale, "admin").customers;
   const account = getMessages(locale, "account");
-  const detail = await getAdminCustomer(userId);
+  // Needed to refuse the one change an administrator must not make to their own
+  // account: the page that would undo it is the one it takes away.
+  const [detail, viewer] = await Promise.all([getAdminCustomer(userId), getSessionSummary()]);
 
   if (!detail) {
     notFound();
@@ -62,6 +66,15 @@ export default async function CustomerDetailPage({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
         <div className="grid gap-6">
           <WalletAdjustForm locale={locale} messages={messages} userId={customer.id} />
+
+          <CustomerAccessForm
+            locale={locale}
+            messages={messages}
+            userId={customer.id}
+            isSelf={customer.id === viewer?.userId}
+            isAdmin={customer.role === "admin"}
+            isActive={customer.isActive}
+          />
 
           <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-5 sm:p-6">
             <h2 className="text-base font-semibold text-[var(--ink)]">

@@ -55,7 +55,10 @@ export function DashboardNav({ locale, messages }: DashboardNavProps) {
     },
     {
       key: "settings",
-      items: [{ key: "providers", href: `${base}/providers` }, { key: "operations" }],
+      items: [
+        { key: "providers", href: `${base}/providers` },
+        { key: "operations", href: `${base}/logs` },
+      ],
     },
   ];
 

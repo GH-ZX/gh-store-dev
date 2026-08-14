@@ -292,13 +292,21 @@ wallet transaction with the request id — rather than a match on amount and tim
   service as well as in the UI, because the cost of getting it wrong is giving
   stock away.
 
+- Access and accountability. Administrators are promoted and removed, and
+  accounts suspended and reactivated, from the customer page instead of a SQL
+  statement — both audited. Two changes are refused: your own role or status,
+  because the page that would undo it is the one it takes away, and anything
+  that would leave no active administrator.
+- Activity log. `audit_logs` had been written since the first hand-made order
+  change and read by nothing. Every hand-made change now shows with the name of
+  whoever made it, alongside the provider sync and reconciliation runs.
+
 ### Remaining
 
-- Build review, support, and notification-composing operations.
+- Build review, support, and notification-composing operations. Reviews are
+  read-only today — customers cannot post — so moderation is not yet load-bearing.
 - Build theme settings and per-page SEO beyond the homepage.
-- Build audit logs, activity logs, and health views.
 - Create games and offers by hand, and delete individual offers.
-- Manage administrators from the dashboard instead of one SQL statement.
 
 **Exit criteria:** Daily operations can be completed through the dashboard
 without direct database edits.

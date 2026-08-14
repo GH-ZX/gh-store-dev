@@ -496,6 +496,31 @@
       "not_found": "We could not find that account.",
       "forbidden": "You are not allowed to adjust balances.",
       "unknown": "We could not apply the adjustment. Please try again."
+    },
+    "accessTitle": "Access",
+    "accessDescription": "Whether this person can sign in, and whether they can run the store.",
+    "accessSelfNote": "This is your own account. Another administrator has to change your role or suspend you — otherwise you could lock yourself out with no way back in from here.",
+    "promoteAction": "Make administrator",
+    "promoteHelp": "Full access to this dashboard, including balances and orders.",
+    "demoteAction": "Remove administrator",
+    "demoteHelp": "They keep their account, wallet and orders; they lose the dashboard.",
+    "suspendAction": "Suspend account",
+    "suspendHelp": "They can no longer sign in. Their wallet and orders are untouched.",
+    "reactivateAction": "Reactivate account",
+    "reactivateHelp": "They can sign in again.",
+    "accessNotices": {
+      "promoted": "They are now an administrator.",
+      "demoted": "They are no longer an administrator.",
+      "suspended": "The account is suspended.",
+      "reactivated": "The account is active again."
+    },
+    "accessErrors": {
+      "self": "You cannot change your own access. Ask another administrator.",
+      "last_admin": "This is the only administrator left. Promote someone else first, or you would lock the store.",
+      "unknown_role": "That is not a role this store has.",
+      "not_found": "We could not find that account.",
+      "invalid_input": "Check the values and try again.",
+      "unknown": "We could not apply that change. Please try again."
     }
   },
   "recharges": {
@@ -576,5 +601,15 @@
       "unbacked": "This wallet was credited with no payment behind it. It costs the store rather than the customer, so check whether it was a deliberate correction.",
       "short_paid": "Less arrived than was requested. Decide whether to credit the smaller amount or ask the customer for the difference."
     }
+  },
+  "logs": {
+    "eyebrow": "Logs",
+    "title": "Activity and history",
+    "description": "What administrators have done, and what the provider syncs and sweeps recorded.",
+    "actionsTitle": "Administrator actions",
+    "syncsTitle": "Provider runs",
+    "emptyTitle": "Nothing recorded yet",
+    "emptyDescription": "Hand-made changes — a delivery marked complete, a balance corrected, an administrator added — appear here with who made them.",
+    "unknownActor": "A deleted account"
   }
 }
