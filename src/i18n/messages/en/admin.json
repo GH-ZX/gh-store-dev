@@ -244,7 +244,7 @@
       "summary": "A second supplier: game top-ups, numbers, social media services, support apps, and recharge accounts.",
       "statusConfigured": "Token saved",
       "statusMissing": "No token",
-      "partialLabel": "Catalogue not connected",
+      "partialLabel": "Not yet proven",
       "keyHintLabel": "Saved token",
       "apiTokenLabel": "API token",
       "apiTokenPlaceholder": "From the MaxStore Mini App, Account → API Keys",
@@ -258,7 +258,7 @@
       "verified": "Token works",
       "accountLabel": "Account",
       "balanceLabel": "Balance",
-      "pendingWork": "The token and this check are built. Importing MaxStore's catalogue and buying through it are not yet — until then, saving a token here changes nothing a customer can see."
+      "pendingWork": "Settings, catalogue import, ordering, and settling are all built — but no call has ever been made against a live MaxStore token. Save a token and press the test button first; anything it contradicts is a bug in our reading of their docs, not in your token."
     },
     "maxstoreImport": {
       "title": "Import from MaxStore",
