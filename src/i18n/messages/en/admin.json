@@ -42,6 +42,7 @@
       "offers": "Packages",
       "orders": "Orders",
       "recharges": "Recharges",
+      "payments": "Payments",
       "customers": "Customers",
       "providers": "Providers and API",
       "website": "Website",
@@ -544,6 +545,36 @@
       "not_found": "We could not find that request.",
       "forbidden": "You are not allowed to do that.",
       "unknown": "We could not complete that. Please try again."
+    }
+  },
+  "payments": {
+    "eyebrow": "Payments",
+    "title": "Payments and wallet credits",
+    "description": "Every top-up next to the wallet credit it produced. The two should always agree; this is where they are compared.",
+    "viewAttention": "Needs attention ({count})",
+    "viewAll": "All payments ({count})",
+    "summary": "{settled} settled · {awaiting} awaiting your review",
+    "requestedLabel": "Requested",
+    "paidLabel": "Paid",
+    "creditedLabel": "Credited",
+    "notCredited": "nothing",
+    "allClearTitle": "Everything agrees",
+    "allClearDescription": "Every payment taken has a matching wallet credit. Nothing needs you here.",
+    "emptyTitle": "No payments yet",
+    "emptyDescription": "Top-ups appear here as soon as a customer requests one.",
+    "states": {
+      "settled": "Settled",
+      "awaiting_review": "Awaiting your review",
+      "open": "Waiting for payment",
+      "closed": "Closed",
+      "not_credited": "Paid, not credited",
+      "unbacked": "Credited with no payment",
+      "short_paid": "Paid less than requested"
+    },
+    "explain": {
+      "not_credited": "The money arrived but the wallet was never credited. The customer has paid and has nothing to show for it — credit them from their customer page, or find out why the credit did not land.",
+      "unbacked": "This wallet was credited with no payment behind it. It costs the store rather than the customer, so check whether it was a deliberate correction.",
+      "short_paid": "Less arrived than was requested. Decide whether to credit the smaller amount or ask the customer for the difference."
     }
   }
 }

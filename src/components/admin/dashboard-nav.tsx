@@ -49,6 +49,7 @@ export function DashboardNav({ locale, messages }: DashboardNavProps) {
       items: [
         { key: "orders", href: `${base}/orders` },
         { key: "recharges", href: `${base}/recharges` },
+        { key: "payments", href: `${base}/payments` },
         { key: "customers", href: `${base}/customers` },
       ],
     },
