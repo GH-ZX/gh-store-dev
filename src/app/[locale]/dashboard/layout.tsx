@@ -49,13 +49,13 @@ export default async function DashboardLayout({ children, params }: LayoutProps<
     // working surface; the layer itself is rendered by the locale shell above.
     <div data-dashboard-shell className="gh-page py-8 sm:py-10">
       <div className="grid gap-8 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:gap-10">
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
           <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-4">
             <div className="flex items-center justify-between gap-2 px-3 pb-4">
               <span className="text-sm font-semibold text-[var(--ink)]">{messages.shell.title}</span>
             </div>
 
-            <DashboardNav locale={locale} messages={messages.shell} />
+            <DashboardNav locale={locale} messages={messages.shell} variant="sidebar" />
 
             <div className="mt-6 grid gap-2 border-t border-[var(--line)] pt-4">
               <Link
@@ -76,7 +76,10 @@ export default async function DashboardLayout({ children, params }: LayoutProps<
           </div>
         </aside>
 
-        <div className="min-w-0">{children}</div>
+        <div className="min-w-0">
+          <DashboardNav locale={locale} messages={messages.shell} variant="mobile" />
+          {children}
+        </div>
       </div>
     </div>
   );
