@@ -16,6 +16,8 @@ export const g2bulkSettingsSchema = z.object({
   api_key: z.string().nullish(),
   markup_percent: z.coerce.number().optional().catch(undefined),
   enabled: z.boolean().optional().catch(undefined),
+  /** Generated, never typed. Part of the callback address the supplier is given. */
+  webhook_secret: z.string().nullish(),
   updated_at: z.string().nullish(),
 });
 
@@ -35,6 +37,8 @@ export type G2BulkStatus = {
   keyHint: string | null;
   markupPercent: number;
   enabled: boolean;
+  /** Whether a callback secret exists, and therefore whether orders carry a callback. */
+  webhookConfigured: boolean;
   updatedAt: string | null;
 };
 
@@ -83,6 +87,19 @@ export function readG2BulkCredentials(providers: unknown): G2BulkCredentials {
   };
 }
 
+/**
+ * The callback secret, which is also the callback's only authentication.
+ *
+ * Server-side only, and never part of {@link G2BulkStatus}: unlike the API key
+ * it cannot be masked and remain useful, because the secret *is* the address the
+ * supplier is given.
+ */
+export function readG2BulkWebhookSecret(providers: unknown): string | null {
+  const parsed = providerSettingsSchema.safeParse(providers ?? {});
+
+  return parsed.success ? parsed.data.g2bulk?.webhook_secret?.trim() || null : null;
+}
+
 export function toG2BulkStatus(providers: unknown): G2BulkStatus {
   const parsed = providerSettingsSchema.safeParse(providers ?? {});
   const settings = parsed.success ? parsed.data.g2bulk : undefined;
@@ -93,6 +110,7 @@ export function toG2BulkStatus(providers: unknown): G2BulkStatus {
     keyHint: maskSecret(credentials.apiKey),
     markupPercent: credentials.markupPercent,
     enabled: credentials.enabled,
+    webhookConfigured: readG2BulkWebhookSecret(providers) !== null,
     updatedAt: settings?.updated_at ?? null,
   };
 }
@@ -105,7 +123,7 @@ export function toG2BulkStatus(providers: unknown): G2BulkStatus {
  */
 export function mergeG2BulkSettings(
   providers: Json | null | undefined,
-  update: { apiKey?: string; markupPercent?: number; enabled?: boolean },
+  update: { apiKey?: string; markupPercent?: number; enabled?: boolean; webhookSecret?: string },
   updatedAt: string,
 ): Json {
   // Other providers share this column, so an unrecognised shape is replaced
@@ -122,6 +140,13 @@ export function mergeG2BulkSettings(
   base.g2bulk = {
     api_key: nextKey,
     markup_percent: clampMarkup(update.markupPercent ?? current.markupPercent),
+    /*
+     * Carried across every save. It is generated rather than typed, so it is
+     * never in the form being merged here — and rebuilding this object without
+     * it would silently retire the callback address the supplier already holds,
+     * with no symptom until an order went unreported.
+     */
+    webhook_secret: update.webhookSecret ?? readG2BulkWebhookSecret(providers),
     /*
      * Saving a key enables the provider. Deriving this from the previous
      * `enabled` instead is what left the very first save disabled: with no key

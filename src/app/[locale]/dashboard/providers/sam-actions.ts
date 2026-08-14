@@ -1,6 +1,5 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
@@ -8,6 +7,7 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { formFlag, formText } from "@/lib/forms/form-data";
 import { logFailure } from "@/lib/logging/logger";
 import { saveSamSettings } from "@/lib/services/admin-settings.service";
+import { newCallbackSecret } from "@/lib/settings/callback-secret";
 import { isValidSamIdentifier, SAM_METHODS } from "@/lib/settings/sam-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -40,16 +40,6 @@ function resolveLocale(value: unknown): Locale {
   return typeof value === "string" && isLocale(value) ? value : DEFAULT_LOCALE;
 }
 
-/**
- * A callback secret, generated rather than typed.
- *
- * Two UUIDs' worth of hex: long enough that guessing is hopeless, and produced
- * server-side so an owner cannot accidentally choose something weak.
- */
-function newWebhookSecret(): string {
-  return `${randomUUID()}${randomUUID()}`.replaceAll("-", "");
-}
-
 async function ensureWebhookSecret(regenerate: boolean): Promise<void> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.from("store_settings").select("providers").eq("id", "global").maybeSingle();
@@ -64,7 +54,7 @@ async function ensureWebhookSecret(regenerate: boolean): Promise<void> {
     return;
   }
 
-  providers.sam = { ...sam, webhook_secret: newWebhookSecret() };
+  providers.sam = { ...sam, webhook_secret: newCallbackSecret() };
 
   await supabase
     .from("store_settings")

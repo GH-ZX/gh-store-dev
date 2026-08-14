@@ -11,6 +11,7 @@ import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getSamOverview } from "@/lib/services/admin-sam.service";
 import {
   getAxiomStatus,
+  getG2BulkCallback,
   getG2BulkStatus,
   getRecentSyncLogs,
   getSamStatus,
@@ -25,8 +26,9 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const provider = messages.providers.g2bulk;
   const sam = messages.providers.sam;
   const logging = messages.providers.logging;
-  const [status, logs, samStatus, samOverview, axiomStatus] = await Promise.all([
+  const [status, callback, logs, samStatus, samOverview, axiomStatus] = await Promise.all([
     getG2BulkStatus(),
+    getG2BulkCallback(),
     getRecentSyncLogs(G2BULK_PROVIDER_NAME),
     getSamStatus(),
     // Reaches Sam when a key is stored, and answers with an error key rather
@@ -83,7 +85,12 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
         </div>
 
         <div className="mt-8 border-t border-[var(--line)] pt-8">
-          <G2BulkSettingsForm locale={locale} messages={provider} status={status} />
+          <G2BulkSettingsForm
+            locale={locale}
+            messages={provider}
+            status={status}
+            callback={callback}
+          />
         </div>
       </section>
 

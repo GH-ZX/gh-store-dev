@@ -10,6 +10,7 @@ import { logFailure } from "@/lib/logging/logger";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
   getG2BulkCredentials,
+  regenerateG2BulkCallbackSecret,
   saveG2BulkSettings,
 } from "@/lib/services/admin-settings.service";
 import { importG2BulkGames } from "@/lib/services/g2bulk-import.service";
@@ -108,6 +109,34 @@ export async function verifyG2BulkKeyAction(
   } catch (error) {
     return { ...INITIAL_PROVIDER_STATE, error: errorKey(error) };
   }
+}
+
+/**
+ * Turn the supplier callback on, or move it to a new secret.
+ *
+ * One action for both, because they are the same write and the page can tell
+ * them apart from the status it already has. Nothing else generates this: an
+ * owner never types the secret, and saving the API key must not disturb it.
+ */
+export async function regenerateG2BulkCallbackAction(
+  _state: ProviderActionState,
+  formData: FormData,
+): Promise<ProviderActionState> {
+  await requireAdmin();
+
+  const locale = resolveLocale(formText(formData, "locale"));
+
+  try {
+    await regenerateG2BulkCallbackSecret();
+  } catch (error) {
+    logFailure("admin.providers", "g2bulk_callback_secret_failed", error);
+
+    return { ...INITIAL_PROVIDER_STATE, error: "unknown" };
+  }
+
+  revalidatePath(`/${locale}/dashboard/providers`);
+
+  return { ...INITIAL_PROVIDER_STATE, notice: "callback_ready" };
 }
 
 const importSchema = z.object({

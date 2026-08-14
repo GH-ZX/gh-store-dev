@@ -11,7 +11,9 @@ import {
   minutesSince,
   type ProviderState,
 } from "@/lib/orders/reconciliation-policy";
-import { readG2BulkCredentials } from "@/lib/settings/provider-settings";
+import { isCallbackReachable } from "@/lib/settings/callback-url";
+import { readG2BulkCredentials, readG2BulkWebhookSecret } from "@/lib/settings/provider-settings";
+import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 import type { Json } from "@/types/database";
 import { log, logFailure } from "@/lib/logging/logger";
@@ -71,6 +73,38 @@ async function readCredentials(): Promise<string | null> {
   const { apiKey, enabled } = readG2BulkCredentials(data?.providers ?? {});
 
   return apiKey && enabled ? apiKey : null;
+}
+
+/**
+ * The address G2Bulk should report this order to, if there is a usable one.
+ *
+ * Null is a normal answer, not a fault: with no callback secret generated the
+ * supplier is simply not asked to call back, and the reconciliation sweep
+ * remains the only way an order settles — which is exactly where this stood
+ * before the callback existed.
+ *
+ * An address the supplier could not reach is worse than none, because it looks
+ * configured. A Supabase URL is public HTTPS by construction, so this only ever
+ * rejects a local stack.
+ */
+async function readCallbackUrl(): Promise<string | null> {
+  const supabase = createSupabaseServiceClient();
+  const { data } = await supabase
+    .from("store_settings")
+    .select("providers")
+    .eq("id", "global")
+    .maybeSingle();
+
+  const secret = readG2BulkWebhookSecret(data?.providers ?? {});
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+
+  if (!secret || !supabaseUrl) {
+    return null;
+  }
+
+  const url = g2bulkCallbackUrl(supabaseUrl, secret);
+
+  return isCallbackReachable(url) ? url : null;
 }
 
 /** Provider keys must be exactly 36 characters, so a UUID is used verbatim. */
@@ -366,6 +400,7 @@ async function currentSupplierCost(
 async function fulfillTopup(
   client: G2BulkFulfillmentClient,
   context: FulfillmentContext,
+  callbackUrl: string | null,
 ): Promise<FulfillmentOutcome> {
   if (!context.gameCode || !context.catalogueName) {
     return { state: "skipped", reason: "This offer is not mapped to a provider product." };
@@ -452,6 +487,13 @@ async function fulfillTopup(
           // The store's own order number, so a supplier-side query can be traced
           // back. Never the customer's price.
           remark: context.orderNumber,
+          /*
+           * Where to report the outcome. Polling below still runs — the supplier
+           * often finishes inside checkout's own window, and an order that
+           * settles in front of the customer should not wait for a round trip
+           * back through the callback.
+           */
+          ...(callbackUrl ? { callback_url: callbackUrl } : {}),
         },
         providerIdempotencyKey(context.orderItemId),
       );
@@ -645,7 +687,9 @@ export async function fulfillOrder(orderId: string): Promise<FulfillmentOutcome>
   const client = new G2BulkFulfillmentClient({ apiKey });
   const outcome =
     context.offerType === "topup"
-      ? await fulfillTopup(client, context)
+      ? // Only top-ups have a callback: the supplier documents one for game
+        // orders and not for card purchases, which deliver their codes inline.
+        await fulfillTopup(client, context, await readCallbackUrl())
       : await fulfillVoucher(client, context);
 
   await announceOutcome(context, outcome);

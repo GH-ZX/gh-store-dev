@@ -3,6 +3,7 @@ import {
   maskSecret,
   mergeG2BulkSettings,
   readG2BulkCredentials,
+  readG2BulkWebhookSecret,
   toG2BulkStatus,
 } from "@/lib/settings/provider-settings";
 import type { Json } from "@/types/database";
@@ -120,6 +121,55 @@ describe("merging an update", () => {
     const merged = mergeG2BulkSettings({}, { apiKey: "k" }, NOW);
 
     expect(toG2BulkStatus(merged).updatedAt).toBe(NOW);
+  });
+});
+
+describe("the callback secret", () => {
+  it("survives a save that knows nothing about it", () => {
+    /*
+     * The secret is generated, never typed, so it is absent from every form that
+     * merges through here. Dropping it would retire the address the supplier
+     * already holds, with no symptom until an order went unreported.
+     */
+    const merged = mergeG2BulkSettings(
+      { g2bulk: { api_key: "k", webhook_secret: "callback-secret" } },
+      { markupPercent: 25 },
+      NOW,
+    );
+
+    expect(readG2BulkWebhookSecret(merged)).toBe("callback-secret");
+  });
+
+  it("survives clearing the API key, which is a pause and not a teardown", () => {
+    const merged = mergeG2BulkSettings(
+      { g2bulk: { api_key: "k", webhook_secret: "callback-secret" } },
+      { apiKey: "" },
+      NOW,
+    );
+
+    expect(readG2BulkWebhookSecret(merged)).toBe("callback-secret");
+  });
+
+  it("is replaced when a new one is generated", () => {
+    const merged = mergeG2BulkSettings(
+      { g2bulk: { api_key: "k", webhook_secret: "old-secret" } },
+      { webhookSecret: "new-secret" },
+      NOW,
+    );
+
+    expect(readG2BulkWebhookSecret(merged)).toBe("new-secret");
+  });
+
+  it("is reported to the UI as a flag, never as the secret", () => {
+    const status = toG2BulkStatus({ g2bulk: { api_key: "k", webhook_secret: "callback-secret" } });
+
+    expect(status.webhookConfigured).toBe(true);
+    expect(JSON.stringify(status)).not.toContain("callback-secret");
+  });
+
+  it("reads as absent when the provider has never had one", () => {
+    expect(readG2BulkWebhookSecret({ g2bulk: { api_key: "k" } })).toBeNull();
+    expect(toG2BulkStatus({ g2bulk: { api_key: "k" } }).webhookConfigured).toBe(false);
   });
 });
 

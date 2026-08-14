@@ -400,6 +400,10 @@ deno_version = 2
 [functions.sam-webhook]
 verify_jwt = false
 
+# G2Bulk cannot send a Supabase JWT either; the callback's own token is the gate.
+[functions.g2bulk-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

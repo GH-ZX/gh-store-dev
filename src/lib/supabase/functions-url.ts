@@ -36,3 +36,23 @@ export function samCallbackUrl(supabaseUrl: string, secret?: string | null): str
 
   return secret ? `${base}?token=${encodeURIComponent(secret)}` : base;
 }
+
+/** The one function G2Bulk calls when a top-up order finishes or fails. */
+export const G2BULK_WEBHOOK_FUNCTION = "g2bulk-webhook";
+
+/**
+ * The callback address sent with every top-up order.
+ *
+ * Hosted alongside the payment callback, for the same reason: the supplier calls
+ * it from its own network, so an address that only resolves on a developer's
+ * machine is an order that is never reported. The store's own domain is not
+ * usable here until it exists.
+ *
+ * As with Sam, the secret is the address rather than something sent beside it —
+ * G2Bulk offers no signature, only whatever URL it was handed at purchase.
+ */
+export function g2bulkCallbackUrl(supabaseUrl: string, secret?: string | null): string {
+  const base = functionUrl(supabaseUrl, G2BULK_WEBHOOK_FUNCTION);
+
+  return secret ? `${base}?token=${encodeURIComponent(secret)}` : base;
+}

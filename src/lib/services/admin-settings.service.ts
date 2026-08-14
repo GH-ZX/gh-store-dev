@@ -9,9 +9,12 @@ import {
   type AxiomSettingsUpdate,
   type AxiomStatus,
 } from "@/lib/settings/axiom-settings";
+import { checkCallbackUrl, type CallbackReachability } from "@/lib/settings/callback-url";
+import { newCallbackSecret } from "@/lib/settings/callback-secret";
 import {
   mergeG2BulkSettings,
   readG2BulkCredentials,
+  readG2BulkWebhookSecret,
   toG2BulkStatus,
   type G2BulkCredentials,
   type G2BulkStatus,
@@ -24,6 +27,7 @@ import {
   type SamSettingsUpdate,
   type SamStatus,
 } from "@/lib/settings/sam-settings";
+import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
@@ -66,10 +70,57 @@ export async function getG2BulkCredentials(): Promise<G2BulkCredentials> {
   return readG2BulkCredentials(await readProviders());
 }
 
+/**
+ * The address G2Bulk is given, as the owner needs to see it.
+ *
+ * The secret is the address, so this returns the whole thing — the same stance
+ * the Sam panel takes, and for the same reason: a version with the token
+ * stripped is not the address and cannot be checked against anything. Admin
+ * only, and it should be treated like a password.
+ *
+ * `reachable` is what stops a local Supabase looking configured. The supplier
+ * calls from its own network, and an address only this machine can resolve is
+ * an order that is never reported.
+ */
+export type G2BulkCallback = {
+  url: string;
+  configured: boolean;
+  reachable: CallbackReachability;
+};
+
+export async function getG2BulkCallback(): Promise<G2BulkCallback> {
+  await requireAdmin();
+
+  const providers = await readProviders();
+  const secret = readG2BulkWebhookSecret(providers);
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  const url = supabaseUrl ? g2bulkCallbackUrl(supabaseUrl, secret) : "";
+
+  return {
+    url,
+    configured: secret !== null,
+    reachable: url ? checkCallbackUrl(url) : "invalid",
+  };
+}
+
+/**
+ * Generate the callback secret, or replace it.
+ *
+ * Replacing it retires the address orders already carry: an order placed before
+ * the change reports to a URL whose token no longer matches, and is refused.
+ * Those orders are not lost — the reconciliation sweep settles them as it did
+ * before any of this existed — but it is why this is a deliberate button rather
+ * than something that happens on save.
+ */
+export async function regenerateG2BulkCallbackSecret(): Promise<G2BulkStatus> {
+  return saveG2BulkSettings({ webhookSecret: newCallbackSecret() });
+}
+
 export async function saveG2BulkSettings(update: {
   apiKey?: string;
   markupPercent?: number;
   enabled?: boolean;
+  webhookSecret?: string;
 }): Promise<G2BulkStatus> {
   await requireAdmin();
 
