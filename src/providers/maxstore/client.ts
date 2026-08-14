@@ -259,6 +259,8 @@ export class MaxStoreClient {
       productType: product.product_type ?? null,
       // Documented: a package is always bought one at a time.
       quantityFixed: (product.product_type ?? "").toLowerCase() === "package",
+      qtyValues: product.qty_values ?? null,
+      params: product.params ?? null,
     }));
   }
 

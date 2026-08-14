@@ -259,6 +259,15 @@
       "accountLabel": "Account",
       "balanceLabel": "Balance",
       "pendingWork": "The token and this check are built. Importing MaxStore's catalogue and buying through it are not yet — until then, saving a token here changes nothing a customer can see."
+    },
+    "maxstoreImport": {
+      "title": "Import from MaxStore",
+      "description": "Each category becomes a container in the catalog, with its products as packages underneath.",
+      "searchPlaceholder": "Search categories",
+      "productsCount": "{count} products, {available} available",
+      "emptyTitle": "Nothing to import",
+      "emptyDescription": "MaxStore returned no products for this token.",
+      "viewCatalog": "Open the catalog"
     }
   },
   "import": {

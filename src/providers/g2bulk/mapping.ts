@@ -13,6 +13,10 @@ import type {
  * are all decisions worth pinning down in tests.
  */
 
+// The price rule is the store's, not this supplier's: it lives in
+// `@/lib/catalog/pricing` so a second supplier cannot grow a second answer.
+export { toRetailPrice, type RetailPriceInput } from "@/lib/catalog/pricing";
+
 export const G2BULK_PROVIDER_NAME = "g2bulk";
 const G2BULK_ORIGIN = "https://api.g2bulk.com";
 
@@ -71,31 +75,6 @@ export function toOfferSlug(catalogue: G2BulkCatalogueItem): string {
 
 export function toGameSlug(game: Pick<G2BulkGame, "code" | "name">): string {
   return toSlug(game.code) || toSlug(game.name) || `game-${game.code}`;
-}
-
-export type RetailPriceInput = {
-  /** Supplier cost in USD: `amount` from the catalogue, `unit_price` for a product. */
-  supplierCostUsd: number;
-  markupPercent: number;
-};
-
-/**
- * Customer-facing price for a supplier cost.
- *
- * Rounded **up** to the cent: rounding down would shave the margin on every
- * order, and a fraction of a cent is invisible to a customer. The result is also
- * floored at the supplier cost so a zero markup can never produce a loss. This
- * is the store price only — the supplier cost is never sent back to G2Bulk.
- */
-export function toRetailPrice({ supplierCostUsd, markupPercent }: RetailPriceInput): number {
-  const safeMarkup = Math.min(
-    PRICING_DEFAULTS.maxMarkupPercent,
-    Math.max(PRICING_DEFAULTS.minMarkupPercent, markupPercent),
-  );
-  const raw = supplierCostUsd * (1 + safeMarkup / 100);
-  const rounded = Math.ceil(raw * 100) / 100;
-
-  return Math.max(rounded, Math.ceil(supplierCostUsd * 100) / 100);
 }
 
 export type StoreInputFieldType =

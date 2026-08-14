@@ -126,6 +126,15 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
               ? { label: maxstore.keyHintLabel, value: maxstoreStatus.tokenHint }
               : null
           }
+          actions={
+            <ButtonLink
+              href={`/${locale}/dashboard/providers/maxstore/import`}
+              variant={maxstoreStatus.configured ? "primary" : "secondary"}
+              trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
+            >
+              {messages.providers.maxstoreImport.title}
+            </ButtonLink>
+          }
         >
           <MaxStoreSettingsForm
             locale={locale}

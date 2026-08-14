@@ -66,6 +66,9 @@ export type MaxStoreProduct = {
   productType: string | null;
   /** Fixed at 1 for a package, per the documentation. */
   quantityFixed: boolean;
+  /** Carried through unparsed: neither shape is documented beyond an example. */
+  qtyValues: unknown;
+  params: unknown;
 };
 
 /** `available` may arrive as a boolean, a 0/1, or the string form of either. */

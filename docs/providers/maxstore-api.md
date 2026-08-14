@@ -103,10 +103,29 @@ The store maps these onto the same failure kinds it already uses for G2Bulk —
 `auth`, `rate_limit`, `request`, `server`, `network`, `contract` — so a screen
 that reports a supplier failure does not need to know which supplier it was.
 
-## What is not built yet
+## How the store uses it
 
-Settings, the typed client, and key verification exist. Importing MaxStore's
-catalogue and fulfilling orders through it do not: `provider_game_mappings` and
-`provider_offer_mappings` are already keyed by `provider_name`, so the schema is
-ready, but the fulfilment service still reaches for G2Bulk by name and would
-need to resolve the provider per offer first.
+- **Catalogue.** `/api/v2/products` is the source of truth, not `/api/v2/content`.
+  Products carry `category_id`, so the store groups them itself and each
+  category becomes a container game with its products as offers. `content/0` is
+  consulted only for nicer category names and its failure costs nothing — the
+  import must not depend on the one endpoint whose contract is a guess.
+- **Fulfilment.** `order_uuid` is the order item's id, so the provider's own
+  idempotency covers every retry: checkout, an operator, and the sweep all send
+  the same uuid and the second one returns the first one's order.
+- **Settling.** There is no callback, so the reconciliation sweep is not a
+  backstop here — it is the mechanism. It polls `/check` for MaxStore orders and
+  `/games/orders` for G2Bulk ones, keyed off which provider owns the offer.
+
+## Still to prove
+
+Every line above is written from the documentation. When a token exists, the
+order to check things in:
+
+1. Verify on the Providers page — proves auth and `/profile`.
+2. Open the import screen — proves `/products`, and shows whether `/content/0`
+   yields names or the store falls back to "Category 12".
+3. Import one small category, then look at the offers it made.
+4. Buy one cheap product end to end, and watch the attempt row: `params` is the
+   least certain part of this integration, since the documentation describes it
+   only as "product-specific dynamic fields, e.g. player_id".

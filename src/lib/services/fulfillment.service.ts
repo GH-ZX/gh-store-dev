@@ -12,6 +12,11 @@ import {
   type ProviderState,
 } from "@/lib/orders/reconciliation-policy";
 import { isCallbackReachable } from "@/lib/settings/callback-url";
+import { readMaxStoreCredentials } from "@/lib/settings/maxstore-settings";
+import { MaxStoreClient } from "@/providers/maxstore/client";
+import { MaxStoreError } from "@/providers/maxstore/errors";
+import { MAXSTORE_PROVIDER_NAME } from "@/providers/maxstore/mapping";
+import { classifyOrderStatus as classifyMaxStoreOrder } from "@/providers/maxstore/schemas";
 import { readG2BulkCredentials, readG2BulkWebhookSecret } from "@/lib/settings/provider-settings";
 import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
@@ -75,6 +80,20 @@ async function readCredentials(): Promise<string | null> {
   return apiKey && enabled ? apiKey : null;
 }
 
+/** The stored MaxStore token, or null when that provider is off or unconfigured. */
+async function readMaxStoreToken(): Promise<string | null> {
+  const supabase = createSupabaseServiceClient();
+  const { data } = await supabase
+    .from("store_settings")
+    .select("providers")
+    .eq("id", "global")
+    .maybeSingle();
+
+  const { apiToken, enabled } = readMaxStoreCredentials(data?.providers ?? {});
+
+  return apiToken && enabled ? apiToken : null;
+}
+
 /**
  * The address G2Bulk should report this order to, if there is a usable one.
  *
@@ -122,7 +141,7 @@ function providerIdempotencyKey(orderItemId: string): string {
  * operator can still see it.
  */
 function describe(error: unknown): { customer: string; code: string | null } {
-  if (error instanceof G2BulkError) {
+  if (error instanceof G2BulkError || error instanceof MaxStoreError) {
     const provider = error.message.trim();
     // Only a rejected request or a rejected key carries a message meant for a
     // person; a network or contract fault is machine detail.
@@ -151,6 +170,14 @@ type FulfillmentContext = {
   gameCode: string | null;
   catalogueName: string | null;
   externalProductId: string | null;
+  /**
+   * Which supplier this offer is mapped to.
+   *
+   * Read from the mapping rather than assumed, now that more than one supplier
+   * can own an offer. Null means the offer is not mapped at all — a hand-made
+   * package, which nothing can deliver automatically.
+   */
+  providerName: string | null;
 };
 
 /**
@@ -192,15 +219,21 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
   let gameCode: string | null = null;
   let catalogueName: string | null = null;
   let externalProductId: string | null = null;
+  let providerName: string | null = null;
 
   if (item.offer_id) {
+    /*
+     * Not filtered by supplier any more. An offer belongs to whichever provider
+     * imported it, and asking G2Bulk about a MaxStore product would find nothing
+     * and read as "not mapped" — which is a refund, not a delivery.
+     */
     const { data: offerMapping } = await supabase
       .from("provider_offer_mappings")
-      .select("external_catalogue_name, external_product_id, offer_id")
-      .eq("provider_name", G2BULK_PROVIDER_NAME)
+      .select("provider_name, external_catalogue_name, external_product_id, offer_id")
       .eq("offer_id", item.offer_id)
       .maybeSingle();
 
+    providerName = offerMapping?.provider_name ?? null;
     catalogueName = offerMapping?.external_catalogue_name ?? null;
     externalProductId = offerMapping?.external_product_id ?? null;
 
@@ -233,6 +266,7 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
     gameCode,
     catalogueName,
     externalProductId,
+    providerName,
   };
 }
 
@@ -258,6 +292,7 @@ type OpenAttempt = { id: string; externalOrderId: string | null; status: string 
 async function openAttempt(
   context: FulfillmentContext,
   requestPayload: Record<string, Json>,
+  provider: string = G2BULK_PROVIDER_NAME,
 ): Promise<OpenAttempt | null> {
   const supabase = createSupabaseServiceClient();
   const key = providerIdempotencyKey(context.orderItemId);
@@ -265,7 +300,7 @@ async function openAttempt(
   const { data: existing } = await supabase
     .from("fulfillment_attempts")
     .select("id, external_order_id, status")
-    .eq("provider", G2BULK_PROVIDER_NAME)
+    .eq("provider", provider)
     .eq("idempotency_key", key)
     .maybeSingle();
 
@@ -281,7 +316,7 @@ async function openAttempt(
     .from("fulfillment_attempts")
     .insert({
       order_item_id: context.orderItemId,
-      provider: G2BULK_PROVIDER_NAME,
+      provider,
       status: "pending",
       idempotency_key: key,
       request_payload: requestPayload,
@@ -658,6 +693,129 @@ async function fulfillVoucher(
   return { state: "processing" };
 }
 
+
+/**
+ * Buy through MaxStore.
+ *
+ * The supplier holds the idempotency rather than the store: `order_uuid` is the
+ * order item's id, so a retry — from a checkout that timed out, an operator, or
+ * the sweep — returns the original order instead of buying a second time. That
+ * is why the key must never be freshly generated per attempt.
+ *
+ * There is no callback to wait for. MaxStore documents no webhook at all, so
+ * polling `/check` is not a fallback here the way it is for G2Bulk; it is the
+ * only mechanism, and an order left `processing` genuinely waits for the sweep.
+ */
+async function fulfillMaxStore(
+  context: FulfillmentContext,
+  apiToken: string,
+): Promise<FulfillmentOutcome> {
+  if (!context.externalProductId) {
+    return { state: "skipped", reason: "This offer is not mapped to a provider product." };
+  }
+
+  const client = new MaxStoreClient({ apiToken });
+  const orderUuid = providerIdempotencyKey(context.orderItemId);
+  const attempt = await openAttempt(
+    context,
+    { product_id: context.externalProductId, qty: context.quantity },
+    MAXSTORE_PROVIDER_NAME,
+  );
+
+  if (!attempt) {
+    return { state: "skipped", reason: "Could not open a fulfilment attempt." };
+  }
+
+  if (attempt.status === "completed") {
+    return { state: "completed", deliveredItems: [] };
+  }
+
+  if (attempt.status === "refunded") {
+    return { state: "failed", reason: "Previously refunded.", refunded: true };
+  }
+
+  await setOrderStatus(context.orderId, "fulfilling");
+
+  if (!attempt.externalOrderId) {
+    try {
+      const placed = await client.placeOrder({
+        productId: context.externalProductId,
+        quantity: context.quantity,
+        orderUuid,
+        // Whatever the customer filled in for this product. MaxStore refuses an
+        // order with a field missing (code 106), which is the right failure:
+        // better a refund than a delivery to the wrong account.
+        params: context.dynamicFields,
+      });
+
+      await recordAttempt(attempt.id, {
+        status: "processing",
+        externalOrderId: placed.orderId,
+        response: placed,
+      });
+
+      const state = classifyMaxStoreOrder(placed.status);
+
+      if (state === "completed") {
+        await recordAttempt(attempt.id, { status: "completed" });
+        await setOrderStatus(context.orderId, "completed");
+
+        return { state: "completed", deliveredItems: [] };
+      }
+
+      if (state === "failed") {
+        return failAndRefund(context, attempt.id, "The supplier rejected this order.");
+      }
+    } catch (error) {
+      const detail = describe(error);
+
+      return failAndRefund(context, attempt.id, detail.customer, detail.code);
+    }
+  }
+
+  for (let round = 0; round < POLL_ATTEMPTS; round += 1) {
+    await delay(POLL_DELAY_MS);
+
+    try {
+      const [result] = await client.checkOrders([orderUuid]);
+
+      if (!result) {
+        continue;
+      }
+
+      const state = classifyMaxStoreOrder(result.status);
+
+      if (state === "completed") {
+        await recordAttempt(attempt.id, {
+          status: "completed",
+          response: result,
+          // Whatever the supplier hands over — codes, an account, a note. Stored
+          // the moment it arrives, because this may be the only copy.
+          delivered: result.delivery ? { items: result.delivery } : undefined,
+        });
+        await setOrderStatus(context.orderId, "completed");
+
+        return { state: "completed", deliveredItems: [] };
+      }
+
+      if (state === "failed") {
+        return failAndRefund(context, attempt.id, "The supplier could not complete this order.");
+      }
+    } catch (error) {
+      const detail = describe(error);
+      await recordAttempt(attempt.id, {
+        status: "processing",
+        errorMessage: detail.customer,
+        errorCode: detail.code,
+      });
+    }
+  }
+
+  await recordAttempt(attempt.id, { status: "processing" });
+
+  return { state: "processing" };
+}
+
 /**
  * Fulfil a paid order.
  *
@@ -676,6 +834,20 @@ export async function fulfillOrder(orderId: string): Promise<FulfillmentOutcome>
 
   if (!context) {
     return { state: "skipped", reason: "Order not found." };
+  }
+
+  if (context.providerName === MAXSTORE_PROVIDER_NAME) {
+    const apiToken = await readMaxStoreToken();
+
+    if (!apiToken) {
+      return { state: "skipped", reason: "The MaxStore provider is not configured." };
+    }
+
+    const outcome = await fulfillMaxStore(context, apiToken);
+
+    await announceOutcome(context, outcome);
+
+    return outcome;
   }
 
   const apiKey = await readCredentials();
@@ -722,10 +894,11 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
   }
 
   const supabase = createSupabaseServiceClient();
+  const provider = context.providerName ?? G2BULK_PROVIDER_NAME;
   const { data: attempt } = await supabase
     .from("fulfillment_attempts")
     .select("id, status, external_order_id, created_at")
-    .eq("provider", G2BULK_PROVIDER_NAME)
+    .eq("provider", provider)
     .eq("idempotency_key", providerIdempotencyKey(context.orderItemId))
     .maybeSingle();
 
@@ -750,19 +923,36 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
   let refunded = false;
 
   if (attempt.external_order_id && ageMinutes >= GRACE_MINUTES) {
-    const credentials = await readCredentials();
+    /*
+     * Ask whichever supplier actually holds this order. For MaxStore this poll
+     * is not a backstop but the only way an order ever settles — it publishes no
+     * callback — so a sweep that asked the wrong provider would strand every one
+     * of its orders at `fulfilling` for ever.
+     */
+    const credentials =
+      provider === MAXSTORE_PROVIDER_NAME ? await readMaxStoreToken() : await readCredentials();
 
     if (!credentials) {
-      return { action: "skipped", reason: "The G2Bulk provider is not configured." };
+      return { action: "skipped", reason: "That supplier is not configured." };
     }
 
     try {
-      const status = await new G2BulkFulfillmentClient({ apiKey: credentials }).findGameOrderStatus(
-        attempt.external_order_id,
-      );
+      if (provider === MAXSTORE_PROVIDER_NAME) {
+        // Keyed by our own uuid, which is what MaxStore knows the order as.
+        const [result] = await new MaxStoreClient({ apiToken: credentials }).checkOrders([
+          providerIdempotencyKey(context.orderItemId),
+        ]);
+        // MaxStore's own words map straight onto the policy's: `wait` is
+        // pending, and pending never settles an order either way.
+        providerState = result ? classifyMaxStoreOrder(result.status) : null;
+      } else {
+        const status = await new G2BulkFulfillmentClient({
+          apiKey: credentials,
+        }).findGameOrderStatus(attempt.external_order_id);
 
-      providerState = status ? classifyProviderStatus(status.status) : null;
-      refunded = status?.refunded === true;
+        providerState = status ? classifyProviderStatus(status.status) : null;
+        refunded = status?.refunded === true;
+      }
     } catch (error) {
       // An unreachable supplier is not an answer about the order. Record why the
       // check failed and leave the order where it is.
