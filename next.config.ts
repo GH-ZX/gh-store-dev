@@ -16,11 +16,21 @@ import type { NextConfig } from "next";
  * network. Development only; it has no effect on a build.
  */
 function lanOrigins(): string[] {
-  return Object.values(networkInterfaces())
-    .flat()
-    .flatMap((details) =>
-      details && details.family === "IPv4" && !details.internal ? [details.address] : [],
-    );
+  return [
+    /*
+     * The loopback address by name, because `localhost` is allowed by default
+     * and `127.0.0.1` is not — the dev server treats them as different hosts.
+     * That caught a browser driven by a test runner, which reaches for the
+     * numeric form: every chunk came back 403, nothing hydrated, and the page
+     * looked complete and did nothing.
+     */
+    "127.0.0.1",
+    ...Object.values(networkInterfaces())
+      .flat()
+      .flatMap((details) =>
+        details && details.family === "IPv4" && !details.internal ? [details.address] : [],
+      ),
+  ];
 }
 
 const nextConfig: NextConfig = {

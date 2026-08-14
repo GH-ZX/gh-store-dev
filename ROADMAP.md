@@ -24,7 +24,7 @@ performance passes, the production Supabase project, and the domain
 | 9. G2Bulk fulfillment | Complete | Sync, top-ups, redeem codes, reconciliation, and the supplier callback done |
 | 10. Payments | Complete | Manual recharge, Sam invoices, SyriatelCash, ShamCash, payments reconciliation, and Binance Pay |
 | 11. Admin operations | Complete | Every daily operation runs from the dashboard: catalog import and hand-built catalog, pricing, orders and fulfilment, recharges, payments, customers, access, support, reviews, notifications, activity log, website content, theme, and SEO |
-| 12. Release | In progress | CI runs the tests; E2E, accessibility, production project, domain, and UAT remain |
+| 12. Release | In progress | CI runs the tests and a browser suite covers the anonymous storefront on phone and desktop in both languages; signed-in E2E, accessibility, the production project, the domain, and UAT remain |
 
 ## Working Rules
 
@@ -339,8 +339,17 @@ wallet transaction with the request id — rather than a match on amount and tim
   `provider_sync_logs`.
 - Catalog editing: game list with search and filters, per-game bilingual fields,
   artwork, carousel flags, publication, and per-package pricing.
-- Website settings: homepage section order, titles, and limits; social links;
-  contact channels; homepage SEO.
+- Website settings: the whole homepage. Sections are added, removed, reordered,
+  switched on, titled and subtitled in both languages, given an item count, and
+  for the three handpicked types pointed at the games, packages or reviews they
+  show. The submitted list is the layout, so adding and removing need no action
+  of their own and a rearrangement still saves in one step.
+- Editing the homepage from the homepage. An administrator gets a toggle on the
+  storefront that puts a pencil beside every section heading and over every game
+  tile and carousel slide, each opening a sheet that saves and revalidates in
+  place. It is the same authority as the dashboard — every action re-checks the
+  administrator — and a signed-out visitor receives none of it.
+- Social links; contact channels; homepage SEO.
 - Customers: search, balances, and audited wallet corrections through the
   `admin_adjust_wallet` RPC rather than direct writes.
 - Recharges: the manual review queue, credited-amount entry, and request limits.
@@ -417,11 +426,35 @@ is reachable from the dashboard without a SQL statement.
   assertions, including every rule about refunds, idempotency and provider
   failure classification, gated nothing.
 
+- Browser coverage of the anonymous storefront, at `pnpm test:e2e`. Every case
+  runs twice, once on a phone and once on a desktop, and the language-dependent
+  ones run in both: document direction, the locale redirect and the old singular
+  game URL, a carousel drag advancing in reading order without navigating, a
+  logo marker jumping to its game and the artwork opening it, the mobile drawer
+  opening and the closed one letting header taps through, a game page answering
+  and a missing one answering 404, and no rotation under reduced motion.
+
+  Playwright drives the Chrome already on the machine rather than downloading
+  its own, so the suite costs nothing to start.
+
+  It found two things on its first full run. The carousel arrows had never
+  rendered: they were gated on Embla's snap list, which was seeded from a
+  `reInit` event the library emits only when it is *re*-activated — a first load
+  emits `init`, so the value stayed empty and the controls never appeared. And
+  `127.0.0.1` was refused its own dev chunks, the same cross-origin block that
+  made the site look complete and dead on a phone, because the allow-list was
+  built from network interfaces and loopback is not one.
+
+  Not in CI. These need a store with a catalog behind them, and CI has no
+  Supabase project; wiring them to one would make the pipeline fail for reasons
+  that have nothing to do with the commit.
+
 ### Remaining
 
-- Add integration, SQL, provider, and Playwright E2E coverage on top of the unit
-  suite that now runs.
-- Test Arabic RTL, English LTR, mobile, desktop, keyboard, and reduced motion.
+- Extend the browser suite to the signed-in and administrator journeys, which
+  need an account and so belong with the staging acceptance run.
+- Add integration, SQL, and provider coverage on top of the unit suite.
+- Test keyboard navigation.
 - Run accessibility, performance, bundle, and Core Web Vitals checks.
 - Create separate Supabase production project.
 - Apply the approved migration set and seed only approved data.

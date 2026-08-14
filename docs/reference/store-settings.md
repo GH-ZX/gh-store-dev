@@ -66,3 +66,29 @@ hand-editable and a bad edit must not blank the homepage:
 Sections are resolved concurrently in `src/lib/services/home.service.ts`, and
 each read is isolated: one failing section is dropped rather than failing the
 page.
+
+## Who edits this
+
+Two places, one stored value.
+
+`/dashboard/website` owns the whole layout: sections are added, removed,
+reordered, retitled, subtitled and pointed at their handpicked items there. The
+list the form submits *is* the layout, so a section that is not submitted has
+been removed and one with a new id has been added — there is no separate add or
+delete action, and a rearrangement saves in a single step. A type marked
+singleton above is withheld from the add list rather than offered and then
+silently dropped by the normalizer; `tests/home/home-layout.test.ts` asserts the
+two lists agree.
+
+The storefront owns the same fields in place. An administrator browsing the
+homepage gets a toggle that puts a pencil beside every section heading and over
+every game tile and carousel slide (`src/components/live-edit`), each opening a
+sheet that writes through `src/lib/live-edit/actions.ts` and revalidates. Those
+actions edit one record's shown fields and carry the rest across, so an open
+panel cannot flatten what another one changed. What they deliberately do not
+touch: a section's pick lists, and a game's slug, prices and packages — the
+first is a long decision with a picker behind it, and the rest change what a
+customer pays or where a link points.
+
+Both paths run behind `requireAdmin`, and the storefront renders no part of the
+editor for anyone else.

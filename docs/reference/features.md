@@ -23,7 +23,9 @@
 - Manual recharge approval and Sam API configuration.
 - ShamCash, SyriatelCash, and Binance Pay configuration where enabled.
 - Customer management, balance adjustments, bans, and username operations.
-- Homepage section order, carousel selection, theme, and website settings.
+- Homepage sections — added, removed, reordered, titled, and pointed at their
+  handpicked items — carousel selection and behaviour, theme, and website
+  settings, editable from the dashboard or in place on the homepage itself.
 - Reviews, support messages, notifications, site logs, and audit logs.
 - IGDB image search and product media management.
 

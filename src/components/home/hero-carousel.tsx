@@ -142,13 +142,6 @@ export function HeroCarousel({
   );
 
   const [selected, setSelected] = useState(0);
-  /*
-   * One entry per snap, which is not always one per slide — `scrollSnapList` is
-   * the only thing that knows, and it is what the library's own dot guide uses.
-   * Mapping the games array instead would silently render the wrong number of
-   * dots the day this groups slides.
-   */
-  const [snaps, setSnaps] = useState<number[]>([]);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
   const stripRef = useRef<HTMLDivElement | null>(null);
@@ -161,34 +154,34 @@ export function HeroCarousel({
     }
   }, [emblaApi]);
 
-  const onReInit = useCallback(() => {
-    if (emblaApi) {
-      setSnaps(emblaApi.scrollSnapList());
-      onSelect();
-    }
-  }, [emblaApi, onSelect]);
-
   useEffect(() => {
     if (!emblaApi) {
       return;
     }
 
     /*
-     * Embla emits `reInit` once on init, so subscribing is enough to seed the
-     * snap list and the selected index — no read on mount, which is what kept
-     * this component free of state written from an effect.
+     * All three events, and `init` is the one that matters. Embla emits `init`
+     * when it first activates and `reInit` only when it is re-activated — a
+     * change of options, of plugins, or a media query it was given. Subscribing
+     * to `reInit` alone therefore seeds nothing on a normal page load, which is
+     * how the arrows came to be gated on a value that stayed empty forever and
+     * never rendered at all. `init` arrives on a `setTimeout(0)` scheduled
+     * while the library is being constructed, so this subscription is in place
+     * long before it fires.
      *
-     * `reInit` also fires when the slides or the options change, and both the
-     * snap list and the selected index can move under us when they do.
+     * `reInit` still matters: the selected index can move when the slides or
+     * the options change under us.
      */
+    emblaApi.on("init", onSelect);
     emblaApi.on("select", onSelect);
-    emblaApi.on("reInit", onReInit);
+    emblaApi.on("reInit", onSelect);
 
     return () => {
+      emblaApi.off("init", onSelect);
       emblaApi.off("select", onSelect);
-      emblaApi.off("reInit", onReInit);
+      emblaApi.off("reInit", onSelect);
     };
-  }, [emblaApi, onSelect, onReInit]);
+  }, [emblaApi, onSelect]);
 
   /*
    * Keeps the current game's logo inside the strip when the strip is long
@@ -361,8 +354,13 @@ export function HeroCarousel({
         * The icons follow reading order rather than the screen, so in Arabic
         * "next" points left — the same `rtl:rotate-180` rule every other
         * directional icon in this codebase uses.
+        *
+        * Gated on the number of games, like the strip below: asking the library
+        * how many snap positions it has means rendering nothing until it has
+        * answered, and a control that appears a second late is a control that
+        * was not there when somebody reached for it.
         */}
-      {snaps.length > 1 ? (
+      {total > 1 ? (
         <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 justify-between px-3 [@media(pointer:fine)]:flex">
           <button
             type="button"
@@ -397,12 +395,12 @@ export function HeroCarousel({
         * They are the keyboard-reachable way to jump to a slide, so the button
         * is the target and carries the name; the artwork inside is decorative.
         *
-        * One button per game rather than per snap, unlike the arrows above: the
-        * row is a list of games to a visitor, and building it from the games
-        * array is the only version that exists in the server-rendered HTML.
-        * Waiting for Embla to report its snaps would leave the space empty on a
-        * slow connection and then shove the page down when it filled. With one
-        * slide in view and the default `slidesToScroll`, a game index is a snap
+        * One button per game rather than per snap position: the row is a list
+        * of games to a visitor, and building it from the games array is the
+        * only version that exists in the server-rendered HTML. Waiting for
+        * Embla to report its snaps would leave the space empty on a slow
+        * connection and then shove the page down when it filled. With one slide
+        * in view and the default `slidesToScroll`, a game index is a snap
         * index, which is what `scrollTo` wants.
         */}
       {total > 1 ? (
