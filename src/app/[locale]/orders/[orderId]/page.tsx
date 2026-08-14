@@ -156,6 +156,21 @@ export default async function OrderDetailPage({
         <span className="text-xs text-[var(--ink-faint)] tabular-nums" dir="ltr">
           {detail.placedAtLabel}: {order.createdAt.slice(0, 16).replace("T", " ")}
         </span>
+
+        {/*
+          * Only for an order that has actually been paid for. An invoice for
+          * something nobody paid is a document that says nothing true, and the
+          * service refuses to issue one — so offering the link would be offering
+          * a 404.
+          */}
+        {order.paymentStatus === "paid" || order.paymentStatus === "refunded" ? (
+          <Link
+            href={`/${locale}/orders/${order.id}/invoice`}
+            className="text-xs font-medium text-[var(--accent)] underline underline-offset-4"
+          >
+            {messages.invoice.viewInvoice}
+          </Link>
+        ) : null}
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">

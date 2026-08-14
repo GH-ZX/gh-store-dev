@@ -142,5 +142,26 @@
     "failed": "فاشل",
     "refunded": "مُسترجع",
     "reconcile": "قيد المراجعة"
+  },
+  "invoice": {
+    "title": "الفاتورة",
+    "backToOrder": "العودة إلى الطلب",
+    "printAction": "حفظ أو طباعة",
+    "numberLabel": "رقم الفاتورة",
+    "issuedLabel": "تاريخ الإصدار",
+    "orderLabel": "الطلب",
+    "orderDateLabel": "تاريخ الطلب",
+    "billedTo": "الفاتورة إلى",
+    "customerFallback": "العميل",
+    "itemLabel": "الصنف",
+    "quantityLabel": "الكمية",
+    "unitPriceLabel": "سعر الوحدة",
+    "lineTotalLabel": "المبلغ",
+    "subtotalLabel": "المجموع الفرعي",
+    "discountLabel": "الخصم",
+    "totalLabel": "الإجمالي",
+    "paidWith": "طريقة الدفع",
+    "footerNote": "تسجّل هذه الفاتورة عملية الشراء كما كانت وقت إصدارها.",
+    "viewInvoice": "عرض الفاتورة"
   }
 }

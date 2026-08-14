@@ -58,7 +58,7 @@ export function SiteFooter({ locale, messages, socialLinks, year }: SiteFooterPr
   ];
 
   return (
-    <footer className="relative mt-8 border-t border-[var(--line)] pt-14 pb-10">
+    <footer data-site-footer className="relative mt-8 border-t border-[var(--line)] pt-14 pb-10">
       <div className="gh-mesh opacity-60" aria-hidden="true" />
       <div className="gh-page relative">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]">

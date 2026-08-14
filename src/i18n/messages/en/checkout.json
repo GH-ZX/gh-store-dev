@@ -142,5 +142,26 @@
     "failed": "Failed",
     "refunded": "Refunded",
     "reconcile": "Under review"
+  },
+  "invoice": {
+    "title": "Invoice",
+    "backToOrder": "Back to the order",
+    "printAction": "Save or print",
+    "numberLabel": "Invoice",
+    "issuedLabel": "Issued",
+    "orderLabel": "Order",
+    "orderDateLabel": "Order date",
+    "billedTo": "Billed to",
+    "customerFallback": "Customer",
+    "itemLabel": "Item",
+    "quantityLabel": "Qty",
+    "unitPriceLabel": "Unit price",
+    "lineTotalLabel": "Amount",
+    "subtotalLabel": "Subtotal",
+    "discountLabel": "Discount",
+    "totalLabel": "Total",
+    "paidWith": "Paid with",
+    "footerNote": "This invoice records the purchase as it stood when it was issued.",
+    "viewInvoice": "View the invoice"
   }
 }

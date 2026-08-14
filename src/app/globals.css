@@ -191,3 +191,35 @@ html:not([data-theme="light"]) .gh-only-light {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Printing.
+ *
+ * The invoice is saved with the browser's own print-to-PDF rather than a
+ * rasteriser shipped to every visitor, so the page has to survive being put on
+ * paper: navigation, buttons, and the decorative shell come off, and the
+ * document keeps ink-on-white regardless of the theme the reader chose. A dark
+ * invoice is a cartridge nobody asked to spend.
+ */
+@media print {
+  .gh-no-print,
+  header[data-site-header],
+  footer[data-site-footer] {
+    display: none !important;
+  }
+
+  :root {
+    --canvas: #ffffff;
+    --shell: #ffffff;
+    --surface: #ffffff;
+    --ink: #111827;
+    --ink-soft: #1f2937;
+    --ink-muted: #4b5563;
+    --ink-faint: #6b7280;
+    --line: #d1d5db;
+  }
+
+  body {
+    background: #ffffff;
+  }
+}

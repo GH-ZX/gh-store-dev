@@ -79,7 +79,8 @@ export function SiteHeader({
     : [];
 
   return (
-    <header className="sticky top-0 z-40 pt-3 sm:pt-5">
+    // Marked so the print stylesheet can take the chrome off an invoice.
+    <header data-site-header className="sticky top-0 z-40 pt-3 sm:pt-5">
       <div className="gh-page">
         {/*
           * The bar does not mirror. `dir="ltr"` pins the physical order — mark on
