@@ -4,7 +4,9 @@
 **Technical repository name:** `gh-store`  
 **Reference repository:** `echocore-store`  
 **Archive:** `gh-store-old`  
-**Current status:** Stages 0–11 complete; stage 12 is the remaining work
+**Current status:** Stages 0–11 complete; stage 12 started — CI now runs the
+test suite, and the remaining release work is E2E coverage, accessibility and
+performance passes, the production Supabase project, and the domain
 
 ## Progress Snapshot
 
@@ -22,7 +24,7 @@
 | 9. G2Bulk fulfillment | Complete | Sync, top-ups, redeem codes, reconciliation, and the supplier callback done |
 | 10. Payments | Complete | Manual recharge, Sam invoices, SyriatelCash, ShamCash, payments reconciliation, and Binance Pay |
 | 11. Admin operations | Complete | Every daily operation runs from the dashboard: catalog import and hand-built catalog, pricing, orders and fulfilment, recharges, payments, customers, access, support, reviews, notifications, activity log, website content, theme, and SEO |
-| 12. Release | Pending | QA, staging UAT, Cloudflare domain, production launch |
+| 12. Release | In progress | CI runs the tests; E2E, accessibility, production project, domain, and UAT remain |
 
 ## Working Rules
 
@@ -147,7 +149,11 @@ starter-template UI. The design contract lives in
 - Configurable homepage driven by `store_settings.home_layout`, with sections
   resolved concurrently and dropped individually when empty or failing.
 - Featured hero carousel following the APG pattern, with no rotation under
-  reduced motion.
+  reduced motion. Rebuilt on Embla v8 once the hand-rolled drag, timer and pause
+  rules had become reimplementations of a solved problem; `direction` is passed
+  to the library rather than left to CSS, because an RTL document driving an LTR
+  carousel drags backwards. Rotation, interval, looping, and slide alignment are
+  set from the dashboard.
 - Games, gift cards, sale offers, and search with a type filter.
 - Game detail and offer detail, including the account fields checkout will ask
   for.
@@ -408,9 +414,19 @@ is reachable from the dashboard without a SQL statement.
 
 ## Stage 12: QA and Release
 
-**Status: Pending**
+**Status: In progress**
 
-- Add unit, integration, SQL, provider, and Playwright E2E coverage.
+### Done
+
+- CI runs `pnpm test`. It did not, until now: the pipeline ran lint, typecheck,
+  build, and the OpenNext build, and never the suite — so four hundred
+  assertions, including every rule about refunds, idempotency and provider
+  failure classification, gated nothing.
+
+### Remaining
+
+- Add integration, SQL, provider, and Playwright E2E coverage on top of the unit
+  suite that now runs.
 - Test Arabic RTL, English LTR, mobile, desktop, keyboard, and reduced motion.
 - Run accessibility, performance, bundle, and Core Web Vitals checks.
 - Create separate Supabase production project.
