@@ -4,10 +4,12 @@ import Link from "next/link";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { GameEditor } from "@/components/live-edit/game-editor";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
+import type { AdminMessages } from "@/i18n/messages";
 import type { StoreGame } from "@/lib/catalog/game-mapper";
 import { cn } from "@/lib/cn";
 import { formatMessage } from "@/i18n/messages";
@@ -61,6 +63,8 @@ export type HeroCarouselProps = {
     details: string;
     featured: string;
   };
+  /** Present only for an administrator; turns the per-slide edit pencil on. */
+  liveEdit?: AdminMessages["liveEdit"] | null;
   className?: string;
 };
 
@@ -97,6 +101,7 @@ export function HeroCarousel({
   loop = true,
   align = "center",
   labels,
+  liveEdit,
   className,
 }: HeroCarouselProps) {
   const total = games.length;
@@ -318,6 +323,24 @@ export function HeroCarousel({
                       </span>
                     </div>
                   </Link>
+
+                  {/*
+                    * Beside the link rather than inside it, for the reason the
+                    * details pill became a span: one link per slide. Only the
+                    * slide in view carries one, so a pencil cannot be tabbed to
+                    * on a slide nobody can see.
+                    */}
+                  {liveEdit && isActive ? (
+                    <div className="absolute top-4 start-4 z-10">
+                      <GameEditor
+                        gameId={game.id}
+                        gameSlug={game.slug}
+                        label={game.name}
+                        locale={locale}
+                        messages={liveEdit}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               );
             })}

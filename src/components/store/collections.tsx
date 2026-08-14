@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { GameCard } from "@/components/store/game-card";
 import { OfferCard, type OfferCardLabels } from "@/components/store/offer-card";
 import { Rail, RailItem } from "@/components/ui/rail";
@@ -86,6 +87,14 @@ export type GameCollectionProps = {
   railLabel?: string;
   /** How many leading tiles load eagerly, for above-the-fold rows. */
   priorityCount?: number;
+  /**
+   * Control layered over each tile — the owner's edit pencil.
+   *
+   * A callback rather than a flag because the collection has no business
+   * knowing what the control is. Called only where the caller supplies one, so
+   * a visitor's page renders exactly what it did before.
+   */
+  renderOverlay?: (game: StoreGame) => ReactNode;
   className?: string;
 };
 
@@ -96,6 +105,7 @@ export function GameGrid({
   layout = "grid",
   railLabel,
   priorityCount = 0,
+  renderOverlay,
   className,
 }: GameCollectionProps) {
   if (layout === "rail" && railLabel) {
@@ -103,7 +113,13 @@ export function GameGrid({
       <Rail label={railLabel} itemWidth="sm" className={className}>
         {games.map((game, index) => (
           <RailItem key={game.id}>
-            <GameCard game={game} locale={locale} labels={labels} priority={index < priorityCount} />
+            <GameCard
+              game={game}
+              locale={locale}
+              labels={labels}
+              priority={index < priorityCount}
+              overlay={renderOverlay?.(game)}
+            />
           </RailItem>
         ))}
       </Rail>
@@ -114,7 +130,13 @@ export function GameGrid({
     <ul className={cn("grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5", className)}>
       {games.map((game, index) => (
         <li key={game.id}>
-          <GameCard game={game} locale={locale} labels={labels} priority={index < priorityCount} />
+          <GameCard
+            game={game}
+            locale={locale}
+            labels={labels}
+            priority={index < priorityCount}
+            overlay={renderOverlay?.(game)}
+          />
         </li>
       ))}
     </ul>

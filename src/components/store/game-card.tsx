@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
 import { ArrowIcon } from "@/components/ui/icons";
@@ -20,11 +21,27 @@ export type GameCardProps = {
   /** Trailing metadata line, e.g. a "from $2.50" price. */
   meta?: string;
   priority?: boolean;
+  /**
+   * Control layered over the tile, outside the link.
+   *
+   * The whole tile is one link, so anything clickable has to sit beside it
+   * rather than inside it — nesting would be invalid HTML that browsers repair
+   * by guessing which of the two was meant.
+   */
+  overlay?: ReactNode;
   className?: string;
 };
 
-export function GameCard({ game, locale, labels, meta, priority = false, className }: GameCardProps) {
-  return (
+export function GameCard({
+  game,
+  locale,
+  labels,
+  meta,
+  priority = false,
+  overlay,
+  className,
+}: GameCardProps) {
+  const card = (
     <Link
       href={`/${locale}/games/${game.slug}`}
       className={cn(
@@ -82,5 +99,16 @@ export function GameCard({ game, locale, labels, meta, priority = false, classNa
         </span>
       </div>
     </Link>
+  );
+
+  if (!overlay) {
+    return card;
+  }
+
+  return (
+    <div className="relative">
+      {card}
+      <div className="absolute top-3 start-3 z-10">{overlay}</div>
+    </div>
   );
 }

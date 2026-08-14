@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { GameEditor } from "@/components/live-edit/game-editor";
+import { SectionEditor } from "@/components/live-edit/section-editor";
 import { ReviewCard } from "@/components/store/review-card";
 import { GameGrid, OfferGrid } from "@/components/store/collections";
 import { ButtonLink } from "@/components/ui/button";
@@ -6,7 +8,7 @@ import { ArrowIcon } from "@/components/ui/icons";
 import { Rail, RailItem } from "@/components/ui/rail";
 import { Section, SectionHeader } from "@/components/ui/section";
 import type { Locale } from "@/i18n/config";
-import type { CatalogMessages, CommonMessages, HomeMessages } from "@/i18n/messages";
+import type { AdminMessages, CatalogMessages, CommonMessages, HomeMessages } from "@/i18n/messages";
 import { getGameCardLabels, getOfferCardLabels } from "@/lib/catalog/labels";
 import {
   getHomeSectionPagePath,
@@ -31,6 +33,12 @@ export type HomeSectionsProps = {
   catalog: CatalogMessages;
   home: HomeMessages;
   socialLinks: SocialLink[];
+  /**
+   * Present only for an administrator, which is what turns the in-place editors
+   * on. Passed as the messages rather than a boolean so a visitor's page never
+   * carries dashboard copy it has no use for.
+   */
+  liveEdit?: AdminMessages["liveEdit"] | null;
 };
 
 /** Default subtitle per section type, used when an admin set no custom one. */
@@ -60,6 +68,7 @@ export function HomeSections({
   catalog,
   home,
   socialLinks,
+  liveEdit,
 }: HomeSectionsProps) {
   return (
     <>
@@ -76,6 +85,22 @@ export function HomeSections({
             subtitle={subtitle}
             viewAllHref={pagePath ? `/${locale}${pagePath}` : undefined}
             viewAllLabel={pagePath ? common.actions.viewAll : undefined}
+            actions={
+              liveEdit ? (
+                <SectionEditor
+                  sectionId={section.id}
+                  titleAr={section.titleAr}
+                  titleEn={section.titleEn}
+                  subtitleAr={section.subtitleAr}
+                  subtitleEn={section.subtitleEn}
+                  enabled={section.enabled}
+                  limit={section.limit}
+                  usesLimit={section.type !== "social_links"}
+                  label={title}
+                  messages={liveEdit}
+                />
+              ) : undefined
+            }
           />
         );
 
@@ -88,6 +113,19 @@ export function HomeSections({
                 games={resolved.games}
                 locale={locale}
                 labels={getGameCardLabels(common)}
+                renderOverlay={
+                  liveEdit
+                    ? (game) => (
+                        <GameEditor
+                          gameId={game.id}
+                          gameSlug={game.slug}
+                          label={game.name}
+                          locale={locale}
+                          messages={liveEdit}
+                        />
+                      )
+                    : undefined
+                }
               />
             </Section>
           );
@@ -141,9 +179,25 @@ export function HomeSections({
               <div className="gh-mesh" aria-hidden="true" />
               <div className="relative flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div className="max-w-lg">
-                  <h2 className="text-[clamp(1.5rem,3.4vw,2.25rem)] leading-[1.15] font-semibold tracking-[-0.03em] text-[var(--ink)]">
-                    {title}
-                  </h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-[clamp(1.5rem,3.4vw,2.25rem)] leading-[1.15] font-semibold tracking-[-0.03em] text-[var(--ink)]">
+                      {title}
+                    </h2>
+                    {liveEdit ? (
+                      <SectionEditor
+                        sectionId={section.id}
+                        titleAr={section.titleAr}
+                        titleEn={section.titleEn}
+                        subtitleAr={section.subtitleAr}
+                        subtitleEn={section.subtitleEn}
+                        enabled={section.enabled}
+                        limit={section.limit}
+                        usesLimit={false}
+                        label={title}
+                        messages={liveEdit}
+                      />
+                    ) : null}
+                  </div>
                   {subtitle ? (
                     <p className="mt-3 text-base leading-7 text-[var(--ink-soft)]">{subtitle}</p>
                   ) : null}

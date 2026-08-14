@@ -155,6 +155,22 @@ export function TrashIcon(props: IconProps) {
   );
 }
 
+/**
+ * A pencil, for editing a thing in place.
+ *
+ * Not directional despite the diagonal: it depicts an object rather than a way
+ * to go, so it is the same glyph in Arabic — mirroring it would only make a
+ * left-handed pencil.
+ */
+export function PencilIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M16.6 3.9a1.9 1.9 0 0 1 2.7 0l.8.8a1.9 1.9 0 0 1 0 2.7L8.9 18.6 4.5 19.5l.9-4.4z" />
+      <path d="M15 5.5 18.5 9" />
+    </Icon>
+  );
+}
+
 export function BellIcon(props: IconProps) {
   return (
     <Icon {...props}>
