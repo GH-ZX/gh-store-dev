@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Tektur } from "next/font/google";
 import { getLocaleDirection, isLocale } from "@/i18n/config";
 import { APP_NAME } from "@/lib/config/app";
 import { getSiteUrl } from "@/lib/seo";
@@ -15,6 +15,16 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+/*
+ * Brand display font for the logo lockup. Variable font, so no `weight` is
+ * needed; self-hosted at build time like the Geist pair above.
+ */
+const tektur = Tektur({
+  variable: "--font-tektur",
   subsets: ["latin"],
   display: "swap",
 });
@@ -45,7 +55,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={resolvedLocale}
       dir={getLocaleDirection(resolvedLocale)}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${tektur.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
  * the label.
  */
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "glass";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "glass" | "dangerGhost";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
@@ -20,6 +20,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   secondary:
     "border border-[var(--line-strong)] bg-[var(--surface)] text-[var(--ink)] hover:border-[color-mix(in_srgb,var(--accent)_60%,transparent)] hover:bg-[var(--surface-strong)]",
   ghost: "text-[var(--ink-soft)] hover:bg-[var(--surface)] hover:text-[var(--ink)]",
+  dangerGhost: "text-[var(--danger)] hover:bg-[var(--danger-surface)] hover:text-[var(--danger)]",
   glass:
     "border border-[var(--line)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] text-[var(--ink)] backdrop-blur-xl hover:border-[var(--line-strong)]",
 };

@@ -154,7 +154,7 @@ export function AccountMenu({
 
           <form action={signOutAction} className="border-t border-[var(--line)] pt-2">
             <input type="hidden" name="locale" value={locale} />
-            <Button type="submit" variant="ghost" size="sm" fullWidth>
+            <Button type="submit" variant="dangerGhost" size="sm" fullWidth>
               {messages.account.signOut}
             </Button>
           </form>

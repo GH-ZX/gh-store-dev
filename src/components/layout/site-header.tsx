@@ -99,7 +99,7 @@ export function SiteHeader({
         >
           <Link href={`/${locale}`} className="flex shrink-0 items-center gap-2.5" aria-label={BRAND.name}>
             <span
-              className="grid size-9 place-items-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[linear-gradient(140deg,color-mix(in_srgb,var(--accent)_28%,var(--surface-strong)),var(--surface-strong))] text-xs font-bold text-[var(--accent-strong)]"
+              className="grid size-9 place-items-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[linear-gradient(140deg,color-mix(in_srgb,var(--accent)_28%,var(--surface-strong)),var(--surface-strong))] font-brand text-xs font-bold text-[var(--accent-strong)]"
               aria-hidden="true"
             >
               GH

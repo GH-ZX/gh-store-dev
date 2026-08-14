@@ -14,6 +14,8 @@ export type SessionSummary = {
   userId: string;
   email: string | null;
   displayName: string;
+  /** Null when the account has no picture; the caller falls back to initials. */
+  avatarUrl: string | null;
   isAdmin: boolean;
 };
 
@@ -40,7 +42,7 @@ export async function getSessionSummary(): Promise<SessionSummary | null> {
   const email = typeof claims?.claims?.email === "string" ? claims.claims.email : null;
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, is_active, full_name, username, email")
+    .select("role, is_active, full_name, username, email, avatar_url")
     .eq("id", userId)
     .maybeSingle();
 
@@ -52,6 +54,7 @@ export async function getSessionSummary(): Promise<SessionSummary | null> {
       profile?.username ?? null,
       profile?.email ?? email,
     ),
+    avatarUrl: profile?.avatar_url?.trim() || null,
     isAdmin: isAdminProfile(profile ?? null),
   };
 }

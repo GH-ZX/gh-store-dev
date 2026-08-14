@@ -99,9 +99,9 @@
   --ink-muted: #5d7086;
   --ink-faint: #78899b;
 
-  --accent: #0b7fa6;
-  --accent-strong: #075d7c;
-  --accent-deep: #064c66;
+  --accent: #06607b;
+  --accent-strong: #044a5e;
+  --accent-deep: #023747;
   --accent-ink: #f6fcff;
   --accent-2: #6a4fd8;
   --accent-2-ink: #f8f6ff;
@@ -120,9 +120,9 @@
   --elevation-1: 0 1px 2px rgba(13, 28, 46, 0.08);
   --elevation-2: 0 18px 40px -24px rgba(13, 28, 46, 0.28);
   --elevation-3: 0 40px 84px -40px rgba(13, 28, 46, 0.32);
-  --glow-accent: 0 0 0 1px rgba(11, 127, 166, 0.24), 0 18px 44px -26px rgba(11, 127, 166, 0.4);
+  --glow-accent: 0 0 0 1px rgba(6, 96, 123, 0.24), 0 18px 44px -26px rgba(6, 96, 123, 0.4);
 
-  --glow-1: rgba(11, 127, 166, 0.14);
+  --glow-1: rgba(6, 96, 123, 0.14);
   --glow-2: rgba(106, 79, 216, 0.12);
   --glow-3: rgba(180, 102, 26, 0.08);
 }

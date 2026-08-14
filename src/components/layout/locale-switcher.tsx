@@ -11,13 +11,19 @@ import { SUPPORTED_LOCALES, type Locale } from "@/i18n/config";
  * Swaps only the locale segment so the visitor stays on the page they are
  * reading, query string included. Rendered as real links, so it works without
  * JavaScript and is crawlable.
+ *
+ * Two shapes share the one component: a `switch` is the pill with both options
+ * side by side, and a `toggle` is a single button for the other language — for
+ * places too cramped for the pill, like the mobile drawer's footer.
  */
 export function LocaleSwitcher({
   locale,
   labels,
+  variant = "switch",
 }: {
   locale: Locale;
   labels: { switchLabel: string; arabic: string; english: string };
+  variant?: "switch" | "toggle";
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -35,6 +41,23 @@ export function LocaleSwitcher({
     ar: labels.arabic,
     en: labels.english,
   };
+
+  if (variant === "toggle") {
+    const target: Locale = locale === "en" ? "ar" : "en";
+
+    return (
+      <Link
+        href={hrefFor(target)}
+        hrefLang={target}
+        lang={target}
+        aria-label={labels.switchLabel}
+        className="inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line)] px-3 text-sm font-medium text-[var(--ink-soft)] transition-colors duration-150 hover:border-[var(--line-strong)] hover:text-[var(--ink)] active:bg-[var(--surface-strong)]"
+      >
+        <GlobeIcon className="size-4 shrink-0 text-[var(--ink-muted)]" />
+        <span dir={target === "ar" ? "rtl" : "ltr"}>{localeLabels[target]}</span>
+      </Link>
+    );
+  }
 
   return (
     <div
