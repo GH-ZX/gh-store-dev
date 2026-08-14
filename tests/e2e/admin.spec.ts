@@ -161,3 +161,41 @@ test.describe("signing out", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });
+
+test.describe("the dashboard navigation on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("shows a group bar and the active group's subtabs", async ({ page }) => {
+    await page.goto("/ar/dashboard/orders", { waitUntil: "domcontentloaded" });
+
+    // Group bar: the four groups, with Operations active. The group buttons are
+    // plain links, so they answer to the link role.
+    const groupBar = page.getByRole("navigation", { name: "أقسام لوحة الإدارة" }).first();
+    await expect(groupBar).toBeVisible();
+    await expect(groupBar.getByRole("link", { name: "العمليات" })).toHaveAttribute("aria-current", "page");
+
+    // Subtabs: only the active group's pages. Each subtab carries an explicit
+    // `role="tab"`, which replaces the implicit link role in the accessibility
+    // tree, so they answer to the tab role — not the link role.
+    await expect(groupBar.getByRole("tab", { name: "الطلبات" })).toHaveAttribute("aria-current", "page");
+    await expect(groupBar.getByRole("tab", { name: "طلبات الشحن" })).toBeVisible();
+    await expect(groupBar.getByRole("tab", { name: "المدفوعات" })).toBeVisible();
+    await expect(groupBar.getByRole("tab", { name: "الزبائن" })).toBeVisible();
+    await expect(groupBar.getByRole("tab", { name: "الدعم" })).toBeVisible();
+    await expect(groupBar.getByRole("link", { name: "الألعاب" })).toHaveCount(0);
+  });
+
+  test("switching groups swaps the subtabs and navigates", async ({ page }) => {
+    await page.goto("/ar/dashboard", { waitUntil: "domcontentloaded" });
+
+    const groupBar = page.getByRole("navigation", { name: "أقسام لوحة الإدارة" }).first();
+
+    // On the overview page only the overview subtab is rendered — the catalog
+    // games subtab does not exist until the catalog group is active. The group
+    // buttons are plain links named after the group label (الكتالوج).
+    await groupBar.getByRole("link", { name: "الكتالوج" }).click();
+
+    await expect(page).toHaveURL(/\/ar\/dashboard\/catalog$/);
+    await expect(groupBar.getByRole("tab", { name: "الألعاب" })).toHaveAttribute("aria-selected", "true");
+  });
+});
