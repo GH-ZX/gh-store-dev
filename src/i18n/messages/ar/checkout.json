@@ -91,6 +91,32 @@
     "supportAction": "تواصل مع الدعم",
     "walletAction": "سجل المحفظة"
   },
+  "review": {
+    "title": "كيف كانت التجربة؟",
+    "description": "تقييمك يساعد بقية العملاء على القرار. ننشره بعد قراءته.",
+    "ratingLabel": "التقييم",
+    "ratingOption": "{rating} من 5",
+    "ratingGiven": "أعطيت {rating} من 5.",
+    "nameLabel": "الاسم الظاهر",
+    "nameHint": "يظهر هذا الاسم مع تقييمك في المتجر.",
+    "bodyLabel": "تقييمك",
+    "submitAction": "إرسال التقييم",
+    "sending": "جارٍ الإرسال…",
+    "thanks": "شكرًا لك. سننشره بعد قراءته.",
+    "yoursTitle": "تقييمك",
+    "pendingNote": "بانتظار النشر.",
+    "statuses": {
+      "pending": "بالانتظار",
+      "approved": "منشور",
+      "rejected": "غير منشور"
+    },
+    "errors": {
+      "invalid_input": "يرجى اختيار تقييم وكتابة بضع كلمات.",
+      "not_eligible": "لا يمكن تقييم إلا طلبًا تم تسليمه.",
+      "already_reviewed": "سبق أن قيّمت هذا الطلب.",
+      "unknown": "حدث خطأ ما. لم يُرسل شيء — يرجى المحاولة مرة أخرى."
+    }
+  },
   "statuses": {
     "pending": "قيد الانتظار",
     "payment_pending": "بانتظار الدفع",

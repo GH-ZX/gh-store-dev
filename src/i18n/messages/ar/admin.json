@@ -45,6 +45,7 @@
       "payments": "المدفوعات",
       "customers": "الزبائن",
       "support": "الدعم",
+      "reviews": "التقييمات",
       "providers": "الموردون والـ API",
       "website": "الموقع والواجهة",
       "operations": "السجلات"
@@ -674,6 +675,35 @@
       "not_found": "هذا الطلب لم يعد موجودًا.",
       "closed": "هذا الطلب مغلق.",
       "unknown": "حدث خطأ ما. لم يُرسل شيء — يرجى المحاولة مرة أخرى."
+    }
+  },
+  "reviews": {
+    "eyebrow": "التقييمات",
+    "title": "تقييمات العملاء",
+    "description": "ما كتبه العملاء بعد التسليم. لا يظهر شيء في المتجر حتى توافق عليه.",
+    "filtersLabel": "أي التقييمات",
+    "filterAll": "الكل",
+    "empty": "لا توجد تقييمات بهذه الحالة.",
+    "unavailable": "تعذّرت قراءة التقييمات، فلم نعرض شيئًا بدل قائمة فارغة.",
+    "ratingLabel": "{rating} من 5",
+    "orderLabel": "الطلب",
+    "noteLabel": "ملاحظة خاصة",
+    "noteHint": "لا يراها إلا المديرون.",
+    "approveAction": "الموافقة",
+    "rejectAction": "الرفض",
+    "featureAction": "تمييز",
+    "unfeatureAction": "إلغاء التمييز",
+    "saving": "جارٍ الحفظ…",
+    "featuredLabel": "مميّز",
+    "reviewedBy": "راجعه {name}",
+    "statuses": {
+      "pending": "بالانتظار",
+      "approved": "منشور",
+      "rejected": "مرفوض"
+    },
+    "errors": {
+      "not_found": "هذا التقييم لم يعد موجودًا.",
+      "unknown": "حدث خطأ ما. لم يتغيّر شيء — يرجى المحاولة مرة أخرى."
     }
   },
   "logs": {

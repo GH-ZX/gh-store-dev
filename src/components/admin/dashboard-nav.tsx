@@ -42,6 +42,7 @@ export function DashboardNav({ locale, messages }: DashboardNavProps) {
       items: [
         { key: "games", href: `${base}/catalog` },
         { key: "website", href: `${base}/website` },
+        { key: "reviews", href: `${base}/reviews` },
       ],
     },
     {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { OrderStatusPanel } from "@/components/checkout/order-status";
+import { ReviewForm } from "@/components/reviews/review-form";
 import { Badge } from "@/components/ui/badge";
 import { ChevronIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
@@ -11,6 +12,7 @@ import { formatPrice } from "@/lib/format/money";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { buildPageMetadata } from "@/lib/seo";
 import { getMyOrder, type MyOrderItem } from "@/lib/services/orders-read.service";
+import { getMyReviewForOrder } from "@/lib/services/reviews.service";
 import { getSessionSummary } from "@/lib/services/session.service";
 
 /**
@@ -119,6 +121,14 @@ export default async function OrderDetailPage({
 
   const detail = messages.orderDetail;
   const submittedFields = order.items.flatMap((item) => item.fields);
+
+  /*
+   * Only a delivered order can be reviewed, so nothing is asked of the reviews
+   * table until the order is complete. The existing review is fetched in the
+   * same breath: the form and "what you already wrote" are the same slot, and
+   * deciding between them needs the answer either way.
+   */
+  const existingReview = order.status === "completed" ? await getMyReviewForOrder(orderId) : null;
 
   return (
     <Section spacing="page" mesh>
@@ -257,6 +267,18 @@ export default async function OrderDetailPage({
             <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
               <p className="text-xs font-medium text-[var(--ink-faint)]">{detail.noteLabel}</p>
               <p className="mt-1 text-sm leading-6 text-[var(--ink-soft)]">{order.customerNote}</p>
+            </div>
+          ) : null}
+
+          {order.status === "completed" ? (
+            <div className="mt-6 border-t border-[var(--line)] pt-6">
+              <ReviewForm
+                locale={locale}
+                orderId={order.id}
+                defaultName={session.displayName}
+                existing={existingReview}
+                messages={messages.review}
+              />
             </div>
           ) : null}
         </section>

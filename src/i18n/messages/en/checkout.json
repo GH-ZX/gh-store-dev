@@ -91,6 +91,32 @@
     "supportAction": "Contact support",
     "walletAction": "Wallet history"
   },
+  "review": {
+    "title": "How did it go?",
+    "description": "Your review helps other customers decide. We publish it once we have read it.",
+    "ratingLabel": "Rating",
+    "ratingOption": "{rating} out of 5",
+    "ratingGiven": "You gave {rating} out of 5.",
+    "nameLabel": "Name to show",
+    "nameHint": "This appears with your review on the storefront.",
+    "bodyLabel": "Your review",
+    "submitAction": "Send review",
+    "sending": "Sending…",
+    "thanks": "Thank you. We will publish it once we have read it.",
+    "yoursTitle": "Your review",
+    "pendingNote": "Waiting to be published.",
+    "statuses": {
+      "pending": "Waiting",
+      "approved": "Published",
+      "rejected": "Not published"
+    },
+    "errors": {
+      "invalid_input": "Please give a rating and write a few words.",
+      "not_eligible": "Only a delivered order can be reviewed.",
+      "already_reviewed": "You have already reviewed this order.",
+      "unknown": "Something went wrong. Nothing was sent — please try again."
+    }
+  },
   "statuses": {
     "pending": "Pending",
     "payment_pending": "Awaiting payment",

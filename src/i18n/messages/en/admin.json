@@ -45,6 +45,7 @@
       "payments": "Payments",
       "customers": "Customers",
       "support": "Support",
+      "reviews": "Reviews",
       "providers": "Providers and API",
       "website": "Website",
       "operations": "Logs"
@@ -674,6 +675,35 @@
       "not_found": "That request no longer exists.",
       "closed": "This request is closed.",
       "unknown": "Something went wrong. Nothing was sent — please try again."
+    }
+  },
+  "reviews": {
+    "eyebrow": "Reviews",
+    "title": "Customer reviews",
+    "description": "What customers wrote after a delivery. Nothing appears on the storefront until you approve it.",
+    "filtersLabel": "Which reviews",
+    "filterAll": "All",
+    "empty": "No reviews at this status.",
+    "unavailable": "The reviews could not be read, so nothing is shown rather than an empty list.",
+    "ratingLabel": "{rating} out of 5",
+    "orderLabel": "Order",
+    "noteLabel": "Private note",
+    "noteHint": "Only administrators see this.",
+    "approveAction": "Approve",
+    "rejectAction": "Reject",
+    "featureAction": "Feature",
+    "unfeatureAction": "Unfeature",
+    "saving": "Saving…",
+    "featuredLabel": "Featured",
+    "reviewedBy": "Reviewed by {name}",
+    "statuses": {
+      "pending": "Waiting",
+      "approved": "Published",
+      "rejected": "Rejected"
+    },
+    "errors": {
+      "not_found": "That review no longer exists.",
+      "unknown": "Something went wrong. Nothing was changed — please try again."
     }
   },
   "logs": {
