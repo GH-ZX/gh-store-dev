@@ -488,10 +488,27 @@ is reachable from the dashboard without a SQL statement.
   supply the heading, because each slide is a different game and a heading built
   from one would rename the store every few seconds.
 
+### Done
+
+- Signed-in and administrator browser suite, in `tests/e2e/admin.setup.ts` and
+  `tests/e2e/admin.spec.ts`. The setup drives the real `/ar/login` form with an
+  account the owner supplies through `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`
+  (in `.env.local`, never committed) and saves the session; the spec then
+  covers the wrong-password error, the redirect to the account page, the guard
+  sending a signed-out visitor away from `/dashboard` with its return path,
+  the overview, the theme editor's controls, every dashboard page answering and
+  fitting, and signing out. The two admin projects exist only when those
+  variables are set, so a machine or CI without an account runs the anonymous
+  suite untouched.
+
+  It found one real defect: the theme presets lived in a `<label>`, and a
+  label's text bleeds into the first control inside it, so the first preset
+  button announced a wall of text ("أزواج جاهزة نيلي زمردي…") instead of its
+  name. They are now a `fieldset` with a `legend`, which is what a group of
+  toggle buttons is.
+
 ### Remaining
 
-- Extend the browser suite to the signed-in and administrator journeys, which
-  need an account and so belong with the staging acceptance run.
 - Add integration, SQL, and provider coverage on top of the unit suite.
 - Test keyboard navigation.
 - Run accessibility, performance, bundle, and Core Web Vitals checks.

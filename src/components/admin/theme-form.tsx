@@ -104,7 +104,8 @@ export function ThemeForm({ theme, messages, errors }: ThemeFormProps) {
 
   return (
     <form action={formAction} className="grid gap-4">
-      <FieldShell label={messages.presetsLabel} hint={messages.presetsHint}>
+      <fieldset className="grid gap-1.5">
+        <legend className="text-xs font-medium text-[var(--ink-soft)]">{messages.presetsLabel}</legend>
         <ul className="flex flex-wrap gap-2">
           {THEME_PRESETS.map((preset) => {
             const selected = active?.id === preset.id;
@@ -143,7 +144,8 @@ export function ThemeForm({ theme, messages, errors }: ThemeFormProps) {
             );
           })}
         </ul>
-      </FieldShell>
+        <span className="text-xs leading-5 text-[var(--ink-faint)]">{messages.presetsHint}</span>
+      </fieldset>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <ColourField
