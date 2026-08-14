@@ -31,9 +31,7 @@
     "errorDescription": "حاول تحديث الصفحة بعد قليل."
   },
   "locale": {
-    "switchLabel": "تغيير اللغة",
-    "arabic": "العربية",
-    "english": "English"
+    "switchLabel": "تغيير اللغة"
   },
   "theme": {
     "toggleLabel": "تغيير المظهر",

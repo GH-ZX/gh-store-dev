@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { Suspense } from "react";
-import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { SocialIcon } from "@/components/ui/brand-icons";
 import type { Locale } from "@/i18n/config";
 import type { CommonMessages } from "@/i18n/messages";
@@ -73,11 +71,6 @@ export function SiteFooter({ locale, messages, socialLinks, year }: SiteFooterPr
               <span className="text-base font-semibold tracking-tight text-[var(--ink)]">{BRAND.name}</span>
             </Link>
             <p className="mt-4 text-sm leading-6 text-[var(--ink-muted)]">{messages.footer.tagline}</p>
-            <Suspense fallback={null}>
-              <div className="mt-6 sm:hidden">
-                <LocaleSwitcher locale={locale} labels={messages.locale} />
-              </div>
-            </Suspense>
           </div>
 
           {columns.map((column) => (

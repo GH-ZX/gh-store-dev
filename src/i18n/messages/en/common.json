@@ -31,9 +31,7 @@
     "errorDescription": "Please refresh the page in a moment."
   },
   "locale": {
-    "switchLabel": "Change language",
-    "arabic": "العربية",
-    "english": "English"
+    "switchLabel": "Change language"
   },
   "theme": {
     "toggleLabel": "Change appearance",

@@ -143,12 +143,10 @@ export function SiteHeader({
              * boundary keeps that out of the static shell.
              */}
             <Suspense fallback={null}>
-              <div className="hidden lg:block">
-                <LocaleSwitcher locale={locale} labels={messages.locale} />
-              </div>
+              <LocaleSwitcher locale={locale} labels={messages.locale} />
             </Suspense>
 
-            {/* Below `lg` this lives in the drawer, beside the language button. */}
+            {/* Below `lg` this lives in the drawer instead. */}
             <div className="hidden lg:block">
               <ThemeToggle labels={messages.theme} />
             </div>
@@ -190,11 +188,6 @@ export function SiteHeader({
                 signIn: { href: `/${locale}/login`, label: messages.account.signIn },
               }}
               themeToggle={<ThemeToggle labels={messages.theme} />}
-              localeSwitcher={
-                <Suspense fallback={null}>
-                  <LocaleSwitcher locale={locale} labels={messages.locale} variant="toggle" />
-                </Suspense>
-              }
               signOut={
                 session ? (
                   <form action={signOutAction}>

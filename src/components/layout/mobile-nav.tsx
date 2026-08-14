@@ -71,8 +71,6 @@ export type MobileNavProps = {
     links: MobileNavLink[];
     signIn: { href: string; label: string };
   };
-  /** Language button, built by the server so it can read the query string. */
-  localeSwitcher?: ReactNode;
   /** Light/dark switch. Lives here on a phone, and in the bar from `lg` up. */
   themeToggle?: ReactNode;
   /** Sign-out form; a server action, so it cannot be assembled here. */
@@ -100,7 +98,6 @@ export function MobileNav({
   items,
   footerItems = [],
   account,
-  localeSwitcher,
   themeToggle,
   signOut,
 }: MobileNavProps) {
@@ -398,9 +395,8 @@ export function MobileNav({
                   * foot of the sheet because none of them navigates anywhere,
                   * and on a phone this is where a thumb already rests.
                   */}
-                {localeSwitcher || themeToggle || signOut ? (
+                {themeToggle || signOut ? (
                   <div className="flex shrink-0 items-center gap-2 border-t border-[var(--line)] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                    {localeSwitcher}
                     {themeToggle}
                     {signOut ? <div className="ms-auto">{signOut}</div> : null}
                   </div>
