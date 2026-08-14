@@ -10,7 +10,6 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
-  type TouchEvent as ReactTouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import { BellIcon } from "@/components/ui/icons";
@@ -23,18 +22,22 @@ import { cn } from "@/lib/cn";
  * languages, because the button that opens it is physically right in both
  * languages: the header bar above is pinned so it does not mirror.
  *
- * Built to be closed as easily as it is opened, which is the part that decides
- * whether a drawer feels good: it takes a drag toward the edge and follows the
- * finger while it does, the backdrop, Escape, a route change, and the breakpoint
- * growing past it. There is deliberately no close button — a free corner of a
- * full-height sheet is awkward to reach, and closing under the thumb that opened
- * it was impossible to keep in both reading directions.
+ * **Why this was rewritten.** The previous version kept the overlay mounted at
+ * all times and hid it with `visibility`, a `transition-[visibility]` and an
+ * `inert` attribute. That overlay is `fixed inset-0 z-50` and the header sits at
+ * `z-40`, so any one of those three not taking effect leaves an invisible sheet
+ * covering the whole viewport — and every tap on the header, including the
+ * button that opens it, lands on the sheet instead. A control that silently
+ * swallows the page is worse than one that animates less prettily, so the closed
+ * overlay is now `pointer-events-none` as well as hidden: three independent
+ * reasons it cannot intercept a tap, none of which depends on a transition
+ * finishing.
  *
- * Two details carry most of the feel. The panel slides on a generous 600ms in
- * and the same 600ms out, so the open and the close read as one unhurried
- * motion rather than a quick blink. And while a drag is in progress the
- * transition is switched off entirely, so the panel tracks the finger instead
- * of easing behind it.
+ * Closing is deliberately over-served: the backdrop, Escape, a route change, the
+ * breakpoint growing past it, and the button itself. There is no close button
+ * inside — a free corner of a full-height sheet is awkward to reach, and a
+ * control under the thumb that opened it could not be kept in both reading
+ * directions.
  */
 export type MobileNavLink = {
   href: string;
@@ -70,15 +73,11 @@ export type MobileNavProps = {
   };
   /** Language button, built by the server so it can read the query string. */
   localeSwitcher?: ReactNode;
+  /** Light/dark switch. Lives here on a phone, and in the bar from `lg` up. */
+  themeToggle?: ReactNode;
   /** Sign-out form; a server action, so it cannot be assembled here. */
   signOut?: ReactNode;
 };
-
-/** Past this many pixels dragged toward the edge, release closes the drawer. */
-const CLOSE_AFTER_PX = 72;
-
-/** A flick this fast closes regardless of how far it travelled. */
-const FLICK_PX_PER_MS = 0.5;
 
 /** First letter of the name, which is all an avatar fallback needs to say. */
 function initial(name: string): string {
@@ -102,18 +101,16 @@ export function MobileNav({
   footerItems = [],
   account,
   localeSwitcher,
+  themeToggle,
   signOut,
 }: MobileNavProps) {
   const [open, setOpen] = useState(false);
-  /** Pixels dragged toward the closing edge; null while no drag is running. */
-  const [drag, setDrag] = useState<number | null>(null);
 
   /*
    * The overlay renders into <body> through a portal, and only after hydration.
-   * On the server there is nothing to portal to, and a drawer that is closed by
-   * default should not paint at all. `useSyncExternalStore` hands the server a
-   * `false` snapshot and the client `true`, which keeps the two passes' markup
-   * identical while a mounted-state effect would trip React's own lint rules.
+   * `useSyncExternalStore` hands the server `false` and the client `true`, which
+   * keeps both render passes identical while a mounted-state effect would trip
+   * React's own lint rules.
    */
   const mounted = useSyncExternalStore(
     () => () => undefined,
@@ -123,195 +120,67 @@ export function MobileNav({
 
   const panelId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
-  const gesture = useRef<{ x: number; y: number; at: number; axis: "?" | "x" | "y" } | null>(null);
-
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname() ?? "";
-  /*
-   * A close is also a settle. `drag` only clears in `onTouchEnd`, so a drawer
-   * closed mid-gesture — Escape, the backdrop, a route change — would otherwise
-   * reopen sitting where the finger left it.
-   */
-  const close = useCallback(() => {
-    setDrag(null);
-    gesture.current = null;
-    setOpen(false);
-  }, []);
 
-  // Links close the drawer themselves; this covers the browser back and forward
-  // buttons, which change the route without any press inside the panel.
+  const close = useCallback(() => setOpen(false), []);
+
+  // Links close the drawer themselves; this covers the browser's back and
+  // forward buttons, which change the route with no press inside the panel.
   useEffect(() => {
     window.addEventListener("popstate", close);
 
     return () => window.removeEventListener("popstate", close);
   }, [close]);
 
-  /*
-   * Close when the viewport grows past the breakpoint this drawer belongs to.
-   * `lg:hidden` would take it off the screen on its own, but the scroll lock
-   * below is JavaScript and would stay applied — leaving a desktop layout that
-   * cannot be scrolled and no visible thing to blame.
-   */
-  useEffect(() => {
-    const query = window.matchMedia("(min-width: 64rem)");
-    const apply = () => {
-      if (query.matches) {
-        close();
-      }
-    };
-
-    apply();
-    query.addEventListener("change", apply);
-
-    return () => query.removeEventListener("change", apply);
-  }, [close]);
-
-  /*
-   * Focus is moved in, kept in, and handed back.
-   *
-   * Without the loop, tabbing walks straight out of an open drawer and onto the
-   * page behind it, which is invisible and inert — the sighted keyboard user
-   * loses the cursor entirely.
-   */
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    const returnTo = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    // There is no close control to land focus on, so the sheet itself takes it.
-    panelRef.current?.focus({ preventScroll: true });
-
-    /*
-     * Only the sheet deserves the screen while it is up: `aria-modal` and the
-     * tab loop keep keyboard focus inside, but a screen reader's virtual cursor
-     * reads the whole document. The rest of the <body> goes `inert` for the
-     * duration, then gets it back — including the header that holds this very
-     * drawer, which is found by climbing from the panel.
-     */
-    let host: HTMLElement | null = panelRef.current;
-    while (host?.parentElement && host.parentElement !== document.body) {
-      host = host.parentElement;
-    }
-    const inerted: HTMLElement[] = [];
-    if (host) {
-      for (const child of Array.from(document.body.children)) {
-        if (child instanceof HTMLElement && child !== host && !child.hasAttribute("inert")) {
-          child.setAttribute("inert", "");
-          inerted.push(child);
-        }
-      }
-    }
-
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         close();
-
-        return;
-      }
-
-      if (event.key !== "Tab" || !panelRef.current) {
-        return;
-      }
-
-      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (!first || !last) {
-        return;
-      }
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
       }
     }
 
+    /*
+     * The page behind must not scroll under the sheet. Restored to whatever it
+     * was rather than to `""`, so a page that sets its own overflow keeps it.
+     */
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
     document.addEventListener("keydown", onKeyDown);
+
+    // Focus moves into the sheet so a keyboard or screen-reader user is not
+    // left behind on the trigger, reading a page they can no longer reach.
+    panelRef.current?.focus();
 
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
-      inerted.forEach((element) => element.removeAttribute("inert"));
-      returnTo?.focus?.();
     };
   }, [open, close]);
 
   /*
-   * Drag to dismiss.
-   *
-   * The axis is locked on the first meaningful move and never revisited: a
-   * finger that started downward is scrolling the list, and a drawer that
-   * changes its mind halfway through a scroll is the single most irritating
-   * thing a sheet can do. Only movement toward the edge counts, so dragging the
-   * other way does nothing rather than tearing the panel off its anchor.
+   * Above `lg` the drawer's links live in the bar instead, so a rotation or a
+   * resize past the breakpoint has to close it — otherwise a sheet stays open
+   * over a layout that already shows everything in it, with no visible way out.
    */
-  function onTouchStart(event: ReactTouchEvent<HTMLDivElement>) {
-    const touch = event.touches[0];
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
 
-    gesture.current = touch
-      ? { x: touch.clientX, y: touch.clientY, at: event.timeStamp, axis: "?" }
-      : null;
-  }
-
-  function onTouchMove(event: ReactTouchEvent<HTMLDivElement>) {
-    const start = gesture.current;
-    const touch = event.touches[0];
-
-    if (!start || !touch) {
-      return;
-    }
-
-    const dx = touch.clientX - start.x;
-    const dy = touch.clientY - start.y;
-
-    if (start.axis === "?") {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
-        return;
+    function onChange(event: MediaQueryListEvent) {
+      if (event.matches) {
+        setOpen(false);
       }
-
-      start.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
     }
 
-    if (start.axis !== "x") {
-      return;
-    }
+    query.addEventListener("change", onChange);
 
-    const width = panelRef.current?.offsetWidth ?? 336;
-    const progress = Math.max(0, dx);
-    // Once the panel's own width is behind it, the sheet resists: effort buys
-    // less travel, which reads as reaching the end rather than sailing past it.
-    setDrag(progress > width ? width + (progress - width) * 0.2 : progress);
-  }
-
-  function onTouchEnd(event: ReactTouchEvent<HTMLDivElement>) {
-    const start = gesture.current;
-    const touch = event.changedTouches[0];
-
-    gesture.current = null;
-    setDrag(null);
-
-    if (!start || !touch || start.axis !== "x") {
-      return;
-    }
-
-    const dx = touch.clientX - start.x;
-    const elapsed = Math.max(1, event.timeStamp - start.at);
-
-    if (dx > CLOSE_AFTER_PX || dx / elapsed > FLICK_PX_PER_MS) {
-      setOpen(false);
-    }
-  }
-
-  const dragging = drag !== null;
+    return () => query.removeEventListener("change", onChange);
+  }, []);
 
   function renderLink(item: MobileNavLink, options: { quiet?: boolean } = {}) {
     const current = isCurrent(pathname, item.href);
@@ -358,8 +227,9 @@ export function MobileNav({
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => (open ? close() : setOpen(true))}
+        onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? labels.close : labels.menu}
@@ -382,8 +252,8 @@ export function MobileNav({
       </button>
 
       {/*
-       * Portaled out of the header so it is free of the bar that holds it.
-       * That bar runs `backdrop-filter`, which quietly turns itself into the
+       * Portaled out of the header so it is free of the bar that holds it. That
+       * bar runs `backdrop-filter`, which quietly turns itself into the
        * containing block for any `fixed` child — the sheet would otherwise
        * stretch across the whole viewport while its click-to-close backdrop
        * stayed pinned to the header strip it was born under.
@@ -392,42 +262,27 @@ export function MobileNav({
         ? createPortal(
             <div
               // The document's direction, restored: the pinned header bar above
-              // would otherwise impose its own on everything written inside the
-              // panel.
+              // would otherwise impose its own on everything written inside.
               dir={dir}
-              /*
-               * `invisible` while closed, not merely translated away. Off screen
-               * is a position, not an absence — a shadow, a blurred backdrop or a
-               * sliver at some viewport width all survive it. `visibility` sits in
-               * the transition list so it holds `visible` through the whole slide
-               * out and only then stops rendering, which is the one property that
-               * behaves that way.
-               *
-               * `pan-y` on the whole overlay hands vertical scrolling back to the
-               * browser and reserves horizontal for the drag, so the sheet follows
-               * the finger no matter where it started — on the panel or on the
-               * mostly blank backdrop.
-               */
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-              onTouchCancel={onTouchEnd}
+              aria-hidden={!open}
               className={cn(
-                "fixed inset-0 z-50 touch-pan-y transition-[visibility] duration-[var(--duration)] lg:hidden",
-                open ? "visible" : "invisible",
+                "fixed inset-0 z-50 lg:hidden",
+                // Three independent reasons a closed sheet cannot take a tap.
+                // The header sits below this in the stack, so one of them
+                // failing used to cost the whole page its taps.
+                open ? "visible" : "pointer-events-none invisible",
               )}
-              inert={!open}
             >
               <button
                 type="button"
-                tabIndex={-1}
+                tabIndex={open ? undefined : -1}
                 aria-label={labels.close}
                 onClick={close}
                 className={cn(
                   "absolute inset-0 h-full w-full cursor-default bg-[color-mix(in_srgb,var(--canvas)_70%,transparent)] transition-opacity duration-[var(--duration)] ease-out motion-reduce:transition-none",
                   // The blur rides with the fade rather than sitting on a
-                  // transparent element: `backdrop-filter` builds its own stacking
-                  // context and does not reliably disappear at `opacity: 0`.
+                  // transparent element: `backdrop-filter` builds its own
+                  // stacking context and does not reliably vanish at opacity 0.
                   open ? "opacity-100 backdrop-blur-md" : "opacity-0",
                 )}
               />
@@ -439,23 +294,8 @@ export function MobileNav({
                 aria-modal="true"
                 aria-label={labels.mobileLabel}
                 tabIndex={-1}
-                /*
-                 * `pan-y` hands vertical scrolling to the browser and keeps
-                 * horizontal for the drag above, so the list still scrolls at
-                 * native speed. `100dvh` because a phone's browser chrome shrinks
-                 * the viewport as it scrolls and `vh` would run the sheet
-                 * underneath it.
-                 */
-                style={
-                  dragging
-                    ? { transform: `translate3d(${drag}px,0,0)`, transition: "none" }
-                    : undefined
-                }
                 className={cn(
-                  "absolute inset-y-0 right-0 flex h-[100dvh] w-[min(21rem,88vw)] touch-pan-y flex-col border-l border-[var(--line)] bg-[var(--surface)] pt-[max(0.75rem,env(safe-area-inset-top))] transition-[transform,box-shadow] duration-[600ms] ease-[var(--ease-spring)] will-change-transform focus:outline-none motion-reduce:transition-none",
-                  // The shadow is dropped while closed: a panel parked past the
-                  // right edge still casts leftward, which would leave a dark
-                  // strip down the side of a page with no drawer open.
+                  "absolute inset-y-0 right-0 flex h-[100dvh] w-[min(21rem,88vw)] flex-col border-l border-[var(--line)] bg-[var(--surface)] pt-[max(0.75rem,env(safe-area-inset-top))] transition-transform duration-[420ms] ease-[var(--ease-spring)] will-change-transform focus:outline-none motion-reduce:transition-none",
                   open ? "translate-x-0 shadow-[var(--elevation-3)]" : "translate-x-full shadow-none",
                 )}
               >
@@ -479,8 +319,8 @@ export function MobileNav({
                           {/*
                             * A plain `img`, not the optimizer: an avatar is one
                             * small square from a host we do not control, and
-                            * routing it through image optimization buys nothing at
-                            * this size.
+                            * routing it through image optimization buys nothing
+                            * at this size.
                             */}
                           {account.avatarUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -536,9 +376,7 @@ export function MobileNav({
                   </div>
                 ) : null}
 
-                <nav
-                  className="flex-1 overflow-y-auto overscroll-contain px-3 pb-2"
-                >
+                <nav className="flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
                   <div className="grid gap-0.5">{items.map((item) => renderLink(item))}</div>
 
                   {account && account.name !== null && account.links.length > 0 ? (
@@ -554,10 +392,17 @@ export function MobileNav({
                   ) : null}
                 </nav>
 
-                {localeSwitcher || signOut ? (
-                  <div className="flex shrink-0 items-center justify-between gap-2 border-t border-[var(--line)] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {/*
+                  * The controls that are settings rather than destinations:
+                  * language, theme, and the way out. They sit together at the
+                  * foot of the sheet because none of them navigates anywhere,
+                  * and on a phone this is where a thumb already rests.
+                  */}
+                {localeSwitcher || themeToggle || signOut ? (
+                  <div className="flex shrink-0 items-center gap-2 border-t border-[var(--line)] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                     {localeSwitcher}
-                    {signOut}
+                    {themeToggle}
+                    {signOut ? <div className="ms-auto">{signOut}</div> : null}
                   </div>
                 ) : null}
               </div>

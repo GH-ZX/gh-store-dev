@@ -148,7 +148,10 @@ export function SiteHeader({
               </div>
             </Suspense>
 
-            <ThemeToggle labels={messages.theme} />
+            {/* Below `lg` this lives in the drawer, beside the language button. */}
+            <div className="hidden lg:block">
+              <ThemeToggle labels={messages.theme} />
+            </div>
 
             {/* Below `lg` the same links live inside the menu panel instead. */}
             <div className="hidden lg:block">
@@ -186,6 +189,7 @@ export function SiteHeader({
                 links: accountLinks,
                 signIn: { href: `/${locale}/login`, label: messages.account.signIn },
               }}
+              themeToggle={<ThemeToggle labels={messages.theme} />}
               localeSwitcher={
                 <Suspense fallback={null}>
                   <LocaleSwitcher locale={locale} labels={messages.locale} variant="toggle" />
