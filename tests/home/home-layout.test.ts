@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  parseIdList,
+  sectionPickKind,
+  sectionUsesSubmitForm,
+} from "@/app/[locale]/dashboard/website/action-state";
+import {
   DEFAULT_HOME_LAYOUT,
   getHomeSectionPagePath,
   getHomeSectionSubtitle,
   getHomeSectionTitle,
   HOME_SECTION_LIMIT_MAX,
+  HOME_SECTION_TYPES,
+  isSingletonSectionType,
   normalizeHomeLayout,
 } from "@/lib/home/layout";
 
@@ -116,5 +123,59 @@ describe("home layout normalization", () => {
     ]);
 
     expect(layout.map(getHomeSectionPagePath)).toEqual(["/games", "/gift-cards", "/sale", null]);
+  });
+
+  it("keeps a subtitle the admin cleared rather than restoring the default", () => {
+    const [cleared] = normalizeHomeLayout([
+      { id: "social", type: "social_links", subtitle_ar: "", subtitle_en: "" },
+    ]);
+
+    // The stored default for this type is non-empty, so an empty string has to
+    // survive the round trip or a subtitle could never be removed.
+    expect(getHomeSectionSubtitle(cleared, "ar")).toBe("");
+    expect(getHomeSectionSubtitle(cleared, "en")).toBe("");
+  });
+});
+
+describe("section editor rules", () => {
+  it("names the pick list each section type owns, and none for the rest", () => {
+    expect(sectionPickKind("game_picks")).toBe("games");
+    expect(sectionPickKind("offer_picks")).toBe("offers");
+    expect(sectionPickKind("customer_reviews")).toBe("reviews");
+    expect(sectionPickKind("sale_offers")).toBeNull();
+    expect(sectionPickKind("carousel")).toBeNull();
+  });
+
+  it("offers the review form on the reviews section only", () => {
+    const withForm = HOME_SECTION_TYPES.filter(sectionUsesSubmitForm);
+
+    expect(withForm).toEqual(["customer_reviews"]);
+  });
+
+  /*
+   * The editor greys out a type it cannot add again. If this and the
+   * normalizer's own list ever disagree, the editor offers a section that is
+   * silently dropped on the next read — which reads as a failed save.
+   */
+  it("agrees with the normalizer about which types may appear only once", () => {
+    const singletons = HOME_SECTION_TYPES.filter(isSingletonSectionType);
+
+    for (const type of HOME_SECTION_TYPES) {
+      const layout = normalizeHomeLayout([
+        { id: "one", type },
+        { id: "two", type },
+      ]);
+
+      expect(layout).toHaveLength(singletons.includes(type) ? 1 : 2);
+    }
+  });
+
+  it("reads a ticked list back, and treats an empty field as nothing ticked", () => {
+    expect(parseIdList("a,b,c")).toEqual(["a", "b", "c"]);
+    expect(parseIdList(" a , b ")).toEqual(["a", "b"]);
+    expect(parseIdList("")).toEqual([]);
+    expect(parseIdList(undefined)).toEqual([]);
+    // A trailing separator is what an empty selection looks like mid-edit.
+    expect(parseIdList("a,,")).toEqual(["a"]);
   });
 });

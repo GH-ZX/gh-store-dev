@@ -32,8 +32,11 @@ import {
   CONTACT_FIELD_PREFIX,
   CONTACT_KIND_OPTIONS,
   MAX_EDITOR_ROWS,
+  parseIdList,
   rowField,
   SECTION_FIELD_PREFIX,
+  sectionPickKind,
+  sectionUsesSubmitForm,
   SOCIAL_FIELD_PREFIX,
   SOCIAL_PLATFORM_OPTIONS,
   type WebsiteActionState,
@@ -94,7 +97,11 @@ const sectionRowSchema = z.object({
   enabled: z.boolean(),
   title_ar: localizedTitle,
   title_en: localizedTitle,
+  subtitle_ar: localizedTitle,
+  subtitle_en: localizedTitle,
   limit: z.coerce.number().int().optional(),
+  picks: z.array(z.string().trim().min(1).max(64)).max(HOME_SECTION_LIMIT_MAX),
+  show_submit_form: z.boolean(),
 });
 
 const sectionsSchema = z.array(sectionRowSchema).min(1).max(MAX_EDITOR_ROWS);
@@ -115,7 +122,14 @@ function readSectionRows(formData: FormData): unknown[] {
       enabled: formFlag(formData, rowField(SECTION_FIELD_PREFIX, index, "enabled")),
       title_ar: formText(formData, rowField(SECTION_FIELD_PREFIX, index, "title_ar")),
       title_en: formText(formData, rowField(SECTION_FIELD_PREFIX, index, "title_en")),
+      subtitle_ar: formText(formData, rowField(SECTION_FIELD_PREFIX, index, "subtitle_ar")),
+      subtitle_en: formText(formData, rowField(SECTION_FIELD_PREFIX, index, "subtitle_en")),
       limit: formText(formData, rowField(SECTION_FIELD_PREFIX, index, "limit")),
+      picks: parseIdList(formText(formData, rowField(SECTION_FIELD_PREFIX, index, "picks"))),
+      show_submit_form: formFlag(
+        formData,
+        rowField(SECTION_FIELD_PREFIX, index, "show_submit_form"),
+      ),
     });
   }
 
@@ -144,10 +158,15 @@ export async function saveHomeLayoutAction(
 
   try {
     /*
-     * The editor manages order, enabled, titles, and the item count. Every other
-     * field — subtitles, the carousel interval, the pick lists — is carried over
-     * from the saved section with the same id, so saving the layout never drops
-     * content that has no control on this page.
+     * The editor manages order, presence, visibility, both titles, both
+     * subtitles, the item count, and the handpicked lists. What it does not
+     * send — the carousel's rotation settings, which have their own card — is
+     * carried over from the saved section with the same id, so saving the
+     * layout never drops something edited elsewhere on this page.
+     *
+     * A row that is not submitted is a section that was removed, and a row with
+     * an id nothing was saved under is one that was added: the submitted list
+     * *is* the layout, so neither needs its own action.
      */
     const current = await getWebsiteSettings();
     const savedById = new Map(current.sections.map((section) => [section.id, section]));
@@ -156,6 +175,7 @@ export async function saveHomeLayoutAction(
       const defaults = createHomeSection(row.type, row.id);
       const previous = savedById.get(row.id);
       const base = previous && previous.type === row.type ? previous : defaults;
+      const kind = sectionPickKind(row.type);
 
       return {
         ...base,
@@ -164,7 +184,16 @@ export async function saveHomeLayoutAction(
         enabled: row.enabled,
         titleAr: row.title_ar || defaults.titleAr,
         titleEn: row.title_en || defaults.titleEn,
+        // Empty means empty, unlike a title: a subtitle is optional copy, and
+        // clearing it has to be a way to remove it rather than a way to get the
+        // default back.
+        subtitleAr: row.subtitle_ar ?? "",
+        subtitleEn: row.subtitle_en ?? "",
         limit: clampLimit(row.limit, base.limit),
+        gameIds: kind === "games" ? row.picks : base.gameIds,
+        offerIds: kind === "offers" ? row.picks : base.offerIds,
+        reviewIds: kind === "reviews" ? row.picks : base.reviewIds,
+        showSubmitForm: sectionUsesSubmitForm(row.type) ? row.show_submit_form : base.showSubmitForm,
       };
     });
 

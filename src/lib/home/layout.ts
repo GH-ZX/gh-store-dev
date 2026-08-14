@@ -34,6 +34,16 @@ const SINGLETON_SECTION_TYPES = new Set<HomeSectionType>([
   "social_links",
 ]);
 
+/**
+ * Whether a second section of this type would be dropped on the way in.
+ *
+ * The editor asks so it can grey out a type instead of offering it, adding it,
+ * and having the normaliser quietly discard it on the next read.
+ */
+export function isSingletonSectionType(type: HomeSectionType): boolean {
+  return SINGLETON_SECTION_TYPES.has(type);
+}
+
 export const HOME_SECTION_LIMIT_MIN = 1;
 export const HOME_SECTION_LIMIT_MAX = 12;
 export const HOME_CAROUSEL_INTERVAL_MIN_SECONDS = 3;

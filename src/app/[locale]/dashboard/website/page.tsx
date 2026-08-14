@@ -10,7 +10,7 @@ import { SocialLinksEditor } from "@/components/admin/social-links-editor";
 import { SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
-import { getWebsiteSettings } from "@/lib/services/admin-website.service";
+import { getHomePickCandidates, getWebsiteSettings } from "@/lib/services/admin-website.service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -27,7 +27,10 @@ export default async function WebsiteSettingsPage({
 }: PageProps<"/[locale]/dashboard/website">) {
   const locale = await resolveLocaleParam(params);
   const messages = getMessages(locale, "admin").website;
-  const settings = await getWebsiteSettings();
+  const [settings, candidates] = await Promise.all([
+    getWebsiteSettings(),
+    getHomePickCandidates(),
+  ]);
 
   return (
     <div className="grid gap-8">
@@ -41,6 +44,8 @@ export default async function WebsiteSettingsPage({
       <AdminCard title={messages.sections.title} description={messages.sections.description}>
         <HomeLayoutEditor
           sections={settings.sections}
+          candidates={candidates}
+          locale={locale}
           messages={messages.sections}
           errors={messages.errors}
         />

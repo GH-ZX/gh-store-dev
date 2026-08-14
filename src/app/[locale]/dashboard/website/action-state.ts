@@ -57,6 +57,45 @@ export function sectionUsesLimit(type: HomeSectionType): boolean {
   return !SECTION_TYPES_WITHOUT_LIMIT.has(type);
 }
 
+/**
+ * Which list of things a section is pointed at by hand, if any.
+ *
+ * Three section types name their own items; every other type asks the catalog a
+ * question — what is on sale, what sells — and picking for it would mean
+ * nothing. Returning the kind rather than a boolean lets one picker serve all
+ * three.
+ */
+export type SectionPickKind = "games" | "offers" | "reviews";
+
+const SECTION_PICK_KINDS: Partial<Record<HomeSectionType, SectionPickKind>> = {
+  game_picks: "games",
+  offer_picks: "offers",
+  customer_reviews: "reviews",
+};
+
+export function sectionPickKind(type: HomeSectionType): SectionPickKind | null {
+  return SECTION_PICK_KINDS[type] ?? null;
+}
+
+/**
+ * The reviews section is the only one that can invite a customer to add to it.
+ */
+export function sectionUsesSubmitForm(type: HomeSectionType): boolean {
+  return type === "customer_reviews";
+}
+
+/** Ticked ids travel as one comma-separated field rather than a checkbox each. */
+export function parseIdList(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+}
+
 /*
  * The option lists mirror the unions in `@/lib/settings/public-settings`, which
  * does not export them. `satisfies` rejects a value that is not in the union,

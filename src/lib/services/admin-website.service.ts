@@ -162,6 +162,104 @@ export async function getWebsiteSettings(): Promise<WebsiteSettings> {
 }
 
 /**
+ * One thing a handpicked section can be pointed at.
+ *
+ * Games, packages and reviews are different rows with nothing in common, but
+ * the editor treats all three the same way — a list you tick — so they are
+ * flattened to one shape here rather than three near-identical pickers.
+ */
+export type PickCandidate = {
+  id: string;
+  labelAr: string;
+  labelEn: string;
+  /** Second line: the game a package belongs to, or a review's own words. */
+  detail: string | null;
+  imageUrl: string | null;
+};
+
+export type HomePickCandidates = {
+  games: PickCandidate[];
+  offers: PickCandidate[];
+  reviews: PickCandidate[];
+};
+
+/*
+ * A ceiling per list, not a page. These feed a picker that is filtered in the
+ * browser, so the whole list has to arrive — but a catalogue can grow without
+ * limit and this page must not grow with it. Well past what a homepage row can
+ * show, and the search box narrows the rest.
+ */
+const PICK_CANDIDATE_LIMIT = 200;
+
+/**
+ * Everything a handpicked section could be pointed at.
+ *
+ * Published items only, because a section pointing at an unpublished one shows
+ * a gap on the homepage and no explanation on this page. Reviews are the
+ * approved ones for the same reason.
+ */
+export async function getHomePickCandidates(): Promise<HomePickCandidates> {
+  await requireAdmin();
+
+  const client = await createSupabaseServerClient();
+
+  const [games, offers, reviews] = await Promise.all([
+    client
+      .from("games")
+      .select("id, name_ar, name_en, image_url, logo_url")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("name_en", { ascending: true })
+      .limit(PICK_CANDIDATE_LIMIT),
+    client
+      .from("offers")
+      .select("id, name_ar, name_en, price, currency, games!inner(name_en, is_active)")
+      .eq("is_active", true)
+      .eq("games.is_active", true)
+      .order("sort_order", { ascending: true })
+      .limit(PICK_CANDIDATE_LIMIT),
+    client
+      .from("reviews")
+      .select("id, display_name, body, rating")
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
+      .limit(PICK_CANDIDATE_LIMIT),
+  ]);
+
+  if (games.error || offers.error || reviews.error) {
+    const reason = games.error ?? offers.error ?? reviews.error;
+
+    throw new Error(`Reading homepage pick candidates failed: ${reason?.message}`);
+  }
+
+  return {
+    games: games.data.map((game) => ({
+      id: game.id,
+      labelAr: game.name_ar,
+      labelEn: game.name_en,
+      detail: null,
+      imageUrl: game.logo_url ?? game.image_url,
+    })),
+    offers: offers.data.map((offer) => ({
+      id: offer.id,
+      labelAr: offer.name_ar,
+      labelEn: offer.name_en,
+      // Package names repeat across games — "1000 points" says nothing on its
+      // own — so the game it belongs to is the label that makes it pickable.
+      detail: offer.games.name_en,
+      imageUrl: null,
+    })),
+    reviews: reviews.data.map((review) => ({
+      id: review.id,
+      labelAr: review.display_name,
+      labelEn: review.display_name,
+      detail: review.body.slice(0, 90),
+      imageUrl: null,
+    })),
+  };
+}
+
+/**
  * The snake_case shape {@link normalizeHomeLayout} reads back.
  *
  * The runtime shape is camelCase, so writing a section without this mapping

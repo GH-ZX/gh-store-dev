@@ -438,7 +438,7 @@
     "description": "Control the homepage sections, social links, contact channels, and SEO.",
     "sections": {
       "title": "Homepage sections",
-      "description": "Reorder sections, switch them on, and set how many items each shows.",
+      "description": "Reorder sections, add and remove them, write their headings, and choose what the handpicked ones show.",
       "enabled": "Enabled",
       "sectionTitleAr": "Title in Arabic",
       "sectionTitleEn": "Title in English",
@@ -457,6 +457,18 @@
         "customer_reviews": "Customer reviews",
         "social_links": "Social links"
       },
+      "sectionSubtitleAr": "Subtitle in Arabic",
+      "sectionSubtitleEn": "Subtitle in English",
+      "subtitleHint": "Leave empty to show no subtitle.",
+      "showSubmitForm": "Invite customers to write a review",
+      "showSubmitFormHint": "Only customers with a delivered order can write one.",
+      "picksLabel": "Chosen items",
+      "picksSearch": "Filter by name",
+      "picksCount": "{count} of {max} chosen",
+      "picksEmpty": "Nothing published to choose from yet.",
+      "addLabel": "Section to add",
+      "addSection": "Add section",
+      "removeSection": "Remove",
       "resetAction": "Restore the default order",
       "saveAction": "Save sections",
       "saved": "Homepage sections saved."
