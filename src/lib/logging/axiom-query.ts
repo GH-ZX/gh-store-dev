@@ -1,6 +1,8 @@
 import "server-only";
 
-import { hasContent } from "@/lib/logging/fields";
+import { hasContent, readCount } from "@/lib/logging/fields";
+import { MAX_PAGE, type LogLevelFilter } from "@/lib/logging/log-view";
+import { PAGE_SIZE } from "@/lib/paging";
 import { readAxiomCredentials } from "@/lib/settings/axiom-settings";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 
@@ -9,11 +11,8 @@ import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/s
  *
  * Axiom's own console is the place to investigate — it has the query language,
  * the dashboards and the alerts, and none of that is worth rebuilding here.
- * What the store's own Logs page owes an operator is narrower: whether anything
- * is broken right now, without leaving the dashboard to find out.
- *
- * So this asks one question — the recent warnings and errors — and links out for
- * everything else.
+ * What the store's own Logs page owes an operator is narrower: what the store
+ * has been saying, a page at a time, without leaving the dashboard to find out.
  *
  * The ingest token and the query token are the same stored token, but they are
  * not the same permission: a token created for ingest alone answers 403 here.
@@ -30,10 +29,38 @@ export type AppEvent = {
 };
 
 export type AppEventsResult =
-  | { ok: true; events: AppEvent[] }
+  | {
+      ok: true;
+      events: AppEvent[];
+      /** Null when the count query's answer was not in a shape we could read. */
+      total: number | null;
+      hasMore: boolean;
+    }
   | { ok: false; reason: "not_configured" | "forbidden" | "unavailable" | "contract" };
 
+type QueryFailure = { ok: false; reason: "forbidden" | "unavailable" | "contract" };
+type QueryResult = { ok: true; body: Record<string, unknown> } | QueryFailure;
+
 const QUERY_PATH = "/v1/datasets/_apl?format=legacy";
+const WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The `where` each filter compiles to.
+ *
+ * Written out as constants and never built from request input: the level
+ * arrives from the query string, and a string interpolated into APL is the same
+ * hazard there as it is in SQL.
+ *
+ * `all` still carries a clause rather than none. The dataset holds rows written
+ * before the ingest shape was corrected, whose level sits at `data.level` and
+ * which this page has no way to render; excluding them here is what keeps the
+ * total and the list agreeing about how many events there are.
+ */
+const LEVEL_CLAUSES: Record<LogLevelFilter, string> = {
+  problems: "| where level in ('warn', 'error')",
+  error: "| where level == 'error'",
+  all: "| where isnotnull(level)",
+};
 
 /** The API host serves queries; an edge host does not. */
 function queryUrl(domain: string): string {
@@ -78,7 +105,61 @@ function toEvent(raw: unknown): AppEvent | null {
   };
 }
 
-export async function getRecentAppEvents(limit = 50): Promise<AppEventsResult> {
+async function runQuery(
+  token: string,
+  domain: string,
+  apl: string,
+  startTime: string,
+  endTime: string,
+): Promise<QueryResult> {
+  try {
+    const response = await fetch(queryUrl(domain), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ apl, startTime, endTime }),
+      signal: AbortSignal.timeout(8_000),
+      cache: "no-store",
+    });
+
+    if (response.status === 403 || response.status === 401) {
+      return { ok: false, reason: "forbidden" };
+    }
+
+    if (!response.ok) {
+      return { ok: false, reason: "unavailable" };
+    }
+
+    const body = (await response.json()) as unknown;
+
+    if (!body || typeof body !== "object") {
+      return { ok: false, reason: "contract" };
+    }
+
+    return { ok: true, body: body as Record<string, unknown> };
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
+/**
+ * One page of events, newest first.
+ *
+ * APL has no `OFFSET`, so page N is reached by asking for everything up to the
+ * end of that page and dropping what comes before it. That is why {@link MAX_PAGE}
+ * exists: the cost of this grows with the page number, and an operator who needs
+ * to go deeper than that wants Axiom's console rather than this list.
+ *
+ * One row beyond the window is requested as well. It is never rendered — it only
+ * has to exist, which is what tells the pager there is a next page without a
+ * second round trip.
+ */
+export async function getAppEvents({
+  page = 1,
+  level = "problems",
+}: { page?: number; level?: LogLevelFilter } = {}): Promise<AppEventsResult> {
   if (!hasServiceRoleKey()) {
     return { ok: false, reason: "not_configured" };
   }
@@ -97,42 +178,54 @@ export async function getRecentAppEvents(limit = 50): Promise<AppEventsResult> {
   }
 
   const dataset = credentials.dataset.replace(/'/g, "");
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const safePage = Math.min(Math.max(Math.trunc(page) || 1, 1), MAX_PAGE);
+  const clause = LEVEL_CLAUSES[level] ?? LEVEL_CLAUSES.problems;
+  const source = `['${dataset}'] ${clause}`;
+  const reach = safePage * PAGE_SIZE + 1;
 
-  try {
-    const response = await fetch(queryUrl(credentials.domain), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${credentials.apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        apl: `['${dataset}'] | where level in ('warn', 'error') | sort by _time desc | limit ${limit}`,
-        startTime: since,
-        endTime: new Date().toISOString(),
-      }),
-      signal: AbortSignal.timeout(8_000),
-      cache: "no-store",
-    });
+  const startTime = new Date(Date.now() - WINDOW_MS).toISOString();
+  const endTime = new Date().toISOString();
 
-    if (response.status === 403 || response.status === 401) {
-      return { ok: false, reason: "forbidden" };
-    }
+  /*
+   * The count is a separate question and a separate query. It runs alongside
+   * rather than after, and it is allowed to fail on its own: a missing total
+   * costs the pager its "of 3" and nothing else, so it must not be able to take
+   * the list down with it.
+   */
+  const [rows, count] = await Promise.all([
+    runQuery(
+      credentials.apiToken,
+      credentials.domain,
+      `${source} | sort by _time desc | limit ${reach}`,
+      startTime,
+      endTime,
+    ),
+    runQuery(
+      credentials.apiToken,
+      credentials.domain,
+      `${source} | summarize count()`,
+      startTime,
+      endTime,
+    ),
+  ]);
 
-    if (!response.ok) {
-      return { ok: false, reason: "unavailable" };
-    }
-
-    const body = (await response.json()) as { matches?: unknown };
-
-    if (!Array.isArray(body.matches)) {
-      // Only the ingest contract was verifiable when this was written; say so
-      // rather than render an empty page that looks like a healthy store.
-      return { ok: false, reason: "contract" };
-    }
-
-    return { ok: true, events: body.matches.map(toEvent).filter((e): e is AppEvent => e !== null) };
-  } catch {
-    return { ok: false, reason: "unavailable" };
+  if (!rows.ok) {
+    return rows;
   }
+
+  if (!Array.isArray(rows.body.matches)) {
+    // Only the ingest contract was verifiable when this was written; say so
+    // rather than render an empty page that looks like a healthy store.
+    return { ok: false, reason: "contract" };
+  }
+
+  const all = rows.body.matches.map(toEvent).filter((e): e is AppEvent => e !== null);
+  const from = (safePage - 1) * PAGE_SIZE;
+
+  return {
+    ok: true,
+    events: all.slice(from, from + PAGE_SIZE),
+    total: count.ok ? readCount(count.body) : null,
+    hasMore: all.length > from + PAGE_SIZE,
+  };
 }

@@ -2,6 +2,7 @@ import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
 import { isSettledOrderStatus } from "@/lib/orders/order-status";
+import { recordAudit } from "@/lib/services/admin-audit.service";
 import { fulfillOrder } from "@/lib/services/fulfillment.service";
 import { notify } from "@/lib/services/notification.service";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
@@ -58,22 +59,13 @@ async function loadOrder(orderId: string): Promise<OrderRow> {
   return data;
 }
 
-/** Record who did what, so a hand-made change is never anonymous. */
-async function audit(
+function audit(
   actorId: string,
   action: string,
   orderId: string,
   values: Record<string, unknown>,
 ): Promise<void> {
-  const service = createSupabaseServiceClient();
-  await service.from("audit_logs").insert({
-    actor_user_id: actorId,
-    action,
-    entity_type: "order",
-    entity_id: orderId,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsonb column
-    new_values: values as any,
-  });
+  return recordAudit({ actorId, action, entityType: "order", entityId: orderId, values });
 }
 
 export type RetryResult = {

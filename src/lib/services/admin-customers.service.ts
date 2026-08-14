@@ -2,6 +2,7 @@ import "server-only";
 
 import { refuseActiveChange, refuseRoleChange } from "@/lib/auth/admin-changes";
 import { requireAdmin } from "@/lib/auth/guards";
+import { recordAudit } from "@/lib/services/admin-audit.service";
 import { safeFilterTerm } from "@/lib/supabase/filters";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -121,22 +122,13 @@ async function countActiveAdmins(): Promise<number> {
   return count ?? 0;
 }
 
-/** Record who changed what, so an access change is never anonymous. */
-async function auditPeopleChange(
+function auditPeopleChange(
   actorId: string,
   action: string,
   targetId: string,
   values: Record<string, unknown>,
 ): Promise<void> {
-  const service = createSupabaseServiceClient();
-  await service.from("audit_logs").insert({
-    actor_user_id: actorId,
-    action,
-    entity_type: "profile",
-    entity_id: targetId,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsonb column
-    new_values: values as any,
-  });
+  return recordAudit({ actorId, action, entityType: "profile", entityId: targetId, values });
 }
 
 /**

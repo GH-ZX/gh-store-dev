@@ -148,11 +148,13 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
       <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6">
         <h2 className="text-sm font-semibold text-[var(--ink)]">{provider.logsHeading}</h2>
 
-        {logs.length === 0 ? (
+        {!logs.ok ? (
+          <p className="mt-3 text-sm text-[var(--warning)]">{provider.logsUnavailable}</p>
+        ) : logs.runs.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--ink-muted)]">{provider.logsEmpty}</p>
         ) : (
           <ul className="mt-4 grid gap-2">
-            {logs.map((log) => (
+            {logs.runs.map((log) => (
               <li
                 key={log.id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm"

@@ -5,13 +5,15 @@ import { TransactionList, WalletSummaryPanel } from "@/components/account/wallet
 import { ChevronIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
+import { PAGE_SIZE, parsePage } from "@/lib/paging";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getSessionSummary } from "@/lib/services/session.service";
 import { getMyTransactions, getMyWallet } from "@/lib/services/wallet.service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
-const PAGE_SIZE = 20;
+/** No deeper than the logs page allows; a wallet history that long wants a filter. */
+const MAX_PAGE = 500;
 
 export default async function WalletPage({ params, searchParams }: PageProps<"/[locale]/wallet">) {
   const locale = await resolveLocaleParam(params);
@@ -25,8 +27,7 @@ export default async function WalletPage({ params, searchParams }: PageProps<"/[
 
   // Paging by page number keeps the URL shareable and the query trivial.
   const query = await searchParams;
-  const rawPage = Number(typeof query.page === "string" ? query.page : "1");
-  const page = Number.isFinite(rawPage) && rawPage > 1 ? Math.floor(rawPage) : 1;
+  const page = parsePage(query.page, MAX_PAGE);
 
   const [wallet, history] = await Promise.all([
     getMyWallet(),

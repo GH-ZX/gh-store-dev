@@ -2,6 +2,7 @@ import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
 import { resetLogDestination } from "@/lib/logging/logger";
+import { PAGE_SIZE, pageRange } from "@/lib/paging";
 import {
   mergeAxiomSettings,
   toAxiomStatus,
@@ -172,27 +173,44 @@ export type ProviderSyncLogEntry = {
   errorMessage: string | null;
 };
 
+/**
+ * Provider runs, a page at a time.
+ *
+ * The result says whether the read worked rather than handing back a list,
+ * because a failed query and a provider that has never run produce the same
+ * empty array and mean opposite things. This used to return `[]` on error, so a
+ * broken read rendered as "no runs yet" — the reassuring answer, and the wrong
+ * one. The Logs page already draws that distinction for Axiom events; it holds
+ * here for the same reason.
+ */
+export type ProviderSyncLogsResult =
+  | { ok: true; runs: ProviderSyncLogEntry[]; total: number }
+  | { ok: false };
+
 export async function getRecentSyncLogs(
   providerName: string,
-  limit = 5,
-): Promise<ProviderSyncLogEntry[]> {
+  options: { page?: number; pageSize?: number } = {},
+): Promise<ProviderSyncLogsResult> {
   await requireAdmin();
 
+  const { from, to } = pageRange(options.page ?? 1, options.pageSize ?? PAGE_SIZE);
+
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("provider_sync_logs")
     .select(
       "id, kind, status, requested_count, created_count, updated_count, failed_count, started_at, finished_at, error_message",
+      { count: "exact" },
     )
     .eq("provider_name", providerName)
     .order("started_at", { ascending: false })
-    .limit(limit);
+    .range(from, to);
 
   if (error) {
-    return [];
+    return { ok: false };
   }
 
-  return data.map((row) => ({
+  const runs = data.map((row) => ({
     id: row.id,
     kind: row.kind,
     status: row.status,
@@ -204,4 +222,6 @@ export async function getRecentSyncLogs(
     finishedAt: row.finished_at,
     errorMessage: row.error_message,
   }));
+
+  return { ok: true, runs, total: count ?? runs.length };
 }
