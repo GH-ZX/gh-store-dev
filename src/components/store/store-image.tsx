@@ -11,7 +11,18 @@ import { cn } from "@/lib/cn";
  *
  * When artwork is missing, a tinted gradient stands in so cards keep their shape
  * instead of collapsing.
+ *
+ * The same gradient sits *behind* every image that does have a source. Supplier
+ * art is served from hosts this store does not control — one of them measured
+ * about eleven seconds for a 178 KB thumbnail — and until the bytes arrive an
+ * image box paints nothing at all, so a grid of them reads as a page that failed
+ * rather than one that is still arriving. It costs no request and no JavaScript:
+ * `object-cover` fills the box, so the moment the artwork paints it covers the
+ * gradient completely.
  */
+
+const PLACEHOLDER =
+  "bg-[linear-gradient(145deg,color-mix(in_srgb,var(--accent)_16%,var(--surface-strong)),var(--surface-inset))]";
 export type StoreImageProps = {
   src: string | null;
   alt: string;
@@ -24,15 +35,7 @@ export type StoreImageProps = {
 
 export function StoreImage({ src, alt, className, focus, priority = false, sizes }: StoreImageProps) {
   if (!src) {
-    return (
-      <div
-        className={cn(
-          "size-full bg-[linear-gradient(145deg,color-mix(in_srgb,var(--accent)_16%,var(--surface-strong)),var(--surface-inset))]",
-          className,
-        )}
-        aria-hidden="true"
-      />
-    );
+    return <div className={cn("size-full", PLACEHOLDER, className)} aria-hidden="true" />;
   }
 
   return (
@@ -43,7 +46,7 @@ export function StoreImage({ src, alt, className, focus, priority = false, sizes
       decoding={priority ? "sync" : "async"}
       fetchPriority={priority ? "high" : "auto"}
       sizes={sizes}
-      className={cn("size-full object-cover", className)}
+      className={cn("size-full object-cover", PLACEHOLDER, className)}
       style={focus ? { objectPosition: `${focus.x}% ${focus.y}%` } : undefined}
     />
   );

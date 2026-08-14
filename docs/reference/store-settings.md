@@ -21,7 +21,7 @@ through two security-definer functions.
 | `social_links` | array of `{ platform, label_ar, label_en, url }` | footer, `/links`, social section |
 | `seo` | `{ title_ar, title_en, description_ar, description_en, og_image_url }` | homepage metadata |
 | `contact` | `{ channels: [...], note_ar, note_en }` | `/contact` |
-| `theme` | reserved for the admin theme editor | — |
+| `theme` | `{ accent, accent_2, default_mode, backdrop }` | every page, through the root layout |
 | `payments`, `providers` | server-only configuration | payment and fulfilment services |
 | `maintenance_mode`, `maintenance_message_*` | maintenance banner | storefront chrome |
 
@@ -29,6 +29,27 @@ A contact channel is `{ kind, label_ar, label_en, value, url? }` where `kind` is
 one of `email`, `phone`, `whatsapp`, `telegram`, `link`. The href is derived from
 `kind` and `value` when `url` is absent. Only `http`, `https`, `mailto`, and
 `tel` URLs are rendered; anything else is dropped.
+
+`kind` and a social link's `platform` also choose the mark shown beside the
+label, from `src/components/ui/brand-icons.tsx`. An unknown value falls back to
+a generic glyph rather than rendering nothing.
+
+## Theme
+
+`accent` and `accent_2` are hex colours and nothing else: they are written into a
+`<style>` element, so `safeColour` accepts only `#rgb` / `#rrggbb` and discards
+anything that could close a declaration. Every other shade is derived from them
+with `color-mix`. `src/lib/settings/theme-presets.ts` holds ready-made pairs the
+dashboard offers as one-press starting points; a test asserts each one's accent
+clears 4.5:1 against the near-white it carries.
+
+`default_mode` is `system` | `dark` | `light`, and only applies to a visitor who
+has not chosen for themselves.
+
+`backdrop` is `none` (default) | `aurora` | `mesh` | `grid`: one fixed,
+unanimated CSS layer behind the storefront, drawn from the glow and line tokens
+so it follows the accents and both themes. It is not rendered at all for `none`,
+and the stylesheet keeps it off the dashboard.
 
 ## Home layout sections
 

@@ -124,6 +124,23 @@ hosted check. Production project creation belongs to stage 12.
   text-transform, which break Arabic script.
 - Verify responsive desktop/mobile behaviour and reduced-motion support.
 
+Three later corrections, all things a person notices before a test does:
+
+- Marks for the channels a customer can reach the store through — WhatsApp,
+  Telegram, Instagram, TikTok, YouTube, X, Discord, Facebook, and the plain mail,
+  phone and link glyphs. They break the house line style on purpose: a brand is
+  recognised as a silhouette, so redrawing one as a 1.5-weight outline produces a
+  glyph nobody recognises. Single-colour, so eight brand palettes do not shout
+  over the store, and the dashboard shows the mark beside each row so a link set
+  to the wrong platform is visible before it ships.
+- One magnifier in the search field, not two. There was a decorative one at the
+  head of the input and a second on the submit button; the button's is the one
+  that labels something a press does.
+- Artwork now paints its placeholder tint while it loads, not only when it is
+  missing. Supplier hosts are slow — one measured eleven seconds for a 178 KB
+  thumbnail — and until the bytes arrived a grid of empty boxes read as a page
+  that had failed rather than one still arriving.
+
 **Exit criteria met:** The shell is responsive, localized, and contains no
 starter-template UI. The design contract lives in
 `docs/design/storefront-design-contract.md`.
@@ -401,6 +418,16 @@ wallet transaction with the request id — rather than a match on amount and tim
   the chosen accent would fall below AA. Only plain hex is accepted, because
   these values are written into a `<style>` element.
 
+  Then two additions, both taken from the reference store and made lighter.
+  Ready-made accent pairs, so an owner who wants a purple store does not have to
+  work out which purple carries white text — a preset fills the two fields the
+  editor already had, and a test refuses any whose accent misses 4.5:1. And a
+  page backdrop: `aurora`, `mesh` or `grid`, one fixed CSS layer with no
+  animation and no second element, against three blurred blobs drifting on
+  90-second loops for as long as the tab is open. Both are drawn from existing
+  tokens, so they follow the owner's accents and both themes for free, and the
+  backdrop is kept off the dashboard, which is a working surface.
+
 - Per-page SEO. Ten pages beyond the homepage — the catalog lists, search, and
   the static content — each with its own title and description, falling back
   field by field to the page's own wording. Detail pages are deliberately absent:
@@ -448,6 +475,18 @@ is reachable from the dashboard without a SQL statement.
   Not in CI. These need a store with a catalog behind them, and CI has no
   Supabase project; wiring them to one would make the pipeline fail for reasons
   that have nothing to do with the commit.
+
+- A breadth pass over every public page, in `tests/e2e/pages.spec.ts`: each one
+  answers 200, shows a first-level heading, throws nothing while hydrating, and
+  does not scroll sideways — plus the account pages sending a signed-out visitor
+  to sign in. Console output is not asserted, because supplier image hosts fail
+  in ways this store does not control; an uncaught exception is always ours.
+
+  It found that the homepage had no `h1` at all. Every other page had one, and
+  the page a visitor and a crawler meet first opened its outline at level 2. It
+  now carries the owner's own SEO title, visually hidden — the carousel cannot
+  supply the heading, because each slide is a different game and a heading built
+  from one would rename the store every few seconds.
 
 ### Remaining
 

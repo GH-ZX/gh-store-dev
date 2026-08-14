@@ -45,7 +45,9 @@ export default async function DashboardLayout({ children, params }: LayoutProps<
   }
 
   return (
-    <div className="gh-page py-8 sm:py-10">
+    // Marked so the stylesheet can keep the owner's ambient backdrop off a
+    // working surface; the layer itself is rendered by the locale shell above.
+    <div data-dashboard-shell className="gh-page py-8 sm:py-10">
       <div className="grid gap-8 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:gap-10">
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-4">

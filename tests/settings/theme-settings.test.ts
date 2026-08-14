@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   accentIsReadable,
   contrastRatio,
+  DEFAULT_THEME_SETTINGS,
   normalizeTheme,
   safeColour,
   themeStyle,
@@ -39,7 +40,7 @@ describe("colours we are willing to put in a stylesheet", () => {
 
 describe("reading stored theme settings", () => {
   it("falls back to the token file when nothing is set", () => {
-    expect(normalizeTheme({})).toEqual({ accent: null, accent2: null, defaultMode: "system" });
+    expect(normalizeTheme({})).toEqual(DEFAULT_THEME_SETTINGS);
   });
 
   it("survives a hand-edited settings blob", () => {
@@ -58,15 +59,23 @@ describe("reading stored theme settings", () => {
   it("treats an unknown mode as the system preference", () => {
     expect(normalizeTheme({ default_mode: "sepia" }).defaultMode).toBe("system");
   });
+
+  it("reads the backdrop, and treats an unknown one as no backdrop at all", () => {
+    expect(normalizeTheme({ backdrop: "aurora" }).backdrop).toBe("aurora");
+    // The value reaches an attribute selector, so anything unrecognised has to
+    // land on the option that renders no element rather than an empty layer.
+    expect(normalizeTheme({ backdrop: "fireworks" }).backdrop).toBe("none");
+    expect(normalizeTheme({}).backdrop).toBe("none");
+  });
 });
 
 describe("the stylesheet an owner's accents produce", () => {
   it("is empty when nothing has been chosen, so no element is rendered", () => {
-    expect(themeStyle({ accent: null, accent2: null, defaultMode: "system" })).toBe("");
+    expect(themeStyle(DEFAULT_THEME_SETTINGS)).toBe("");
   });
 
   it("derives the hover and pressed shades rather than asking for them", () => {
-    const css = themeStyle({ accent: "#06607b", accent2: null, defaultMode: "system" });
+    const css = themeStyle({ ...DEFAULT_THEME_SETTINGS, accent: "#06607b" });
 
     expect(css).toContain("--accent:#06607b");
     expect(css).toContain("--accent-strong:color-mix(in srgb, #06607b 82%, #000)");
@@ -74,7 +83,7 @@ describe("the stylesheet an owner's accents produce", () => {
   });
 
   it("leaves the second accent alone when only the first is set", () => {
-    const css = themeStyle({ accent: "#06607b", accent2: null, defaultMode: "system" });
+    const css = themeStyle({ ...DEFAULT_THEME_SETTINGS, accent: "#06607b" });
 
     expect(css).not.toContain("--accent-2:");
   });

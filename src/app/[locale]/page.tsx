@@ -74,8 +74,24 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
     preload(heroImage, { as: "image", fetchPriority: "high" });
   }
 
+  /*
+   * The homepage had no first-level heading at all — every other page in the
+   * store has one, and the most important page did not. A screen reader landing
+   * here got an outline that starts at level 2 with no statement of what the
+   * site is, and a crawler got the same.
+   *
+   * It is hidden rather than drawn because the design's answer to "what is this
+   * page" is the carousel, and the carousel cannot supply it: each slide is a
+   * different game, so a heading built from one would rename the store every few
+   * seconds. The text is the owner's own SEO title, falling back to the same
+   * line the tab does — so the page and its title always say the same thing.
+   */
+  const heading = (locale === "ar" ? settings.seo.titleAr : settings.seo.titleEn) || home.hero.title;
+
   const page = (
     <>
+      <h1 className="sr-only">{heading}</h1>
+
       {/*
         * The carousel leads. There used to be a pitch above it — a headline, two
         * buttons and three stat tiles — which pushed the actual games below the

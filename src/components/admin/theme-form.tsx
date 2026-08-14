@@ -16,6 +16,7 @@ import { matchThemePreset, THEME_PRESETS } from "@/lib/settings/theme-presets";
 import {
   ACCENT_INK,
   accentIsReadable,
+  BACKDROPS,
   contrastRatio,
   safeColour,
   THEME_MODES,
@@ -178,14 +179,26 @@ export function ThemeForm({ theme, messages, errors }: ThemeFormProps) {
         </p>
       ) : null}
 
-      <SelectField
-        label={messages.modeLabel}
-        hint={messages.modeHint}
-        name="default_mode"
-        defaultValue={theme.defaultMode}
-        fieldClassName="max-w-xs"
-        options={THEME_MODES.map((mode) => ({ value: mode, label: messages.modes[mode] }))}
-      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <SelectField
+          label={messages.modeLabel}
+          hint={messages.modeHint}
+          name="default_mode"
+          defaultValue={theme.defaultMode}
+          options={THEME_MODES.map((mode) => ({ value: mode, label: messages.modes[mode] }))}
+        />
+
+        <SelectField
+          label={messages.backdropLabel}
+          hint={messages.backdropHint}
+          name="backdrop"
+          defaultValue={theme.backdrop}
+          options={BACKDROPS.map((backdrop) => ({
+            value: backdrop,
+            label: messages.backdrops[backdrop],
+          }))}
+        />
+      </div>
 
       <FormResult
         error={resolveWebsiteError(errors, state.error)}

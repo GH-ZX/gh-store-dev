@@ -553,6 +553,14 @@
         "dark": "Dark",
         "light": "Light"
       },
+      "backdropLabel": "Page backdrop",
+      "backdropHint": "An ambient layer behind the storefront. It holds still and never animates, and the dashboard is left plain.",
+      "backdrops": {
+        "none": "None",
+        "aurora": "Aurora — light along the top",
+        "mesh": "Mesh — soft colour in the corners",
+        "grid": "Dot grid — faint engineering paper"
+      },
       "saveAction": "Save theme",
       "saved": "Theme saved."
     },
