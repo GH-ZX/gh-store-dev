@@ -64,6 +64,7 @@ async function loadCategories(): Promise<
           productCount: products.length || (category.product_count ?? 0),
           hasStock,
           alreadyImported: imported.has(toVoucherGameCode(category.id)),
+          providerCode: toVoucherGameCode(category.id),
         }))
         .sort((first, second) => first.title.localeCompare(second.title)),
     };

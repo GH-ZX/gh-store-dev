@@ -13,6 +13,7 @@ import {
   regenerateG2BulkCallbackSecret,
   saveG2BulkSettings,
 } from "@/lib/services/admin-settings.service";
+import { removeImportedGame, type RemoveImportedResult } from "@/lib/services/admin-catalog.service";
 import { importG2BulkGames } from "@/lib/services/g2bulk-import.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -188,4 +189,50 @@ export async function importG2BulkGamesAction(
   } finally {
     revalidatePath(`/${locale}/dashboard/providers`);
   }
+}
+
+/**
+ * Take an imported product back out of the store.
+ *
+ * Called straight from the picker's click handler rather than through a form:
+ * the rows already sit inside the import form, forms do not nest, and a removal
+ * that submitted the surrounding selection would be the wrong shape of action
+ * entirely.
+ *
+ * Keyed by the supplier's code, which is the only identifier the picker holds.
+ * The game, its packages, and its provider mappings go together; orders that
+ * bought them keep their snapshots.
+ */
+export async function removeImportedGameAction(input: {
+  code: string;
+  locale: string;
+}): Promise<RemoveImportedResult> {
+  await requireAdmin();
+
+  const code = typeof input.code === "string" ? input.code.trim() : "";
+
+  if (!code || code.length > 120) {
+    return { ok: false, reason: "not_imported" };
+  }
+
+  const locale = resolveLocale(input.locale);
+  let result: RemoveImportedResult;
+
+  try {
+    result = await removeImportedGame(code);
+  } catch (error) {
+    logFailure("admin.providers", "imported_game_remove_failed", error, { code });
+
+    return { ok: false, reason: "unknown" };
+  }
+
+  if (result.ok) {
+    // The catalog, the pickers, and every storefront page that listed it.
+    revalidatePath("/", "layout");
+    revalidatePath(`/${locale}/dashboard/catalog`);
+    revalidatePath(`/${locale}/dashboard/providers/g2bulk/import`);
+    revalidatePath(`/${locale}/dashboard/providers/g2bulk/vouchers`);
+  }
+
+  return result;
 }

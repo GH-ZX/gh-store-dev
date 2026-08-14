@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/auth/guards";
 import { toSearchTokens } from "@/lib/catalog/search";
+import { recordAudit } from "@/lib/services/admin-audit.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 import type { Database } from "@/types/database";
@@ -486,9 +487,18 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
   }
 }
 
-/** Deletes the game; offers and provider mappings cascade with it. */
+/**
+ * Deletes the game; offers and provider mappings cascade with it.
+ *
+ * Audited, because it is the largest single thing an administrator can undo
+ * nothing about: the row is gone, and with it every package under it. Orders
+ * survive — `order_items.offer_id` is `on delete set null` and each item carries
+ * a purchase-time snapshot — so what the audit row has to preserve is which game
+ * it was, which is why the name and slug are read before the delete rather than
+ * recovered from an id that no longer resolves.
+ */
 export async function deleteAdminGame(gameId: string): Promise<void> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   if (!UUID_PATTERN.test(gameId)) {
     throw new GameNotFoundError();
@@ -499,7 +509,7 @@ export async function deleteAdminGame(gameId: string): Promise<void> {
     .from("games")
     .delete()
     .eq("id", gameId)
-    .select("id")
+    .select("id, slug, name_ar, name_en")
     .maybeSingle();
 
   if (error) {
@@ -509,6 +519,68 @@ export async function deleteAdminGame(gameId: string): Promise<void> {
   if (!data) {
     throw new GameNotFoundError();
   }
+
+  await recordAudit({
+    actorId: admin.id,
+    action: "catalog.game_deleted",
+    entityType: "game",
+    entityId: data.id,
+    values: { slug: data.slug, nameAr: data.name_ar, nameEn: data.name_en },
+  });
+}
+
+export type RemoveImportedResult =
+  | { ok: true; name: string }
+  | { ok: false; reason: "not_imported" | "unknown" };
+
+/**
+ * Remove what an import brought in, from the screen that brought it.
+ *
+ * The import pickers show every product the supplier carries and mark the ones
+ * the store already has. Until now that mark was the end of it: undoing an
+ * import meant finding the game in the catalog list and deleting it there,
+ * which is a different screen reached by remembering what the supplier called
+ * the thing.
+ *
+ * Keyed by the supplier's own code, because that is what the picker holds. A
+ * voucher category arrives under a derived code, so both screens resolve
+ * through the same mapping table and neither needs to know about the other.
+ */
+export async function removeImportedGame(providerCode: string): Promise<RemoveImportedResult> {
+  await requireAdmin();
+
+  const client = await createSupabaseServerClient();
+  const { data: mapping, error } = await client
+    .from("provider_game_mappings")
+    .select("game_id, games (name_en, name_ar)")
+    .eq("provider_name", G2BULK_PROVIDER_NAME)
+    .eq("external_game_code", providerCode)
+    .maybeSingle();
+
+  if (error) {
+    return { ok: false, reason: "unknown" };
+  }
+
+  if (!mapping?.game_id) {
+    // Already gone, or never imported. Both mean there is nothing to remove,
+    // and a picker showing a stale mark is exactly how this is reached.
+    return { ok: false, reason: "not_imported" };
+  }
+
+  const game = (Array.isArray(mapping.games) ? mapping.games[0] : mapping.games) as
+    | { name_en: string; name_ar: string }
+    | null;
+
+  try {
+    await deleteAdminGame(mapping.game_id);
+  } catch (deleteError) {
+    return {
+      ok: false,
+      reason: deleteError instanceof GameNotFoundError ? "not_imported" : "unknown",
+    };
+  }
+
+  return { ok: true, name: game?.name_en || game?.name_ar || providerCode };
 }
 
 /** Raised when a package slug is already used by another package of the same game. */

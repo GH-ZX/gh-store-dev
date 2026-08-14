@@ -254,7 +254,13 @@
     "resultSummary": "{created} games added, {updated} updated, {failed} failed.",
     "resultOffers": "Packages: {created} created and {updated} updated.",
     "backToProviders": "Back to providers",
-    "viewStore": "View games in the store"
+    "viewStore": "View games in the store",
+    "removeAction": "Remove from the store",
+    "removeConfirm": "Remove this from the store? Its packages go with it, and orders that bought it keep their records. It can be imported again.",
+    "removing": "Removing…",
+    "removed": "{name} was removed from the store.",
+    "removeMissing": "That is no longer in the store — the list was out of date.",
+    "removeFailed": "Removing it failed. Nothing was changed — please try again."
   },
   "catalog": {
     "eyebrow": "Catalog",

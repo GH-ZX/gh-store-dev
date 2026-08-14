@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
+import { ImportRemoveButton } from "@/components/admin/import-remove-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowIcon, CheckIcon, SearchIcon } from "@/components/ui/icons";
@@ -13,6 +14,7 @@ import {
 } from "@/app/[locale]/dashboard/providers/g2bulk/vouchers/action-state";
 import { importG2BulkVouchersAction } from "@/app/[locale]/dashboard/providers/g2bulk/vouchers/actions";
 import { cn } from "@/lib/cn";
+import type { RemoveImportedResult } from "@/lib/services/admin-catalog.service";
 
 /**
  * Provider voucher-category picker.
@@ -30,6 +32,8 @@ export type ImportableVoucherCategory = {
   productCount: number;
   hasStock: boolean;
   alreadyImported: boolean;
+  /** The code the mapping is stored under, so removal needs no second lookup. */
+  providerCode: string;
 };
 
 export type G2BulkVoucherImportFormProps = {
@@ -53,7 +57,33 @@ export function G2BulkVoucherImportForm({
     INITIAL_VOUCHER_IMPORT_STATE,
   );
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  // Seeded from what the store already carries, so the picker opens on the truth.
+  const [selected, setSelected] = useState<Set<number>>(
+    () =>
+      new Set(
+        categories.filter((category) => category.alreadyImported).map((category) => category.id),
+      ),
+  );
+  const [removal, setRemoval] = useState<RemoveImportedResult | null>(null);
+
+  function onRemoved(result: RemoveImportedResult, code: string): void {
+    setRemoval(result);
+
+    if (!result.ok) {
+      return;
+    }
+
+    const removed = categories.find((category) => category.providerCode === code);
+
+    if (removed) {
+      setSelected((current) => {
+        const next = new Set(current);
+        next.delete(removed.id);
+
+        return next;
+      });
+    }
+  }
 
   const totalProducts = useMemo(
     () => categories.reduce((total, category) => total + category.productCount, 0),
@@ -228,9 +258,19 @@ export function G2BulkVoucherImportForm({
                     {category.hasStock ? messages.inStock : messages.outOfStock}
                   </Badge>
                   {category.alreadyImported ? (
-                    <Badge tone="neutral" icon={<CheckIcon />}>
-                      {shared.alreadyImported}
-                    </Badge>
+                    <>
+                      <Badge tone="neutral" icon={<CheckIcon />}>
+                        {shared.alreadyImported}
+                      </Badge>
+                      <ImportRemoveButton
+                        code={category.providerCode}
+                        locale={locale}
+                        label={shared.removeAction}
+                        confirmMessage={shared.removeConfirm}
+                        busy={shared.removing}
+                        onDone={onRemoved}
+                      />
+                    </>
                   ) : null}
                 </label>
               </li>
@@ -255,6 +295,24 @@ export function G2BulkVoucherImportForm({
           </span>
         </span>
       </label>
+
+      {removal?.ok ? (
+        <p
+          role="status"
+          className="rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm leading-6 text-[var(--ink-soft)]"
+        >
+          {formatMessage(shared.removed, { name: removal.name }, locale)}
+        </p>
+      ) : null}
+
+      {removal && !removal.ok ? (
+        <p
+          role="alert"
+          className="rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--danger)_35%,transparent)] bg-[var(--danger-surface)] px-4 py-3 text-sm leading-6 text-[var(--danger)]"
+        >
+          {removal.reason === "not_imported" ? shared.removeMissing : shared.removeFailed}
+        </p>
+      ) : null}
 
       {error ? (
         <p

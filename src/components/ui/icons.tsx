@@ -139,6 +139,22 @@ export function SupportIcon(props: IconProps) {
   );
 }
 
+/**
+ * A waste basket, for removing something from the store.
+ *
+ * Symmetric about its vertical axis, so it needs no RTL treatment — the rule at
+ * the top of this file rather than an exception to it.
+ */
+export function TrashIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7h16M10 7V5.5A1.5 1.5 0 0 1 11.5 4h1A1.5 1.5 0 0 1 14 5.5V7" />
+      <path d="M6.5 7l.8 11.1A2 2 0 0 0 9.3 20h5.4a2 2 0 0 0 2-1.9L17.5 7" />
+      <path d="M10.5 11v5M13.5 11v5" />
+    </Icon>
+  );
+}
+
 export function BellIcon(props: IconProps) {
   return (
     <Icon {...props}>

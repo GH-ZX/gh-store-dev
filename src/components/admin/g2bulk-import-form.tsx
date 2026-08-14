@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
+import { ImportRemoveButton } from "@/components/admin/import-remove-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowIcon, CheckIcon, SearchIcon } from "@/components/ui/icons";
@@ -13,14 +14,23 @@ import {
 } from "@/app/[locale]/dashboard/providers/action-state";
 import { importG2BulkGamesAction } from "@/app/[locale]/dashboard/providers/actions";
 import { cn } from "@/lib/cn";
+import type { RemoveImportedResult } from "@/lib/services/admin-catalog.service";
 
 /**
  * Provider game picker.
  *
  * The list comes from the server already fetched; this component only handles
- * selection and submits the chosen codes. Games already mapped to the store are
- * marked, because re-importing them refreshes prices rather than duplicating
- * them — useful, but a different intent from adding something new.
+ * selection and submits the chosen codes.
+ *
+ * Games the store already carries start selected and marked. The selection is
+ * meant to read as "what this store has", so the picker opens showing the truth
+ * rather than an empty set an operator has to rebuild — and re-importing a
+ * selected game refreshes its prices rather than duplicating it, which is what
+ * submitting an unchanged selection does.
+ *
+ * Each imported row also carries a removal control, because the mark used to be
+ * the end of the story: undoing an import meant finding the game in the catalog
+ * list under whatever the store called it.
  */
 export type ImportableGame = {
   code: string;
@@ -46,7 +56,28 @@ export function G2BulkImportForm({
     INITIAL_IMPORT_STATE,
   );
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  /*
+   * Seeded from what the store already has, not empty. `useState` with an
+   * initialiser rather than an effect, so the first paint is already correct.
+   */
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(games.filter((game) => game.alreadyImported).map((game) => game.code)),
+  );
+  const [removal, setRemoval] = useState<RemoveImportedResult | null>(null);
+
+  function onRemoved(result: RemoveImportedResult, code: string): void {
+    setRemoval(result);
+
+    if (result.ok) {
+      // Nothing left to re-import under that code.
+      setSelected((current) => {
+        const next = new Set(current);
+        next.delete(code);
+
+        return next;
+      });
+    }
+  }
 
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -209,9 +240,19 @@ export function G2BulkImportForm({
                   </span>
                 </span>
                 {game.alreadyImported ? (
-                  <Badge tone="neutral" icon={<CheckIcon />}>
-                    {messages.alreadyImported}
-                  </Badge>
+                  <>
+                    <Badge tone="neutral" icon={<CheckIcon />}>
+                      {messages.alreadyImported}
+                    </Badge>
+                    <ImportRemoveButton
+                      code={game.code}
+                      locale={locale}
+                      label={messages.removeAction}
+                      confirmMessage={messages.removeConfirm}
+                      busy={messages.removing}
+                      onDone={onRemoved}
+                    />
+                  </>
                 ) : null}
               </label>
             </li>
@@ -233,6 +274,24 @@ export function G2BulkImportForm({
           </span>
         </span>
       </label>
+
+      {removal?.ok ? (
+        <p
+          role="status"
+          className="rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm leading-6 text-[var(--ink-soft)]"
+        >
+          {formatMessage(messages.removed, { name: removal.name }, locale)}
+        </p>
+      ) : null}
+
+      {removal && !removal.ok ? (
+        <p
+          role="alert"
+          className="rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--danger)_35%,transparent)] bg-[var(--danger-surface)] px-4 py-3 text-sm leading-6 text-[var(--danger)]"
+        >
+          {removal.reason === "not_imported" ? messages.removeMissing : messages.removeFailed}
+        </p>
+      ) : null}
 
       {error ? (
         <p
