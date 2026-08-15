@@ -182,7 +182,10 @@ test.describe("the dashboard navigation on a phone", () => {
     await expect(groupBar.getByRole("tab", { name: "المدفوعات" })).toBeVisible();
     await expect(groupBar.getByRole("tab", { name: "الزبائن" })).toBeVisible();
     await expect(groupBar.getByRole("tab", { name: "الدعم" })).toBeVisible();
-    await expect(groupBar.getByRole("link", { name: "الألعاب" })).toHaveCount(0);
+    // Subtabs only ever belong to the active group, so a games subtab must not
+    // exist while Operations is active. Queried as a tab: the subtabs carry an
+    // explicit `role="tab"`, so the link role would never match them.
+    await expect(groupBar.getByRole("tab", { name: "الألعاب" })).toHaveCount(0);
   });
 
   test("switching groups swaps the subtabs and navigates", async ({ page }) => {
