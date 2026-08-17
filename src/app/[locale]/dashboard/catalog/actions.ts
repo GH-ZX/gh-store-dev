@@ -55,6 +55,7 @@ const optionalNumber = (max: number) =>
 
 const gameSchema = z.object({
   gameId: z.uuid(),
+  categoryId: z.union([z.literal(""), z.uuid()]),
   nameAr: z.string().trim().min(1).max(160),
   nameEn: z.string().trim().min(1).max(160),
   slug: z.string().trim().min(1).max(80).regex(SLUG_PATTERN),
@@ -136,6 +137,7 @@ export async function updateGameAction(
 
   const parsed = gameSchema.safeParse({
     gameId: formText(formData, "gameId"),
+    categoryId: formText(formData, "categoryId") ?? "",
     nameAr: formText(formData, "nameAr"),
     nameEn: formText(formData, "nameEn"),
     slug: formText(formData, "slug"),
@@ -162,7 +164,7 @@ export async function updateGameAction(
   const { gameId, ...fields } = parsed.data;
 
   try {
-    await updateAdminGame(gameId, fields);
+    await updateAdminGame(gameId, { ...fields, categoryId: fields.categoryId || null });
   } catch (error) {
     return failed(errorKey(error));
   }

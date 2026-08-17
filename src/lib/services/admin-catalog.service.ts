@@ -188,6 +188,7 @@ export async function listAdminGames({
 
 /** The editable half of a game, shared by the read and the write. */
 export type AdminGameFields = {
+  categoryId: string | null;
   nameAr: string;
   nameEn: string;
   slug: string;
@@ -247,7 +248,7 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
   const { data: game, error } = await client
     .from("games")
     .select(
-      "id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order",
+      "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order",
     )
     .eq("id", gameId)
     .maybeSingle();
@@ -277,6 +278,7 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
   return {
     game: {
       id: game.id,
+      categoryId: game.category_id,
       slug: game.slug,
       nameAr: game.name_ar,
       nameEn: game.name_en,
@@ -350,6 +352,7 @@ export async function updateAdminGame(gameId: string, fields: AdminGameFields): 
   const { data, error } = await client
     .from("games")
     .update({
+      category_id: fields.categoryId,
       name_ar: fields.nameAr,
       name_en: fields.nameEn,
       slug: fields.slug,
@@ -546,14 +549,17 @@ export type RemoveImportedResult =
  * voucher category arrives under a derived code, so both screens resolve
  * through the same mapping table and neither needs to know about the other.
  */
-export async function removeImportedGame(providerCode: string): Promise<RemoveImportedResult> {
+export async function removeImportedGame(
+  providerCode: string,
+  providerName: string = G2BULK_PROVIDER_NAME,
+): Promise<RemoveImportedResult> {
   await requireAdmin();
 
   const client = await createSupabaseServerClient();
   const { data: mapping, error } = await client
     .from("provider_game_mappings")
     .select("game_id, games (name_en, name_ar)")
-    .eq("provider_name", G2BULK_PROVIDER_NAME)
+    .eq("provider_name", providerName)
     .eq("external_game_code", providerCode)
     .maybeSingle();
 
@@ -748,4 +754,39 @@ export async function deleteAdminOffer(gameId: string, offerId: string): Promise
   if (!data) {
     throw new OfferNotFoundError();
   }
+}
+
+export type AdminCategory = {
+  id: string;
+  slug: string;
+  nameAr: string;
+  nameEn: string;
+};
+
+/**
+ * The categories an import can drop a game into, and the editor can re-home it
+ * under.
+ *
+ * Read for the dashboard only — the storefront has no category pages yet, so
+ * this never feeds a public route.
+ */
+export async function listAdminCategories(): Promise<AdminCategory[]> {
+  await requireAdmin();
+
+  const client = await createSupabaseServerClient();
+  const { data, error } = await client
+    .from("categories")
+    .select("id, slug, name_ar, name_en")
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    throw new Error(`Reading the categories failed: ${error.message}`);
+  }
+
+  return data.map((category) => ({
+    id: category.id,
+    slug: category.slug,
+    nameAr: category.name_ar,
+    nameEn: category.name_en,
+  }));
 }

@@ -18,6 +18,11 @@ import { MaxStoreError } from "@/providers/maxstore/errors";
 import { MAXSTORE_PROVIDER_NAME } from "@/providers/maxstore/mapping";
 import { classifyOrderStatus as classifyMaxStoreOrder } from "@/providers/maxstore/schemas";
 import { readG2BulkCredentials, readG2BulkWebhookSecret } from "@/lib/settings/provider-settings";
+import { readBatStoreCredentials } from "@/lib/settings/batstore-settings";
+import { BatStoreClient } from "@/providers/batstore/client";
+import { BatStoreError } from "@/providers/batstore/errors";
+import { BATSTORE_PROVIDER_NAME } from "@/providers/batstore/mapping";
+import { classifyOrderStatus as classifyBatStoreOrder } from "@/providers/batstore/schemas";
 import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 import type { Json } from "@/types/database";
@@ -94,6 +99,20 @@ async function readMaxStoreToken(): Promise<string | null> {
   return apiToken && enabled ? apiToken : null;
 }
 
+/** The stored BatStore key, or null when that provider is off or unconfigured. */
+async function readBatStoreToken(): Promise<string | null> {
+  const supabase = createSupabaseServiceClient();
+  const { data } = await supabase
+    .from("store_settings")
+    .select("providers")
+    .eq("id", "global")
+    .maybeSingle();
+
+  const { apiToken, enabled } = readBatStoreCredentials(data?.providers ?? {});
+
+  return apiToken && enabled ? apiToken : null;
+}
+
 /**
  * The address G2Bulk should report this order to, if there is a usable one.
  *
@@ -141,7 +160,7 @@ function providerIdempotencyKey(orderItemId: string): string {
  * operator can still see it.
  */
 function describe(error: unknown): { customer: string; code: string | null } {
-  if (error instanceof G2BulkError || error instanceof MaxStoreError) {
+  if (error instanceof G2BulkError || error instanceof MaxStoreError || error instanceof BatStoreError) {
     const provider = error.message.trim();
     // Only a rejected request or a rejected key carries a message meant for a
     // person; a network or contract fault is machine detail.
@@ -817,6 +836,165 @@ async function fulfillMaxStore(
 }
 
 /**
+ * Buy through BatStore.
+ *
+ * The supplier holds the idempotency rather than the store: `idempotency_key` is
+ * the order item's id, so a retry — from a checkout that timed out, an operator,
+ * or the sweep — returns the original order instead of buying a second time.
+ *
+ * Delivery is `items[].account_data` appearing on the order, which is checked by
+ * polling `GET /orders/{id}`. BatStore documents no webhook, so polling is not a
+ * fallback here the way it is for G2Bulk; it is the only mechanism, and an order
+ * left `processing` genuinely waits for the sweep.
+ */
+async function fulfillBatStore(
+  context: FulfillmentContext,
+  apiToken: string,
+): Promise<FulfillmentOutcome> {
+  if (!context.externalProductId) {
+    return { state: "skipped", reason: "This offer is not mapped to a provider product." };
+  }
+
+  const activationIdentifier =
+    context.dynamicFields.activation_identifier ??
+    context.dynamicFields.activationIdentifier ??
+    "";
+
+  if (!activationIdentifier) {
+    return { state: "skipped", reason: "The order carries no activation identifier." };
+  }
+
+  const client = new BatStoreClient(apiToken);
+  const idempotencyKey = providerIdempotencyKey(context.orderItemId);
+  const attempt = await openAttempt(
+    context,
+    {
+      product_id: context.externalProductId,
+      quantity: context.quantity,
+      activation_identifier: activationIdentifier,
+    },
+    BATSTORE_PROVIDER_NAME,
+  );
+
+  if (!attempt) {
+    return { state: "skipped", reason: "Could not open a fulfilment attempt." };
+  }
+
+  if (attempt.status === "completed") {
+    return { state: "completed", deliveredItems: [] };
+  }
+
+  if (attempt.status === "refunded") {
+    return { state: "failed", reason: "Previously refunded.", refunded: true };
+  }
+
+  await setOrderStatus(context.orderId, "fulfilling");
+
+  if (!attempt.externalOrderId) {
+    try {
+      const placed = await client.createOrder({
+        productId: context.externalProductId,
+        quantity: context.quantity,
+        activationIdentifier,
+        idempotencyKey,
+        customerReference: context.orderNumber,
+      });
+
+      await recordAttempt(attempt.id, {
+        status: "processing",
+        externalOrderId: placed.id || null,
+        response: placed,
+      });
+
+      const state = classifyBatStoreOrder(placed);
+
+      if (state === "completed") {
+        const delivered = deliveredItems(placed);
+
+        await recordAttempt(attempt.id, {
+          status: "completed",
+          externalOrderId: placed.id || null,
+          delivered: delivered.payload,
+        });
+        await setOrderStatus(context.orderId, "completed");
+
+        return { state: "completed", deliveredItems: delivered.codes };
+      }
+
+      if (state === "failed") {
+        return failAndRefund(context, attempt.id, "The supplier rejected this order.");
+      }
+    } catch (error) {
+      const detail = describe(error);
+
+      return failAndRefund(context, attempt.id, detail.customer, detail.code);
+    }
+  }
+
+  for (let round = 0; round < POLL_ATTEMPTS; round += 1) {
+    await delay(POLL_DELAY_MS);
+
+    try {
+      const result = await client.getOrder(attempt.externalOrderId ?? "");
+
+      if (!result.id) {
+        continue;
+      }
+
+      const state = classifyBatStoreOrder(result);
+
+      if (state === "completed") {
+        const delivered = deliveredItems(result);
+
+        await recordAttempt(attempt.id, {
+          status: "completed",
+          response: result,
+          // Whatever the supplier hands over — an account, a code, a note. Stored
+          // the moment it arrives, because this may be the only copy.
+          delivered: delivered.payload,
+        });
+        await setOrderStatus(context.orderId, "completed");
+
+        return { state: "completed", deliveredItems: delivered.codes };
+      }
+
+      if (state === "failed") {
+        return failAndRefund(context, attempt.id, "The supplier could not complete this order.");
+      }
+    } catch (error) {
+      const detail = describe(error);
+      await recordAttempt(attempt.id, {
+        status: "processing",
+        errorMessage: detail.customer,
+        errorCode: detail.code,
+      });
+    }
+  }
+
+  await recordAttempt(attempt.id, { status: "processing" });
+
+  return { state: "processing" };
+}
+
+/** The delivered account data as stored payload and customer-readable codes. */
+function deliveredItems(order: {
+  items: { id: string; accountData: unknown }[];
+}): { payload: { items: string[] }; codes: string[] } {
+  const items = order.items.map((item) => {
+    if (typeof item.accountData === "string") {
+      return item.accountData.trim() || item.id;
+    }
+
+    // An object-shaped account is kept whole, since it may carry several fields.
+    return item.accountData === null || item.accountData === undefined
+      ? item.id
+      : JSON.stringify(item.accountData);
+  });
+
+  return { payload: { items }, codes: items };
+}
+
+/**
  * Fulfil a paid order.
  *
  * Safe to call more than once: the attempt row and the provider's own
@@ -844,6 +1022,20 @@ export async function fulfillOrder(orderId: string): Promise<FulfillmentOutcome>
     }
 
     const outcome = await fulfillMaxStore(context, apiToken);
+
+    await announceOutcome(context, outcome);
+
+    return outcome;
+  }
+
+  if (context.providerName === BATSTORE_PROVIDER_NAME) {
+    const apiToken = await readBatStoreToken();
+
+    if (!apiToken) {
+      return { state: "skipped", reason: "The BatStore provider is not configured." };
+    }
+
+    const outcome = await fulfillBatStore(context, apiToken);
 
     await announceOutcome(context, outcome);
 
@@ -921,6 +1113,7 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
    */
   let providerState: ProviderState = null;
   let refunded = false;
+  let deliveredPayload: { items: string[] } | undefined;
 
   if (attempt.external_order_id && ageMinutes >= GRACE_MINUTES) {
     /*
@@ -930,7 +1123,11 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
      * of its orders at `fulfilling` for ever.
      */
     const credentials =
-      provider === MAXSTORE_PROVIDER_NAME ? await readMaxStoreToken() : await readCredentials();
+      provider === MAXSTORE_PROVIDER_NAME
+        ? await readMaxStoreToken()
+        : provider === BATSTORE_PROVIDER_NAME
+          ? await readBatStoreToken()
+          : await readCredentials();
 
     if (!credentials) {
       return { action: "skipped", reason: "That supplier is not configured." };
@@ -945,6 +1142,14 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
         // MaxStore's own words map straight onto the policy's: `wait` is
         // pending, and pending never settles an order either way.
         providerState = result ? classifyMaxStoreOrder(result.status) : null;
+      } else if (provider === BATSTORE_PROVIDER_NAME) {
+        const result = await new BatStoreClient(credentials).getOrder(attempt.external_order_id);
+        providerState = result ? classifyBatStoreOrder(result) : null;
+        // The account data arrives on the order itself, so the sweep is where it
+        // is first seen for an order the checkout window could not wait for.
+        if (providerState === "completed" && result) {
+          deliveredPayload = deliveredItems(result).payload;
+        }
       } else {
         const status = await new G2BulkFulfillmentClient({
           apiKey: credentials,
@@ -979,7 +1184,10 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
   }
 
   if (decision.action === "complete") {
-    await recordAttempt(attempt.id, { status: "completed" });
+    await recordAttempt(attempt.id, {
+      status: "completed",
+      ...(deliveredPayload ? { delivered: deliveredPayload } : {}),
+    });
     await setOrderStatus(context.orderId, "completed");
     await announceOutcome(context, { state: "completed", deliveredItems: [] });
 

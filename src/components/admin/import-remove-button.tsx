@@ -25,6 +25,7 @@ import type { RemoveImportedResult } from "@/lib/services/admin-catalog.service"
  */
 export function ImportRemoveButton({
   code,
+  provider,
   locale,
   label,
   confirmMessage,
@@ -32,6 +33,7 @@ export function ImportRemoveButton({
   onDone,
 }: {
   code: string;
+  provider?: string;
   locale: Locale;
   label: string;
   confirmMessage: string;
@@ -50,7 +52,7 @@ export function ImportRemoveButton({
     }
 
     startTransition(async () => {
-      const result = await removeImportedGameAction({ code, locale });
+      const result = await removeImportedGameAction({ code, provider, locale });
 
       onDone(result, code);
 

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
+import { BatStoreClient } from "@/providers/batstore/client";
+import { BatStoreError } from "@/providers/batstore/errors";
 import { G2BulkClient } from "@/providers/g2bulk/client";
 import { G2BulkError } from "@/providers/g2bulk/errors";
 import { MaxStoreClient } from "@/providers/maxstore/client";
@@ -11,8 +13,10 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { logFailure } from "@/lib/logging/logger";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
+  getBatStoreCredentials,
   getG2BulkCredentials,
   getMaxStoreCredentials,
+  saveBatStoreSettings,
   saveBinanceSettings,
   regenerateG2BulkCallbackSecret,
   saveG2BulkSettings,
@@ -47,9 +51,9 @@ function resolveLocale(value: unknown): Locale {
 
 /** Map a provider failure onto a message key the page can localize. */
 function errorKey(error: unknown): string {
-  if (error instanceof G2BulkError || error instanceof MaxStoreError) {
-    // Both suppliers classify failures with the same vocabulary, so one message
-    // catalogue serves both and a third supplier costs nothing here.
+  if (error instanceof G2BulkError || error instanceof MaxStoreError || error instanceof BatStoreError) {
+    // All the suppliers classify failures with the same vocabulary, so one
+    // message catalogue serves them and another supplier costs nothing here.
     return error.kind;
   }
 
@@ -213,6 +217,7 @@ export async function importG2BulkGamesAction(
 export async function removeImportedGameAction(input: {
   code: string;
   locale: string;
+  provider?: string;
 }): Promise<RemoveImportedResult> {
   await requireAdmin();
 
@@ -226,7 +231,7 @@ export async function removeImportedGameAction(input: {
   let result: RemoveImportedResult;
 
   try {
-    result = await removeImportedGame(code);
+    result = await removeImportedGame(code, input.provider);
   } catch (error) {
     logFailure("admin.providers", "imported_game_remove_failed", error, { code });
 
@@ -239,6 +244,8 @@ export async function removeImportedGameAction(input: {
     revalidatePath(`/${locale}/dashboard/catalog`);
     revalidatePath(`/${locale}/dashboard/providers/g2bulk/import`);
     revalidatePath(`/${locale}/dashboard/providers/g2bulk/vouchers`);
+    revalidatePath(`/${locale}/dashboard/providers/maxstore/import`);
+    revalidatePath(`/${locale}/dashboard/providers/batstore/import`);
   }
 
   return result;
@@ -315,6 +322,79 @@ export async function verifyMaxStoreTokenAction(
         username: profile.username ?? profile.userId ?? "—",
         balance: profile.balance,
       },
+    };
+  } catch (error) {
+    return { ...INITIAL_PROVIDER_STATE, error: errorKey(error) };
+  }
+}
+
+const batstoreSchema = z.object({
+  apiToken: z.string().max(400).optional(),
+  markupPercent: z.coerce.number().min(0).max(500),
+  locale: z.string().optional(),
+});
+
+export async function saveBatStoreSettingsAction(
+  _state: ProviderActionState,
+  formData: FormData,
+): Promise<ProviderActionState> {
+  await requireAdmin();
+
+  const parsed = batstoreSchema.safeParse({
+    apiToken: formText(formData, "apiToken"),
+    markupPercent: formText(formData, "markupPercent") ?? "15",
+    locale: formText(formData, "locale"),
+  });
+
+  if (!parsed.success) {
+    return { ...INITIAL_PROVIDER_STATE, error: "invalid_input" };
+  }
+
+  const locale = resolveLocale(parsed.data.locale);
+
+  try {
+    await saveBatStoreSettings({
+      // An empty field means "keep the saved token", so it is not forwarded.
+      apiToken: parsed.data.apiToken?.trim() ? parsed.data.apiToken : undefined,
+      markupPercent: parsed.data.markupPercent,
+    });
+  } catch (error) {
+    logFailure("admin.providers", "batstore_settings_save_failed", error);
+
+    return { ...INITIAL_PROVIDER_STATE, error: "unknown" };
+  }
+
+  revalidatePath(`/${locale}/dashboard/providers`);
+
+  return { ...INITIAL_PROVIDER_STATE, notice: "saved" };
+}
+
+/**
+ * Prove the key, and say what it belongs to.
+ *
+ * `/me` is the cheapest call BatStore documents and returns the wallet balance,
+ * which is the number an owner actually wants to see. It doubles as the first
+ * real test of `docs/providers/batstore-api.md`.
+ */
+export async function verifyBatStoreTokenAction(
+  _state: ProviderActionState,
+  _formData: FormData,
+): Promise<ProviderActionState> {
+  await requireAdmin();
+
+  const { apiToken } = await getBatStoreCredentials();
+
+  if (!apiToken) {
+    return { ...INITIAL_PROVIDER_STATE, error: "missing_key" };
+  }
+
+  try {
+    const account = await new BatStoreClient(apiToken).getMe();
+
+    return {
+      error: null,
+      notice: "verified",
+      account,
     };
   } catch (error) {
     return { ...INITIAL_PROVIDER_STATE, error: errorKey(error) };

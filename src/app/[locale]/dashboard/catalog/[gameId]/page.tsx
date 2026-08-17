@@ -10,7 +10,7 @@ import { ChevronIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
-import { getAdminGame } from "@/lib/services/admin-catalog.service";
+import { getAdminGame, listAdminCategories } from "@/lib/services/admin-catalog.service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -28,6 +28,7 @@ export default async function CatalogGamePage({
   const { gameId } = await params;
   const messages = getMessages(locale, "admin").catalog;
   const detail = await getAdminGame(gameId);
+  const categories = await listAdminCategories();
 
   if (!detail) {
     notFound();
@@ -68,7 +69,13 @@ export default async function CatalogGamePage({
         </div>
       </div>
 
-      <GameEditForm locale={locale} messages={messages.game} errors={messages.errors} game={game} />
+      <GameEditForm
+        locale={locale}
+        messages={messages.game}
+        errors={messages.errors}
+        categories={categories}
+        game={game}
+      />
 
       <OfferRowsForm
         locale={locale}

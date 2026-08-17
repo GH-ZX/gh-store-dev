@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AxiomSettingsForm } from "@/components/admin/axiom-settings-form";
+import { BatStoreSettingsForm } from "@/components/admin/batstore-settings-form";
 import { BinanceSettingsForm } from "@/components/admin/binance-settings-form";
 import { G2BulkSettingsForm } from "@/components/admin/g2bulk-settings-form";
 import { MaxStoreSettingsForm } from "@/components/admin/maxstore-settings-form";
@@ -14,6 +15,7 @@ import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getSamOverview } from "@/lib/services/admin-sam.service";
 import {
   getAxiomStatus,
+  getBatStoreStatus,
   getBinanceStatus,
   getG2BulkCallback,
   getG2BulkStatus,
@@ -42,15 +44,17 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const messages = getMessages(locale, "admin");
   const provider = messages.providers.g2bulk;
   const maxstore = messages.providers.maxstore;
+  const batstore = messages.providers.batstore;
   const sam = messages.providers.sam;
   const binance = messages.providers.binance;
   const logging = messages.providers.logging;
   const groups = messages.providers.groups;
-  const [status, callback, maxstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus] =
+  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus] =
     await Promise.all([
       getG2BulkStatus(),
       getG2BulkCallback(),
       getMaxStoreStatus(),
+      getBatStoreStatus(),
       getRecentSyncLogs(G2BULK_PROVIDER_NAME),
       getSamStatus(),
       getBinanceStatus(),
@@ -145,6 +149,42 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             messages={maxstore}
             errors={provider.errors}
             status={maxstoreStatus}
+          />
+        </ProviderSection>
+
+        <ProviderSection
+          name={batstore.name}
+          summary={batstore.summary}
+          defaultOpen={!batstoreStatus.configured}
+          badges={[
+            {
+              label: batstoreStatus.configured ? batstore.statusConfigured : batstore.statusMissing,
+              tone: batstoreStatus.configured ? "success" : "neutral",
+            },
+            // Said in the summary, not only inside: a supplier that cannot yet
+            // sell anything should not look finished from the outside.
+            { label: batstore.partialLabel, tone: "warning" },
+          ]}
+          hint={
+            batstoreStatus.tokenHint
+              ? { label: batstore.keyHintLabel, value: batstoreStatus.tokenHint }
+              : null
+          }
+          actions={
+            <ButtonLink
+              href={`/${locale}/dashboard/providers/batstore/import`}
+              variant={batstoreStatus.configured ? "primary" : "secondary"}
+              trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
+            >
+              {messages.providers.batstoreImport.title}
+            </ButtonLink>
+          }
+        >
+          <BatStoreSettingsForm
+            locale={locale}
+            messages={batstore}
+            errors={provider.errors}
+            status={batstoreStatus}
           />
         </ProviderSection>
       </ProviderGroup>

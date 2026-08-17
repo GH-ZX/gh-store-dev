@@ -5,6 +5,7 @@ import {
   AdminCard,
   CheckboxField,
   FormResult,
+  SelectField,
   TextAreaField,
   TextField,
 } from "@/components/admin/admin-form";
@@ -19,7 +20,7 @@ import {
   deleteGameAction,
   updateGameAction,
 } from "@/app/[locale]/dashboard/catalog/actions";
-import type { AdminGame } from "@/lib/services/admin-catalog.service";
+import type { AdminCategory, AdminGame } from "@/lib/services/admin-catalog.service";
 
 /**
  * Game editor.
@@ -36,6 +37,7 @@ export type GameEditFormProps = {
   locale: Locale;
   messages: AdminMessages["catalog"]["game"];
   errors: AdminMessages["catalog"]["errors"];
+  categories: AdminCategory[];
   game: AdminGame;
 };
 
@@ -50,7 +52,7 @@ function resolveError(
   return errors[key as keyof AdminMessages["catalog"]["errors"]] ?? errors.unknown;
 }
 
-export function GameEditForm({ locale, messages, errors, game }: GameEditFormProps) {
+export function GameEditForm({ locale, messages, errors, categories, game }: GameEditFormProps) {
   const [saveState, saveAction, saving] = useActionState<CatalogActionState, FormData>(
     updateGameAction,
     INITIAL_CATALOG_STATE,
@@ -67,6 +69,22 @@ export function GameEditForm({ locale, messages, errors, game }: GameEditFormPro
       <form action={saveAction} className="grid gap-5">
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="gameId" value={game.id} />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectField
+            label={messages.categoryLabel}
+            hint={messages.categoryHint}
+            name="categoryId"
+            defaultValue={game.categoryId ?? ""}
+            options={[
+              { value: "", label: messages.categoryNone },
+              ...categories.map((category) => ({
+                value: category.id,
+                label: `${category.nameAr} / ${category.nameEn}`,
+              })),
+            ]}
+          />
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField

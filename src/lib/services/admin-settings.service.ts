@@ -16,6 +16,13 @@ import {
   type BinanceCredentials,
   type BinanceStatus,
 } from "@/lib/settings/binance-settings";
+import {
+  mergeBatStoreSettings,
+  readBatStoreCredentials,
+  toBatStoreStatus,
+  type BatStoreCredentials,
+  type BatStoreStatus,
+} from "@/lib/settings/batstore-settings";
 import { checkCallbackUrl, type CallbackReachability } from "@/lib/settings/callback-url";
 import {
   mergeMaxStoreSettings,
@@ -327,6 +334,44 @@ export async function saveMaxStoreSettings(update: {
   }
 
   return toMaxStoreStatus(data.providers);
+}
+
+export async function getBatStoreStatus(): Promise<BatStoreStatus> {
+  await requireAdmin();
+
+  return toBatStoreStatus(await readProviders());
+}
+
+/** Server-only: returns the plaintext BatStore key. Never pass this to a client component. */
+export async function getBatStoreCredentials(): Promise<BatStoreCredentials> {
+  await requireAdmin();
+
+  return readBatStoreCredentials(await readProviders());
+}
+
+export async function saveBatStoreSettings(update: {
+  apiToken?: string;
+  markupPercent?: number;
+  enabled?: boolean;
+}): Promise<BatStoreStatus> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const providers = await readProviders();
+  const next = mergeBatStoreSettings(providers, update, new Date().toISOString());
+
+  const { data, error } = await supabase
+    .from("store_settings")
+    .update({ providers: next })
+    .eq("id", SETTINGS_ID)
+    .select("providers")
+    .single();
+
+  if (error) {
+    throw new Error(`Saving provider settings failed: ${error.message}`);
+  }
+
+  return toBatStoreStatus(data.providers);
 }
 
 export async function getBinanceStatus(): Promise<BinanceStatus> {
