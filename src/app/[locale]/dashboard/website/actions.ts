@@ -16,8 +16,9 @@ import {
 } from "@/lib/home/layout";
 import {
   getWebsiteSettings,
-  saveContactChannels,
+  saveBranding,
   saveCarouselSettings,
+  saveContactChannels,
   saveHomeLayout,
   savePageSeo,
   saveSeo,
@@ -441,6 +442,51 @@ export async function saveSeoAction(
     });
   } catch (error) {
     logFailure("admin.website", "seo_save_failed", error);
+
+    return failure("unknown");
+  }
+
+  revalidatePath("/", "layout");
+
+  return saved();
+}
+
+/**
+ * Site name.
+ *
+ * An empty name is a valid save: it means "use the built-in store brand"
+ * rather than a mistake, so clearing the field is how an owner backs out of
+ * a promotional name. The switch only decides how far the name spreads — the
+ * homepage tab always uses it.
+ */
+const brandingSchema = z.object({
+  name_ar: z.string().trim().max(80).optional(),
+  name_en: z.string().trim().max(80).optional(),
+});
+
+export async function saveBrandingAction(
+  _state: WebsiteActionState,
+  formData: FormData,
+): Promise<WebsiteActionState> {
+  await requireAdmin();
+
+  const parsed = brandingSchema.safeParse({
+    name_ar: formText(formData, "name_ar"),
+    name_en: formText(formData, "name_en"),
+  });
+
+  if (!parsed.success) {
+    return failure("invalid_input");
+  }
+
+  try {
+    await saveBranding({
+      nameAr: parsed.data.name_ar ?? "",
+      nameEn: parsed.data.name_en ?? "",
+      useEverywhere: formFlag(formData, "use_everywhere"),
+    });
+  } catch (error) {
+    logFailure("admin.website", "branding_save_failed", error);
 
     return failure("unknown");
   }

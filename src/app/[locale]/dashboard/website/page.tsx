@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AdminCard } from "@/components/admin/admin-form";
+import { BrandingForm } from "@/components/admin/branding-form";
 import { ContactChannelsEditor } from "@/components/admin/contact-channels-editor";
 import { HomeLayoutEditor } from "@/components/admin/home-layout-editor";
 import { CarouselForm } from "@/components/admin/carousel-form";
@@ -40,6 +41,14 @@ export default async function WebsiteSettingsPage({
         title={messages.title}
         subtitle={messages.description}
       />
+
+      <AdminCard title={messages.branding.title} description={messages.branding.description}>
+        <BrandingForm
+          branding={settings.branding}
+          messages={messages.branding}
+          errors={messages.errors}
+        />
+      </AdminCard>
 
       <AdminCard title={messages.sections.title} description={messages.sections.description}>
         <HomeLayoutEditor

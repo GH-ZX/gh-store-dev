@@ -1370,6 +1370,7 @@ export type Database = {
       }
       store_settings: {
         Row: {
+          branding: Json
           contact: Json
           created_at: string
           home_layout: Json
@@ -1386,6 +1387,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          branding?: Json
           contact?: Json
           created_at?: string
           home_layout?: Json
@@ -1402,6 +1404,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          branding?: Json
           contact?: Json
           created_at?: string
           home_layout?: Json

@@ -40,7 +40,7 @@ import type { Json } from "@/types/database";
 const SETTINGS_ID = "global";
 
 /** Presentation columns only: `payments` and `providers` are deliberately absent. */
-const PRESENTATION_COLUMNS = "home_layout, social_links, seo, contact, theme";
+const PRESENTATION_COLUMNS = "home_layout, social_links, seo, contact, theme, branding";
 
 type PresentationRow = {
   home_layout: Json;
@@ -48,6 +48,7 @@ type PresentationRow = {
   seo: Json;
   contact: Json;
   theme: Json;
+  branding: Json;
 };
 
 export type WebsiteSettings = {
@@ -63,6 +64,7 @@ export type WebsiteSettings = {
    */
   seo: PublicStoreSettings["seo"];
   theme: ThemeSettings;
+  branding: PublicStoreSettings["branding"];
 };
 
 export type SocialLinkInput = {
@@ -95,6 +97,12 @@ export type SeoInput = {
   ogImageUrl: string | null;
 };
 
+export type BrandingInput = {
+  nameAr: string;
+  nameEn: string;
+  useEverywhere: boolean;
+};
+
 type JsonObject = { [key: string]: Json | undefined };
 
 /** A stored JSON object, or an empty one when the column holds anything else. */
@@ -124,12 +132,18 @@ async function readPresentationRow(): Promise<PresentationRow> {
     seo: data?.seo ?? {},
     contact: data?.contact ?? {},
     theme: data?.theme ?? {},
+    branding: data?.branding ?? {},
   };
 }
 
 /** Write one presentation column, leaving every other column untouched. */
 async function updateColumn(
-  update: Partial<Pick<PresentationRow, "home_layout" | "social_links" | "seo" | "contact" | "theme">>,
+  update: Partial<
+    Pick<
+      PresentationRow,
+      "home_layout" | "social_links" | "seo" | "contact" | "theme" | "branding"
+    >
+  >,
 ): Promise<void> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
@@ -153,6 +167,7 @@ export async function getWebsiteSettings(): Promise<WebsiteSettings> {
     seo: toJsonObject(row.seo),
     contact: toJsonObject(row.contact),
     theme: toJsonObject(row.theme),
+    branding: toJsonObject(row.branding),
   });
 
   return {
@@ -163,6 +178,7 @@ export async function getWebsiteSettings(): Promise<WebsiteSettings> {
     contactNoteEn: settings.contactNoteEn,
     seo: settings.seo,
     theme: settings.theme,
+    branding: settings.branding,
   };
 }
 
@@ -356,6 +372,25 @@ export async function saveSeo(seo: SeoInput): Promise<void> {
   }
 
   await updateColumn({ seo: next });
+}
+
+/**
+ * Save the site name.
+ *
+ * An empty name is a valid save: it means "use the built-in store brand"
+ * rather than a mistake. The switch only decides how far the name spreads —
+ * the homepage tab always uses it.
+ */
+export async function saveBranding(input: BrandingInput): Promise<void> {
+  await requireAdmin();
+
+  await updateColumn({
+    branding: {
+      name_ar: input.nameAr.trim(),
+      name_en: input.nameEn.trim(),
+      use_everywhere: input.useEverywhere,
+    },
+  });
 }
 
 /**

@@ -436,6 +436,16 @@
     "eyebrow": "Website",
     "title": "Website settings",
     "description": "Control the homepage sections, social links, contact channels, and SEO.",
+    "branding": {
+      "title": "Site name",
+      "description": "Shown in the browser tab for the homepage. Turn the switch on to also use it in the header, footer, and invoices.",
+      "nameAr": "Name in Arabic",
+      "nameEn": "Name in English",
+      "useEverywhere": "Use this name everywhere",
+      "useEverywhereHint": "Also replaces the built-in name in the header, footer, and invoices.",
+      "saveAction": "Save site name",
+      "saved": "Site name saved."
+    },
     "sections": {
       "title": "Homepage sections",
       "description": "Reorder sections, add and remove them, write their headings, and choose what the handpicked ones show.",
