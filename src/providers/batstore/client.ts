@@ -6,7 +6,7 @@ import { sanitisePath } from "@/lib/logging/outcome";
 import { BatStoreError, classifyBatStoreStatus } from "@/providers/batstore/errors";
 import {
   orderSchema,
-  productSchema,
+  productsSchema,
   toBatStoreOrder,
   toBatStoreProduct,
   type BatStoreAccount,
@@ -168,7 +168,7 @@ export class BatStoreClient {
   /** Every sellable product, test products included — the importer decides. */
   async listProducts(): Promise<BatStoreProduct[]> {
     const { json } = await this.request("/api/reseller/products");
-    const parsed = z.array(productSchema).safeParse(json);
+    const parsed = productsSchema.safeParse(json);
 
     if (!parsed.success) {
       throw new BatStoreError("contract", "BatStore API returned an unreadable product list.");

@@ -37,8 +37,9 @@ the dashboard's verify button uses it for.
 ### `GET /api/reseller/products`
 
 List active products. Optional `lang` query; supports an `If-None-Match` header
-and answers 304 when unchanged. Each item carries `id`, `name`, `description`,
-`emoji`, `image_url`, `price_usd`, `standard_price_usd`, `pricing_type`,
+and answers 304 when unchanged. The response wraps the list: `{ success,
+products: [...] }`. Each item carries `id`, `name`, `description`, `emoji`,
+`image_url`, `price_usd`, `standard_price_usd`, `pricing_type`,
 `special_price_expires_at`, `warranty_days`, `delivery_type`, `stock`,
 `price_tiers`, `api_test`.
 
@@ -62,14 +63,18 @@ Create an order. Body (`CreateOrderRequest`):
 | `customer_reference` | no | internal customer reference from the reseller bot |
 | `idempotency_key` | yes | unique per purchase attempt; retrying the exact same request returns the original order, reusing it with a different payload returns HTTP 409 |
 
-Can answer 402 (insufficient balance) and 400/422 on a bad request.
+The response wraps the order: `{ success, status, order, ... }`. Can answer 402
+(insufficient balance) and 400/422 on a bad request.
 
 ### `GET /api/reseller/orders/{order_id}`
 
-Read an order. Returns `id`, `status`, `product_id`, `product_name`,
-`quantity`, `amount_usd`, `delivery_type`, `customer_reference`,
-`idempotency_key`, `activation_identifier`, `created_at`, and `items` — each
-item is `{ id, account_data }`, the delivered account.
+Read an order. Returns `{ success, order }`; the `Order` carries `id`, `status`,
+`product_id`, `product_name`, `quantity`, `amount_usd`, `delivery_type`,
+`customer_reference`, `idempotency_key`, `activation_identifier`, `created_at`,
+and `items` — each item is `{ id, account_data }`, the delivered account.
+
+Documented `status` values: `COMPLETED`, `PAID_PENDING_DELIVERY`,
+`AWAITING_ACTIVATION_INFO`, `AWAITING_ACTIVATION`, `CANCELLED`.
 
 ### `POST /api/reseller/orders/{order_id}/activation-identifier`
 

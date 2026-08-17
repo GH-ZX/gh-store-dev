@@ -10,6 +10,7 @@ import {
 import {
   classifyOrderStatus,
   productSchema,
+  productsSchema,
   toBatStoreOrder,
   toBatStoreProduct,
 } from "@/providers/batstore/schemas";
@@ -47,6 +48,27 @@ describe("batstore offer type", () => {
 
   it("exposes the activation field key the importer and fulfilment share", () => {
     expect(ACTIVATION_FIELD_KEY).toBe("activation_identifier");
+  });
+});
+
+describe("batstore product list", () => {
+  it("accepts the wrapped response the API actually sends", () => {
+    const parsed = productsSchema.safeParse({
+      success: true,
+      products: [{ id: 12, name: "Grok 1 month", price_usd: 5.0 }],
+    });
+
+    expect(parsed.success).toBe(true);
+
+    if (parsed.success) {
+      expect(parsed.data[0].name).toBe("Grok 1 month");
+    }
+  });
+
+  it("still accepts a bare array", () => {
+    const parsed = productsSchema.safeParse([{ id: 1, name: "Netflix", price_usd: 9.99 }]);
+
+    expect(parsed.success).toBe(true);
   });
 });
 
@@ -99,6 +121,25 @@ describe("batstore order classification", () => {
     const order = toBatStoreOrder({ id: "1", status: "failed", items: [] });
 
     expect(classifyOrderStatus(order)).toBe("failed");
+  });
+
+  it("reads the documented statuses: completed and cancelled", () => {
+    expect(classifyOrderStatus(toBatStoreOrder({ id: "1", status: "COMPLETED", items: [] }))).toBe(
+      "completed",
+    );
+    expect(
+      classifyOrderStatus(toBatStoreOrder({ id: "2", status: "CANCELLED", items: [] })),
+    ).toBe("failed");
+  });
+
+  it("treats the still-working statuses as pending", () => {
+    for (const status of [
+      "PAID_PENDING_DELIVERY",
+      "AWAITING_ACTIVATION_INFO",
+      "AWAITING_ACTIVATION",
+    ]) {
+      expect(classifyOrderStatus(toBatStoreOrder({ id: "1", status, items: [] }))).toBe("pending");
+    }
   });
 
   it("treats anything unrecognised as still working", () => {

@@ -74,6 +74,23 @@ export function toBatStoreProduct(product: z.input<typeof productSchema>): BatSt
   };
 }
 
+/**
+ * The products list, as `GET /api/reseller/products` reports it.
+ *
+ * The live API wraps the array in `{ success, products }` — the swagger example
+ * is a bare array, which is how this ended up wrong once — so both shapes are
+ * accepted rather than betting on one.
+ */
+export const productsSchema = z.union([
+  z.array(productSchema),
+  z
+    .object({
+      success: z.boolean().nullish(),
+      products: z.array(productSchema).nullish(),
+    })
+    .transform((value) => value.products ?? []),
+]);
+
 export type BatStoreAccount = {
   username: string;
   balance: number;
@@ -153,8 +170,8 @@ export function toBatStoreOrder(order: z.infer<typeof orderSchema>): BatStoreOrd
 /**
  * Map an order's state onto what the store does about it.
  *
- * The swagger does not enumerate status values, so delivery is read from the
- * thing that actually matters — `items` — and only an explicit failure wording
+ * Delivery is read from the thing that actually matters — `items` — and from
+ * the status the API documents as finished. Only an explicit failure wording
  * settles an order against the customer. Anything unrecognised stays "working",
  * because refunding an order that is about to deliver gives the goods away.
  */
@@ -163,9 +180,20 @@ export function classifyOrderStatus(order: BatStoreOrder): "completed" | "failed
     return "completed";
   }
 
-  const status = order.status?.trim().toLowerCase() ?? "";
+  const status = order.status?.trim().toUpperCase() ?? "";
 
-  if (["failed", "cancelled", "canceled", "refunded", "rejected", "error"].includes(status)) {
+  if (status === "COMPLETED") {
+    return "completed";
+  }
+
+  if (
+    status === "CANCELLED" ||
+    status === "CANCELED" ||
+    status === "FAILED" ||
+    status === "REFUNDED" ||
+    status === "REJECTED" ||
+    status === "ERROR"
+  ) {
     return "failed";
   }
 
