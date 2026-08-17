@@ -87,6 +87,13 @@ const publicSettingsSchema = z.object({
     })
     .optional(),
   theme: z.unknown().optional(),
+  branding: z
+    .object({
+      name_ar: z.string().trim().max(80).optional(),
+      name_en: z.string().trim().max(80).optional(),
+      use_everywhere: z.boolean().optional(),
+    })
+    .optional(),
   maintenance_mode: z.boolean().optional(),
   maintenance_message_ar: z.string().trim().max(400).nullish(),
   maintenance_message_en: z.string().trim().max(400).nullish(),
@@ -125,6 +132,11 @@ export type PublicStoreSettings = {
     pages: PageSeoMap;
   };
   theme: ThemeSettings;
+  branding: {
+    nameAr: string;
+    nameEn: string;
+    useEverywhere: boolean;
+  };
   maintenanceMode: boolean;
   maintenanceMessageAr: string;
   maintenanceMessageEn: string;
@@ -144,6 +156,11 @@ export const EMPTY_PUBLIC_SETTINGS: PublicStoreSettings = {
     pages: {},
   },
   theme: DEFAULT_THEME_SETTINGS,
+  branding: {
+    nameAr: "",
+    nameEn: "",
+    useEverywhere: false,
+  },
   maintenanceMode: false,
   maintenanceMessageAr: "",
   maintenanceMessageEn: "",
@@ -251,6 +268,11 @@ export function normalizePublicSettings(value: unknown): PublicStoreSettings {
       pages: normalizePageSeo(settings.seo?.pages),
     },
     theme: normalizeTheme(settings.theme),
+    branding: {
+      nameAr: settings.branding?.name_ar ?? "",
+      nameEn: settings.branding?.name_en ?? "",
+      useEverywhere: settings.branding?.use_everywhere ?? false,
+    },
     maintenanceMode: settings.maintenance_mode ?? false,
     maintenanceMessageAr: settings.maintenance_message_ar ?? "",
     maintenanceMessageEn: settings.maintenance_message_en ?? "",
