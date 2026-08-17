@@ -2,7 +2,6 @@ import Link from "next/link";
 import { SocialIcon } from "@/components/ui/brand-icons";
 import type { Locale } from "@/i18n/config";
 import type { CommonMessages } from "@/i18n/messages";
-import { BRAND } from "@/lib/brand";
 import { getSocialLinkLabel, type SocialLink } from "@/lib/settings/public-settings";
 
 /**
@@ -17,9 +16,11 @@ export type SiteFooterProps = {
   messages: CommonMessages;
   socialLinks: SocialLink[];
   year: number;
+  /** Resolved display name for the chrome (built-in brand unless set everywhere). */
+  brandName: string;
 };
 
-export function SiteFooter({ locale, messages, socialLinks, year }: SiteFooterProps) {
+export function SiteFooter({ locale, messages, socialLinks, year, brandName }: SiteFooterProps) {
   const columns = [
     {
       heading: messages.footer.storeHeading,
@@ -61,14 +62,14 @@ export function SiteFooter({ locale, messages, socialLinks, year }: SiteFooterPr
       <div className="gh-page relative">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]">
           <div className="max-w-sm">
-            <Link href={`/${locale}`} className="flex items-center gap-2.5" aria-label={BRAND.name}>
+            <Link href={`/${locale}`} className="flex items-center gap-2.5" aria-label={brandName}>
               <span
                 className="grid size-9 place-items-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-strong)] text-xs font-bold text-[var(--accent-strong)]"
                 aria-hidden="true"
               >
-                GH
+                {brandName.trim().slice(0, 2).toUpperCase() || "GH"}
               </span>
-              <span className="text-base font-semibold tracking-tight text-[var(--ink)]">{BRAND.name}</span>
+              <span className="text-base font-semibold tracking-tight text-[var(--ink)]">{brandName}</span>
             </Link>
             <p className="mt-4 text-sm leading-6 text-[var(--ink-muted)]">{messages.footer.tagline}</p>
           </div>
@@ -129,7 +130,7 @@ export function SiteFooter({ locale, messages, socialLinks, year }: SiteFooterPr
 
         <div className="mt-12 flex flex-col gap-2 border-t border-[var(--line)] pt-6 text-xs text-[var(--ink-faint)] sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {year} {BRAND.name}. {messages.footer.rights}
+            © {year} {brandName}. {messages.footer.rights}
           </p>
           <p>{messages.footer.tagline}</p>
         </div>

@@ -202,3 +202,59 @@ test.describe("the dashboard navigation on a phone", () => {
     await expect(groupBar.getByRole("tab", { name: "الألعاب" })).toHaveAttribute("aria-selected", "true");
   });
 });
+
+/*
+ * The site-name setting.
+ *
+ * The homepage tab is the owner's to name, so the configured name shows there
+ * whether or not the switch is on; the switch is what spreads it to the
+ * header, footer, and invoices. This case saves, asserts both states, and then
+ * clears the value again — the setting persists in the real store settings,
+ * and every other spec shares the same database.
+ */
+test.describe("the site name", () => {
+  const ARABIC_NAME = "متجر الاختبار";
+  const ENGLISH_NAME = "Test Store";
+  const year = new Date().getFullYear();
+
+  test("drives the homepage tab and, with the switch, the chrome", async ({ page }) => {
+    // Save a configured name, switch off.
+    await page.goto("/ar/dashboard/website", { waitUntil: "domcontentloaded" });
+    // The field name is unique; the label text collides with the social links
+    // editor's pet labels, so select by name.
+    await page.locator('input[name="name_ar"]').fill(ARABIC_NAME);
+    await page.locator('input[name="name_en"]').fill(ENGLISH_NAME);
+    await page.getByRole("button", { name: "حفظ اسم المتجر" }).click();
+    await expect(page.getByText("تم حفظ اسم المتجر.")).toBeVisible();
+
+    // The homepage tab is the configured name alone — no "· GH Store" suffix,
+    // because the homepage metadata reads it as an absolute title.
+    await page.goto("/ar", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveTitle(ARABIC_NAME);
+
+    // Switch off: the chrome keeps the built-in brand.
+    await expect(page.getByRole("link", { name: "GH Store" }).first()).toBeVisible();
+
+    // Turn the switch on: header and footer follow the configured name.
+    await page.goto("/ar/dashboard/website", { waitUntil: "domcontentloaded" });
+    await page.locator('input[name="use_everywhere"]').check();
+    await page.getByRole("button", { name: "حفظ اسم المتجر" }).click();
+    await expect(page.getByText("تم حفظ اسم المتجر.")).toBeVisible();
+
+    await page.goto("/ar", { waitUntil: "domcontentloaded" });
+    const brandLocator = page.getByRole("link", { name: ARABIC_NAME });
+    await expect(brandLocator).toHaveCount(2);
+    await expect(page.getByText(`© ${year} ${ARABIC_NAME}.`, { exact: false })).toBeVisible();
+
+    // Back out: clearing the fields restores the built-in brand everywhere.
+    await page.goto("/ar/dashboard/website", { waitUntil: "domcontentloaded" });
+    await page.locator('input[name="name_ar"]').fill("");
+    await page.locator('input[name="name_en"]').fill("");
+    await page.locator('input[name="use_everywhere"]').uncheck();
+    await page.getByRole("button", { name: "حفظ اسم المتجر" }).click();
+    await expect(page.getByText("تم حفظ اسم المتجر.")).toBeVisible();
+
+    await page.goto("/ar", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveTitle("GH Store");
+  });
+});

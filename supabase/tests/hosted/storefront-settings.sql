@@ -59,6 +59,14 @@ begin
     raise exception 'Public settings home_layout must be an array';
   end if;
 
+  if not (public_settings ? 'branding') then
+    raise exception 'Public settings must expose the branding block';
+  end if;
+
+  if jsonb_typeof(public_settings -> 'branding') <> 'object' then
+    raise exception 'Public settings branding must be an object';
+  end if;
+
   if jsonb_typeof(public.get_home_layout()) <> 'array' then
     raise exception 'get_home_layout must return an array';
   end if;

@@ -5,6 +5,7 @@ import { HomeFallbackLinks, HomeSections } from "@/components/home/home-sections
 import { LiveEditMode } from "@/components/live-edit/live-edit-mode";
 import { Section } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
+import { buildBrandName } from "@/lib/brand";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { buildPageMetadata } from "@/lib/seo";
 import { getHomeCarousel, resolveHomeSections } from "@/lib/services/home.service";
@@ -16,16 +17,26 @@ export async function generateMetadata({ params }: PageProps<"/[locale]">): Prom
   const home = getMessages(locale, "home");
   const settings = await getPublicStoreSettings();
 
-  const title = (locale === "ar" ? settings.seo.titleAr : settings.seo.titleEn) || home.hero.title;
   const description =
     (locale === "ar" ? settings.seo.descriptionAr : settings.seo.descriptionEn) || home.hero.description;
 
-  return buildPageMetadata({
+  const metadata = buildPageMetadata({
     locale,
-    title,
+    title: "",
     description,
     imageUrl: settings.seo.ogImageUrl,
   });
+
+  /*
+   * The homepage tab is the owner's to name: the configured site name always
+   * wins here (Arabic preferred, then English, then the built-in brand), read
+   * as an absolute title so the root template's "· GH Store" suffix is skipped.
+   */
+  metadata.title = {
+    absolute: settings.branding.nameAr.trim() || settings.branding.nameEn.trim() || buildBrandName(settings, locale),
+  };
+
+  return metadata;
 }
 
 export default async function HomePage({ params }: PageProps<"/[locale]">) {

@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SupportFab } from "@/components/support/support-fab";
 import { getLocaleDirection, isLocale, type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
+import { BRAND, buildBrandName } from "@/lib/brand";
 import { getG2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
 import { getUnreadNotificationCount } from "@/lib/services/notification.service";
 import { getSessionSummary } from "@/lib/services/session.service";
@@ -37,6 +38,13 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
     getUnreadNotificationCount(session?.userId ?? null),
   ]);
 
+  /*
+   * The chrome name. The homepage tab always uses the configured name, but the
+   * header, footer, and invoices keep the built-in brand unless the owner has
+   * chosen to use the configured name everywhere.
+   */
+  const brandName = settings.branding.useEverywhere ? buildBrandName(settings, locale) : BRAND.name;
+
   return (
     <div lang={locale} dir={getLocaleDirection(locale)} className="flex min-h-screen flex-col">
       {/*
@@ -63,6 +71,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
         session={session}
         wallet={wallet}
         unreadCount={unreadCount}
+        brandName={brandName}
         notificationsLabel={getMessages(locale, "account").notifications.badgeLabel}
       />
 
@@ -75,6 +84,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
         messages={common}
         socialLinks={settings.socialLinks}
         year={new Date().getFullYear()}
+        brandName={brandName}
       />
 
       {/* Last in the DOM so it comes after the footer in reading order. */}

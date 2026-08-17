@@ -6,9 +6,11 @@ import { ChevronIcon } from "@/components/ui/icons";
 import { Section } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { APP_NAME } from "@/lib/config/app";
+import { buildBrandName } from "@/lib/brand";
 import { formatPrice } from "@/lib/format/money";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getOrderInvoice } from "@/lib/services/invoice.service";
+import { getPublicStoreSettings } from "@/lib/services/settings.service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -28,7 +30,7 @@ export default async function OrderInvoicePage({
   const locale = await resolveLocaleParam(params);
   const { orderId } = await params;
   const messages = getMessages(locale, "checkout").invoice;
-  const invoice = await getOrderInvoice(locale, orderId);
+  const [invoice, settings] = await Promise.all([getOrderInvoice(locale, orderId), getPublicStoreSettings()]);
 
   if (!invoice) {
     notFound();
@@ -36,6 +38,11 @@ export default async function OrderInvoicePage({
 
   const issued = invoice.issuedAt.slice(0, 10);
   const ordered = invoice.orderDate.slice(0, 10);
+  /*
+   * The invoice header follows the chrome's naming rules: the configured name
+   * when the owner chose to use it everywhere, else the built-in brand.
+   */
+  const brandName = settings.branding.useEverywhere ? buildBrandName(settings, locale) : APP_NAME;
 
   return (
     <Section spacing="page">
@@ -55,7 +62,7 @@ export default async function OrderInvoicePage({
         <article className="mt-6 rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6 sm:p-10">
           <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--line)] pb-6">
             <div>
-              <p className="font-brand text-lg font-bold text-[var(--ink)]">{APP_NAME}</p>
+              <p className="font-brand text-lg font-bold text-[var(--ink)]">{brandName}</p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--ink)]">
                 {messages.title}
               </h1>

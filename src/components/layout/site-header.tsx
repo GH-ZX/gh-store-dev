@@ -12,9 +12,13 @@ import { SearchIcon } from "@/components/ui/icons";
 import { getLocaleDirection, type Locale } from "@/i18n/config";
 import type { CommonMessages, SearchMessages } from "@/i18n/messages";
 import { signOutAction } from "@/lib/auth/actions";
-import { BRAND } from "@/lib/brand";
 import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
 import type { SessionSummary } from "@/lib/services/session.service";
+
+/** Up to two letters for the logo tile, from the start of the display name. */
+function brandInitials(name: string): string {
+  return name.trim().slice(0, 2).toUpperCase() || "GH";
+}
 
 /**
  * Storefront header.
@@ -33,6 +37,8 @@ export type SiteHeaderProps = {
   /** Unread notifications for the signed-in reader; 0 for a visitor. */
   unreadCount: number;
   notificationsLabel: string;
+  /** Resolved display name for the chrome (built-in brand unless set everywhere). */
+  brandName: string;
 };
 
 export function SiteHeader({
@@ -43,6 +49,7 @@ export function SiteHeader({
   wallet,
   unreadCount,
   notificationsLabel,
+  brandName,
 }: SiteHeaderProps) {
   const primaryItems = [
     { href: `/${locale}`, label: messages.navigation.home },
@@ -98,14 +105,14 @@ export function SiteHeader({
           dir="ltr"
           className="gh-sheen flex min-h-16 items-center gap-3 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[color-mix(in_srgb,var(--canvas-raised)_82%,transparent)] px-3 shadow-[var(--elevation-2)] backdrop-blur-2xl sm:gap-4 sm:px-4"
         >
-          <Link href={`/${locale}`} className="flex shrink-0 items-center gap-2.5" aria-label={BRAND.name}>
+          <Link href={`/${locale}`} className="flex shrink-0 items-center gap-2.5" aria-label={brandName}>
             <span
               className="grid size-9 place-items-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[linear-gradient(140deg,color-mix(in_srgb,var(--accent)_28%,var(--surface-strong)),var(--surface-strong))] font-brand text-xs font-bold text-[var(--accent-strong)]"
               aria-hidden="true"
             >
-              GH
+              {brandInitials(brandName)}
             </span>
-            <BrandWordmark />
+            <BrandWordmark name={brandName} />
           </Link>
 
           <nav className="hidden items-center gap-0.5 lg:flex" aria-label={messages.navigation.primaryLabel}>
