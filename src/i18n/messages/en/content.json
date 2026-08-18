@@ -135,5 +135,25 @@
     "description": "Follow new offers and announcements on the channel you prefer.",
     "emptyTitle": "No links yet",
     "emptyDescription": "We are adding our channels soon. Check back to find them here."
+  },
+  "about": {
+    "eyebrow": "About the store",
+    "title": "GH Store — a digital services store.",
+    "description": "Email accounts, AI accounts, game top-ups, and digital cards at clear prices.",
+    "sections": [
+      {
+        "heading": "What is GH Store?",
+        "body": "GH Store is a digital services store that sells ready email accounts, AI accounts, game top-up packages, and digital cards and codes. Every product is delivered directly in the order page once payment is confirmed."
+      },
+      {
+        "heading": "Who is it for?",
+        "body": "It is for individuals who want to buy digital services without a bank card or international balance. You pay from your in-store wallet and receive your product instantly."
+      },
+      {
+        "heading": "Why do we ask for your data?",
+        "body": "We ask for basic data only — such as your email and your in-game account ID when topping up — to complete and deliver your order. We do not request permissions over your Google account, and we never access your mail, files, or calendar. Your data is used solely to fulfil your order and is never sold to any third party."
+      }
+    ],
+    "privacyLabel": "Privacy policy"
   }
 }

@@ -20,6 +20,7 @@ const STATIC_PATHS = [
   { path: "/gift-cards", priority: 0.9, changeFrequency: "daily" as const },
   { path: "/sale", priority: 0.8, changeFrequency: "daily" as const },
   { path: "/how", priority: 0.5, changeFrequency: "monthly" as const },
+  { path: "/about", priority: 0.5, changeFrequency: "monthly" as const },
   { path: "/faq", priority: 0.5, changeFrequency: "monthly" as const },
   { path: "/contact", priority: 0.4, changeFrequency: "monthly" as const },
   { path: "/links", priority: 0.3, changeFrequency: "monthly" as const },

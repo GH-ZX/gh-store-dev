@@ -34,6 +34,7 @@ export function SiteFooter({ locale, messages, socialLinks, year, brandName }: S
     {
       heading: messages.footer.helpHeading,
       links: [
+        { href: `/${locale}/about`, label: messages.links.about },
         { href: `/${locale}/how`, label: messages.links.how },
         { href: `/${locale}/faq`, label: messages.links.faq },
         { href: `/${locale}/contact`, label: messages.links.contact },
