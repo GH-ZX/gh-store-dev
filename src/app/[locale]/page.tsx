@@ -93,23 +93,22 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
    * the hidden block below) satisfies both without drawing a copy block above
    * the games.
    */
-  const heading = (locale === "ar" ? settings.seo.titleAr : settings.seo.titleEn) || home.hero.title;
   const brandName = buildBrandName(settings, locale);
 
   const page = (
     <>
       {/*
-        * One visible line above the carousel carrying the store's name and what
-        * it does. A quiet equaliser rather than a pitch — this is the text a
-        * visitor reads to learn what the page is, and the text a brand review
-        * reads for the same answer. The heading stays `sr-only` so the outline
-        * still opens at level one without drawing a second, louder block.
+        * The visible headline is the app's own name. Google's branding review
+        * reads the visible main heading to identify the app and match it to the
+        * OAuth consent screen — an `sr-only` h1 reads as "no name on the page",
+        * which is exactly the mismatch it keeps reporting. The name sits in a
+        * quiet display weight; the purpose line below it explains what the
+        * store does.
         */}
-      <p className="mb-4 text-center text-sm leading-6 text-[var(--ink-soft)] sm:text-base">
-        <span className="font-brand font-semibold tracking-[0.08em] text-[var(--ink)]">{brandName}</span>
-        <span className="mx-2 text-[var(--accent)]" aria-hidden="true">
-          ·
-        </span>
+      <h1 className="text-center font-brand text-2xl font-semibold tracking-[0.08em] text-[var(--ink)] sm:text-3xl">
+        {brandName}
+      </h1>
+      <p className="mt-3 mb-4 text-center text-sm leading-6 text-[var(--ink-soft)] sm:text-base">
         {home.hero.description}
       </p>
 
@@ -129,10 +128,6 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           {home.data.privacyLink}
         </Link>
       </p>
-
-      <div className="sr-only">
-        <h1>{heading}</h1>
-      </div>
 
       {/*
         * The carousel leads. There used to be a pitch above it — a headline, two
