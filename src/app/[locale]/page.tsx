@@ -98,15 +98,22 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const page = (
     <>
       {/*
-        * The name and purpose stay in the document — a crawler and a brand
-        * review read them — but the design's answer to "what is this page" is
-        * the carousel, so they are hidden rather than drawn. Screen readers
-        * still announce them; only the eye skips the block.
+        * One visible line above the carousel carrying the store's name and what
+        * it does. A quiet equaliser rather than a pitch — this is the text a
+        * visitor reads to learn what the page is, and the text a brand review
+        * reads for the same answer. The heading stays `sr-only` so the outline
+        * still opens at level one without drawing a second, louder block.
         */}
+      <p className="mb-4 text-center text-sm leading-6 text-[var(--ink-soft)] sm:text-base">
+        <span className="font-brand font-semibold tracking-[0.08em] text-[var(--ink)]">{brandName}</span>
+        <span className="mx-2 text-[var(--accent)]" aria-hidden="true">
+          ·
+        </span>
+        {home.hero.description}
+      </p>
+
       <div className="sr-only">
-        <p>{brandName}</p>
         <h1>{heading}</h1>
-        <p>{home.hero.description}</p>
       </div>
 
       {/*
