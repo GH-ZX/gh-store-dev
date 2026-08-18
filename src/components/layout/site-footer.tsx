@@ -63,12 +63,14 @@ export function SiteFooter({ locale, messages, socialLinks, year, brandName }: S
         <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]">
           <div className="max-w-sm">
             <Link href={`/${locale}`} className="flex items-center gap-2.5" aria-label={brandName}>
-              <span
-                className="grid size-9 place-items-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-strong)] text-xs font-bold text-[var(--accent-strong)]"
+              <img
+                src="/gh-store-logo.png"
+                alt=""
+                width={36}
+                height={36}
+                className="size-9 shrink-0 rounded-[var(--radius-control)] object-cover"
                 aria-hidden="true"
-              >
-                {brandName.trim().slice(0, 2).toUpperCase() || "GH"}
-              </span>
+              />
               <span className="text-base font-semibold tracking-tight text-[var(--ink)]">{brandName}</span>
             </Link>
             <p className="mt-4 text-sm leading-6 text-[var(--ink-muted)]">{messages.footer.tagline}</p>

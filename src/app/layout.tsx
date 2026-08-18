@@ -47,6 +47,10 @@ export const metadata: Metadata = {
   },
   description: "A modern digital gaming store.",
   applicationName: APP_NAME,
+  icons: {
+    icon: "/gh-store-logo.png",
+    apple: "/gh-store-logo.png",
+  },
 };
 
 export const viewport: Viewport = {
