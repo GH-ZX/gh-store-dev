@@ -68,7 +68,7 @@ export function SiteFooter({ locale, messages, socialLinks, year, brandName }: S
                 alt=""
                 width={36}
                 height={36}
-                className="size-9 shrink-0 rounded-[var(--radius-control)] object-cover"
+                className="gh-logo-theme size-9 shrink-0 rounded-[var(--radius-control)] object-cover"
                 aria-hidden="true"
               />
               <span className="text-base font-semibold tracking-tight text-[var(--ink)]">{brandName}</span>

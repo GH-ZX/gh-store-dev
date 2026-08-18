@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { preload } from "react-dom";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { HomeFallbackLinks, HomeSections } from "@/components/home/home-sections";
@@ -110,6 +111,23 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           ·
         </span>
         {home.hero.description}
+      </p>
+
+      {/*
+        * Google's branding review asks a homepage to be transparent about why it
+        * collects data and to carry a privacy-policy link. One quiet strip does
+        * both without becoming part of the pitch: the datapoint is a sentence a
+        * visitor reads and recognises, and the link is the same route the
+        * consent screen points to.
+        */}
+      <p className="mb-6 text-center text-xs leading-5 text-[var(--ink-muted)] sm:text-sm sm:leading-6">
+        {home.data.note}
+        <Link
+          href={`/${locale}/privacy`}
+          className="ms-1.5 font-semibold text-[var(--accent)] underline decoration-[var(--line)] underline-offset-4 transition-colors duration-[var(--duration)] hover:text-[var(--accent-strong)]"
+        >
+          {home.data.privacyLink}
+        </Link>
       </p>
 
       <div className="sr-only">

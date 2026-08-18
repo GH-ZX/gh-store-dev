@@ -205,6 +205,18 @@ html:not([data-theme="light"]) .gh-only-light {
   display: none;
 }
 
+/*
+ * The logo is drawn for the dark canvas — a pale mark on a dark field — so on
+ * the light theme it would vanish into the paper. Inverting the bitmap turns
+ * the silhouettes dark while the transparent field stays untouched, and the
+ * `hue-rotate` keeps the tint from shifting as far as a naive inversion would
+ * push it. Rendered only while the light theme is active; the dark canvas is
+ * the one the artwork was made for, so it is left exactly as delivered.
+ */
+[data-theme="light"] .gh-logo-theme {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 @keyframes gh-rise {
   from {
     opacity: 0;

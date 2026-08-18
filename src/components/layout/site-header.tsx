@@ -106,7 +106,7 @@ export function SiteHeader({
               alt=""
               width={36}
               height={36}
-              className="size-9 shrink-0 rounded-[var(--radius-control)] object-cover"
+              className="gh-logo-theme size-9 shrink-0 rounded-[var(--radius-control)] object-cover"
               aria-hidden="true"
             />
             <BrandWordmark name={brandName} />
