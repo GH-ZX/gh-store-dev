@@ -3,6 +3,7 @@ allowBuilds:
   sharp: false
   unrs-resolver: false
   workerd: true
+nodeLinker: hoisted
 minimumReleaseAgeExclude:
   - '@supabase/auth-js@2.112.3'
   - '@supabase/functions-js@2.112.3'
