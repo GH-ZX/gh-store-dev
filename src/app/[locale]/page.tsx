@@ -3,7 +3,7 @@ import { preload } from "react-dom";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { HomeFallbackLinks, HomeSections } from "@/components/home/home-sections";
 import { LiveEditMode } from "@/components/live-edit/live-edit-mode";
-import { Section, SectionHeader } from "@/components/ui/section";
+import { Section } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { buildBrandName } from "@/lib/brand";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
@@ -86,38 +86,34 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   }
 
   /*
-   * A homepage is a first impression, and this one has to carry the store's
-   * name and what it does in text a visitor — and a crawler or a brand review —
-   * can read. Before, the only heading was `sr-only`: the carousel was the
-   * answer to "what is this page", and each slide is a different game, so a
-   * heading built from one would have renamed the store every few seconds.
-   *
-   * The fix keeps both ideas. The block below states the name and purpose —
-   * the brand name, the owner's own SEO title (the same line the tab shows),
-   * and the store's one-line description — while the carousel still leads the
-   * visuals below it.
+   * The homepage must carry the store's name and what it does in text a crawler
+   * or a brand review can read, but the carousel is what a visitor sees. Keeping
+   * the name, the SEO title, and the one-line description in the document (see
+   * the hidden block below) satisfies both without drawing a copy block above
+   * the games.
    */
   const heading = (locale === "ar" ? settings.seo.titleAr : settings.seo.titleEn) || home.hero.title;
   const brandName = buildBrandName(settings, locale);
 
   const page = (
     <>
-      <Section spacing="tight" mesh>
-        <SectionHeader
-          as="h1"
-          align="center"
-          eyebrow={brandName}
-          title={heading}
-          subtitle={home.hero.description}
-        />
-      </Section>
+      {/*
+        * The name and purpose stay in the document — a crawler and a brand
+        * review read them — but the design's answer to "what is this page" is
+        * the carousel, so they are hidden rather than drawn. Screen readers
+        * still announce them; only the eye skips the block.
+        */}
+      <div className="sr-only">
+        <p>{brandName}</p>
+        <h1>{heading}</h1>
+        <p>{home.hero.description}</p>
+      </div>
 
       {/*
-        * The carousel leads the tiles below the intro. The pitch that used to
-        * live above it — a headline, two buttons and three stat tiles — pushed
-        * the actual games below the fold on a phone and told a visitor nothing
-        * they had not already assumed by arriving. The statement above and the
-        * games themselves do that work now.
+        * The carousel leads. There used to be a pitch above it — a headline, two
+        * buttons and three stat tiles — which pushed the actual games below the
+        * fold on a phone and told a visitor nothing they had not already assumed
+        * by arriving. The games are the pitch.
         */}
       {carousel.games.length > 0 ? (
         <Section spacing="page" mesh>
