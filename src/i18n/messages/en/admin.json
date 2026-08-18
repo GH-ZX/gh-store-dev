@@ -11,11 +11,14 @@
     "signInAction": "Sign in",
     "signUpAction": "Create account",
     "signOutAction": "Sign out",
+    "googleSignInAction": "Continue with Google",
+    "orDivider": "or",
     "toggleToSignUp": "No account yet? Create one.",
     "toggleToSignIn": "Already have an account? Sign in.",
     "errors": {
       "invalid_input": "Check the email and password, then try again.",
       "invalid_credentials": "Those sign-in details are not correct.",
+      "oauth_failed": "We could not connect to Google. Try again.",
       "signup_failed": "We could not create the account. Try another email or again later."
     },
     "notices": {

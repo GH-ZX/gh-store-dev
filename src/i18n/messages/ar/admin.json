@@ -11,11 +11,14 @@
     "signInAction": "دخول",
     "signUpAction": "إنشاء الحساب",
     "signOutAction": "تسجيل الخروج",
+    "googleSignInAction": "المتابعة عبر Google",
+    "orDivider": "أو",
     "toggleToSignUp": "ليس لديك حساب؟ أنشئ واحدًا.",
     "toggleToSignIn": "لديك حساب؟ سجّل الدخول.",
     "errors": {
       "invalid_input": "تحقق من البريد الإلكتروني وكلمة المرور ثم أعد المحاولة.",
       "invalid_credentials": "بيانات الدخول غير صحيحة.",
+      "oauth_failed": "تعذر الاتصال بحساب Google. أعد المحاولة.",
       "signup_failed": "تعذر إنشاء الحساب. جرّب بريدًا آخر أو حاول لاحقًا."
     },
     "notices": {

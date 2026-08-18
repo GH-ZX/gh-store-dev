@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import { getMessages, type AdminMessages } from "@/i18n/messages";
@@ -110,6 +111,19 @@ export function AuthForm({ locale, messages, mode, redirectTo }: AuthFormProps) 
       >
         {isSignUp ? messages.signUpAction : messages.signInAction}
       </Button>
+
+      <div role="separator" className="flex items-center gap-3 text-xs text-[var(--ink-faint)]">
+        <span className="h-px flex-1 bg-[var(--line)]" />
+        <span>{messages.orDivider}</span>
+        <span className="h-px flex-1 bg-[var(--line)]" />
+      </div>
+
+      <GoogleSignInButton
+        locale={locale}
+        redirectTo={redirectTo}
+        label={messages.googleSignInAction}
+        errorLabel={messages.errors.oauth_failed}
+      />
 
       <Link
         href={isSignUp ? `/${locale}/login` : `/${locale}/login?mode=sign-up`}
