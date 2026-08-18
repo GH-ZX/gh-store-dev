@@ -10,7 +10,8 @@
 		"global_fetch_strictly_public"
 	],
 	"vars": {
-		"NEXT_PUBLIC_SUPABASE_URL": "https://njlzgfddfnnqujaodbta.supabase.co"
+		"NEXT_PUBLIC_SUPABASE_URL": "https://njlzgfddfnnqujaodbta.supabase.co",
+		"NEXT_PUBLIC_APP_URL": "https://gh-store.me"
 	},
 	"assets": {
 		"directory": ".open-next/assets",
