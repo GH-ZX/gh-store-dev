@@ -84,6 +84,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const requestHeaders = await headers();
   const locale = requestHeaders.get("x-gh-store-locale") ?? "ar";
   const resolvedLocale = isLocale(locale) ? locale : "ar";
+  const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
   /*
    * The theme belongs to the document, so it is read here rather than in the
    * locale layout: the default mode has to reach the pre-paint script, and the
@@ -116,6 +117,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <link rel="preconnect" href={imageOrigin} crossOrigin="" />
             <link rel="dns-prefetch" href={imageOrigin} />
           </>
+        ) : null}
+        {googleSiteVerification ? (
+          <meta name="google-site-verification" content={googleSiteVerification} />
         ) : null}
         {/*
          * Applies the stored theme before first paint, so a light-theme visitor
