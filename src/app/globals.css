@@ -233,6 +233,25 @@ html:not([data-theme="light"]) .gh-only-light {
   animation: gh-fade var(--duration) var(--ease-out-expo) both;
 }
 
+/*
+ * The carousel's progress rail: the active segment fills itself over the
+ * interval the slide stays up, as a countdown written in the brand accent
+ * rather than dots. The duration is set inline by the carousel from its
+ * configured interval, so only the neutral longer default lives here.
+ */
+@keyframes gh-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@utility gh-progress {
+  animation: gh-progress 6s linear both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

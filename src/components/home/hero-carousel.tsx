@@ -3,7 +3,7 @@
 import Link from "next/link";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { GameEditor } from "@/components/live-edit/game-editor";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
@@ -17,12 +17,10 @@ import { formatMessage } from "@/i18n/messages";
 /**
  * Featured games carousel, on Embla.
  *
- * The hand-rolled version cross-faded between absolutely-positioned slides and
- * carried its own swipe detection, its own rotation timer, and its own pause
- * rules. All three were reimplementations of things this library does properly:
- * a drag that tracks the finger and settles with momentum rather than snapping
- * after a 44px threshold, a wheel and trackpad gesture, and rotation that stops
- * the moment somebody touches it.
+ * A cinematic hero rather than a card: the artwork bleeds to the frame, a
+ * strong canvas wash rises from the bottom for the caption, and the game's
+ * name is set large enough to lead the page. Motion is a slow Ken Burns zoom
+ * on the active slide and a caption that rises into place.
  *
  * **Arabic.** `direction` is passed to Embla rather than left to CSS. It is not
  * a styling concern here — Embla measures slide offsets and decides which way a
@@ -33,7 +31,8 @@ import { formatMessage } from "@/i18n/messages";
  * **Reduced motion.** Autoplay is not registered at all when the visitor asks
  * for less motion, rather than registered and paused: a plugin that exists can
  * be started by a stray interaction, and the setting is a statement about what
- * the page may do rather than what it may do right now.
+ * the page may do rather than what it may do right now. The global
+ * `prefers-reduced-motion` rule also collapses the zoom and the progress fill.
  *
  * **The whole slide is the link.** A picture of a game with a title on it reads
  * as something to press, on a phone especially, and asking for the small pill
@@ -93,6 +92,11 @@ function usePrefersReducedMotion(): boolean {
   );
 }
 
+/** Zero-padded two-digit number for the editorial counter, e.g. `01`. */
+function padTwo(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
 export function HeroCarousel({
   games,
   locale,
@@ -144,7 +148,6 @@ export function HeroCarousel({
   const [selected, setSelected] = useState(0);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
-  const stripRef = useRef<HTMLDivElement | null>(null);
 
   const onSelect = useCallback(() => {
     if (emblaApi) {
@@ -183,37 +186,21 @@ export function HeroCarousel({
     };
   }, [emblaApi, onSelect]);
 
-  /*
-   * Keeps the current game's logo inside the strip when the strip is long
-   * enough to scroll — otherwise rotation walks the marker off the edge and the
-   * row stops saying where you are.
-   *
-   * Scrolls the strip itself rather than calling `scrollIntoView`, which is
-   * allowed to scroll every ancestor including the page: pulling the document
-   * around while somebody is reading, on a timer, would be worse than a marker
-   * out of sight. The offset is a difference between two measured positions, so
-   * it is correct in Arabic without caring which end `scrollLeft` counts from.
-   */
-  useEffect(() => {
-    const strip = stripRef.current;
-    const marker = strip?.firstElementChild?.children[selected];
-
-    if (!strip || !(marker instanceof HTMLElement) || strip.scrollWidth <= strip.clientWidth + 1) {
-      return;
-    }
-
-    const stripBox = strip.getBoundingClientRect();
-    const markerBox = marker.getBoundingClientRect();
-
-    strip.scrollBy({
-      left: markerBox.left - stripBox.left - (stripBox.width - markerBox.width) / 2,
-      behavior: reducedMotion ? "auto" : "smooth",
-    });
-  }, [selected, total, reducedMotion]);
-
   if (total === 0) {
     return null;
   }
+
+  /*
+   * Editorial counter, e.g. `01 / 05`. The brand face (Tektur) gives the row a
+   * numeral character the Geist body cannot, and the width is tabular so a
+   * tenth game does not nudge the digits.
+   */
+  const counter = (
+    <span className="hidden flex-none items-baseline gap-2 font-brand text-sm tracking-[0.22em] text-[var(--ink-soft)] tabular-nums sm:inline-flex" aria-hidden="true">
+      <span className="text-base text-[var(--ink)]">{padTwo(selected + 1)}</span>
+      <span className="text-[var(--ink-faint)]">{padTwo(total)}</span>
+    </span>
+  );
 
   return (
     <section
@@ -221,15 +208,15 @@ export function HeroCarousel({
       aria-roledescription="carousel"
       aria-label={labels.regionLabel}
     >
-      <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-1.5 backdrop-blur-xl">
+      <div className="relative overflow-hidden rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-1.5 shadow-[var(--elevation-2)] backdrop-blur-xl">
         {/*
           * The viewport clips; the container is the flex track Embla moves.
-          * Portrait on a phone, wide on a desktop — one game should never be
+          * Tall on a phone, wide on a desktop — one game should never be
           * several screens tall on a laptop or a letterbox on a phone.
           */}
         <div
           ref={emblaRef}
-          className="gh-sheen relative aspect-[4/5] overflow-hidden rounded-[var(--radius-inner)] border border-[var(--line)] bg-[var(--surface-inset)] sm:aspect-[16/10] lg:aspect-[21/9]"
+          className="gh-sheen relative aspect-[4/5] overflow-hidden rounded-[var(--radius-inner)] border border-[var(--line)] bg-[var(--surface-inset)] sm:aspect-[16/9] lg:aspect-[2.4/1]"
         >
           {/* `touch-action` keeps a vertical scroll the page's, not the carousel's. */}
           <div className="flex h-full touch-pan-y">
@@ -264,56 +251,75 @@ export function HeroCarousel({
                     // item does not reliably give the artwork inside it that.
                     className="group absolute inset-0"
                   >
+                    {/*
+                      * Ken Burns: the active slide breathes from rest to a slow
+                      * zoom while it is on screen. The exchange is animated by
+                      * the transition rather than a keyframe so it pauses and
+                      * reverses cleanly when rotation hands the frame over.
+                      */}
                     <StoreImage
                       src={game.imageUrl}
                       alt={game.name}
                       focus={game.carouselFocus}
                       priority={slideIndex === 0}
-                      sizes="(min-width: 1280px) 1200px, (min-width: 640px) 92vw, 100vw"
+                      sizes="(min-width: 1280px) 1280px, (min-width: 640px) 92vw, 100vw"
                       className={cn(
-                        "transition-transform duration-[2400ms] ease-[var(--ease-out-expo)]",
-                        isActive ? "scale-105" : "scale-100",
+                        "transition-transform duration-[3200ms] ease-[var(--ease-out-expo)] will-change-transform",
+                        isActive ? "scale-110" : "scale-100",
                       )}
                     />
+
+                    {/*
+                      * The cinematic wash. Two layers: a canvas gradient rising
+                      * from the bottom so the caption always sits on a field the
+                      * theme knows, and a soft accent bloom cornered opposite
+                      * the text so the top of the frame is not flat.
+                      */}
                     <div
-                      className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--canvas)_94%,transparent)_6%,color-mix(in_srgb,var(--canvas)_55%,transparent)_40%,transparent_70%)]"
                       aria-hidden="true"
+                      className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--canvas)_92%,transparent)_2%,color-mix(in_srgb,var(--canvas)_68%,transparent)_34%,transparent_62%),radial-gradient(70% 90% at 90% 8%,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_64%)]"
                     />
 
-                    {/* Capped, so the copy does not run the width of a wide screen. */}
-                    <div className="absolute inset-x-0 bottom-0 max-w-2xl p-5 sm:p-7 lg:p-9">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {game.carouselBadge ? (
-                          <Badge tone="accent">{game.carouselBadge}</Badge>
-                        ) : game.isFeatured ? (
-                          <Badge tone="accent">{labels.featured}</Badge>
+                    {/*
+                      * The caption. Capped so the copy does not run the width of
+                      * a wide screen, and rising into place on the active slide
+                      * so a new game announces itself instead of appearing.
+                      */}
+                    <div className="absolute inset-x-0 bottom-0 max-w-3xl p-5 sm:p-8 lg:p-12">
+                      <div className={cn(isActive && "gh-rise")}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {game.carouselBadge ? (
+                            <Badge tone="accent">{game.carouselBadge}</Badge>
+                          ) : game.isFeatured ? (
+                            <Badge tone="accent">{labels.featured}</Badge>
+                          ) : null}
+                          {game.pointsName ? <Badge tone="neutral">{game.pointsName}</Badge> : null}
+                        </div>
+
+                        <h3 className="mt-4 max-w-[18ch] text-[clamp(2rem,4.5vw,4.25rem)] leading-[1.04] font-semibold tracking-[-0.04em] text-[var(--ink)]">
+                          {game.name}
+                        </h3>
+
+                        {game.description ? (
+                          <p className="mt-3 line-clamp-2 max-w-xl text-sm leading-7 text-[var(--ink-soft)] sm:text-base">
+                            {game.description}
+                          </p>
                         ) : null}
-                        {game.pointsName ? <Badge tone="neutral">{game.pointsName}</Badge> : null}
-                      </div>
 
-                      <h3 className="mt-3 text-[clamp(1.5rem,3.4vw,2.25rem)] leading-[1.12] font-semibold tracking-[-0.03em] text-[var(--ink)]">
-                        {game.name}
-                      </h3>
-
-                      {game.description ? (
-                        <p className="mt-2 line-clamp-2 max-w-md text-sm leading-6 text-[var(--ink-soft)]">
-                          {game.description}
-                        </p>
-                      ) : null}
-
-                      {/*
-                        * A span, not a link: the slide around it already goes
-                        * to the game, and a link inside a link is invalid HTML
-                        * that browsers repair by guessing. It keeps the pill
-                        * shape because that is what says "this is pressable" at
-                        * a glance, and it reacts to hover on the whole slide.
-                        */}
-                      <span className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--accent)] ps-5 pe-1.5 text-sm font-semibold text-[var(--accent-ink)] transition-colors duration-[var(--duration)] group-hover:bg-[var(--accent-strong)] sm:min-h-11">
-                        {labels.details}
-                        <span className="grid size-8 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent-ink)_14%,transparent)] transition-transform duration-[var(--duration)] ease-[var(--ease-spring)] group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">
-                          <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
+                        {/*
+                          * A span, not a link: the slide around it already goes
+                          * to the game, and a link inside a link is invalid HTML
+                          * that browsers repair by guessing. It keeps the pill
+                          * shape because that is what says "this is pressable" at
+                          * a glance, and it reacts to hover on the whole slide.
+                          */}
+                        <span className="mt-6 inline-flex min-h-13 items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--accent)] ps-6 pe-1.5 text-sm font-semibold text-[var(--accent-ink)] shadow-[var(--elevation-1)] transition-colors duration-[var(--duration)] group-hover:bg-[var(--accent-strong)] sm:min-h-11">
+                          {labels.details}
+                          <span className="grid size-9 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent-ink)_14%,transparent)] transition-transform duration-[var(--duration)] ease-[var(--ease-spring)] group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">
+                            <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
+                          </span>
                         </span>
-                      </span>
+                      </div>
                     </div>
                   </Link>
 
@@ -339,111 +345,101 @@ export function HeroCarousel({
             })}
           </div>
         </div>
+
+        {/*
+          * Editorial counter in the corner of the frame, and the arrows for a
+          * pointer and only for a pointer. A phone drags the slide and has no
+          * room to spare; a mouse has no drag habit and nothing else to click.
+          * `pointer:fine` is the honest test for that — a narrow window on a
+          * laptop still gets them, and a large tablet does not.
+          *
+          * The arrows sit outside the element handed to Embla, as the library
+          * requires: the viewport responds to pointer events, and a click
+          * landing inside it can be read as the start of a drag.
+          *
+          * The icons follow reading order rather than the screen, so in Arabic
+          * "next" points left — the same `rtl:rotate-180` rule every other
+          * directional icon in this codebase uses.
+          */}
+        {total > 1 ? (
+          <>
+            <div className="pointer-events-none absolute end-4 top-4 z-10 sm:end-6 sm:top-6">
+              {counter}
+            </div>
+
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 justify-between px-4 [@media(pointer:fine)]:flex">
+              <button
+                type="button"
+                onClick={() => emblaApi?.scrollPrev()}
+                disabled={!canPrev}
+                aria-label={labels.previous}
+                className="pointer-events-auto grid size-12 place-items-center rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_78%,transparent)] text-[var(--ink-soft)] shadow-[var(--elevation-1)] backdrop-blur-md transition-[border-color,color,transform] duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] hover:-translate-x-0.5 rtl:hover:translate-x-0.5 disabled:opacity-30"
+              >
+                <ArrowIcon direction="start" className="size-4 rtl:rotate-180" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => emblaApi?.scrollNext()}
+                disabled={!canNext}
+                aria-label={labels.next}
+                className="pointer-events-auto grid size-12 place-items-center rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_78%,transparent)] text-[var(--ink-soft)] shadow-[var(--elevation-1)] backdrop-blur-md transition-[border-color,color,transform] duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] hover:translate-x-0.5 rtl:hover:-translate-x-0.5 disabled:opacity-30"
+              >
+                <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
+              </button>
+            </div>
+          </>
+        ) : null}
       </div>
 
       {/*
-        * Arrows for a pointer, and only for a pointer. A phone drags the slide
-        * and has no room to spare; a mouse has no drag habit and nothing else to
-        * click. `pointer:fine` is the honest test for that — a narrow window on
-        * a laptop still gets them, and a large tablet does not.
+        * Position markers as a segmented progress rail — one segment per game,
+        * and the active one is both the marker and the countdown to the next:
+        * it fills over `intervalSeconds` while rotation runs, and a segment is
+        * the keyboard-reachable way to jump to a slide, so the button is the
+        * target and carries the name.
         *
-        * Outside the element handed to Embla, as the library requires: the
-        * viewport responds to pointer events, and a click landing inside it can
-        * be read as the start of a drag.
-        *
-        * The icons follow reading order rather than the screen, so in Arabic
-        * "next" points left — the same `rtl:rotate-180` rule every other
-        * directional icon in this codebase uses.
-        *
-        * Gated on the number of games, like the strip below: asking the library
-        * how many snap positions it has means rendering nothing until it has
-        * answered, and a control that appears a second late is a control that
-        * was not there when somebody reached for it.
+        * Every segment gets a `key` that turns the fill into a new element each
+        * time it activates, which is what restarts the `gh-progress` animation
+        * in step with Embla's own timer.
         */}
       {total > 1 ? (
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 justify-between px-3 [@media(pointer:fine)]:flex">
-          <button
-            type="button"
-            onClick={() => emblaApi?.scrollPrev()}
-            disabled={!canPrev}
-            aria-label={labels.previous}
-            className="pointer-events-auto grid size-11 place-items-center rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_82%,transparent)] text-[var(--ink-soft)] backdrop-blur-md transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] disabled:opacity-30"
+        <div className="mt-4 flex items-center gap-4 sm:mt-5">
+          <div
+            className="flex flex-1 items-center gap-1.5"
+            role="group"
+            aria-label={labels.regionLabel}
           >
-            <ArrowIcon direction="start" className="size-4 rtl:rotate-180" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => emblaApi?.scrollNext()}
-            disabled={!canNext}
-            aria-label={labels.next}
-            className="pointer-events-auto grid size-11 place-items-center rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_82%,transparent)] text-[var(--ink-soft)] backdrop-blur-md transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] disabled:opacity-30"
-          >
-            <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
-          </button>
-        </div>
-      ) : null}
-
-      {/*
-        * Position markers, as game logos rather than dots.
-        *
-        * A dot says "there are four of these and you are on the second", which
-        * is a fact about a widget. A logo says which games are in there, so the
-        * row doubles as a way to reach the one you came for — and a logo is
-        * recognised faster than its name is read, in either language.
-        *
-        * They are the keyboard-reachable way to jump to a slide, so the button
-        * is the target and carries the name; the artwork inside is decorative.
-        *
-        * One button per game rather than per snap position: the row is a list
-        * of games to a visitor, and building it from the games array is the
-        * only version that exists in the server-rendered HTML. Waiting for
-        * Embla to report its snaps would leave the space empty on a slow
-        * connection and then shove the page down when it filled. With one slide
-        * in view and the default `slidesToScroll`, a game index is a snap
-        * index, which is what `scrollTo` wants.
-        */}
-      {total > 1 ? (
-        // Scrolls rather than wraps or shrinks: a store with a dozen featured
-        // games would otherwise stack rows of logos above the fold on a phone.
-        // `w-max` with auto margins centres the row while it fits and leaves it
-        // flush once it overflows, which `justify-center` cannot do — that
-        // clips the first items out of reach.
-        <div ref={stripRef} className="mt-3 overflow-x-auto pb-1 sm:mt-4 [scrollbar-width:none]">
-          <ul className="mx-auto flex w-max items-center gap-2" role="list">
             {games.map((game, slideIndex) => {
               const isActive = slideIndex === selected;
 
               return (
-                <li key={game.id}>
-                  <button
-                    type="button"
-                    onClick={() => emblaApi?.scrollTo(slideIndex)}
-                    aria-label={formatMessage(labels.goToGame, { name: game.name }, locale)}
-                    aria-current={isActive ? "true" : undefined}
+                <button
+                  key={game.id}
+                  type="button"
+                  onClick={() => emblaApi?.scrollTo(slideIndex)}
+                  aria-label={formatMessage(labels.goToGame, { name: game.name }, locale)}
+                  aria-current={isActive ? "true" : undefined}
+                  className="group/seg h-1.5 flex-1 cursor-pointer overflow-hidden rounded-full bg-[var(--surface-inset)] transition-colors duration-[var(--duration)] hover:bg-[var(--line)] focus-visible:bg-[var(--line-strong)]"
+                >
+                  <span
+                    key={isActive ? `active:${selected}` : `idle:${slideIndex}`}
                     className={cn(
-                      // 44px square: the logo is the touch target rather than
-                      // something small centred inside a larger one.
-                      "relative size-11 overflow-hidden rounded-[var(--radius-control)] border bg-[var(--surface)] transition-[border-color,opacity,transform] duration-[var(--duration)] ease-[var(--ease-spring)] sm:size-12",
-                      isActive
-                        ? "border-[var(--accent)] opacity-100 ring-2 ring-[color-mix(in_srgb,var(--accent)_45%,transparent)]"
-                        : "border-[var(--line)] opacity-55 hover:opacity-100",
+                      "block h-full w-full origin-left rounded-full bg-[var(--accent)] rtl:origin-right",
+                      isActive ? (rotating ? "gh-progress" : "scale-x-100") : "scale-x-0",
                     )}
-                  >
-                    <StoreImage
-                      // Falls back to the slide artwork: a game can reach the
-                      // carousel without a logo, and an empty square would be
-                      // indistinguishable from the next empty square.
-                      src={game.logoUrl ?? game.imageUrl}
-                      alt=""
-                      sizes="3rem"
-                      className="absolute inset-0"
-                    />
-                  </button>
-                </li>
+                    style={
+                      isActive && rotating
+                        ? { animationDuration: `${Math.max(2, intervalSeconds)}s` }
+                        : undefined
+                    }
+                  />
+                </button>
               );
             })}
-          </ul>
+          </div>
+
+          {counter}
         </div>
       ) : null}
     </section>
