@@ -68,7 +68,8 @@
   "price": {
     "from": "From",
     "was": "Was",
-    "discount": "{percent}% off"
+    "discount": "{percent}% off",
+    "capital": "Base price"
   },
   "account": {
     "signIn": "Sign in",

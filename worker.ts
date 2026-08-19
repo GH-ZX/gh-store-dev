@@ -1,4 +1,5 @@
-// @ts-ignore `.open-next/worker.js` is generated at build time
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- `.open-next/worker.js` only exists after an OpenNext build
+// @ts-ignore
 import { default as handler } from "./.open-next/worker.js";
 
 type ReconcileEnv = {
@@ -8,7 +9,7 @@ type ReconcileEnv = {
 
 type ScheduledContext = { waitUntil(promise: Promise<unknown>): void };
 
-export default {
+const worker = {
   fetch: handler.fetch,
 
   async scheduled(_event: unknown, env: ReconcileEnv, ctx: ScheduledContext) {
@@ -27,3 +28,5 @@ export default {
     );
   },
 };
+
+export default worker;

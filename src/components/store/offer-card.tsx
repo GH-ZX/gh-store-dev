@@ -7,6 +7,7 @@ import type { Locale } from "@/i18n/config";
 import { formatMessage } from "@/i18n/messages";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import { cn } from "@/lib/cn";
+import { formatPrice } from "@/lib/format/money";
 
 /**
  * Offer tile.
@@ -24,6 +25,8 @@ import { cn } from "@/lib/cn";
 export type OfferCardLabels = {
   sale: string;
   discount: string;
+  /** The supplier's capital price, rendered only on an operator's cards. */
+  capital: string;
   offerTypes: Record<StoreOffer["offerType"], string>;
 };
 
@@ -45,6 +48,20 @@ const TYPE_ICONS = {
   redeem_code: TagIcon,
 } as const;
 
+/**
+ * Capital price line for an operator's card.
+ *
+ * Rendered only when the server read enriched the offer — a visitor's offer
+ * never carries `supplierCostUsd`, so nothing leaks.
+ */
+function CapitalPrice({ amount, locale, label }: { amount: number; locale: Locale; label: string }) {
+  return (
+    <span className="text-xs text-[var(--ink-muted)] tabular-nums">
+      {label}: <span dir="ltr">{formatPrice(amount, "USD", locale)}</span>
+    </span>
+  );
+}
+
 export function OfferCard({
   offer,
   locale,
@@ -63,6 +80,7 @@ export function OfferCard({
 
   const interactive =
     "transition-[transform,border-color,box-shadow] duration-[var(--duration)] ease-[var(--ease-spring)] hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:shadow-[var(--elevation-2)]";
+  const capitalAmount = offer.supplierCostUsd ?? null;
 
   if (compact) {
     return (
@@ -92,6 +110,11 @@ export function OfferCard({
               size="sm"
             />
           </span>
+          {capitalAmount !== null ? (
+            <span className="mt-1.5 block">
+              <CapitalPrice amount={capitalAmount} locale={locale} label={labels.capital} />
+            </span>
+          ) : null}
         </span>
 
         <span
@@ -143,21 +166,28 @@ export function OfferCard({
           ) : null}
         </div>
 
-        <div className="mt-auto flex items-end justify-between gap-3">
-          <Price
-            amount={offer.price}
-            currency={offer.currency}
-            locale={locale}
-            originalAmount={offer.originalPrice}
-            discountPercent={offer.discountPercent}
-            discountLabel={discountLabel}
-          />
-          <span
-            className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
-            aria-hidden="true"
-          >
-            <ArrowIcon direction="end" className="size-3.5 rtl:rotate-180" />
-          </span>
+        <div className="mt-auto">
+          <div className="flex items-end justify-between gap-3">
+            <Price
+              amount={offer.price}
+              currency={offer.currency}
+              locale={locale}
+              originalAmount={offer.originalPrice}
+              discountPercent={offer.discountPercent}
+              discountLabel={discountLabel}
+            />
+            <span
+              className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
+              aria-hidden="true"
+            >
+              <ArrowIcon direction="end" className="size-3.5 rtl:rotate-180" />
+            </span>
+          </div>
+          {capitalAmount !== null ? (
+            <p className="mt-2">
+              <CapitalPrice amount={capitalAmount} locale={locale} label={labels.capital} />
+            </p>
+          ) : null}
         </div>
       </div>
     </Link>

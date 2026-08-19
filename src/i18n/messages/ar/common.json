@@ -68,7 +68,8 @@
   "price": {
     "from": "يبدأ من",
     "was": "كان",
-    "discount": "خصم {percent}%"
+    "discount": "خصم {percent}%",
+    "capital": "سعر الرأسمال"
   },
   "account": {
     "signIn": "تسجيل الدخول",

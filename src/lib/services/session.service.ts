@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { isAdminProfile } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -58,3 +60,33 @@ export async function getSessionSummary(): Promise<SessionSummary | null> {
     isAdmin: isAdminProfile(profile ?? null),
   };
 }
+
+/**
+ * Whether the requesting user is an active admin, as a boolean.
+ *
+ * `requireAdmin` throws for non-admins, which is right for guarded routes but
+ * wrong where the response merely *enriches* a public page. Memoized with React's
+ * `cache` so a request that loads several catalogs checks the profile once.
+ */
+export const currentUserIsAdmin = cache(async (): Promise<boolean> => {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: claims } = await supabase.auth.getClaims();
+    const userId = claims?.claims?.sub;
+
+    if (!userId) {
+      return false;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, is_active")
+      .eq("id", userId)
+      .maybeSingle();
+
+    return isAdminProfile(profile ?? null);
+  } catch {
+    // A broken session read means "visitor", never a thrown page.
+    return false;
+  }
+});

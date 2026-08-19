@@ -13,6 +13,7 @@ export function getOfferCardLabels(common: CommonMessages, catalog: CatalogMessa
   return {
     sale: common.badges.sale,
     discount: common.price.discount,
+    capital: common.price.capital,
     offerTypes: {
       topup: catalog.offerTypes.topup,
       gift_card: catalog.offerTypes.gift_card,

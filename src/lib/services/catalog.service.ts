@@ -8,6 +8,9 @@ import {
 } from "@/lib/catalog/offer-mapper";
 import { toSearchTokens, type SearchFilter } from "@/lib/catalog/search";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { currentUserIsAdmin } from "@/lib/services/session.service";
+import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 
 export class CatalogReadError extends Error {
   constructor() {
@@ -37,6 +40,38 @@ export async function tryCatalogRead<T>(read: () => Promise<T>): Promise<Catalog
 
     throw error;
   }
+}
+
+/**
+ * Attach each offer's supplier capital price, but only for an active admin.
+ *
+ * `provider_offer_mappings` is locked to admins by RLS, so the anon client can
+ * never read it; the admin's own session can. Following the editor, the G2Bulk
+ * row is the canonical cost source. Non-admins get their offers back untouched,
+ * so a visitor's render carries no cost data at all.
+ */
+async function withAdminCosts(offers: StoreOffer[]): Promise<StoreOffer[]> {
+  if (offers.length === 0 || !(await currentUserIsAdmin())) {
+    return offers;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("provider_offer_mappings")
+    .select("offer_id, supplier_cost_usd")
+    .in("offer_id", offers.map((offer) => offer.id))
+    .eq("provider_name", G2BULK_PROVIDER_NAME);
+
+  if (error) {
+    throw new CatalogReadError();
+  }
+
+  const costById = new Map(data.map((row) => [row.offer_id, row.supplier_cost_usd]));
+
+  return offers.map((offer) => ({
+    ...offer,
+    supplierCostUsd: costById.get(offer.id) ?? null,
+  }));
 }
 
 /** Columns a free-text query is matched against, per entity. */
@@ -165,7 +200,7 @@ export async function getGameBySlug(locale: Locale, slug: string): Promise<Store
 
   return {
     game: toStoreGame(game, locale),
-    offers: offers.map((offer) => toStoreOffer({ ...offer, games: relation }, locale)),
+    offers: await withAdminCosts(offers.map((offer) => toStoreOffer({ ...offer, games: relation }, locale))),
   };
 }
 
@@ -296,7 +331,7 @@ export async function getOffersByType(
     throw new CatalogReadError();
   }
 
-  return data.map((offer) => toStoreOffer(offer, locale));
+  return withAdminCosts(data.map((offer) => toStoreOffer(offer, locale)));
 }
 
 export async function getSaleOffers(locale: Locale, limit?: number): Promise<StoreOffer[]> {
@@ -320,7 +355,7 @@ export async function getSaleOffers(locale: Locale, limit?: number): Promise<Sto
     throw new CatalogReadError();
   }
 
-  return data.map((offer) => toStoreOffer(offer, locale));
+  return withAdminCosts(data.map((offer) => toStoreOffer(offer, locale)));
 }
 
 /**
@@ -347,7 +382,7 @@ export async function getSuggestedOffers(locale: Locale, limit: number): Promise
   }
 
   if (data.length > 0) {
-    return data.map((offer) => toStoreOffer(offer, locale));
+    return withAdminCosts(data.map((offer) => toStoreOffer(offer, locale)));
   }
 
   // Nothing is featured yet; fall back to the cheapest active offers so a fresh
@@ -364,7 +399,7 @@ export async function getSuggestedOffers(locale: Locale, limit: number): Promise
     throw new CatalogReadError();
   }
 
-  return fallback.map((offer) => toStoreOffer(offer, locale));
+  return withAdminCosts(fallback.map((offer) => toStoreOffer(offer, locale)));
 }
 
 export async function getOffersByIds(locale: Locale, ids: string[]): Promise<StoreOffer[]> {
@@ -386,7 +421,11 @@ export async function getOffersByIds(locale: Locale, ids: string[]): Promise<Sto
 
   const byId = new Map(data.map((offer) => [offer.id, toStoreOffer(offer, locale)]));
 
-  return ids.map((id) => byId.get(id)).filter((offer): offer is StoreOffer => offer !== undefined);
+  const matched = ids
+    .map((id) => byId.get(id))
+    .filter((offer): offer is StoreOffer => offer !== undefined);
+
+  return withAdminCosts(matched);
 }
 
 export type CatalogSearchResult = {
@@ -502,6 +541,6 @@ export async function searchCatalog(
 
   return {
     games: wantsGames ? matchedGames.map((game) => toStoreGame(game, locale)) : [],
-    offers: offers.map((offer) => toStoreOffer(offer, locale)),
+    offers: await withAdminCosts(offers.map((offer) => toStoreOffer(offer, locale))),
   };
 }

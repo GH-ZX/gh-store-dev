@@ -52,6 +52,13 @@ export type StoreOffer = {
   game: StoreOfferGame | null;
   /** Whole-percent discount, or null when there is no higher original price. */
   discountPercent: number | null;
+  /**
+   * The supplier's capital price in USD, attached only for an operator.
+   *
+   * Left undefined for everyone else, so a visitor's render carries no cost data
+   * at all and a leak is impossible rather than merely unlikely.
+   */
+  supplierCostUsd?: number | null;
 };
 
 /** Columns every offer read selects. */
