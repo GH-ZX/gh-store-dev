@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { checkoutFieldName, type CheckoutActionState } from "@/app/[locale]/checkout/action-state";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
+import { requireAdmin } from "@/lib/auth/guards";
 import { formText } from "@/lib/forms/form-data";
 import { getOfferBySlug, type StoreInputField } from "@/lib/services/catalog.service";
 import { placeOrder, type PlaceOrderResult } from "@/lib/services/order.service";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Placing an order from the checkout form.
@@ -113,6 +115,14 @@ export async function placeOrderAction(
   }
 
   /*
+   * Top-ups are single-unit deliveries: the supplier's top-up order takes no
+   * quantity, so anything above one would charge a customer many times for a
+   * single delivery. The UI always submits 1; this re-reads the offer and clamps
+   * regardless, so a hand-edited form cannot overcharge on a top-up.
+   */
+  const quantity = detail.offer.offerType === "topup" ? 1 : parsed.data.quantity;
+
+  /*
    * The field list comes from the offer, never from the submission. Values are
    * trimmed to undefined first: a required field holding only spaces is missing,
    * and an optional one holding only spaces was left blank.
@@ -145,7 +155,7 @@ export async function placeOrderAction(
   const result = await placeOrder({
     offerSlug: parsed.data.offerSlug,
     gameSlug: parsed.data.gameSlug,
-    quantity: parsed.data.quantity,
+    quantity,
     dynamicFields,
     idempotencyKey: parsed.data.idempotencyKey,
   });
@@ -156,4 +166,93 @@ export async function placeOrderAction(
 
   // Outside any try/catch: `redirect` works by throwing.
   redirect(`/${locale}/orders/${result.orderId}`);
+}
+
+export type GiftPrefillResult =
+  | { ok: true; fields: Record<string, string> }
+  | { ok: false; reason: "not_found" | "not_eligible" | "unknown" };
+
+/**
+ * Pull the account fields a recipient used the last time they bought this same
+ * offer, so a gift to a returning customer does not ask for them again.
+ *
+ * Admin-only: an ordinary customer has no reason to fill someone else's order.
+ * Only completed orders count — a paid-but-failed delivery would auto-fill a
+ * wrong player id and hand the error straight to the supplier.
+ */
+export async function prefillGiftFieldsAction(
+  recipientEmail: string,
+  gameSlug: string,
+  offerSlug: string,
+): Promise<GiftPrefillResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { ok: false, reason: "unknown" };
+  }
+
+  const parsed = z.object({ email: z.string().trim().max(320).pipe(z.email()) }).safeParse({
+    email: recipientEmail,
+  });
+
+  if (!parsed.success) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: offer } = await supabase
+    .from("offers")
+    .select("id, games!inner (slug)")
+    .eq("slug", offerSlug)
+    .eq("is_active", true)
+    .eq("games.slug", gameSlug)
+    .eq("games.is_active", true)
+    .maybeSingle();
+
+  if (!offer) {
+    return { ok: false, reason: "unknown" };
+  }
+
+  const { data: recipient } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", parsed.data.email.toLowerCase())
+    .eq("role", "customer")
+    .maybeSingle();
+
+  if (!recipient) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  // A customer's last completed order of this exact offer. Queried from `orders`
+  // (which carries `created_at`) with the matching item embedded, because
+  // PostgREST cannot order by a column of a *to-one* embedded resource.
+  const { data: order } = await supabase
+    .from("orders")
+    .select("order_items!inner (dynamic_fields)")
+    .eq("user_id", recipient.id)
+    .eq("status", "completed")
+    .eq("order_items.offer_id", offer.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const item = order && Array.isArray(order.order_items) ? order.order_items[0] : undefined;
+
+  if (!item || !item.dynamic_fields || typeof item.dynamic_fields !== "object") {
+    return { ok: false, reason: "not_eligible" };
+  }
+
+  const fields: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(item.dynamic_fields)) {
+    if (typeof value === "string" && value.length > 0) {
+      fields[key] = value;
+    }
+  }
+
+  return Object.keys(fields).length > 0
+    ? { ok: true, fields }
+    : { ok: false, reason: "not_eligible" };
 }

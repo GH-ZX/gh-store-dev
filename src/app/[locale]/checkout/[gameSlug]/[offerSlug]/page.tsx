@@ -95,11 +95,15 @@ export default async function CheckoutPage({
   }
 
   const { offer, game, inputFields } = read.data;
-  const wallet = await getMyWallet();
+
+  // The admin has no customer wallet: their orders are gifts, paid on arrival
+  // and counted as normal invoices. Balance math never applies to that path.
+  const isGift = session.isAdmin;
+  const wallet = isGift ? null : await getMyWallet();
   const balance = wallet?.balance ?? 0;
   const quantity = 1;
   const total = offer.price * quantity;
-  const insufficient = balance < total;
+  const insufficient = !isGift && balance < total;
 
   return (
     <Section spacing="page" mesh>
@@ -117,7 +121,7 @@ export default async function CheckoutPage({
         as="h1"
         eyebrow={messages.eyebrow}
         title={messages.title}
-        subtitle={messages.description}
+        subtitle={isGift ? messages.giftDescription : messages.description}
         className="mt-5"
       />
 
@@ -141,10 +145,14 @@ export default async function CheckoutPage({
                 offerSlug={offer.slug}
                 fields={inputFields}
                 disabled={insufficient}
+                gift={isGift}
               />
             </div>
 
-            <NoticePanel className="mt-5" description={messages.fields.lockedNotice} />
+            <NoticePanel
+              className="mt-5"
+              description={isGift ? messages.fields.giftNotice : messages.fields.lockedNotice}
+            />
           </section>
         </div>
 
@@ -161,6 +169,7 @@ export default async function CheckoutPage({
           insufficient={insufficient}
           shortfall={total - balance}
           walletHref={`/${locale}/wallet`}
+          gift={isGift}
         />
       </div>
     </Section>

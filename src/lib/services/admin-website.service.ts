@@ -468,12 +468,12 @@ export async function savePageSeo(path: SeoPagePath, seo: PageSeo): Promise<void
  * Carousel behaviour.
  *
  * Its own writer rather than four more columns on the layout editor: the
- * carousel is one section among nine there, and rotation, looping and alignment
+ * carousel is one section among nine there, and the speed, looping and alignment
  * are settings for a component rather than for a list of sections. It edits the
  * carousel section in place and leaves the other eight exactly as they were.
+ * Rotation is always on, so it is not among the settings.
  */
 export async function saveCarouselSettings(input: {
-  autoplay: boolean;
   intervalSeconds: number;
   loop: boolean;
   align: "start" | "center";
@@ -485,7 +485,6 @@ export async function saveCarouselSettings(input: {
     section.type === "carousel"
       ? {
           ...section,
-          autoplay: input.autoplay,
           intervalSeconds: input.intervalSeconds,
           loop: input.loop,
           align: input.align,

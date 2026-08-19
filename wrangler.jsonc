@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"main": ".open-next/worker.js",
+	"main": "./worker.ts",
 	"name": "gh-store",
 	"account_id": "5c885c3c858ff52e420d04dfb76e9377",
 	"compatibility_date": "2026-08-11",
@@ -12,6 +12,9 @@
 	"vars": {
 		"NEXT_PUBLIC_SUPABASE_URL": "https://njlzgfddfnnqujaodbta.supabase.co",
 		"NEXT_PUBLIC_APP_URL": "https://gh-store.me"
+	},
+	"triggers": {
+		"crons": ["*/5 * * * *"]
 	},
 	"assets": {
 		"directory": ".open-next/assets",

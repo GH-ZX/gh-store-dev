@@ -3,7 +3,7 @@
 import Link from "next/link";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GameEditor } from "@/components/live-edit/game-editor";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
@@ -28,11 +28,11 @@ import { formatMessage } from "@/i18n/messages";
  * the option set, slide 1 is the rightmost and dragging left still means "next"
  * in reading order.
  *
- * **Reduced motion.** Autoplay is not registered at all when the visitor asks
- * for less motion, rather than registered and paused: a plugin that exists can
- * be started by a stray interaction, and the setting is a statement about what
- * the page may do rather than what it may do right now. The global
- * `prefers-reduced-motion` rule also collapses the zoom and the progress fill.
+ * **Reduced motion.** The global `prefers-reduced-motion` rule collapses the
+ * zoom and the progress fill for a visitor who asks for less motion, but the
+ * strip itself always advances — the owner's storefront sells the featured
+ * games by moving them, and that decision is not up for negotiation by the
+ * visitor's OS. Control stays with the arrows and the progress rail.
  *
  * **The whole slide is the link.** A picture of a game with a title on it reads
  * as something to press, on a phone especially, and asking for the small pill
@@ -49,7 +49,7 @@ export type HeroCarouselProps = {
   games: StoreGame[];
   locale: Locale;
   intervalSeconds: number;
-  /** Rotation, off regardless when the visitor prefers reduced motion. */
+  /** Rotation, always on for a strip with more than one slide. */
   autoplay?: boolean;
   loop?: boolean;
   align?: "start" | "center";
@@ -66,31 +66,6 @@ export type HeroCarouselProps = {
   liveEdit?: AdminMessages["liveEdit"] | null;
   className?: string;
 };
-
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
-
-/**
- * Matches the media query the rest of the design system honours.
- *
- * `useSyncExternalStore` rather than state written from an effect: the browser
- * already holds this value, so it is subscribed to rather than copied. The
- * server snapshot is `false`, which keeps both render passes identical — and a
- * carousel that arrives still and then starts is better than one that arrives
- * moving and has to be stopped.
- */
-function usePrefersReducedMotion(): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      const query = window.matchMedia(REDUCED_MOTION);
-
-      query.addEventListener("change", onChange);
-
-      return () => query.removeEventListener("change", onChange);
-    },
-    () => window.matchMedia(REDUCED_MOTION).matches,
-    () => false,
-  );
-}
 
 /** Zero-padded two-digit number for the editorial counter, e.g. `01`. */
 function padTwo(value: number): string {
@@ -109,8 +84,7 @@ export function HeroCarousel({
   className,
 }: HeroCarouselProps) {
   const total = games.length;
-  const reducedMotion = usePrefersReducedMotion();
-  const rotating = autoplay && !reducedMotion && total > 1;
+  const rotating = autoplay && total > 1;
 
   /*
    * Rebuilt only when a decision changes, never per render: handing Embla a new
@@ -122,10 +96,16 @@ export function HeroCarousel({
         ? [
             Autoplay({
               delay: Math.max(2, intervalSeconds) * 1000,
-              // A visitor who has taken hold of it is reading, not waiting.
-              stopOnInteraction: true,
-              stopOnMouseEnter: true,
-              stopOnFocusIn: true,
+              /*
+               * The carousel advances no matter what the visitor is doing. The
+               * default stops — an interaction, hover, focus — let a frame that
+               * is being read sit still, but they also read as "it only moves
+               * when I am not looking", and the storefront needs the featured
+               * games to sell themselves. The progress rail keeps the next swap
+               * visible and the arrows still hand control to a visitor who
+               * wants it.
+               */
+              stopOnInteraction: false,
             }),
           ]
         : [],
@@ -252,32 +232,57 @@ export function HeroCarousel({
                     className="group absolute inset-0"
                   >
                     {/*
-                      * Ken Burns: the active slide breathes from rest to a slow
-                      * zoom while it is on screen. The exchange is animated by
-                      * the transition rather than a keyframe so it pauses and
-                      * reverses cleanly when rotation hands the frame over.
+                      * The backdrop. Supplier uploads are often square and low
+                      * in resolution; shown "as is" in a 16:9 frame they
+                      * letterbox. A quiet blurred copy fills the whole frame so
+                      * the slide never reads as a floating rectangle — light
+                      * blur, no saturation, just enough to keep the edges
+                      * legible. The Ken Burns zoom breathes on this field rather
+                      * than the artwork.
                       */}
-                    <StoreImage
-                      src={game.imageUrl}
-                      alt={game.name}
-                      focus={game.carouselFocus}
-                      priority={slideIndex === 0}
-                      sizes="(min-width: 1280px) 1280px, (min-width: 640px) 92vw, 100vw"
+                    <div
+                      aria-hidden="true"
                       className={cn(
-                        "transition-transform duration-[3200ms] ease-[var(--ease-out-expo)] will-change-transform",
-                        isActive ? "scale-110" : "scale-100",
+                        "absolute inset-0 scale-110 bg-cover bg-center blur-xl transition-transform duration-[3200ms] ease-[var(--ease-out-expo)] will-change-transform",
+                        isActive ? "scale-[1.18]" : "scale-110",
                       )}
+                      style={{
+                        backgroundImage: game.imageUrl ? `url(${game.imageUrl})` : undefined,
+                      }}
                     />
+
+                    {/*
+                      * The artwork itself, framed at 4:3 and centred. A square
+                      * upload shown whole leaves a wide blurred margin on a
+                      * landscape frame, and shown cover-cropped it loses the
+                      * icon — 4:3 is the middle: most of the image, a natural
+                      * crop, and only a narrow band of backdrop around it. On a
+                      * portrait frame the box reaches the frame edges and the
+                      * backdrop simply stops being visible.
+                      */}
+                    <div className="absolute inset-0 grid place-items-center">
+                      <div className="aspect-[4/3] h-full max-w-full">
+                        <StoreImage
+                          src={game.imageUrl}
+                          alt={game.name}
+                          priority={slideIndex === 0}
+                          sizes="(min-width: 1280px) 1280px, (min-width: 640px) 92vw, 100vw"
+                          className="size-full drop-shadow-[0_18px_48px_rgba(0,0,0,0.35)]"
+                        />
+                      </div>
+                    </div>
 
                     {/*
                       * The cinematic wash. Two layers: a canvas gradient rising
                       * from the bottom so the caption always sits on a field the
                       * theme knows, and a soft accent bloom cornered opposite
-                      * the text so the top of the frame is not flat.
+                      * the text so the top of the frame is not flat. The bottom
+                      * is deliberately deep — the caption is what sells the
+                      * slide, and it must win against a busy artwork.
                       */}
                     <div
                       aria-hidden="true"
-                      className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--canvas)_92%,transparent)_2%,color-mix(in_srgb,var(--canvas)_68%,transparent)_34%,transparent_62%),radial-gradient(70% 90% at 90% 8%,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_64%)]"
+                      className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--canvas)_97%,transparent)_0%,color-mix(in_srgb,var(--canvas)_82%,transparent)_28%,color-mix(in_srgb,var(--canvas)_38%,transparent)_58%,transparent_78%),radial-gradient(70% 90% at 90% 8%,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_64%)]"
                     />
 
                     {/*
@@ -296,12 +301,12 @@ export function HeroCarousel({
                           {game.pointsName ? <Badge tone="neutral">{game.pointsName}</Badge> : null}
                         </div>
 
-                        <h3 className="mt-4 max-w-[18ch] text-[clamp(2rem,4.5vw,4.25rem)] leading-[1.04] font-semibold tracking-[-0.04em] text-[var(--ink)]">
+                        <h3 className="mt-4 max-w-[18ch] text-[clamp(2rem,4.5vw,4.25rem)] leading-[1.04] font-semibold tracking-[-0.04em] text-[var(--ink)] [text-shadow:0_2px_18px_rgba(0,0,0,0.45)]">
                           {game.name}
                         </h3>
 
                         {game.description ? (
-                          <p className="mt-3 line-clamp-2 max-w-xl text-sm leading-7 text-[var(--ink-soft)] sm:text-base">
+                          <p className="mt-3 line-clamp-2 max-w-xl text-sm leading-7 text-[var(--ink-soft)] [text-shadow:0_1px_8px_rgba(0,0,0,0.4)] sm:text-base">
                             {game.description}
                           </p>
                         ) : null}

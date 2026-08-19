@@ -617,10 +617,11 @@ export async function savePageSeoAction(
  *
  * Its own form because these are settings for a component rather than for the
  * list of sections: the layout editor decides which sections exist and in what
- * order, and this decides how one of them behaves.
+ * order, and this decides how one of them behaves. Rotation is always on — the
+ * strip sells the games by moving — so the speed and the wrapping are what is
+ * left to configure.
  */
 const carouselSchema = z.object({
-  autoplay: z.boolean(),
   loop: z.boolean(),
   align: z.enum(["start", "center"]),
   interval_seconds: z.coerce
@@ -637,7 +638,6 @@ export async function saveCarouselAction(
   await requireAdmin();
 
   const parsed = carouselSchema.safeParse({
-    autoplay: formFlag(formData, "autoplay"),
     loop: formFlag(formData, "loop"),
     align: formText(formData, "align") ?? "center",
     interval_seconds: formText(formData, "interval_seconds") ?? "6",
@@ -649,7 +649,6 @@ export async function saveCarouselAction(
 
   try {
     await saveCarouselSettings({
-      autoplay: parsed.data.autoplay,
       loop: parsed.data.loop,
       align: parsed.data.align,
       intervalSeconds: parsed.data.interval_seconds,

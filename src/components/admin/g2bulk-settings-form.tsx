@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { SecretField } from "@/components/admin/secret-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckIcon, ShieldIcon } from "@/components/ui/icons";
@@ -22,16 +23,17 @@ import type { G2BulkStatus } from "@/lib/settings/provider-settings";
 /**
  * G2Bulk credential and pricing form.
  *
- * The key field is always empty on render — the saved secret is represented only
- * by a masked hint, so it never travels back to the browser. Leaving the field
- * blank keeps the stored key, which lets an admin change the markup without
- * handling the secret at all.
+ * The key field is locked once a key is saved — the secret is represented only
+ * by a masked hint and never travels back to the browser. Editing is opened by
+ * the Edit button on purpose, and leaving the field blank keeps the stored key,
+ * which lets an admin change the markup without handling the secret at all.
  */
 export type G2BulkSettingsFormProps = {
   locale: Locale;
   messages: AdminMessages["providers"]["g2bulk"];
   status: G2BulkStatus;
   callback: G2BulkCallback;
+  secrets: AdminMessages["providers"]["secrets"];
 };
 
 type ErrorKey = keyof AdminMessages["providers"]["g2bulk"]["errors"];
@@ -52,6 +54,7 @@ export function G2BulkSettingsForm({
   messages,
   status,
   callback,
+  secrets,
 }: G2BulkSettingsFormProps) {
   const [saveState, saveAction, saving] = useActionState<ProviderActionState, FormData>(
     saveG2BulkSettingsAction,
@@ -88,22 +91,17 @@ export function G2BulkSettingsForm({
       <form action={saveAction} className="grid gap-5">
         <input type="hidden" name="locale" value={locale} />
 
-        <label className="grid gap-2">
-          <span className="text-sm font-medium text-[var(--ink-soft)]">{messages.apiKeyLabel}</span>
-          <input
-            type="password"
-            name="apiKey"
-            autoComplete="off"
-            spellCheck={false}
-            dir="ltr"
-            placeholder={messages.apiKeyPlaceholder}
-            className="min-h-12 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 font-mono text-sm text-[var(--ink)] outline-none transition-colors duration-[var(--duration)] focus:border-[color-mix(in_srgb,var(--accent)_55%,transparent)]"
-          />
-          <span className="text-xs leading-5 text-[var(--ink-faint)]">
-            {messages.apiKeyHelp}
-            {status.configured ? ` ${messages.apiKeyKeepHelp}` : ""}
-          </span>
-        </label>
+        <SecretField
+          label={messages.apiKeyLabel}
+          name="apiKey"
+          placeholder={messages.apiKeyPlaceholder}
+          hint={messages.apiKeyHelp}
+          keepHint={messages.apiKeyKeepHelp}
+          lockedHint={secrets.lockedHint}
+          editLabel={secrets.editAction}
+          cancelLabel={secrets.cancelAction}
+          configured={status.configured}
+        />
 
         <label className="grid max-w-xs gap-2">
           <span className="text-sm font-medium text-[var(--ink-soft)]">{messages.markupLabel}</span>

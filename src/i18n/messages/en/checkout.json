@@ -2,6 +2,7 @@
   "eyebrow": "Checkout",
   "title": "Complete your order",
   "description": "Review the package, enter your in-game account details, then pay from your wallet balance.",
+  "giftDescription": "This is a gift order — nothing is debited from any wallet; it is recorded as a paid invoice with the store's other invoices.",
   "offerPromise": "Pay from your wallet balance and we deliver straight to your game account.",
   "summary": {
     "title": "Order summary",
@@ -13,6 +14,7 @@
     "totalHint": "The final amount is calculated on the server the moment you confirm.",
     "balanceLabel": "Your wallet balance",
     "balanceAfterLabel": "Balance after this purchase",
+    "giftNote": "Gift order: recorded as a paid invoice, no wallet balance involved.",
     "insufficientTitle": "Your balance is too low",
     "insufficientDescription": "You need {amount} more to place this order. Add balance, then try again.",
     "walletAction": "My wallet"
@@ -27,7 +29,19 @@
     "noFieldsDescription": "Place the order and your code appears on the order page once it is delivered.",
     "submitAction": "Confirm and pay",
     "submitPending": "Placing your order…",
-    "lockedNotice": "On confirmation the amount leaves your wallet and these details are sent to the supplier as they are."
+    "lockedNotice": "On confirmation the amount leaves your wallet and these details are sent to the supplier as they are.",
+    "giftSubmitAction": "Confirm order",
+    "giftNotice": "This is a gift order: it is recorded as a paid invoice and these details are sent to the supplier as they are.",
+    "giftRecipientLabel": "Gift to a customer — their email",
+    "giftRecipientHint": "Enter the customer's email, then press “Fill details” to auto-fill their account details if they have bought this package before.",
+    "giftPrefillAction": "Fill details",
+    "giftPrefillPending": "Filling…",
+    "giftPrefillDone": "Details filled automatically. Review them before confirming the order.",
+    "giftRecipientErrors": {
+      "not_found": "No customer uses that email address.",
+      "not_eligible": "This customer has not bought this package before, so there is nothing to fill.",
+      "unknown": "Could not auto-fill. Please try again."
+    }
   },
   "errors": {
     "unauthenticated": "Your session expired. Sign in and try again.",
@@ -70,6 +84,7 @@
     "paymentStatusLabel": "Payment status",
     "paymentMethodLabel": "Payment method",
     "paymentMethodWallet": "Wallet balance",
+    "paymentMethodGift": "Gift — no wallet charge",
     "noteLabel": "Your note",
     "fulfillmentTitle": "Delivery",
     "codesTitle": "Redeem codes",
@@ -162,6 +177,14 @@
     "totalLabel": "Total",
     "paidWith": "Paid with",
     "footerNote": "This invoice records the purchase as it stood when it was issued.",
-    "viewInvoice": "View the invoice"
+    "viewInvoice": "View the invoice",
+    "downloadPdf": "Download PDF",
+    "downloadPng": "Download image",
+    "downloading": "Preparing…",
+    "deliveryDetailsTitle": "Delivery details",
+    "codesTitle": "Redeem codes",
+    "codesHeading": "Your {product} redeem code",
+    "codesDescription": "Keep these somewhere safe; they stay available on this page.",
+    "keepForSupportNote": "Keep this invoice if you ever need to contact support about this order."
   }
 }

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { FormResult, SelectField, TextField } from "@/components/admin/admin-form";
+import { SecretField } from "@/components/admin/secret-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckIcon } from "@/components/ui/icons";
@@ -30,10 +31,12 @@ export function AxiomSettingsForm({
   locale,
   messages,
   status,
+  secrets,
 }: {
   locale: Locale;
   messages: Messages;
   status: AxiomStatus;
+  secrets: AdminMessages["providers"]["secrets"];
 }) {
   const [saveState, saveAction, saving] = useActionState<AxiomActionState, FormData>(
     saveAxiomSettingsAction,
@@ -52,16 +55,16 @@ export function AxiomSettingsForm({
       <form action={saveAction} className="grid gap-5">
         <input type="hidden" name="locale" value={locale} />
 
-        <TextField
+        <SecretField
           label={messages.tokenLabel}
-          hint={`${messages.tokenHelp}${status.configured ? ` ${messages.tokenKeepHelp}` : ""}`}
           name="apiToken"
-          type="password"
-          autoComplete="off"
-          spellCheck={false}
-          dir="ltr"
           placeholder={messages.tokenPlaceholder}
-          className="font-mono"
+          hint={messages.tokenHelp}
+          keepHint={messages.tokenKeepHelp}
+          lockedHint={secrets.lockedHint}
+          editLabel={secrets.editAction}
+          cancelLabel={secrets.cancelAction}
+          configured={status.configured}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">

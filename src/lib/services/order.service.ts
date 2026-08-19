@@ -1,6 +1,6 @@
 import "server-only";
 
-import { requireAuth, UnauthorizedError } from "@/lib/auth/guards";
+import { isAdminProfile, requireAuth, UnauthorizedError } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fulfillOrder } from "@/lib/services/fulfillment.service";
 import { logFailure, logOutcome } from "@/lib/logging/logger";
@@ -98,8 +98,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 }
 
 async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
+  let user: { id: string };
+
   try {
-    await requireAuth();
+    user = await requireAuth();
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       return { ok: false, reason: "unauthenticated" };
@@ -109,6 +111,21 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   }
 
   const supabase = await createSupabaseServerClient();
+
+  // Admins have no customer wallet. Their checkout goes through the gift path
+  // (paid on arrival, recorded as a normal invoice), so the wallet RPC and its
+  // balance checks never apply to them.
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    return { ok: false, reason: "unknown" };
+  }
+
+  const isAdmin = isAdminProfile(profile);
 
   // Resolve the offer by its public slugs. The id is never taken from the
   // browser, so a crafted form cannot point checkout at a different product.
@@ -126,7 +143,7 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   }
 
   const { data, error } = await supabase
-    .rpc("place_wallet_order", {
+    .rpc(isAdmin ? "place_gift_order" : "place_wallet_order", {
       p_offer_id: offer.id,
       p_quantity: input.quantity,
       p_dynamic_fields: input.dynamicFields,

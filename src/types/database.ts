@@ -1753,6 +1753,22 @@ export type Database = {
           status: string
         }[]
       }
+      place_gift_order: {
+        Args: {
+          p_customer_note?: string
+          p_dynamic_fields: Json
+          p_idempotency_key: string
+          p_offer_id: string
+          p_quantity: number
+        }
+        Returns: {
+          balance: number
+          idempotent: boolean
+          order_id: string
+          order_number: string
+          total: number
+        }[]
+      }
       place_wallet_order: {
         Args: {
           p_customer_note?: string

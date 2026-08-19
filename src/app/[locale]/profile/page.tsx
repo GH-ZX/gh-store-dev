@@ -52,7 +52,9 @@ export default async function ProfilePage({ params }: PageProps<"/[locale]/profi
     );
   }
 
-  const wallet = await getMyWallet();
+  // The admin has no customer wallet; the wallet panel would show a zero balance
+  // that means nothing to someone whose purchases are gift orders.
+  const wallet = session.isAdmin ? null : await getMyWallet();
 
   return (
     <Section spacing="page" mesh>
@@ -76,13 +78,15 @@ export default async function ProfilePage({ params }: PageProps<"/[locale]/profi
         </div>
 
         <div className="grid gap-6">
-          <WalletSummaryPanel
-            locale={locale}
-            messages={messages}
-            wallet={wallet}
-            detailHref={`/${locale}/wallet`}
-            rechargeHref={`/${locale}/recharge`}
-          />
+          {wallet ? (
+            <WalletSummaryPanel
+              locale={locale}
+              messages={messages}
+              wallet={wallet}
+              detailHref={`/${locale}/wallet`}
+              rechargeHref={`/${locale}/recharge`}
+            />
+          ) : null}
 
           <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6">
             <h2 className="text-base font-semibold text-[var(--ink)]">{messages.orders.title}</h2>

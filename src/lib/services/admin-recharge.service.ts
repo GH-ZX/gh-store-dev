@@ -249,7 +249,7 @@ async function notifyRechargeOutcome(
       titleEn: "Your balance was topped up",
       bodyAr: `أضفنا ${amount} دولار إلى محفظتك (${data.reference}). يمكنك الشراء به الآن.`,
       bodyEn: `We added ${amount} USD to your wallet (${data.reference}). It is ready to spend.`,
-      href: "/wallet",
+      href: `/recharge/${requestId}/invoice`,
       entityType: "recharge",
       entityId: requestId,
     });

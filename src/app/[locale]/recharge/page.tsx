@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/states";
 import { AdminCard } from "@/components/admin/admin-form";
 import { BinanceTopUpForm } from "@/components/recharge/binance-top-up-form";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { ChevronIcon, WalletIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
@@ -29,6 +30,11 @@ export default async function RechargePage({ params }: PageProps<"/[locale]/rech
 
   if (!session) {
     redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/recharge`)}`);
+  }
+
+  // The admin has no customer wallet to recharge; gifts are paid on arrival.
+  if (session.isAdmin) {
+    redirect(`/${locale}/dashboard`);
   }
 
   const [config, requests, sam, binance] = await Promise.all([
@@ -146,6 +152,18 @@ export default async function RechargePage({ params }: PageProps<"/[locale]/rech
                     <p className="mt-1.5 text-xs leading-5 text-[var(--ink-muted)]">
                       {messages.noteLabel}: {request.adminNote}
                     </p>
+                  ) : null}
+
+                  {request.status === "approved" ? (
+                    <div className="mt-3">
+                      <ButtonLink
+                        href={`/${locale}/recharge/${request.id}/invoice`}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        {messages.invoice.viewInvoice}
+                      </ButtonLink>
+                    </div>
                   ) : null}
                 </li>
               ))}

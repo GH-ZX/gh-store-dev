@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { SecretField } from "@/components/admin/secret-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckIcon, ShieldIcon } from "@/components/ui/icons";
@@ -21,9 +22,9 @@ import type { BatStoreStatus } from "@/lib/settings/batstore-settings";
  *
  * Built to read like the MaxStore panel beside it — same masked-hint rule, same
  * verify button — because an owner running several suppliers should be learning
- * one screen, not several. The token field is always empty on render; the saved
- * secret is represented only by its masked tail, and leaving the field blank
- * keeps it.
+ * one screen, not several. The token field is locked once a token is saved;
+ * editing is opened by the Edit button on purpose, and leaving the field blank
+ * keeps the saved secret.
  *
  * The verify button is both a convenience and the first proof that
  * `docs/providers/batstore-api.md` matches the real API: `/me` returns the
@@ -34,6 +35,7 @@ export type BatStoreSettingsFormProps = {
   messages: AdminMessages["providers"]["batstore"];
   errors: AdminMessages["providers"]["g2bulk"]["errors"];
   status: BatStoreStatus;
+  secrets: AdminMessages["providers"]["secrets"];
 };
 
 export function BatStoreSettingsForm({
@@ -41,6 +43,7 @@ export function BatStoreSettingsForm({
   messages,
   errors,
   status,
+  secrets,
 }: BatStoreSettingsFormProps) {
   const [saveState, saveAction, saving] = useActionState<ProviderActionState, FormData>(
     saveBatStoreSettingsAction,
@@ -60,22 +63,17 @@ export function BatStoreSettingsForm({
       <form action={saveAction} className="grid gap-5">
         <input type="hidden" name="locale" value={locale} />
 
-        <label className="grid gap-2">
-          <span className="text-sm font-medium text-[var(--ink-soft)]">{messages.apiTokenLabel}</span>
-          <input
-            type="password"
-            name="apiToken"
-            autoComplete="off"
-            spellCheck={false}
-            dir="ltr"
-            placeholder={messages.apiTokenPlaceholder}
-            className="min-h-12 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 font-mono text-sm text-[var(--ink)] outline-none transition-colors duration-[var(--duration)] focus:border-[color-mix(in_srgb,var(--accent)_55%,transparent)]"
-          />
-          <span className="text-xs leading-5 text-[var(--ink-faint)]">
-            {messages.apiTokenHelp}
-            {status.configured ? ` ${messages.apiTokenKeepHelp}` : ""}
-          </span>
-        </label>
+        <SecretField
+          label={messages.apiTokenLabel}
+          name="apiToken"
+          placeholder={messages.apiTokenPlaceholder}
+          hint={messages.apiTokenHelp}
+          keepHint={messages.apiTokenKeepHelp}
+          lockedHint={secrets.lockedHint}
+          editLabel={secrets.editAction}
+          cancelLabel={secrets.cancelAction}
+          configured={status.configured}
+        />
 
         <label className="grid max-w-xs gap-2">
           <span className="text-sm font-medium text-[var(--ink-soft)]">{messages.markupLabel}</span>

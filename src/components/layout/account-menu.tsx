@@ -116,12 +116,14 @@ export function AccountMenu({
             >
               {messages.account.account}
             </Link>
-            <Link
-              href={`/${locale}/wallet`}
-              className="rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"
-            >
-              {messages.account.walletLabel}
-            </Link>
+            {!session.isAdmin ? (
+              <Link
+                href={`/${locale}/wallet`}
+                className="rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"
+              >
+                {messages.account.walletLabel}
+              </Link>
+            ) : null}
             <Link
               href={`/${locale}/notifications`}
               className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"

@@ -62,10 +62,32 @@ function normalizeLevel(value: string | null | undefined): LogLevel {
   return (LOG_LEVELS as readonly string[]).includes(level ?? "") ? (level as LogLevel) : "info";
 }
 
-function normalizeDomain(value: string | null | undefined): string {
-  const domain = value?.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+/**
+ * The host out of a bare host or a full URL.
+ *
+ * An owner copying an address out of Axiom may paste `api.axiom.co`, a trailing
+ * slash, or a whole URL with a path — the dataset page hands over addresses
+ * like `https://…/v1/ingest/gh-store`, and pasting one of those must not build
+ * `…/v1/ingest/gh-store/v1/ingest/gh-store`. Only the host survives.
+ */
+function toHost(value: string | null | undefined): string | null {
+  const raw = value?.trim();
 
-  return domain || AXIOM_DEFAULTS.domain;
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+
+    return url.hostname || null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeDomain(value: string | null | undefined): string {
+  return toHost(value) ?? AXIOM_DEFAULTS.domain;
 }
 
 export function readAxiomCredentials(providers: unknown): AxiomCredentials {
@@ -113,7 +135,7 @@ export function toAxiomStatus(providers: unknown): AxiomStatus {
  * reasonably arrive with either.
  */
 export function axiomIngestUrl(domain: string, dataset: string): string {
-  const host = domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const host = toHost(domain) ?? AXIOM_DEFAULTS.domain;
   const name = encodeURIComponent(dataset.trim() || AXIOM_DEFAULTS.dataset);
 
   return /(^|\.)edge\.axiom\.co$/i.test(host)

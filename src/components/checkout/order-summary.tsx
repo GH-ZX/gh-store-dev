@@ -30,6 +30,11 @@ export type OrderSummaryProps = {
   insufficient: boolean;
   shortfall: number;
   walletHref: string;
+  /**
+   * Admin checkout. The admin has no customer wallet, so the balance row and
+   * shortfall notices are replaced by a gift note.
+   */
+  gift?: boolean;
 };
 
 function SummaryRow({ label, children }: { label: string; children: ReactNode }) {
@@ -54,6 +59,7 @@ export function OrderSummary({
   insufficient,
   shortfall,
   walletHref,
+  gift = false,
 }: OrderSummaryProps) {
   return (
     <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6">
@@ -80,43 +86,49 @@ export function OrderSummary({
         <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">{messages.summary.totalHint}</p>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4">
-        <p className="flex items-center gap-2 text-xs font-medium text-[var(--ink-faint)]">
-          <WalletIcon className="size-4 text-[var(--accent)]" />
-          {messages.summary.balanceLabel}
-        </p>
-        <p className="text-sm font-semibold text-[var(--ink)] tabular-nums" dir="ltr">
-          {formatPrice(balance, currency, locale)}
-        </p>
-      </div>
-
-      {insufficient ? (
-        <div
-          role="alert"
-          className="mt-4 rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] bg-[var(--danger-surface)] p-4"
-        >
-          <p className="flex items-center gap-2 text-sm font-semibold text-[var(--danger)]">
-            <AlertIcon className="size-4 shrink-0" />
-            {messages.summary.insufficientTitle}
-          </p>
-          <p className="mt-2 text-sm leading-6 text-[var(--ink-soft)]">
-            {formatMessage(messages.summary.insufficientDescription, {
-              amount: formatPrice(shortfall, currency, locale),
-            })}
-          </p>
-          <ButtonLink href={walletHref} variant="secondary" size="sm" className="mt-4">
-            {messages.summary.walletAction}
-          </ButtonLink>
-        </div>
+      {gift ? (
+        <NoticePanel className="mt-4" description={messages.summary.giftNote} />
       ) : (
-        <NoticePanel
-          className="mt-4"
-          description={`${messages.summary.balanceAfterLabel}: ${formatPrice(
-            balance - total,
-            currency,
-            locale,
-          )}`}
-        />
+        <>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4">
+            <p className="flex items-center gap-2 text-xs font-medium text-[var(--ink-faint)]">
+              <WalletIcon className="size-4 text-[var(--accent)]" />
+              {messages.summary.balanceLabel}
+            </p>
+            <p className="text-sm font-semibold text-[var(--ink)] tabular-nums" dir="ltr">
+              {formatPrice(balance, currency, locale)}
+            </p>
+          </div>
+
+          {insufficient ? (
+            <div
+              role="alert"
+              className="mt-4 rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] bg-[var(--danger-surface)] p-4"
+            >
+              <p className="flex items-center gap-2 text-sm font-semibold text-[var(--danger)]">
+                <AlertIcon className="size-4 shrink-0" />
+                {messages.summary.insufficientTitle}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--ink-soft)]">
+                {formatMessage(messages.summary.insufficientDescription, {
+                  amount: formatPrice(shortfall, currency, locale),
+                })}
+              </p>
+              <ButtonLink href={walletHref} variant="secondary" size="sm" className="mt-4">
+                {messages.summary.walletAction}
+              </ButtonLink>
+            </div>
+          ) : (
+            <NoticePanel
+              className="mt-4"
+              description={`${messages.summary.balanceAfterLabel}: ${formatPrice(
+                balance - total,
+                currency,
+                locale,
+              )}`}
+            />
+          )}
+        </>
       )}
     </div>
   );

@@ -1,12 +1,4 @@
 {
-  "hero": {
-    "title": "All digital services in one place.",
-    "description": "Email accounts, AI accounts, game top-ups, and digital cards at clear prices — with a wallet balance that makes every purchase faster."
-  },
-  "data": {
-    "note": "We use your data only to fulfil orders and secure your account — and we never sell it.",
-    "privacyLink": "Privacy policy"
-  },
   "carousel": {
     "regionLabel": "Featured games",
     "slideLabel": "Slide {index} of {total}",

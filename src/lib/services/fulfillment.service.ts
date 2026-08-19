@@ -190,6 +190,12 @@ type FulfillmentContext = {
   catalogueName: string | null;
   externalProductId: string | null;
   /**
+   * `gift` orders are paid-on-arrival admin purchases with no wallet behind
+   * them. A fulfilment failure must not try to refund one, because there is no
+   * wallet transaction to reverse.
+   */
+  paymentMethod: string | null;
+  /**
    * Which supplier this offer is mapped to.
    *
    * Read from the mapping rather than assumed, now that more than one supplier
@@ -210,7 +216,7 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, payment_status, order_items (id, offer_id, quantity, dynamic_fields, metadata)",
+      "id, order_number, status, payment_status, payment_method, order_items (id, offer_id, quantity, dynamic_fields, metadata)",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -285,6 +291,7 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
     gameCode,
     catalogueName,
     externalProductId,
+    paymentMethod: data.payment_method,
     providerName,
   };
 }
@@ -382,6 +389,10 @@ async function recordAttempt(
  *
  * The refund RPC is idempotent, so a repeated settlement returns the same result
  * rather than crediting twice.
+ *
+ * A gift order has no wallet to credit — nothing was ever debited — so the
+ * refund step is skipped for it. The order still goes `failed` (the delivery did
+ * not happen), and the customer-facing copy correctly says nothing was returned.
  */
 async function failAndRefund(
   context: FulfillmentContext,
@@ -393,6 +404,10 @@ async function failAndRefund(
 
   await recordAttempt(attemptId, { status: "failed", errorMessage: reason, errorCode: code });
   await setOrderStatus(context.orderId, "failed");
+
+  if (context.paymentMethod === "gift") {
+    return { state: "failed", reason, refunded: false };
+  }
 
   const { error } = await supabase.rpc("refund_failed_order", {
     p_order_id: context.orderId,

@@ -49,6 +49,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const binance = messages.providers.binance;
   const logging = messages.providers.logging;
   const groups = messages.providers.groups;
+  const secrets = messages.providers.secrets;
   const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus] =
     await Promise.all([
       getG2BulkStatus(),
@@ -113,6 +114,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             messages={provider}
             status={status}
             callback={callback}
+            secrets={secrets}
           />
         </ProviderSection>
 
@@ -149,6 +151,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             messages={maxstore}
             errors={provider.errors}
             status={maxstoreStatus}
+            secrets={secrets}
           />
         </ProviderSection>
 
@@ -185,6 +188,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             messages={batstore}
             errors={provider.errors}
             status={batstoreStatus}
+            secrets={secrets}
           />
         </ProviderSection>
       </ProviderGroup>
@@ -210,6 +214,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             messages={sam}
             status={samStatus}
             overview={samOverview}
+            secrets={secrets}
           />
         </ProviderSection>
 
@@ -237,6 +242,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             messages={binance}
             errors={provider.errors}
             status={binanceStatus}
+            secrets={secrets}
           />
         </ProviderSection>
       </ProviderGroup>
@@ -258,7 +264,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
               : null
           }
         >
-          <AxiomSettingsForm locale={locale} messages={logging} status={axiomStatus} />
+          <AxiomSettingsForm locale={locale} messages={logging} status={axiomStatus} secrets={secrets} />
         </ProviderSection>
       </ProviderGroup>
 

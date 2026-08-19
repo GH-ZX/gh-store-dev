@@ -234,13 +234,19 @@
         "unknown": "We could not save that. Please try again."
       }
     },
-    "groups": {
+"groups": {
       "suppliers": "Suppliers",
-      "suppliersDescription": "Where the store buys what it sells.",
+      "suppliersDescription": "Who the store buys what it sells from.",
       "payments": "Payments",
-      "paymentsDescription": "How customers pay, and how the money is reported back.",
+      "paymentsDescription": "How customers pay, and how money is reported.",
       "monitoring": "Monitoring",
-      "monitoringDescription": "Where the store reports on itself."
+      "monitoringDescription": "Where the store reports about itself."
+    },
+    "secrets": {
+      "editAction": "Edit",
+      "cancelAction": "Cancel",
+      "lockedHint": "A key is saved. Press Edit to replace it.",
+      "lockedHintPair": "A key and secret are saved. Press Edit to replace them."
     },
     "maxstore": {
       "name": "MaxStore",
@@ -635,8 +641,6 @@
       "title": "Carousel",
       "description": "How the featured games at the top of the homepage behave.",
       "missing": "The homepage has no carousel section. Add one in the layout above.",
-      "autoplayLabel": "Move by itself",
-      "autoplayHint": "Slides advance on their own until a visitor touches or hovers the carousel.",
       "intervalLabel": "Seconds per slide",
       "intervalHint": "Between 3 and 30.",
       "loopLabel": "Loop around",
@@ -710,6 +714,7 @@
     "paymentStatusLabel": "Payment status",
     "paymentMethodLabel": "Paid with",
     "paymentMethodWallet": "Wallet balance",
+    "paymentMethodGift": "Gift — no wallet charge",
     "noteLabel": "Customer note",
     "metadataLabel": "Extra data",
     "transactionsTitle": "Wallet movements",

@@ -25,6 +25,12 @@ export default async function WalletPage({ params, searchParams }: PageProps<"/[
     redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/wallet`)}`);
   }
 
+  // The admin has no customer wallet — their purchases are gift orders. Pointing
+  // them at a wallet page with nothing to show would just invite confusion.
+  if (session.isAdmin) {
+    redirect(`/${locale}/dashboard`);
+  }
+
   // Paging by page number keeps the URL shareable and the query trivial.
   const query = await searchParams;
   const page = parsePage(query.page, MAX_PAGE);

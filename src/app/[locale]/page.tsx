@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { preload } from "react-dom";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { HomeFallbackLinks, HomeSections } from "@/components/home/home-sections";
@@ -15,11 +14,12 @@ import { getHomeLayout, getPublicStoreSettings } from "@/lib/services/settings.s
 
 export async function generateMetadata({ params }: PageProps<"/[locale]">): Promise<Metadata> {
   const locale = await resolveLocaleParam(params);
-  const home = getMessages(locale, "home");
+  const content = getMessages(locale, "content");
   const settings = await getPublicStoreSettings();
 
   const description =
-    (locale === "ar" ? settings.seo.descriptionAr : settings.seo.descriptionEn) || home.hero.description;
+    (locale === "ar" ? settings.seo.descriptionAr : settings.seo.descriptionEn) ||
+    content.about.description;
 
   const metadata = buildPageMetadata({
     locale,
@@ -87,48 +87,12 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   }
 
   /*
-   * The homepage must carry the store's name and what it does in text a crawler
-   * or a brand review can read, but the carousel is what a visitor sees. Keeping
-   * the name, the SEO title, and the one-line description in the document (see
-   * the hidden block below) satisfies both without drawing a copy block above
-   * the games.
+   * The homepage is the carousel: no name banner, no pitch. The store's name
+   * lives in the visible header, the page title, and the description metadata —
+   * a crawler still finds it, and a visitor lands straight on the games.
    */
-  const brandName = buildBrandName(settings, locale);
-
   const page = (
     <>
-      {/*
-        * The visible headline is the app's own name. Google's branding review
-        * reads the visible main heading to identify the app and match it to the
-        * OAuth consent screen — an `sr-only` h1 reads as "no name on the page",
-        * which is exactly the mismatch it keeps reporting. The name sits in a
-        * quiet display weight; the purpose line below it explains what the
-        * store does.
-        */}
-      <h1 className="text-center font-brand text-2xl font-semibold tracking-[0.08em] text-[var(--ink)] sm:text-3xl">
-        {brandName}
-      </h1>
-      <p className="mt-3 mb-4 text-center text-sm leading-6 text-[var(--ink-soft)] sm:text-base">
-        {home.hero.description}
-      </p>
-
-      {/*
-        * Google's branding review asks a homepage to be transparent about why it
-        * collects data and to carry a privacy-policy link. One quiet strip does
-        * both without becoming part of the pitch: the datapoint is a sentence a
-        * visitor reads and recognises, and the link is the same route the
-        * consent screen points to.
-        */}
-      <p className="mb-6 text-center text-xs leading-5 text-[var(--ink-muted)] sm:text-sm sm:leading-6">
-        {home.data.note}
-        <Link
-          href={`/${locale}/privacy`}
-          className="ms-1.5 font-semibold text-[var(--accent)] underline decoration-[var(--line)] underline-offset-4 transition-colors duration-[var(--duration)] hover:text-[var(--accent-strong)]"
-        >
-          {home.data.privacyLink}
-        </Link>
-      </p>
-
       {/*
         * The carousel leads. There used to be a pitch above it — a headline, two
         * buttons and three stat tiles — which pushed the actual games below the
@@ -141,7 +105,6 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             games={carousel.games}
             locale={locale}
             intervalSeconds={carousel.section?.intervalSeconds ?? 6}
-            autoplay={carousel.section?.autoplay ?? true}
             loop={carousel.section?.loop ?? true}
             align={carousel.section?.align ?? "center"}
             labels={{

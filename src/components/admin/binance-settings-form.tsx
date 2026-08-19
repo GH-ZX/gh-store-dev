@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { FormResult, SelectField } from "@/components/admin/admin-form";
+import { SecretField } from "@/components/admin/secret-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckIcon } from "@/components/ui/icons";
@@ -31,16 +32,15 @@ export type BinanceSettingsFormProps = {
   messages: AdminMessages["providers"]["binance"];
   errors: AdminMessages["providers"]["g2bulk"]["errors"];
   status: BinanceStatus;
+  secrets: AdminMessages["providers"]["secrets"];
 };
-
-const CONTROL =
-  "min-h-12 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 font-mono text-sm text-[var(--ink)] outline-none transition-colors duration-[var(--duration)] focus:border-[color-mix(in_srgb,var(--accent)_55%,transparent)]";
 
 export function BinanceSettingsForm({
   locale,
   messages,
   errors,
   status,
+  secrets,
 }: BinanceSettingsFormProps) {
   const [state, formAction, saving] = useActionState<ProviderActionState, FormData>(
     saveBinanceSettingsAction,
@@ -54,31 +54,23 @@ export function BinanceSettingsForm({
       <input type="hidden" name="locale" value={locale} />
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="grid gap-2">
-          <span className="text-sm font-medium text-[var(--ink-soft)]">{messages.apiKeyLabel}</span>
-          <input
-            type="password"
-            name="apiKey"
-            autoComplete="off"
-            spellCheck={false}
-            dir="ltr"
-            className={CONTROL}
-          />
-        </label>
+        <SecretField
+          label={messages.apiKeyLabel}
+          name="apiKey"
+          lockedHint={secrets.lockedHintPair}
+          editLabel={secrets.editAction}
+          cancelLabel={secrets.cancelAction}
+          configured={status.configured}
+        />
 
-        <label className="grid gap-2">
-          <span className="text-sm font-medium text-[var(--ink-soft)]">
-            {messages.apiSecretLabel}
-          </span>
-          <input
-            type="password"
-            name="apiSecret"
-            autoComplete="off"
-            spellCheck={false}
-            dir="ltr"
-            className={CONTROL}
-          />
-        </label>
+        <SecretField
+          label={messages.apiSecretLabel}
+          name="apiSecret"
+          lockedHint={secrets.lockedHintPair}
+          editLabel={secrets.editAction}
+          cancelLabel={secrets.cancelAction}
+          configured={status.configured}
+        />
       </div>
 
       <p className="text-xs leading-5 text-[var(--ink-faint)]">

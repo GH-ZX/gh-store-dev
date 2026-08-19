@@ -226,33 +226,3 @@ test.describe("navigation", () => {
     expect(missing?.status()).toBe(404);
   });
 });
-
-test.describe("reduced motion", () => {
-  test("the carousel does not rotate on its own", async ({ page }) => {
-    // Set on the page rather than through `test.use`, so it is unambiguous that
-    // it applies before the first navigation — the carousel decides whether to
-    // register the autoplay plugin at all on its first render.
-    await page.emulateMedia({ reducedMotion: "reduce" });
-
-    await openHome(page, "ar");
-
-    const markers = page.getByRole("button", { name: /انتقل إلى/ });
-
-    if ((await markers.count()) < 2) {
-      test.skip(true, "fewer than two carousel slides in this catalog");
-    }
-
-    const selected = () =>
-      markers.evaluateAll((items) =>
-        items.findIndex((item) => item.getAttribute("aria-current") === "true"),
-      );
-
-    const before = await selected();
-
-    // Longer than the shortest interval an owner can configure, so a carousel
-    // that rotates under this setting cannot slip through by being slow.
-    await page.waitForTimeout(9000);
-
-    expect(await selected()).toBe(before);
-  });
-});

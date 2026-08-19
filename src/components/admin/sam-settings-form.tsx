@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { SecretField } from "@/components/admin/secret-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertIcon, CheckIcon, ShieldIcon } from "@/components/ui/icons";
@@ -28,15 +29,17 @@ import {
  * recent transfers straight away rather than hiding them behind a button whose
  * result vanished on the next render.
  *
- * The key field renders empty even when a key is stored — the saved secret is
- * represented by a masked tail only — so leaving it blank changes a wallet or the
- * review policy without handling the secret.
+ * The key field is locked once a key is stored — the secret is represented by a
+ * masked tail only. Editing is opened by the Edit button on purpose, and leaving
+ * the field blank changes a wallet or the review policy without handling the
+ * secret.
  */
 export type SamSettingsFormProps = {
   locale: Locale;
   messages: AdminMessages["providers"]["sam"];
   status: SamStatus;
   overview: SamOverview;
+  secrets: AdminMessages["providers"]["secrets"];
 };
 
 type Messages = AdminMessages["providers"]["sam"];
@@ -71,7 +74,7 @@ function CallbackWarning({ title, body }: { title: string; body: string }) {
   );
 }
 
-export function SamSettingsForm({ locale, messages, status, overview }: SamSettingsFormProps) {
+export function SamSettingsForm({ locale, messages, status, overview, secrets }: SamSettingsFormProps) {
   const [saveState, saveAction, saving] = useActionState<SamActionState, FormData>(
     saveSamSettingsAction,
     INITIAL_SAM_STATE,
@@ -316,22 +319,17 @@ export function SamSettingsForm({ locale, messages, status, overview }: SamSetti
       <form action={saveAction} className="grid gap-5">
         <input type="hidden" name="locale" value={locale} />
 
-        <label className="grid gap-2">
-          <span className="text-sm font-medium text-[var(--ink-soft)]">{messages.apiKeyLabel}</span>
-          <input
-            type="password"
-            name="apiKey"
-            autoComplete="off"
-            spellCheck={false}
-            dir="ltr"
-            placeholder={messages.apiKeyPlaceholder}
-            className={`${fieldClass} font-mono`}
-          />
-          <span className="text-xs leading-5 text-[var(--ink-faint)]">
-            {messages.apiKeyHelp}
-            {status.configured ? ` ${messages.apiKeyKeepHelp}` : ""}
-          </span>
-        </label>
+        <SecretField
+          label={messages.apiKeyLabel}
+          name="apiKey"
+          placeholder={messages.apiKeyPlaceholder}
+          hint={messages.apiKeyHelp}
+          keepHint={messages.apiKeyKeepHelp}
+          lockedHint={secrets.lockedHint}
+          editLabel={secrets.editAction}
+          cancelLabel={secrets.cancelAction}
+          configured={status.configured}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2">

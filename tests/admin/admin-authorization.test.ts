@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -40,7 +40,9 @@ function actionFiles(dir: string): string[] {
 
 const files = actionFiles(DASHBOARD).map((path) => ({
   path,
-  label: path.slice(DASHBOARD.length + 1),
+  // Normalize separators so the labels match the forward-slash paths the
+  // assertions below name, on Windows as well as on POSIX.
+  label: path.slice(DASHBOARD.length + 1).split(sep).join("/"),
   source: readFileSync(path, "utf8"),
 }));
 

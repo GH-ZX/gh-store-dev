@@ -267,7 +267,9 @@ export default async function OrderDetailPage({
                 <dd className="text-[var(--ink)]">
                   {order.paymentMethod === "wallet"
                     ? messages.paymentMethodWallet
-                    : (order.paymentMethod ?? "—")}
+                    : order.paymentMethod === "gift"
+                      ? messages.paymentMethodGift
+                      : (order.paymentMethod ?? "—")}
                 </dd>
               </div>
             </dl>

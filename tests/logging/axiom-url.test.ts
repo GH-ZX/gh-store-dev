@@ -29,6 +29,17 @@ describe("axiom ingest URL", () => {
     );
   });
 
+  it("keeps only the host when a full address is pasted", () => {
+    // Axiom's dataset page hands over an address that already carries a path;
+    // pasting it must not build the path twice.
+    expect(axiomIngestUrl("https://api.axiom.co/v1/datasets/gh-store/ingest", "gh-store")).toBe(
+      "https://api.axiom.co/v1/datasets/gh-store/ingest",
+    );
+    expect(axiomIngestUrl("https://gh-store.edge.axiom.co/v1/ingest/gh-store", "gh-store")).toBe(
+      "https://gh-store.edge.axiom.co/v1/ingest/gh-store",
+    );
+  });
+
   it("handles the EU API host like any other API host", () => {
     expect(axiomIngestUrl("api.eu.axiom.co", "gh-store")).toBe(
       "https://api.eu.axiom.co/v1/datasets/gh-store/ingest",

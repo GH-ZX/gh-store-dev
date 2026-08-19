@@ -53,6 +53,42 @@ export async function getRechargeConfig(): Promise<RechargeConfig> {
   return normalizeRechargeConfig(error ? {} : data);
 }
 
+export type MyRechargeRequestDetail = MyRechargeRequest & {
+  exchangeRate: number | null;
+  resolvedAt: string | null;
+};
+
+export async function getMyRechargeRequest(id: string): Promise<MyRechargeRequestDetail | null> {
+  const user = await requireAuth();
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("recharge_requests")
+    .select(
+      "id, reference, requested_amount, wallet_credit_amount, requested_currency, payment_method, status, admin_note, exchange_rate, reviewed_at, created_at",
+    )
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    reference: data.reference,
+    requestedAmount: data.requested_amount,
+    creditedAmount: data.wallet_credit_amount,
+    currency: data.requested_currency,
+    paymentMethod: data.payment_method,
+    status: data.status as RechargeRequestStatus,
+    adminNote: data.admin_note,
+    createdAt: data.created_at,
+    exchangeRate: data.exchange_rate,
+    resolvedAt: data.reviewed_at,
+  };
+}
+
 export async function getMyRechargeRequests(limit = 20): Promise<MyRechargeRequest[]> {
   const user = await requireAuth();
   const supabase = await createSupabaseServerClient();

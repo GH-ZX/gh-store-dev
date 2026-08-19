@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { OrderStatusPanel } from "@/components/checkout/order-status";
 import { ReviewForm } from "@/components/reviews/review-form";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { ChevronIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
 import type { Locale } from "@/i18n/config";
@@ -164,12 +165,14 @@ export default async function OrderDetailPage({
           * a 404.
           */}
         {order.paymentStatus === "paid" || order.paymentStatus === "refunded" ? (
-          <Link
+          <ButtonLink
             href={`/${locale}/orders/${order.id}/invoice`}
-            className="text-xs font-medium text-[var(--accent)] underline underline-offset-4"
+            variant="secondary"
+            size="sm"
+            className="mt-1"
           >
             {messages.invoice.viewInvoice}
-          </Link>
+          </ButtonLink>
         ) : null}
       </div>
 
@@ -254,7 +257,9 @@ export default async function OrderDetailPage({
                 <dd className="text-sm font-semibold text-[var(--ink)]">
                   {order.paymentMethod === "wallet"
                     ? detail.paymentMethodWallet
-                    : order.paymentMethod}
+                    : order.paymentMethod === "gift"
+                      ? detail.paymentMethodGift
+                      : order.paymentMethod}
                 </dd>
               </div>
             ) : null}

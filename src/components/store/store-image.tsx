@@ -31,9 +31,23 @@ export type StoreImageProps = {
   focus?: { x: number; y: number };
   priority?: boolean;
   sizes?: string;
+  /**
+   * How the artwork fills its box. `cover` crops to the frame; `contain`
+   * shows the whole upload, so a square supplier image stays a square with
+   * whatever backdrop the caller paints behind it.
+   */
+  fit?: "cover" | "contain";
 };
 
-export function StoreImage({ src, alt, className, focus, priority = false, sizes }: StoreImageProps) {
+export function StoreImage({
+  src,
+  alt,
+  className,
+  focus,
+  priority = false,
+  sizes,
+  fit = "cover",
+}: StoreImageProps) {
   if (!src) {
     return <div className={cn("size-full", PLACEHOLDER, className)} aria-hidden="true" />;
   }
@@ -46,7 +60,12 @@ export function StoreImage({ src, alt, className, focus, priority = false, sizes
       decoding={priority ? "sync" : "async"}
       fetchPriority={priority ? "high" : "auto"}
       sizes={sizes}
-      className={cn("size-full object-cover", PLACEHOLDER, className)}
+      className={cn(
+        "size-full",
+        fit === "contain" ? "object-contain" : "object-cover",
+        PLACEHOLDER,
+        className,
+      )}
       style={focus ? { objectPosition: `${focus.x}% ${focus.y}%` } : undefined}
     />
   );

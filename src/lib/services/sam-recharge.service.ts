@@ -517,7 +517,7 @@ async function announceCredit(samInvoiceId: string, credited: number): Promise<v
   const service = createSupabaseServiceClient();
   const { data } = await service
     .from("sam_invoices")
-    .select("user_id, recharge_requests (reference)")
+    .select("user_id, recharge_request_id, recharge_requests (reference)")
     .eq("sam_invoice_id", samInvoiceId)
     .maybeSingle();
 
@@ -542,9 +542,9 @@ async function announceCredit(samInvoiceId: string, credited: number): Promise<v
     bodyEn: reference
       ? `We added ${amount} USD to your wallet (${reference}). It is ready to spend.`
       : `We added ${amount} USD to your wallet. It is ready to spend.`,
-    href: "/wallet",
+    href: data.recharge_request_id ? `/recharge/${data.recharge_request_id}/invoice` : "/wallet",
     entityType: "recharge",
-    entityId: null,
+    entityId: data.recharge_request_id ?? null,
   });
 }
 
