@@ -4,9 +4,10 @@
 **Technical repository name:** `gh-store`  
 **Reference repository:** `echocore-store`  
 **Archive:** `gh-store-old`  
-**Current status:** Stages 0–11 complete; stage 12 started — CI now runs the
-test suite, and the remaining release work is E2E coverage, accessibility and
-performance passes, the production Supabase project, and the domain
+**Current status:** Stages 0–11 complete; stage 12 is in final release hardening.
+The owner confirms that `gh-store.me`, production Supabase, and Cloudflare
+configuration are ready; this repository still verifies the customer-facing
+runtime, callbacks, monitoring, UAT, and rollback evidence.
 
 ## Progress Snapshot
 
@@ -24,7 +25,7 @@ performance passes, the production Supabase project, and the domain
 | 9. G2Bulk fulfillment | Complete | Sync, top-ups, redeem codes, reconciliation, and the supplier callback done |
 | 10. Payments | Complete | Manual recharge, Sam invoices, SyriatelCash, ShamCash, payments reconciliation, and Binance Pay |
 | 11. Admin operations | Complete | Every daily operation runs from the dashboard: catalog import and hand-built catalog, pricing, orders and fulfilment, recharges, payments, customers, access, support, reviews, notifications, activity log, website content, theme, and SEO |
-| 12. Release | In progress | CI runs the tests and a browser suite covers the anonymous storefront on phone and desktop in both languages; signed-in E2E, accessibility, the production project, the domain, and UAT remain |
+| 12. Release | In progress | CI runs tests and browser coverage exists for anonymous and admin flows; API hardening, accessibility, performance, production callback verification, UAT, and rollback evidence remain |
 
 ## Working Rules
 
@@ -94,7 +95,10 @@ missing list must say why it is blank. An owner cannot tell "nothing here" from
 - Create and link the hosted GH Store staging project.
 - Install Supabase SSR `0.12.4` and Supabase JS `2.112.3`.
 - Add server and browser Supabase clients.
-- Add Next.js middleware session refresh boundary.
+- Add Next.js middleware session refresh boundary. The `middleware.ts` convention
+  is intentionally retained until OpenNext Cloudflare supports the Next.js 16
+  Node-default `proxy.ts` convention without dropping Edge middleware support.
+
 - Generate database types from the linked staging schema.
 - Add `profiles`, roles, timestamps, auth trigger, admin helper, and RLS policies.
 - Add `requireAuth`, `requireAdmin`, and profile authorization tests.
@@ -196,11 +200,11 @@ real volume to measure.
 This stage had been left marked pending long after its work landed, so each item
 was walked against the code before the status moved.
 
-- Registration, sign-in, sign-out, and password recovery. Sign-up and sign-in
-  share one form at `/login`, switched by `?mode=sign-up`. There is deliberately
-  no `/auth/callback` route: Supabase delivers recovery as a URL *fragment*,
-  which a server route cannot read, so the reset panel is client-side and
-  establishes the session in the browser.
+- Registration, sign-in, sign-out, and password recovery. Sign-up and sign-in share one form at `/login`, switched by
+  `?mode=sign-up`. OAuth and code-based sign-ins return through `/auth/callback`;
+  password recovery is handled client-side because Supabase delivers the recovery
+  session in a URL fragment that a server route cannot read.
+
 - Profile and account settings, including a password change.
 - Wallet balance and an immutable transaction history, paged.
 - Notifications and customer inbox: delivery, failure, refund, and top-up
@@ -509,15 +513,19 @@ is reachable from the dashboard without a SQL statement.
 
 ### Remaining
 
+- Verify production Auth URLs, canonical URLs, payment webhooks, and provider webhooks.
 - Add integration, SQL, and provider coverage on top of the unit suite.
-- Test keyboard navigation.
-- Run accessibility, performance, bundle, and Core Web Vitals checks.
-- Create separate Supabase production project.
-- Apply the approved migration set and seed only approved data.
-- Configure Cloudflare production Worker and secrets.
-- Purchase domain through GoDaddy and manage DNS through Cloudflare.
-- Configure Auth URLs, canonical URLs, payment webhooks, and provider webhooks.
-- Run production smoke tests and verify rollback procedures.
+- Complete keyboard and accessibility checks.
+- Run performance, bundle, and Core Web Vitals checks.
+- Run production smoke tests with approved test accounts.
+- Verify rollback procedures and document incident response.
+
+### Owner-confirmed complete; evidence still tracked
+
+- Production domain: `https://gh-store.me`.
+- Production Supabase configured for the Cloudflare Worker.
+- Cloudflare production Worker and secrets configured.
+- Production migrations and seed data applied, pending final release verification.
 
 **Exit criteria:** Staging UAT is approved, production secrets are separated, rollback is tested, and all critical customer/admin/payment/fulfillment flows pass.
 

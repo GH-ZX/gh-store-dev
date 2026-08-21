@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AccountMenu } from "@/components/layout/account-menu";
@@ -101,11 +102,12 @@ export function SiteHeader({
           className="gh-sheen flex min-h-16 items-center gap-3 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[color-mix(in_srgb,var(--canvas-raised)_82%,transparent)] px-3 shadow-[var(--elevation-2)] backdrop-blur-2xl sm:gap-4 sm:px-4"
         >
           <Link href={`/${locale}`} className="flex shrink-0 items-center gap-2.5" aria-label={brandName}>
-            <img
+            <Image
               src="/gh-store-logo.png"
               alt=""
               width={36}
               height={36}
+              priority
               className="gh-logo-theme size-9 shrink-0 rounded-[var(--radius-control)] object-cover"
               aria-hidden="true"
             />

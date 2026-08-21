@@ -33,7 +33,11 @@ const BINANCE_HOST = "https://bpay.binanceapi.com";
 function json(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      ...(status === 405 ? { allow: "POST" } : {}),
+    },
   });
 }
 
@@ -181,11 +185,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: settings } = await supabase
+  const { data: settings, error: settingsError } = await supabase
     .from("store_settings")
     .select("providers")
     .eq("id", "global")
     .maybeSingle();
+
+  if (settingsError) {
+    return json({ returnCode: "FAIL", returnMessage: "settings_unavailable" }, 503);
+  }
 
   const binance = (settings?.providers as { binance?: Record<string, unknown> } | null)?.binance;
   const apiKey = text(binance?.api_key);
@@ -275,11 +283,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
     return acknowledge();
   }
 
-  const { data: invoice } = await supabase
+  const { data: invoice, error: invoiceError } = await supabase
     .from("binance_invoices")
     .select("merchant_trade_no, recharge_request_id, status, charge_amount, user_id")
     .eq("merchant_trade_no", merchantTradeNo)
     .maybeSingle();
+
+  if (invoiceError) {
+    return json({ returnCode: "FAIL", returnMessage: "invoice_lookup_failed" }, 503);
+  }
 
   if (!invoice) {
     return acknowledge();
@@ -306,11 +318,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   if (status !== "PAID") {
     if (["EXPIRED", "CANCELED", "CANCELLED", "ERROR"].includes(status)) {
-      await supabase.rpc("fail_binance_invoice", {
+      const { error } = await supabase.rpc("fail_binance_invoice", {
         p_merchant_trade_no: merchantTradeNo,
         p_status: status === "EXPIRED" ? "expired" : "cancelled",
         p_payload: { source: "webhook", status },
       });
+
+      if (error) {
+        return json({ returnCode: "FAIL", returnMessage: "invoice_update_failed" }, 500);
+      }
     }
 
     return acknowledge();

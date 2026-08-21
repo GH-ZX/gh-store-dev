@@ -38,7 +38,11 @@ type Payload = {
 function json(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      ...(status === 405 ? { allow: "POST" } : {}),
+    },
   });
 }
 
@@ -87,11 +91,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: settings } = await supabase
+  const { data: settings, error: settingsError } = await supabase
     .from("store_settings")
     .select("providers")
     .eq("id", "global")
     .maybeSingle();
+
+  if (settingsError) {
+    return json({ ok: false, error: "settings_unavailable" }, 503);
+  }
 
   const providers = settings?.providers as { g2bulk?: { webhook_secret?: unknown } } | null;
   const expected = text(providers?.g2bulk?.webhook_secret);
@@ -153,12 +161,16 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return json({ ok: false, error: "storage_failed" }, 500);
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from("fulfillment_events")
       .select("id, processed_at")
       .eq("provider", "g2bulk")
       .eq("external_event_id", eventId)
       .maybeSingle();
+
+    if (existingError) {
+      return json({ ok: false, error: "event_lookup_failed" }, 500);
+    }
 
     if (existing?.processed_at) {
       return json({ ok: true, applied: false, duplicate: true }, 200);
@@ -182,7 +194,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       .eq("id", eventRowId);
   };
 
-  const { data: attempt } = await supabase
+  const { data: attempt, error: attemptError } = await supabase
     .from("fulfillment_attempts")
     .select(
       "id, status, order_item_id, order_items!inner (order_id, orders!inner (id, order_number, status, user_id))",
@@ -190,6 +202,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
     .eq("provider", "g2bulk")
     .eq("external_order_id", externalOrderId)
     .maybeSingle();
+
+  if (attemptError) {
+    return json({ ok: false, error: "fulfillment_lookup_failed" }, 500);
+  }
 
   const item = attempt
     ? ((Array.isArray(attempt.order_items) ? attempt.order_items[0] : attempt.order_items) as {

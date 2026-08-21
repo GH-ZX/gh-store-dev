@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SocialIcon } from "@/components/ui/brand-icons";
 import type { Locale } from "@/i18n/config";
@@ -64,7 +65,7 @@ export function SiteFooter({ locale, messages, socialLinks, year, brandName }: S
         <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]">
           <div className="max-w-sm">
             <Link href={`/${locale}`} className="flex items-center gap-2.5" aria-label={brandName}>
-              <img
+              <Image
                 src="/gh-store-logo.png"
                 alt=""
                 width={36}

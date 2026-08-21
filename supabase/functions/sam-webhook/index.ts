@@ -47,7 +47,11 @@ type Payload = {
 function json(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      ...(status === 405 ? { allow: "POST" } : {}),
+    },
   });
 }
 
@@ -99,11 +103,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: settings } = await supabase
+  const { data: settings, error: settingsError } = await supabase
     .from("store_settings")
     .select("providers")
     .eq("id", "global")
     .maybeSingle();
+
+  if (settingsError) {
+    return json({ ok: false, error: "settings_unavailable" }, 503);
+  }
 
   const providers = settings?.providers as { sam?: { webhook_secret?: unknown } } | null;
   const expected = text(providers?.sam?.webhook_secret);
@@ -134,13 +142,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
     return json({ ok: false, error: "unsupported_event" }, 400);
   }
 
-  const { data: invoice } = await supabase
+  const { data: invoice, error: invoiceError } = await supabase
     .from("sam_invoices")
     .select(
       "sam_invoice_id, status, amount, currency, charge_currency, payment_method, user_id",
     )
     .eq("sam_invoice_id", invoiceId)
     .maybeSingle();
+
+  if (invoiceError) {
+    return json({ ok: false, error: "invoice_lookup_failed" }, 503);
+  }
 
   if (!invoice) {
     return json({ ok: false, error: "unknown_invoice" }, 404);
@@ -153,11 +165,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
 
   if (event === "invoice.expired") {
-    await supabase.rpc("fail_sam_invoice", {
+    const { error } = await supabase.rpc("fail_sam_invoice", {
       p_sam_invoice_id: invoice.sam_invoice_id,
       p_status: "expired",
       p_payload: { source: "webhook" },
     });
+
+    if (error) {
+      return json({ ok: false, error: "invoice_update_failed" }, 500);
+    }
 
     return json({ ok: true, status: "expired", applied: true }, 200);
   }

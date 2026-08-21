@@ -1,7 +1,8 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { log } from "@/lib/logging/logger";
+import { isReconcileAuthorized } from "@/lib/api/reconcile";
+import { log, logFailure } from "@/lib/logging/logger";
 import { reconcileStuckOrders } from "@/lib/services/reconciliation.service";
+import { hasServiceRoleKey } from "@/lib/supabase/service";
 
 /**
  * Scheduled fulfilment sweep.
@@ -23,24 +24,18 @@ import { reconcileStuckOrders } from "@/lib/services/reconciliation.service";
 
 export const dynamic = "force-dynamic";
 
-function digest(value: string): Buffer {
-  return createHash("sha256").update(value, "utf8").digest();
-}
-
-function authorized(request: Request): boolean {
-  const expected = process.env.RECONCILE_CRON_SECRET?.trim();
-
-  if (!expected) {
-    return false;
-  }
-
-  const header = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ?? "";
-
-  return header.length > 0 && timingSafeEqual(digest(header), digest(expected));
+function json<T>(body: T, status = 200, extraHeaders: Record<string, string> = {}): NextResponse {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      ...extraHeaders,
+    },
+  });
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  if (!authorized(request)) {
+  if (!isReconcileAuthorized(request.headers, process.env.RECONCILE_CRON_SECRET)) {
     /*
      * This secret is the only gate on the endpoint, so someone trying it is
      * worth seeing. The presented value is never logged — only that there was
@@ -52,10 +47,39 @@ export async function POST(request: Request): Promise<NextResponse> {
       configured: Boolean(process.env.RECONCILE_CRON_SECRET?.trim()),
     });
 
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    return json({ ok: false, error: "unauthorized" }, 401);
   }
 
-  const run = await reconcileStuckOrders();
+  if (!hasServiceRoleKey()) {
+    log.error("fulfilment", "reconcile_not_configured", {
+      reason: "missing_service_role_key",
+    });
 
-  return NextResponse.json({ ok: true, ...run, results: undefined });
+    return json({ ok: false, error: "reconciliation_not_configured" }, 503, {
+      "Retry-After": "300",
+    });
+  }
+
+  try {
+    const run = await reconcileStuckOrders();
+
+    return json({
+      ok: true,
+      checked: run.checked,
+      completed: run.completed,
+      refunded: run.refunded,
+      escalated: run.escalated,
+      waiting: run.waiting,
+      skipped: run.skipped,
+    });
+  } catch (error) {
+    logFailure("fulfilment", "reconcile_failed", error);
+
+    return json({ ok: false, error: "reconciliation_failed" }, 500);
+  }
+}
+
+/** Explicit JSON response for probes and misconfigured schedulers. */
+export function GET(): NextResponse {
+  return json({ ok: false, error: "method_not_allowed" }, 405, { Allow: "POST" });
 }

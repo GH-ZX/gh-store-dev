@@ -1,18 +1,27 @@
-# GH-Store
+# GH Store
 
-Next.js digital gaming store with a new visual identity and Cloudflare deployment.
+GH Store is a localized digital gaming store built with Next.js 16, Supabase,
+and Cloudflare Workers through OpenNext. Customers can browse games and gift
+cards, create accounts, recharge their wallet, purchase offers, track delivery,
+open support tickets, and download invoices. Administrators manage catalog,
+providers, payments, fulfillment, customers, reviews, support, website content,
+and audit logs from the dashboard.
 
-## Current Status
+## Current status
 
-Phase 1 foundation: Next.js App Router, TypeScript, Tailwind CSS, Cloudflare Workers, and OpenNext are configured. Product features are intentionally not copied yet; they will be rebuilt from the `echocore-store` reference in controlled phases.
+The application is feature-complete for staging and is in final production
+hardening. The production domain is `https://gh-store.me`; production Supabase
+and Cloudflare configuration are maintained outside this repository and must be
+verified with the release checklist before enabling real customer payments.
 
 ## Requirements
 
 - Node.js 24
 - pnpm 11
-- Cloudflare account for preview/deployment
+- A Supabase project with the approved migrations applied
+- Cloudflare account for Worker preview/deployment
 
-## Local Development
+## Local development
 
 ```bash
 pnpm install
@@ -20,28 +29,69 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Open http://localhost:3000.
+Open <http://localhost:3000>. The local environment can use the development
+Supabase fallback, but production always requires explicit Supabase variables.
 
-## Quality Checks
+## Environment variables
+
+Public application settings:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_DEFAULT_LOCALE`
+
+Server-only integration settings:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `RECONCILE_CRON_SECRET`
+- `G2BULK_API_KEY`
+- `SAM_API_KEY`
+- `BINANCE_PAY_API_KEY`
+- `BINANCE_PAY_SECRET_KEY`
+- `BINANCE_PAY_WEBHOOK_SECRET`
+
+Never commit `.env.local`, `.dev.vars`, provider credentials, webhook secrets,
+or customer data.
+
+## Quality checks
 
 ```bash
+pnpm test
 pnpm lint
 pnpm typecheck
 pnpm build
+pnpm exec opennextjs-cloudflare build
 ```
 
-## Cloudflare Preview
+Run the browser suite when Chrome and a configured environment are available:
+
+```bash
+pnpm test:e2e
+```
+
+Administrator browser tests additionally use `E2E_ADMIN_EMAIL` and
+`E2E_ADMIN_PASSWORD`. Credentials remain local environment variables and are
+never committed.
+
+## Supabase
+
+Migrations live in `supabase/migrations`. Apply only the approved migration set
+to the intended project, then verify generated database types and RLS tests.
+Supabase Edge Functions provide payment/provider callbacks and must be deployed
+with their required secrets and JWT settings.
+
+## Cloudflare preview and deployment
 
 ```bash
 pnpm run preview
-```
-
-The preview uses OpenNext to build a Worker and Wrangler to run it locally.
-
-## Deployment
-
-```bash
 pnpm run deploy
 ```
 
-Production deployment will be enabled after Supabase, provider secrets, webhooks, and acceptance tests are configured.
+The Worker cron invokes `POST /api/reconcile` every five minutes. It requires
+both `NEXT_PUBLIC_APP_URL` and `RECONCILE_CRON_SECRET`; missing or failed
+configuration is reported in Worker logs rather than silently ignored.
+
+Before production launch, verify the domain, Auth redirect URLs, payment and
+provider callbacks, Worker secrets, reconciliation logs, smoke tests, and
+rollback procedure using the release checklist in `ROADMAP.md`.
