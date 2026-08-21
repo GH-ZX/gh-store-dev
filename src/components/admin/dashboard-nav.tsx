@@ -112,8 +112,7 @@ export function DashboardNav({ locale, messages, variant }: DashboardNavProps) {
           </div>
 
           {activeGroup && activeGroup.items.some((item) => item.href) ? (
-            <div
-              role="tablist"
+            <nav
               aria-label={messages.groups[activeGroup.key as keyof AdminMessages["shell"]["groups"]]}
               className="mt-2 grid gap-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_88%,transparent)] p-1 shadow-[var(--elevation-1)] backdrop-blur-xl"
               style={{ gridTemplateColumns: `repeat(${activeGroup.items.filter((item) => item.href).length}, minmax(0, 1fr))` }}
@@ -130,8 +129,6 @@ export function DashboardNav({ locale, messages, variant }: DashboardNavProps) {
                   <Link
                     key={item.key}
                     href={item.href}
-                    role="tab"
-                    aria-selected={current}
                     aria-current={current ? "page" : undefined}
                     className={cn(
                       "flex min-w-0 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-1 py-2 text-center transition-colors duration-[var(--duration)]",
@@ -147,7 +144,7 @@ export function DashboardNav({ locale, messages, variant }: DashboardNavProps) {
                   </Link>
                 );
               })}
-            </div>
+            </nav>
           ) : null}
         </nav>
       </div>

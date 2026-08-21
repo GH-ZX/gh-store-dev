@@ -141,6 +141,7 @@ async function attemptOpenThread(input: {
   const { count } = await supabase
     .from("support_threads")
     .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
     .in("status", ["open", "pending"]);
 
   if ((count ?? 0) >= OPEN_THREAD_LIMIT) {
