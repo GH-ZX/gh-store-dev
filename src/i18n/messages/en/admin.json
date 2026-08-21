@@ -268,7 +268,7 @@
       "webhookTitle": "Webhook",
       "webhookOn": "Registered",
       "webhookOff": "Not registered",
-      "webhookHelp": "Registers the bot's webhook with Telegram so commands reach this store's Worker. The dashboard performs the setWebhook call itself; you do not need to run curl.",
+      "webhookHelp": "Registers the bot's webhook with Telegram. It points at a Supabase Edge Function (like the G2Bulk callback), so it works however the store is deployed. The dashboard performs the setWebhook call itself; you do not need to run curl.",
       "webhookRegister": "Register the webhook",
       "webhookRegenerate": "Re-register the webhook",
       "webhookRegenerateHelp": "Generates a new secret and tells Telegram to use it. Only needed if you believe the current one leaked.",

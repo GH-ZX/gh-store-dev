@@ -409,6 +409,10 @@ verify_jwt = false
 [functions.binance-webhook]
 verify_jwt = false
 
+# Telegram cannot send a Supabase JWT either; the callback's own token is the gate.
+[functions.telegram-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

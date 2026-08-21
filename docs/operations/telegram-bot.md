@@ -1,10 +1,11 @@
 # Owner Telegram Bot
 
-GH-Store notifies the store owner over Telegram. The bot has two halves, both in
-the Cloudflare Worker:
+GH-Store notifies the store owner over Telegram. The bot has two halves:
 
-1. **Webhook** — `POST https://gh-store.me/telegram-webhook`, verified with the
-   secret token Telegram sends. Commands the owner can use:
+1. **Webhook** — a Supabase Edge Function
+   (`https://njlzgfddfnnqujaodbta.supabase.co/functions/v1/telegram-webhook`),
+   gated by a token in the URL exactly like the G2Bulk callback. Commands the
+   owner can use:
 
    - `/start` — register this chat as the owner chat and get a wallet balance.
    - `/stats` — active/completed orders, pending recharges, open support,
@@ -12,7 +13,7 @@ the Cloudflare Worker:
    - `/pending` — manual recharges waiting for review.
    - `/alerts` / `/help` — guidance.
 
-2. **Scheduled drain** — on the Worker's five-minute cron, rows in
+2. **Scheduled drain** — on the Cloudflare Worker's five-minute cron, rows in
    `telegram_alerts` are delivered to the owner chat. Alerts fire for:
 
    - New orders placed.
@@ -75,16 +76,14 @@ owner alerts**, without touching Cloudflare or a terminal:
    may be omitted if `NEXT_PUBLIC_SUPABASE_URL` is already set as a var — the
    Worker falls back to it.
 
-3. **Point Telegram at the Worker** (run once):
+3. **Point Telegram at the Edge Function** (run once):
 
    ```bash
-   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://gh-store.me/telegram-webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://njlzgfddfnnqujaodbta.supabase.co/functions/v1/telegram-webhook?token=<TELEGRAM_WEBHOOK_SECRET>"
    ```
 
-   The webhook path is handled by the Worker directly; it never reaches the
-   Next.js application. When the dashboard registers the webhook, it reuses a
-   Worker `TELEGRAM_WEBHOOK_SECRET` if one is set, so the two paths never
-   disagree about the secret.
+   The dashboard's **Register the webhook** button performs this same call with
+   a freshly generated token, so the curl is only needed for manual setups.
 
 4. **Register the owner chat**: open the bot in Telegram and send `/start`. The
    chat id is stored in `store_settings.telegram.chat_id`. Only that chat can
@@ -92,7 +91,8 @@ owner alerts**, without touching Cloudflare or a terminal:
 
 5. **Verify**: place a test order or send a support message; the alert should
    appear within five minutes. Worker logs are under Workers -> gh-store ->
-   Logs with the `telegram` area tag.
+   Logs with the `telegram` area tag. Webhook errors show under Supabase ->
+   Edge Functions -> telegram-webhook -> Logs.
 
 ## Dashboard panel
 

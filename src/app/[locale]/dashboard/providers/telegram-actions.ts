@@ -117,13 +117,10 @@ export async function verifyTelegramBotAction(
  *
  * The manual `setWebhook` curl is replaced by this button: a fresh webhook
  * secret is always generated and saved, then Telegram is told to call the
- * Worker's `/telegram-webhook` with it. A fresh token every time is what makes
- * the button a real regenerate — re-running it rotates the secret, which is
- * the point when the current one may have leaked.
- *
- * The Worker accepts both the environment secret and the stored one, so a
- * previously configured `TELEGRAM_WEBHOOK_SECRET` never disagrees with a
- * dashboard-registered secret.
+ * Supabase Edge Function with it (the token is part of the address, exactly
+ * like the G2Bulk callback). A fresh token every time is what makes the button
+ * a real regenerate — re-running it rotates the secret, which is the point
+ * when the current one may have leaked.
  */
 export async function registerTelegramWebhookAction(
   _state: TelegramActionState,

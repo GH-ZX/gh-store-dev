@@ -57,3 +57,4 @@ jobs:
           supabase functions deploy sam-webhook --project-ref "$SUPABASE_PROJECT_REF"
           supabase functions deploy g2bulk-webhook --project-ref "$SUPABASE_PROJECT_REF"
           supabase functions deploy binance-webhook --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy telegram-webhook --project-ref "$SUPABASE_PROJECT_REF"

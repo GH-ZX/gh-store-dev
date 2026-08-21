@@ -48,7 +48,7 @@ import {
   type SamSettingsUpdate,
   type SamStatus,
 } from "@/lib/settings/sam-settings";
-import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
+import { g2bulkCallbackUrl, functionUrl, telegramWebhookFunction } from "@/lib/supabase/functions-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   mergeTelegramSettings,
@@ -523,26 +523,20 @@ export async function saveTelegramSettings(update: TelegramSettingsUpdate): Prom
 /**
  * The address the Telegram webhook is registered at.
  *
- * The Worker owns `/telegram-webhook`, so this is the one public path on the
- * store itself rather than a Supabase function URL.
+ * A Supabase Edge Function, like the G2Bulk and Sam callbacks: this address is
+ * public however and wherever the store is deployed, and it does not depend on
+ * the Cloudflare Worker's environment. The secret is part of the address.
  */
-export function telegramWebhookUrl(): string | null {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? "";
+export function telegramWebhookUrl(secret?: string | null): string | null {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
 
-  if (!appUrl) {
+  if (!supabaseUrl) {
     return null;
   }
 
-  try {
-    const url = new URL(appUrl);
-    url.pathname = "/telegram-webhook";
-    url.search = "";
-    url.hash = "";
+  const base = functionUrl(supabaseUrl, telegramWebhookFunction);
 
-    return url.toString();
-  } catch {
-    return null;
-  }
+  return secret ? `${base}?token=${encodeURIComponent(secret)}` : base;
 }
 
 /**
@@ -645,7 +639,8 @@ export async function registerTelegramWebhook(token: string, secret: string): Pr
   ok: boolean;
   kind: string;
 }> {
-  const url = telegramWebhookUrl();
+  // The token lives in the URL itself, exactly like the G2Bulk callback.
+  const url = telegramWebhookUrl(secret);
 
   if (!url) {
     return { ok: false, kind: "invalid_url" };
@@ -655,7 +650,7 @@ export async function registerTelegramWebhook(token: string, secret: string): Pr
     const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url, secret_token: secret, allowed_updates: ["message", "callback_query"] }),
+      body: JSON.stringify({ url, allowed_updates: ["message", "callback_query"] }),
     });
     const payload = (await response.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
 

@@ -56,3 +56,6 @@ export function g2bulkCallbackUrl(supabaseUrl: string, secret?: string | null): 
 
   return secret ? `${base}?token=${encodeURIComponent(secret)}` : base;
 }
+
+/** The one function Telegram calls when the owner sends the bot a command. */
+export const telegramWebhookFunction = "telegram-webhook";

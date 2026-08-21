@@ -40,10 +40,14 @@ add these four secrets:
 ## Step 3 — Point Telegram at the Worker (run once)
 
 ```bash
-curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://gh-store.me/telegram-webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://njlzgfddfnnqujaodbta.supabase.co/functions/v1/telegram-webhook?token=<TELEGRAM_WEBHOOK_SECRET>"
 ```
 
-Replace `<TOKEN>` and `<TELEGRAM_WEBHOOK_SECRET>` with your real values.
+Replace `<TOKEN>` and `<TELEGRAM_WEBHOOK_SECRET>` with your real values. The
+webhook is a Supabase Edge Function (like the G2Bulk callback), so it works
+however the store is deployed. The dashboard's **Register the webhook** button
+does this same call with a freshly generated token — the curl is only for
+manual setups.
 
 ## Step 4 — Register your chat
 
@@ -73,5 +77,7 @@ Replace `<TOKEN>` and `<TELEGRAM_WEBHOOK_SECRET>` with your real values.
 - Migration `20260821030000_telegram_alerts.sql` — **already applied** to
   Supabase.
 - Database types regenerated — the build typechecks.
-- The bot webhook and alert drain live in the Cloudflare Worker and deploy with
-  the app (push this branch to GitHub so Cloudflare deploys it).
+- The webhook lives in a Supabase Edge Function and deploys via the `Deploy
+  Supabase Edge Functions` GitHub workflow (or manually with
+  `supabase functions deploy telegram-webhook`). The alert drain stays in the
+  Cloudflare Worker.

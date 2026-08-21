@@ -1,11 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- `.open-next/worker.js` only exists after an OpenNext build
 // @ts-ignore
 import { default as handler } from "./.open-next/worker.js";
-import {
-  handleTelegramWebhook,
-  runTelegramScheduled,
-  type BotEnv,
-} from "./worker/telegram-bot";
+import { runTelegramScheduled, type BotEnv } from "./worker/telegram-bot";
 
 type ReconcileEnv = BotEnv;
 
@@ -44,17 +40,7 @@ function reconciliationUrl(appUrl: string): string | null {
 }
 
 const worker = {
-  async fetch(request: Request, env: ReconcileEnv, ctx: WorkerContext) {
-    // The Telegram webhook is the Worker's own route, handled before anything
-    // reaches the Next.js application.
-    const url = new URL(request.url);
-
-    if (url.pathname === "/telegram-webhook") {
-      return handleTelegramWebhook(request, env, ctx);
-    }
-
-    return handler.fetch(request, env, ctx);
-  },
+  fetch: handler.fetch,
 
   async scheduled(_event: unknown, env: ReconcileEnv, ctx: ScheduledContext) {
     const secret = env.RECONCILE_CRON_SECRET?.trim();
@@ -98,7 +84,9 @@ const worker = {
       });
     }
 
-    if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+    // `runTelegramScheduled` resolves the URL itself (falling back to the
+    // public var), so only the service key needs checking here.
+    if (env.SUPABASE_SERVICE_ROLE_KEY) {
       jobs.push(runTelegramScheduled(env));
     }
 
