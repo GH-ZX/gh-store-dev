@@ -8,7 +8,7 @@ import { notify } from "@/lib/services/notification.service";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 
 /**
- * The two things an operator can do to an order that is stuck.
+ * The three things an operator can do to an order that is stuck.
  *
  * Both are narrow on purpose. An order is created by the checkout RPC and
  * delivered by the fulfilment worker; these exist for the cases those cannot
@@ -24,7 +24,13 @@ import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/s
  */
 
 export class OrderOpError extends Error {
-  readonly reason: "not_found" | "already_delivered" | "refunded" | "not_configured" | "unknown";
+  readonly reason:
+    | "not_found"
+    | "already_delivered"
+    | "refunded"
+    | "not_refundable"
+    | "not_configured"
+    | "unknown";
 
   constructor(reason: OrderOpError["reason"], message: string) {
     super(message);
@@ -37,6 +43,8 @@ type OrderRow = {
   id: string;
   order_number: string;
   status: string;
+  payment_status: string;
+  payment_method: string | null;
   user_id: string;
 };
 
@@ -48,7 +56,7 @@ async function loadOrder(orderId: string): Promise<OrderRow> {
   const service = createSupabaseServiceClient();
   const { data } = await service
     .from("orders")
-    .select("id, order_number, status, user_id")
+    .select("id, order_number, status, payment_status, payment_method, user_id")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -110,6 +118,65 @@ export async function retryFulfillment(orderId: string): Promise<RetryResult> {
     ...("reason" in outcome && outcome.reason ? { reason: outcome.reason } : {}),
     ...("refunded" in outcome ? { refunded: outcome.refunded } : {}),
   };
+}
+
+/**
+ * Return a paid wallet order after a terminal failure.
+ *
+ * This is the manual counterpart to the automatic refund policy. It is only for
+ * wallet-paid orders; gift orders never had a customer wallet charge.
+ */
+export async function refundOrderManually(orderId: string, note: string): Promise<void> {
+  const admin = await requireAdmin();
+  const order = await loadOrder(orderId);
+  const reason = note.trim();
+
+  if (reason.length === 0) {
+    throw new OrderOpError("unknown", "A note is required.");
+  }
+
+  if (order.status === "completed") {
+    throw new OrderOpError("already_delivered", "This order is already delivered.");
+  }
+
+  if (order.status === "refunded" || order.status === "cancelled") {
+    throw new OrderOpError("refunded", "This order is already settled.");
+  }
+
+  if (order.payment_method !== "wallet" || order.payment_status !== "paid") {
+    throw new OrderOpError(
+      "not_refundable",
+      "Only a paid wallet order can be refunded from this dashboard.",
+    );
+  }
+
+  const service = createSupabaseServiceClient();
+  const { error } = await service.rpc("refund_failed_order", {
+    p_order_id: orderId,
+    p_reason: reason,
+    p_idempotency_key: orderId,
+  });
+
+  if (error) {
+    throw new OrderOpError("unknown", error.message);
+  }
+
+  await audit(admin.id, "order.manual_refund", orderId, {
+    order_number: order.order_number,
+    note: reason,
+  });
+
+  await notify({
+    userId: order.user_id,
+    type: "order_failed",
+    titleAr: "تمت إعادة مبلغ الطلب",
+    titleEn: "Your order was refunded",
+    bodyAr: `أعدنا مبلغ الطلب ${order.order_number} إلى محفظتك. ${reason}`,
+    bodyEn: `The amount for order ${order.order_number} was returned to your wallet. ${reason}`,
+    href: `/orders/${orderId}`,
+    entityType: "order",
+    entityId: orderId,
+  });
 }
 
 /**

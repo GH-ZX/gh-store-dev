@@ -12,6 +12,7 @@ import {
 } from "@/app/[locale]/dashboard/orders/action-state";
 import {
   markDeliveredAction,
+  refundOrderAction,
   retryFulfillmentAction,
 } from "@/app/[locale]/dashboard/orders/actions";
 
@@ -51,8 +52,12 @@ export function OrderOps({ locale, messages, orderId, settled }: OrderOpsProps) 
     markDeliveredAction,
     INITIAL_ORDER_OP_STATE,
   );
+  const [refundState, refund, refunding] = useActionState<OrderOpState, FormData>(
+    refundOrderAction,
+    INITIAL_ORDER_OP_STATE,
+  );
 
-  const busy = retrying || delivering;
+  const busy = retrying || delivering || refunding;
 
   /*
    * A retry reports what the supplier actually did, not just "done" — an order
@@ -96,6 +101,38 @@ export function OrderOps({ locale, messages, orderId, settled }: OrderOpsProps) 
             </div>
 
             <FormResult error={resolveError(messages, retryState.error)} notice={retryNotice} />
+          </form>
+
+          <form action={refund} className="grid gap-3 border-t border-[var(--line)] pt-6">
+            <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="orderId" value={orderId} />
+
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--ink)]">{messages.refundTitle}</h3>
+              <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+                {messages.refundDescription}
+              </p>
+            </div>
+
+            <TextAreaField
+              label={messages.refundNoteLabel}
+              hint={messages.refundNoteHint}
+              name="note"
+              required
+              minLength={3}
+              maxLength={280}
+            />
+
+            <div>
+              <Button type="submit" variant="secondary" disabled={busy}>
+                {messages.refundAction}
+              </Button>
+            </div>
+
+            <FormResult
+              error={resolveError(messages, refundState.error)}
+              notice={refundState.notice === "refunded_manually" ? messages.refundedManually : null}
+            />
           </form>
 
           <form action={deliver} className="grid gap-3 border-t border-[var(--line)] pt-6">

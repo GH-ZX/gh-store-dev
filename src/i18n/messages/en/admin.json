@@ -240,7 +240,9 @@
       "payments": "Payments",
       "paymentsDescription": "How customers pay, and how money is reported.",
       "monitoring": "Monitoring",
-      "monitoringDescription": "Where the store reports about itself."
+      "monitoringDescription": "Where the store reports about itself.",
+      "operations": "Order operations",
+      "operationsDescription": "What happens when a supplier fails after a customer has paid."
     },
     "secrets": {
       "editAction": "Edit",
@@ -328,9 +330,23 @@
       "saveAction": "Save",
       "saved": "Saved",
       "pendingWork": "Credentials and signing are built and tested. Taking an actual payment — the invoice record, the checkout hand-off, and the callback that credits a wallet — is not finished, so turning this on does not yet put it in front of customers."
+    },
+    "fulfillmentPolicy": {
+      "name": "Failed-order policy",
+      "summary": "Choose whether a terminal supplier failure returns a wallet customer's payment automatically.",
+      "refundEnabled": "Automatic refunds on",
+      "refundDisabled": "Manual review before refund",
+      "choiceLabel": "Refund policy",
+      "refundTitle": "Return the money automatically",
+      "refundDescription": "Recommended. When the supplier definitively rejects or fails an order, return the customer's wallet amount once and notify them.",
+      "keepTitle": "Keep the money for manual review",
+      "keepDescription": "The order is marked failed but the amount stays in the wallet system until you investigate and resolve it from the dashboard.",
+      "saveAction": "Save failed-order policy",
+      "saved": "Failed-order policy saved."
     }
   },
   "import": {
+
     "eyebrow": "Import",
     "title": "Import G2Bulk games",
     "description": "Choose the games to add. Importing again refreshes prices instead of duplicating games.",
@@ -416,6 +432,8 @@
       "description": "Prices are in USD. Supplier cost is for your reference and is never shown to customers.",
       "nameAr": "Name in Arabic",
       "nameEn": "Name in English",
+      "descriptionAr": "Description in Arabic",
+      "descriptionEn": "Description in English",
       "price": "Selling price",
       "originalPrice": "Price before discount",
       "cost": "Supplier cost",
@@ -461,6 +479,8 @@
       "description": "Packages the supplier import does not provide.",
       "nameArLabel": "Name (Arabic)",
       "nameEnLabel": "Name (English)",
+      "descriptionArLabel": "Description (Arabic)",
+      "descriptionEnLabel": "Description (English)",
       "slugLabel": "Address",
       "slugHint": "Unique within this game.",
       "priceLabel": "Price (USD)",
@@ -733,6 +753,12 @@
     "retryTitle": "Run the delivery again",
     "retryDescription": "Sends the order to the supplier again. It cannot buy twice, because the same attempt key is kept.",
     "retryAction": "Retry delivery",
+    "refundTitle": "Refund manually",
+    "refundDescription": "Use this only after confirming the supplier will not deliver. It returns the wallet charge once and records your note.",
+    "refundNoteLabel": "Why are you refunding it?",
+    "refundNoteHint": "The note is kept in the audit log and shown to the customer.",
+    "refundAction": "Refund customer",
+    "refundedManually": "The order was refunded and the customer has been notified.",
     "deliverTitle": "Mark delivered by hand",
     "deliverDescription": "For what you handed over yourself, outside the system. It does not touch the wallet, because the money was taken at checkout.",
     "deliverNoteLabel": "What did you do?",
@@ -750,6 +776,7 @@
       "note_required": "Write a note explaining what you did, at least three characters.",
       "already_delivered": "This order is already delivered.",
       "refunded": "This order was refunded, so delivering it now would give the goods away.",
+      "not_refundable": "Only a paid wallet order can be refunded from this dashboard.",
       "not_found": "We could not find that order.",
       "not_configured": "The service key is not configured on the server, so this action cannot run.",
       "unknown": "We could not complete that. Please try again."

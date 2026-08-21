@@ -90,9 +90,10 @@ ordering, and whether it is published.
 > bare numbers — `60`, `18` — which mean nothing on a card. Set the currency name
 > once and every package reads properly: `60 UC`.
 
-Below that, each package shows its selling price, pre-discount price, pricing
-mode, sale flag, and publish flag. **Supplier cost and your margin are shown but
-cannot be typed over** — they are the provider's numbers.
+Below that, each package shows editable Arabic and English names and descriptions,
+its selling price, pre-discount price, pricing mode, sale flag, and publish flag.
+**Supplier cost and your margin are shown but cannot be typed over** — they are the
+provider's numbers. Re-import keeps your edited descriptions and names.
 
 **Pricing modes:** *automatic* follows your markup on every import. *Custom* and
 *fixed* are yours and a sync never changes them. An offer on sale is also left
@@ -231,11 +232,21 @@ that matters.
 |---|---|---|
 | **Delivered** | order marked complete, with the code if there is one | charge stands |
 | **Still processing** | order marked in progress | charge stands, nothing is refunded |
-| **Failed** | order marked refunded, with the reason | **refunded automatically, exactly once** |
+| **Failed** | order marked failed or refunded, with the reason | refunded automatically when the policy is on; otherwise held for manual review |
 
 **"Still processing" is not failure.** A supplier can finish minutes later, so the
 store waits rather than refunding — refunding something that then gets delivered
 would lose the money outright.
+
+### Failed-order policy
+
+Set this on **Dashboard → Providers and API → Order operations**. The recommended
+choice is **Return the money automatically**: a terminal supplier failure refunds
+a wallet order exactly once. If you choose **Keep the money for manual review**,
+the order is marked failed and remains in the attention queue; open its order page
+and either retry delivery or use **Refund manually** after confirming the supplier
+will not deliver. Every manual refund requires a note and is audited. Gift orders
+are not wallet charges and are never refunded by this control.
 
 A retry never buys twice: each purchase carries a key the provider honours for 30
 minutes, and the store's own record of the attempt makes a repeat a no-op.
@@ -244,8 +255,9 @@ The reason a customer reads is the supplier's own wording. Internal
 classification is kept separately, for you.
 
 > **Your supplier balance must be funded.** If your G2Bulk wallet is empty,
-> orders will be charged, fail, and refund — which works correctly, but sells
-> nothing.
+> orders may be charged, fail, and refund — which protects the customer but sells
+> nothing. Keep G2Bulk offers unpublished or disabled until the provider balance
+> can cover the products you sell.
 
 ---
 

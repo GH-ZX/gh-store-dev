@@ -16,6 +16,7 @@ import {
   getBatStoreCredentials,
   getG2BulkCredentials,
   getMaxStoreCredentials,
+  saveFulfillmentSettings,
   saveBatStoreSettings,
   saveBinanceSettings,
   regenerateG2BulkCallbackSecret,
@@ -408,6 +409,47 @@ const binanceSchema = z.object({
   enabled: z.boolean(),
   locale: z.string().optional(),
 });
+
+/**
+ * Choose what happens to a wallet charge after a terminal provider failure.
+ *
+ * The form uses an explicit two-value choice rather than an unchecked checkbox:
+ * the dangerous state should never be selected accidentally by a missing field.
+ */
+const fulfillmentSettingsSchema = z.object({
+  refundPolicy: z.enum(["refund", "keep"]),
+  locale: z.string().optional(),
+});
+
+export async function saveFulfillmentSettingsAction(
+  _state: ProviderActionState,
+  formData: FormData,
+): Promise<ProviderActionState> {
+  await requireAdmin();
+
+  const parsed = fulfillmentSettingsSchema.safeParse({
+    refundPolicy: formText(formData, "refundPolicy"),
+    locale: formText(formData, "locale"),
+  });
+
+  if (!parsed.success) {
+    return { ...INITIAL_PROVIDER_STATE, error: "invalid_input" };
+  }
+
+  const locale = resolveLocale(parsed.data.locale);
+
+  try {
+    await saveFulfillmentSettings(parsed.data.refundPolicy === "refund");
+  } catch (error) {
+    logFailure("admin.providers", "fulfillment_settings_save_failed", error);
+
+    return { ...INITIAL_PROVIDER_STATE, error: "unknown" };
+  }
+
+  revalidatePath(`/${locale}/dashboard/providers`);
+
+  return { ...INITIAL_PROVIDER_STATE, notice: "saved" };
+}
 
 /**
  * Save Binance Pay.

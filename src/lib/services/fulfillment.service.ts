@@ -25,6 +25,7 @@ import { BATSTORE_PROVIDER_NAME } from "@/providers/batstore/mapping";
 import { classifyOrderStatus as classifyBatStoreOrder } from "@/providers/batstore/schemas";
 import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
+import { readRefundOnFulfillmentFailure } from "@/lib/settings/fulfillment-settings";
 import type { Json } from "@/types/database";
 import { log, logFailure } from "@/lib/logging/logger";
 
@@ -385,10 +386,9 @@ async function recordAttempt(
 }
 
 /**
- * Settle a terminal failure: mark the order failed, then refund.
- *
- * The refund RPC is idempotent, so a repeated settlement returns the same result
- * rather than crediting twice.
+ * Settle a terminal failure: mark the order failed, then follow the owner's
+ * refund policy. The refund RPC is idempotent, so a repeated settlement returns
+ * the same result rather than crediting twice.
  *
  * A gift order has no wallet to credit — nothing was ever debited — so the
  * refund step is skipped for it. The order still goes `failed` (the delivery did
@@ -406,6 +406,27 @@ async function failAndRefund(
   await setOrderStatus(context.orderId, "failed");
 
   if (context.paymentMethod === "gift") {
+    return { state: "failed", reason, refunded: false };
+  }
+
+  /*
+   * The owner can choose to investigate a failed order before returning money.
+   * Missing or unreadable settings deliberately choose the safer refund path;
+   * only an explicit `false` keeps the customer charge in place.
+   */
+  const { data: settings } = await supabase
+    .from("store_settings")
+    .select("payments")
+    .eq("id", "global")
+    .maybeSingle();
+
+  if (!readRefundOnFulfillmentFailure(settings?.payments ?? {})) {
+    log.warn("fulfilment", "order_failed_without_refund", {
+      orderId: context.orderId,
+      orderNumber: context.orderNumber,
+      reason,
+    });
+
     return { state: "failed", reason, refunded: false };
   }
 
@@ -1213,7 +1234,12 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
     const outcome = await failAndRefund(context, attempt.id, decision.reason);
     await announceOutcome(context, outcome);
 
-    return { action: "refunded", reason: decision.reason };
+    return outcome.refunded
+      ? { action: "refunded", reason: decision.reason }
+      : {
+          action: "escalated",
+          reason: "The supplier failed and this order needs a manual refund decision.",
+        };
   }
 
   /*

@@ -180,8 +180,12 @@ function channelHref(kind: ContactChannelKind, value: string, url: string | unde
       return `mailto:${value}`;
     case "phone":
       return `tel:${value.replace(/[^\d+]/g, "")}`;
-    case "whatsapp":
-      return `https://wa.me/${value.replace(/[^\d]/g, "")}`;
+    case "whatsapp": {
+      const digits = value.replace(/[^\d]/g, "");
+      const international = digits.startsWith("00") ? digits.slice(2) : digits;
+
+      return international ? `https://wa.me/${international}` : null;
+    }
     case "telegram":
       return `https://t.me/${value.replace(/^@/, "")}`;
     default:

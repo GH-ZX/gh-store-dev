@@ -217,6 +217,8 @@ export type AdminGameOffer = {
   slug: string;
   nameAr: string;
   nameEn: string;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
   price: number;
   originalPrice: number | null;
   currency: string;
@@ -235,7 +237,7 @@ export type AdminGameDetail = {
 };
 
 const OFFER_COLUMNS =
-  "id, slug, name_ar, name_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
+  "id, slug, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
 
 export async function getAdminGame(gameId: string): Promise<AdminGameDetail | null> {
   await requireAdmin();
@@ -309,6 +311,8 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
         slug: offer.slug,
         nameAr: offer.name_ar,
         nameEn: offer.name_en,
+        descriptionAr: offer.description_ar,
+        descriptionEn: offer.description_en,
         price: offer.price,
         originalPrice: offer.original_price,
         currency: offer.currency,
@@ -392,6 +396,8 @@ export type AdminOfferUpdate = {
   id: string;
   nameAr: string;
   nameEn: string;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
   price: number;
   originalPrice: number | null;
   isSale: boolean;
@@ -458,6 +464,8 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
       .update({
         name_ar: row.nameAr,
         name_en: row.nameEn,
+        description_ar: row.descriptionAr,
+        description_en: row.descriptionEn,
         price: row.price,
         original_price: row.originalPrice,
         is_sale: row.isSale,
@@ -665,7 +673,15 @@ export async function createAdminGame(input: {
  */
 export async function createAdminOffer(
   gameId: string,
-  input: { nameAr: string; nameEn: string; slug: string; price: number; offerType: string },
+  input: {
+    nameAr: string;
+    nameEn: string;
+    descriptionAr: string | null;
+    descriptionEn: string | null;
+    slug: string;
+    price: number;
+    offerType: string;
+  },
 ): Promise<string> {
   await requireAdmin();
 
@@ -694,6 +710,8 @@ export async function createAdminOffer(
       game_id: gameId,
       name_ar: input.nameAr,
       name_en: input.nameEn,
+      description_ar: input.descriptionAr,
+      description_en: input.descriptionEn,
       slug: input.slug,
       price: input.price,
       offer_type: input.offerType,

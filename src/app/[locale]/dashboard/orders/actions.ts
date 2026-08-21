@@ -5,7 +5,12 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formText } from "@/lib/forms/form-data";
-import { markDelivered, OrderOpError, retryFulfillment } from "@/lib/services/admin-order-ops.service";
+import {
+  markDelivered,
+  OrderOpError,
+  refundOrderManually,
+  retryFulfillment,
+} from "@/lib/services/admin-order-ops.service";
 import {
   INITIAL_ORDER_OP_STATE,
   type OrderOpState,
@@ -60,6 +65,32 @@ export async function retryFulfillmentAction(
     refresh(resolveLocale(parsed.data.locale), parsed.data.orderId);
 
     return { error: null, notice: "retried", outcome: result.state };
+  } catch (error) {
+    return toError(error);
+  }
+}
+
+export async function refundOrderAction(
+  _state: OrderOpState,
+  formData: FormData,
+): Promise<OrderOpState> {
+  await requireAdmin();
+
+  const parsed = deliverSchema.safeParse({
+    orderId: formText(formData, "orderId"),
+    note: formText(formData, "note"),
+    locale: formText(formData, "locale"),
+  });
+
+  if (!parsed.success) {
+    return { ...INITIAL_ORDER_OP_STATE, error: "note_required" };
+  }
+
+  try {
+    await refundOrderManually(parsed.data.orderId, parsed.data.note);
+    refresh(resolveLocale(parsed.data.locale), parsed.data.orderId);
+
+    return { error: null, notice: "refunded_manually", outcome: null };
   } catch (error) {
     return toError(error);
   }

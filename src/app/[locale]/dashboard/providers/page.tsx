@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AxiomSettingsForm } from "@/components/admin/axiom-settings-form";
+import { FulfillmentPolicyForm } from "@/components/admin/fulfillment-policy-form";
 import { BatStoreSettingsForm } from "@/components/admin/batstore-settings-form";
 import { BinanceSettingsForm } from "@/components/admin/binance-settings-form";
 import { G2BulkSettingsForm } from "@/components/admin/g2bulk-settings-form";
@@ -17,6 +18,7 @@ import {
   getAxiomStatus,
   getBatStoreStatus,
   getBinanceStatus,
+  getFulfillmentSettings,
   getG2BulkCallback,
   getG2BulkStatus,
   getMaxStoreStatus,
@@ -48,9 +50,10 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const sam = messages.providers.sam;
   const binance = messages.providers.binance;
   const logging = messages.providers.logging;
+  const fulfillmentPolicy = messages.providers.fulfillmentPolicy;
   const groups = messages.providers.groups;
   const secrets = messages.providers.secrets;
-  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus] =
+  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings] =
     await Promise.all([
       getG2BulkStatus(),
       getG2BulkCallback(),
@@ -63,6 +66,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
       // than throwing, so a provider outage cannot take this page down.
       getSamOverview(),
       getAxiomStatus(),
+      getFulfillmentSettings(),
     ]);
 
   return (
@@ -243,6 +247,29 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             errors={provider.errors}
             status={binanceStatus}
             secrets={secrets}
+          />
+        </ProviderSection>
+      </ProviderGroup>
+
+      <ProviderGroup title={groups.operations} description={groups.operationsDescription}>
+        <ProviderSection
+          name={fulfillmentPolicy.name}
+          summary={fulfillmentPolicy.summary}
+          defaultOpen={true}
+          badges={[
+            {
+              label: fulfillmentSettings.refundOnFailure
+                ? fulfillmentPolicy.refundEnabled
+                : fulfillmentPolicy.refundDisabled,
+              tone: fulfillmentSettings.refundOnFailure ? "success" : "warning",
+            },
+          ]}
+        >
+          <FulfillmentPolicyForm
+            locale={locale}
+            refundOnFailure={fulfillmentSettings.refundOnFailure}
+            messages={fulfillmentPolicy}
+            errors={provider.errors}
           />
         </ProviderSection>
       </ProviderGroup>

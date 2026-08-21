@@ -359,7 +359,8 @@ wallet transaction with the request id — rather than a match on amount and tim
   presentation-preserving, reconciling withdrawn items, recorded in
   `provider_sync_logs`.
 - Catalog editing: game list with search and filters, per-game bilingual fields,
-  artwork, carousel flags, publication, and per-package pricing.
+  artwork, carousel flags, publication, and per-package names, descriptions,
+  pricing, and publication controls.
 - Website settings: the whole homepage. Sections are added, removed, reordered,
   switched on, titled and subtitled in both languages, given an item count, and
   for the three handpicked types pointed at the games, packages or reviews they
@@ -381,10 +382,11 @@ wallet transaction with the request id — rather than a match on amount and tim
   or customer, and a detail page showing purchase-time item snapshots, the
   account fields the customer submitted, every delivery attempt with the
   provider's raw request and response, and the wallet movements the order caused.
-- Order operations: retry a delivery, and record one completed by hand against a
-  required note. Both refuse a completed, refunded, or cancelled order in the
-  service as well as in the UI, because the cost of getting it wrong is giving
-  stock away.
+- Order operations: retry a delivery, record one completed by hand against a
+  required note, or manually refund a paid wallet order against a required note.
+  The service and UI refuse settled orders, and every manual refund is audited.
+  Automatic refund-versus-manual-review policy is also available to the owner
+  under Providers and API → Order operations and defaults to refund.
 
 - Access and accountability. Administrators are promoted and removed, and
   accounts suspended and reactivated, from the customer page instead of a SQL
@@ -532,11 +534,12 @@ is reachable from the dashboard without a SQL statement.
 
 - The Arabic and English homepages, catalog, login, content pages, sitemap, and
   robots file respond successfully over HTTPS.
-- The public contact page currently says that no contact channels have been
-  configured. Add at least one real support channel before opening sales.
-- Privacy and terms currently contain text saying they need legal review. Replace
-  or approve that wording before launch.
-- The visible catalog needs an owner content pass: entries such as `0106`, raw
+- The owner-provided WhatsApp, Telegram, and email channels are now seeded by
+  migration `20260821010000_customer_defaults_and_fulfillment_policy.sql`; apply
+  that migration to the linked production project before opening sales.
+- Privacy and terms no longer expose draft-review notices, but the owner should
+  still confirm that the published wording matches the business and local law.
+- The visible catalog still needs an owner content pass: entries such as `0106`, raw
   supplier instructions, translations, prices, delivery type, provider mapping,
   and required account fields must be confirmed before publishing.
 

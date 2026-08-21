@@ -6,6 +6,7 @@ import {
   CheckboxField,
   FormResult,
   SelectField,
+  TextAreaField,
   TextField,
 } from "@/components/admin/admin-form";
 import { EmptyState } from "@/components/shared/states";
@@ -146,6 +147,21 @@ export function OfferRowsForm({
                     defaultValue={offer.nameEn}
                     required
                     maxLength={160}
+                    dir="ltr"
+                  />
+                  <TextAreaField
+                    label={messages.descriptionAr}
+                    name={`offers.${index}.descriptionAr`}
+                    defaultValue={offer.descriptionAr ?? ""}
+                    maxLength={4000}
+                    rows={3}
+                  />
+                  <TextAreaField
+                    label={messages.descriptionEn}
+                    name={`offers.${index}.descriptionEn`}
+                    defaultValue={offer.descriptionEn ?? ""}
+                    maxLength={4000}
+                    rows={3}
                     dir="ltr"
                   />
                   <TextField

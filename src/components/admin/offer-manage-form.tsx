@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { FormResult, SelectField, TextField } from "@/components/admin/admin-form";
+import { FormResult, SelectField, TextAreaField, TextField } from "@/components/admin/admin-form";
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/config";
 import type { AdminMessages, CatalogMessages } from "@/i18n/messages";
@@ -104,6 +104,22 @@ export function OfferManageForm({
             min={0}
             step={0.01}
             required
+            dir="ltr"
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextAreaField
+            label={messages.descriptionArLabel}
+            name="descriptionAr"
+            maxLength={4000}
+            rows={3}
+          />
+          <TextAreaField
+            label={messages.descriptionEnLabel}
+            name="descriptionEn"
+            maxLength={4000}
+            rows={3}
             dir="ltr"
           />
         </div>

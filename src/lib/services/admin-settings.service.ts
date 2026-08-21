@@ -50,6 +50,11 @@ import {
 } from "@/lib/settings/sam-settings";
 import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  mergeRefundOnFulfillmentFailure,
+  readRefundOnFulfillmentFailure,
+  type FulfillmentSettings,
+} from "@/lib/settings/fulfillment-settings";
 import type { Json } from "@/types/database";
 
 /**
@@ -411,4 +416,46 @@ export async function saveBinanceSettings(update: {
   }
 
   return toBinanceStatus(data.providers);
+}
+
+export async function getFulfillmentSettings(): Promise<FulfillmentSettings> {
+  await requireAdmin();
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("store_settings")
+    .select("payments")
+    .eq("id", SETTINGS_ID)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Reading fulfilment settings failed: ${error.message}`);
+  }
+
+  return { refundOnFailure: readRefundOnFulfillmentFailure(data?.payments ?? {}) };
+}
+
+export async function saveFulfillmentSettings(refundOnFailure: boolean): Promise<FulfillmentSettings> {
+  await requireAdmin();
+  const supabase = await createSupabaseServerClient();
+  const { data: current, error: readError } = await supabase
+    .from("store_settings")
+    .select("payments")
+    .eq("id", SETTINGS_ID)
+    .maybeSingle();
+
+  if (readError) {
+    throw new Error(`Reading fulfilment settings failed: ${readError.message}`);
+  }
+
+  const payments = mergeRefundOnFulfillmentFailure(current?.payments, refundOnFailure);
+  const { error } = await supabase
+    .from("store_settings")
+    .update({ payments })
+    .eq("id", SETTINGS_ID);
+
+  if (error) {
+    throw new Error(`Saving fulfilment settings failed: ${error.message}`);
+  }
+
+  return { refundOnFailure };
 }

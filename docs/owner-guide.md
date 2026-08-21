@@ -26,6 +26,7 @@ GH-Store is a bilingual digital gaming store for game top-ups, redeem codes, and
 | Store overview | Dashboard -> Home | Available |
 | Games and offers editing | Dashboard -> Catalog | Available |
 | Orders and delivery | Dashboard -> Orders | Available |
+| Failed-order refund policy | Dashboard -> Providers and API -> Order operations | Available |
 | Wallet recharge | Dashboard -> Recharges / Payments | Available |
 | Homepage and theme | Dashboard -> Website | Available |
 | Reviews and messages | Dashboard -> Reviews / Support | Available |
@@ -40,9 +41,12 @@ from the dashboard.
 - Do not run random SQL files against production.
 - Never place provider API keys in the browser.
 - Do not retry a delayed provider order as a new order.
-- Do not refund a provider order until its final state is known.
+- Do not refund a provider order until its final state is known. If automatic refunds are disabled, use the manual refund action only after confirming the supplier will not deliver.
 - Keep the existing `echocore-store` project untouched.
 - Never publish an offer until its provider mapping, price, delivery method, and
   required customer fields have been checked.
 - Keep at least one small-value test product unpublished until the owner has
   verified the complete payment and fulfillment path.
+- With a low supplier balance, keep G2Bulk offers unpublished or disabled. A
+  provider account balance is separate from the customer's wallet: a successful
+  wallet checkout can still be charged before the supplier rejects the delivery.
