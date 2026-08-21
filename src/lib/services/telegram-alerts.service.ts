@@ -5,12 +5,18 @@ import { logFailure } from "@/lib/logging/logger";
 import type { Json } from "@/types/database";
 
 /**
- * Owner alerts delivered over Telegram.
+ * Alerts delivered over Telegram.
  *
  * The Cloudflare Worker delivers these on its schedule; this module only writes
  * the queue. Same rule as customer notifications: alerting must never break the
  * thing it reports on, so {@link enqueueTelegramAlert} swallows every failure
  * and the money path never waits on Telegram.
+ *
+ * `userId` routes the alert to a linked customer's chat (looked up by the
+ * Worker); when omitted the alert goes to the owner's chat, as before. Owner
+ * and customer alerts share the same queue and types — `order_failed` already
+ * carries the refund state both audiences want — so there is exactly one drain
+ * and one retry loop.
  *
  * `dedupKey` is optional and deliberately rare — it exists for events that fire
  * repeatedly (a low wallet blocking every checkout) where a unique key makes
@@ -22,12 +28,15 @@ export type TelegramAlertType =
   | "order_failed"
   | "recharge_request"
   | "support_message"
-  | "low_wallet";
+  | "low_wallet"
+  | "order_delivered";
 
 export async function enqueueTelegramAlert(input: {
   type: TelegramAlertType;
   payload: Json;
   dedupKey?: string;
+  /** When set, delivered to the linked customer chat instead of the owner. */
+  userId?: string;
 }): Promise<void> {
   if (!hasServiceRoleKey()) {
     return;
@@ -39,6 +48,7 @@ export async function enqueueTelegramAlert(input: {
       {
         type: input.type,
         payload: input.payload,
+        ...(input.userId ? { user_id: input.userId } : {}),
         ...(input.dedupKey ? { dedup_key: input.dedupKey } : {}),
       },
       {

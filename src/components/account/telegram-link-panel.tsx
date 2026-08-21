@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { FormResult } from "@/components/admin/admin-form";
 import { TelegramIcon } from "@/components/ui/brand-icons";
 import { Button } from "@/components/ui/button";
+import { CheckIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { AccountMessages } from "@/i18n/messages";
 import { INITIAL_TELEGRAM_STATE, type TelegramActionState } from "@/app/[locale]/profile/telegram-action-state";
@@ -38,6 +39,7 @@ export function TelegramLinkPanel({
     unlinkTelegramAction,
     INITIAL_TELEGRAM_STATE,
   );
+  const [copied, setCopied] = useState(false);
 
   const code = state.code ?? null;
 
@@ -84,10 +86,28 @@ export function TelegramLinkPanel({
 
           {code ? (
             <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3">
-              <p className="text-xs text-[var(--ink-faint)]">{messages.telegram.codeHint}</p>
-              <p className="mt-1 text-lg font-semibold tracking-widest text-[var(--accent)]" dir="ltr">
-                {code}
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-[var(--ink-faint)]">{messages.telegram.codeHint}</p>
+                  <p className="mt-1 text-lg font-semibold tracking-widest text-[var(--accent)]" dir="ltr">
+                    {code}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  leadingIcon={copied ? <CheckIcon /> : undefined}
+                  onClick={() => {
+                    void navigator.clipboard.writeText(code).then(
+                      () => setCopied(true),
+                      () => setCopied(false),
+                    );
+                  }}
+                >
+                  {copied ? messages.telegram.codeCopied : messages.telegram.codeCopy}
+                </Button>
+              </div>
               <p className="mt-1 text-xs text-[var(--ink-faint)]">
                 {messages.telegram.codeExpiry} {formatExpiry(state.expiresAt, locale)}
               </p>

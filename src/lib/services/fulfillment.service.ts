@@ -1333,6 +1333,18 @@ async function announceOutcome(
       entityId: context.orderId,
     });
 
+    // The linked customer hears about it in Telegram too; the owner alert for
+    // the same event is enqueued separately at order placement.
+    await enqueueTelegramAlert({
+      type: "order_delivered",
+      userId: order.user_id,
+      payload: {
+        order_id: context.orderId,
+        order_number: context.orderNumber,
+        quantity: context.quantity,
+      },
+    });
+
     return;
   }
 
@@ -1347,6 +1359,18 @@ async function announceOutcome(
       order_id: context.orderId,
       order_number: context.orderNumber,
       quantity: context.quantity,
+      reason: outcome.reason,
+      refunded: outcome.refunded,
+    },
+  });
+
+  // And the customer whose order this is, when their chat is linked.
+  await enqueueTelegramAlert({
+    type: "order_failed",
+    userId: order.user_id,
+    payload: {
+      order_id: context.orderId,
+      order_number: context.orderNumber,
       reason: outcome.reason,
       refunded: outcome.refunded,
     },

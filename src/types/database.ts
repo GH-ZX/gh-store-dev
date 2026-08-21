@@ -1518,6 +1518,7 @@ export type Database = {
           sent_at: string | null
           status: string
           type: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1528,6 +1529,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           type: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1538,14 +1540,24 @@ export type Database = {
           sent_at?: string | null
           status?: string
           type?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "telegram_alerts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       telegram_chat_links: {
         Row: {
           chat_id: number
           created_at: string
           first_name: string | null
+          language_code: string | null
           linked_at: string
           user_id: string
           username: string | null
@@ -1554,6 +1566,7 @@ export type Database = {
           chat_id: number
           created_at?: string
           first_name?: string | null
+          language_code?: string | null
           linked_at?: string
           user_id: string
           username?: string | null
@@ -1562,6 +1575,7 @@ export type Database = {
           chat_id?: number
           created_at?: string
           first_name?: string | null
+          language_code?: string | null
           linked_at?: string
           user_id?: string
           username?: string | null

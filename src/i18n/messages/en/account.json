@@ -64,6 +64,8 @@
     "linkAction": "Get a link code",
     "newCodeAction": "Get a new code",
     "codeHint": "Send this code to the store bot in Telegram:",
+    "codeCopy": "Copy",
+    "codeCopied": "Copied",
     "codeExpiry": "Expires at",
     "unlinkAction": "Unlink",
     "linked": "Linked.",

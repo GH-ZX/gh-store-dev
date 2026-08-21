@@ -67,6 +67,13 @@ type Texts = {
   needLink: string;
   notFound: string;
   orderStatus: string;
+  catalog: string;
+  categories: string;
+  games: string;
+  offers: string;
+  back: string;
+  emptyCatalog: string;
+  noOffers: string;
 };
 
 const TEXTS: Record<Locale, Texts> = {
@@ -94,6 +101,13 @@ const TEXTS: Record<Locale, Texts> = {
     needLink: "هذه الميزة تحتاج ربط حسابك أولًا. اضغط «ربط الحساب».",
     notFound: "لا شيء هنا بعد.",
     orderStatus: "الحالة",
+    catalog: "🛍 الكتالوج",
+    categories: "اختر تصنيفًا:",
+    games: "الألعاب المتاحة:",
+    offers: "اختر باقتك:",
+    back: "↩ رجوع",
+    emptyCatalog: "لا يوجد كتالوج بعد. عد لاحقًا.",
+    noOffers: "لا توجد باقات متاحة لهذا اللعبة حاليًا.",
   },
   en: {
     welcome:
@@ -119,6 +133,13 @@ const TEXTS: Record<Locale, Texts> = {
     needLink: "This needs a linked account first. Tap Sign in to connect.",
     notFound: "Nothing here yet.",
     orderStatus: "Status",
+    catalog: "🛍 Catalog",
+    categories: "Pick a category:",
+    games: "Available games:",
+    offers: "Pick a package:",
+    back: "↩ Back",
+    emptyCatalog: "The catalog is empty for now. Check back later.",
+    noOffers: "No packages available for this game right now.",
   },
 };
 
@@ -178,6 +199,7 @@ function t(locale: Locale, key: keyof Texts): string {
 function menuKeyboard(locale: Locale, linked: boolean): unknown {
   return {
     inline_keyboard: [
+      [{ text: t(locale, "catalog"), callback_data: "catalog" }],
       linked
         ? [
             { text: t(locale, "orders"), callback_data: "orders" },
@@ -288,6 +310,161 @@ async function readProfile(
   return data ?? null;
 }
 
+// ─── Catalog reads ──────────────────────────────────────────────────────────
+
+async function readCategories(
+  supabase: ReturnType<typeof createClient>,
+  locale: Locale,
+): Promise<{ id: string; name: string }[]> {
+  const { data } = await supabase
+    .from("categories")
+    .select("id, name_ar, name_en")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("name_en", { ascending: true })
+    .limit(20);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: locale === "ar" ? row.name_ar : row.name_en,
+  }));
+}
+
+async function readGames(
+  supabase: ReturnType<typeof createClient>,
+  locale: Locale,
+  categoryId: string | null,
+): Promise<{ id: string; slug: string; name: string }[]> {
+  let query = supabase
+    .from("games")
+    .select("id, slug, name_ar, name_en")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("name_en", { ascending: true })
+    .limit(30);
+
+  if (categoryId) {
+    query = query.eq("category_id", categoryId);
+  }
+
+  const { data } = await query;
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: locale === "ar" ? row.name_ar : row.name_en,
+  }));
+}
+
+async function readOffers(
+  supabase: ReturnType<typeof createClient>,
+  locale: Locale,
+  gameId: string,
+): Promise<{ slug: string; name: string; price: number; currency: string; original_price: number | null }[]> {
+  const { data } = await supabase
+    .from("offers")
+    .select("slug, name_ar, name_en, price, currency, original_price")
+    .eq("game_id", gameId)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("price", { ascending: true })
+    .limit(15);
+
+  return (data ?? []).map((row) => ({
+    slug: row.slug,
+    name: locale === "ar" ? row.name_ar : row.name_en,
+    price: row.price,
+    currency: row.currency,
+    original_price: row.original_price,
+  }));
+}
+
+function backRow(locale: Locale, data: string): unknown[] {
+  return [{ text: t(locale, "back"), callback_data: data }];
+}
+
+async function showCatalog(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+): Promise<void> {
+  const categories = await readCategories(supabase, locale);
+
+  if (categories.length === 0) {
+    await sendText(botToken, chatId, t(locale, "emptyCatalog"));
+    return;
+  }
+
+  await sendText(botToken, chatId, t(locale, "categories"), {
+    inline_keyboard: [
+      ...categories.map((category) => [
+        { text: category.name, callback_data: `cat:${category.id}` },
+      ]),
+      backRow(locale, "menu"),
+    ],
+  });
+}
+
+async function showGames(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  categoryId: string,
+): Promise<void> {
+  const games = await readGames(supabase, locale, categoryId);
+
+  if (games.length === 0) {
+    await sendText(botToken, chatId, t(locale, "noOffers"));
+    return;
+  }
+
+  await sendText(botToken, chatId, t(locale, "games"), {
+    inline_keyboard: [
+      // The category rides along so "back" can return to this list.
+      ...games.map((game) => [{ text: game.name, callback_data: `game:${game.id}:${categoryId}` }]),
+      backRow(locale, "catalog"),
+    ],
+  });
+}
+
+async function showOffers(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  gameId: string,
+  categoryId: string,
+): Promise<void> {
+  const offers = await readOffers(supabase, locale, gameId);
+
+  if (offers.length === 0) {
+    await sendText(botToken, chatId, t(locale, "noOffers"));
+    return;
+  }
+
+  await sendText(
+    botToken,
+    chatId,
+    [
+      t(locale, "offers"),
+      ...offers.map((offer) => {
+        const sale = offer.original_price && offer.original_price > offer.price;
+        const unit = offer.currency === "SYP" ? "SYP" : offer.currency === "EUR" ? "€" : "$";
+        const fmt = (value: number) => `${unit}${value.toFixed(2)}`;
+        const price = sale ? `~~${fmt(offer.original_price)}~~ ${fmt(offer.price)}` : fmt(offer.price);
+        return `${offer.name} — <b>${price}</b>`;
+      }),
+      "",
+      "https://gh-store.me",
+    ].join("\n"),
+    {
+      inline_keyboard: [backRow(locale, `cat:${categoryId}`)],
+    },
+  );
+}
+
 /**
  * Try to consume a link code and bind the chat to its account.
  *
@@ -300,6 +477,7 @@ async function consumeLinkCode(
   chatId: number,
   username: string | null,
   firstName: string | null,
+  languageCode: string | null,
 ): Promise<{ ok: true; userId: string } | { ok: false; reason: "invalid" | "used" | "expired" }> {
   const { data: row } = await supabase
     .from("telegram_link_codes")
@@ -325,6 +503,7 @@ async function consumeLinkCode(
       user_id: row.user_id,
       username: username ?? null,
       first_name: firstName ?? null,
+      language_code: languageCode,
     },
     { onConflict: "chat_id" },
   );
@@ -556,6 +735,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           chatId,
           text(message.from?.username),
           text(message.from?.first_name),
+          message.from?.language_code ?? null,
         );
 
         if (result.ok) {
@@ -653,6 +833,24 @@ Deno.serve(async (request: Request): Promise<Response> => {
       switch (data) {
         case "menu":
           await sendText(botToken, chatId, linked ? t(locale, "linkedMenu") : t(locale, "welcome"), menuKeyboard(locale, linked));
+          break;
+
+        case "catalog":
+          await showCatalog(supabase, botToken, chatId, locale);
+          break;
+
+        default:
+          if (data.startsWith("cat:")) {
+            const categoryId = data.slice(4);
+            if (categoryId) {
+              await showGames(supabase, botToken, chatId, locale, categoryId);
+            }
+          } else if (data.startsWith("game:")) {
+            const [gameId, categoryId] = data.slice(5).split(":");
+            if (gameId) {
+              await showOffers(supabase, botToken, chatId, locale, gameId, categoryId ?? "");
+            }
+          }
           break;
 
         case "link":

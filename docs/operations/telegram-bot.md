@@ -120,24 +120,46 @@ orders and wallet balance — no password ever goes through the bot.
 
 The linking proof is a short-lived code, exactly like a two-factor backup:
 
-1. On the site: **My account → Telegram bot** → **Get a link code**. The code
-   (e.g. `GS-1F4K2X`) is shown only to the signed-in account owner and expires
-   in ten minutes. Re-minting retires the previous code.
+1. On the site: **My account → Telegram bot** → **Get a link code** (with a
+   **Copy** button). The code (e.g. `GS-1F4K2X`) is shown only to the signed-in
+   account owner and expires in ten minutes. Re-minting retires the previous
+   code.
 2. In the bot: send the code as a message (or `/link <code>`). The bot
    validates it, binds the chat to the account, and marks the code used.
 
 From then on the chat is linked: `/orders` shows the last five orders with
 status, `/wallet` shows the balance, `/account` shows the profile, and the menu
-buttons offer Orders, Wallet, Browse the store, Support, and Unlink. The owner
-chat is unaffected — it keeps the store operations.
+buttons offer Catalog, Orders, Wallet, Browse the store, Support, and Unlink.
+The owner chat is unaffected — it keeps the store operations.
+
+### Catalog in the chat
+
+The menu's **Catalog** button browses the store without leaving Telegram: pick
+a category, then a game, then read the packages and prices. Text only — no
+images. Back buttons return to the previous list, and the offers message links
+to the site for checkout.
+
+### Customer order notifications
+
+A linked customer receives a Telegram message when an order of theirs is
+delivered or fails, in the language they linked with (stored on the chat link
+as `language_code`). Both directions share the `telegram_alerts` queue:
+
+- alerts **without** `user_id` go to the owner chat (existing behavior);
+- alerts **with** `user_id` go to that customer's linked chat.
+
+The owner's per-type toggles apply only to the owner's own alerts; customer
+alerts always reach the customer who owns the event.
 
 ### Data
 
-- `telegram_chat_links` — `chat_id` → `user_id`, one chat per account. RLS
-  lets a customer read or delete only their own row; the bot writes with the
-  service key.
+- `telegram_chat_links` — `chat_id` → `user_id`, one chat per account, plus the
+  `language_code` the customer linked with. RLS lets a customer read or delete
+  only their own row; the bot writes with the service key.
 - `telegram_link_codes` — one-use, ten-minute codes minted on the profile page
   and consumed by the bot.
+- `telegram_alerts.user_id` — optional; routes a queued alert to a linked
+  customer chat instead of the owner chat.
 
 ## Notes
 

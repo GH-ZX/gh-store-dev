@@ -1,13 +1,17 @@
 /**
- * Owner Telegram alerts — the delivery half.
+ * Telegram alerts — the delivery half.
  *
  * The webhook half lives in a Supabase Edge Function
  * (`supabase/functions/telegram-webhook`), where it is token-gated and
  * independent of this Worker's environment. This file is the other direction:
- * the store → owner queue. `deliverTelegramAlerts` drains `telegram_alerts` —
- * rows written by the store's server code on orders, failures, recharges,
- * support messages, and low supplier balance — and posts them to the owner's
- * chat, on the Worker's five-minute schedule.
+ * the store → chat queue. `deliverTelegramAlerts` drains `telegram_alerts` —
+ * rows written by the store's server code — and posts them on the Worker's
+ * five-minute schedule:
+ *
+ * - alerts without a `user_id` go to the owner's chat (orders, failures,
+ *   recharges, support, low wallet);
+ * - alerts with a `user_id` go to that customer's linked chat (order delivered,
+ *   order failed), rendered in the language they linked with.
  *
  * Secrets: `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` (or
  * `NEXT_PUBLIC_SUPABASE_URL` for the URL) are required to read the queue and
@@ -41,6 +45,13 @@ type AlertRow = {
   type: string;
   payload: Record<string, unknown>;
   created_at: string;
+  user_id: string | null;
+};
+
+/** A customer chat link, keyed by user id — one chat per account. */
+type ChatLink = {
+  chat_id: number | string;
+  language_code: string | null;
 };
 
 function botLog(event: string, fields: Record<string, unknown> = {}): void {
@@ -170,7 +181,7 @@ async function fetchPendingAlerts(env: BotEnv, limit: number): Promise<AlertRow[
   // `failed` rows are retried on the next drain; only `sent` rows are skipped.
   const { ok, json } = await supabaseJson(
     env,
-    `telegram_alerts?status=in.(pending,failed)&order=created_at.asc&limit=${limit}&select=id,type,payload,created_at`,
+    `telegram_alerts?status=in.(pending,failed)&order=created_at.asc&limit=${limit}&select=id,type,payload,created_at,user_id`,
   );
 
   if (!ok) {
@@ -178,14 +189,42 @@ async function fetchPendingAlerts(env: BotEnv, limit: number): Promise<AlertRow[
   }
 
   return (Array.isArray(json) ? json : []).map((row) => {
-    const value = row as { id: string; type: string; payload?: unknown; created_at: string };
+    const value = row as {
+      id: string;
+      type: string;
+      payload?: unknown;
+      created_at: string;
+      user_id?: string | null;
+    };
     return {
       id: value.id,
       type: value.type,
       payload: value.payload && typeof value.payload === "object" ? (value.payload as Record<string, unknown>) : {},
       created_at: value.created_at,
+      user_id: typeof value.user_id === "string" ? value.user_id : null,
     };
   });
+}
+
+/** The linked chat for a customer, when they have linked one. */
+async function chatLinkForUser(env: BotEnv, userId: string): Promise<ChatLink | null> {
+  const { ok, json } = await supabaseJson(env, `telegram_chat_links?user_id=eq.${userId}&select=chat_id,language_code`);
+
+  if (!ok || !Array.isArray(json) || json.length === 0) {
+    return null;
+  }
+
+  const row = json[0] as { chat_id?: unknown; language_code?: unknown };
+  const chatId = typeof row.chat_id === "number" ? row.chat_id : typeof row.chat_id === "string" ? Number(row.chat_id) : NaN;
+
+  if (!Number.isFinite(chatId)) {
+    return null;
+  }
+
+  return {
+    chat_id: chatId,
+    language_code: typeof row.language_code === "string" && row.language_code ? row.language_code : null,
+  };
 }
 
 async function markAlert(env: BotEnv, id: string, status: "sent" | "failed"): Promise<void> {
@@ -201,7 +240,8 @@ async function markAlert(env: BotEnv, id: string, status: "sent" | "failed"): Pr
 
 // ─── Message rendering ──────────────────────────────────────────────────────
 
-function alertText(row: AlertRow): string {
+/** Owner-facing rendering; the same event is a different message for a customer. */
+function ownerAlertText(row: AlertRow): string {
   const p = row.payload;
 
   switch (row.type) {
@@ -255,6 +295,59 @@ function alertText(row: AlertRow): string {
   }
 }
 
+/** Customer-facing rendering, in the language the customer linked with. */
+function customerAlertText(row: AlertRow, locale: "ar" | "en"): string {
+  const p = row.payload;
+  const orderLink = `https://gh-store.me/${locale}/orders/${encodeURIComponent(String(p.order_id ?? ""))}`;
+
+  switch (row.type) {
+    case "order_delivered":
+      return locale === "ar"
+        ? [
+            "✅ <b>تم تنفيذ طلبك</b>",
+            `الطلب: <b>${escapeHtml(p.order_number ?? row.id)}</b>`,
+            "طلبك جاهز. افتح الطلب لعرض التفاصيل.",
+            `الطلب: ${orderLink}`,
+          ].join("\n")
+        : [
+            "✅ <b>Your order is delivered</b>",
+            `Order: <b>${escapeHtml(p.order_number ?? row.id)}</b>`,
+            "Your order is ready. Open it to see the details.",
+            `Order: ${orderLink}`,
+          ].join("\n");
+
+    case "order_failed":
+      return locale === "ar"
+        ? [
+            "❌ <b>تعذّر تنفيذ طلبك</b>",
+            `الطلب: <b>${escapeHtml(p.order_number ?? row.id)}</b>`,
+            p.refunded === true
+              ? "أعدنا المبلغ إلى محفظتك."
+              : "تواصل معنا وسنعالج الأمر.",
+            p.reason ? `السبب: ${escapeHtml(p.reason)}` : "",
+            `الطلب: ${orderLink}`,
+          ]
+            .filter((line) => line.length > 0)
+            .join("\n")
+        : [
+            "❌ <b>Your order failed</b>",
+            `Order: <b>${escapeHtml(p.order_number ?? row.id)}</b>`,
+            p.refunded === true ? "The amount is back in your wallet." : "Contact us and we will sort it out.",
+            p.reason ? `Reason: ${escapeHtml(p.reason)}` : "",
+            `Order: ${orderLink}`,
+          ]
+            .filter((line) => line.length > 0)
+            .join("\n");
+
+    default:
+      return locale === "ar" ? `📢 ${escapeHtml(row.type)}` : `📢 ${escapeHtml(row.type)}`;
+  }
+}
+
+function customerLocale(languageCode: string | null): "ar" | "en" {
+  return languageCode?.toLowerCase().startsWith("ar") ? "ar" : "en";
+}
+
 // ─── Delivery ───────────────────────────────────────────────────────────────
 
 export async function deliverTelegramAlerts(env: BotEnv): Promise<void> {
@@ -273,14 +366,43 @@ export async function deliverTelegramAlerts(env: BotEnv): Promise<void> {
   }
 
   const prefs = telegram.alert_prefs ?? {};
-  const alerts = (await fetchPendingAlerts(env, BATCH)).filter(
-    // The dashboard lets the owner turn individual alert types off; an unknown
-    // type (a newer build than this worker) is delivered rather than dropped.
-    (alert) => prefs[alert.type] !== false,
-  );
+  const alerts = await fetchPendingAlerts(env, BATCH);
 
   for (const alert of alerts) {
-    const sent = await sendText(owner, alertText(alert), token);
+    // Owner alerts respect the dashboard toggles; customer alerts always go to
+    // the customer who owns the event, whatever the owner chose for their own
+    // chat. An unknown type (a newer build than this worker) is delivered to
+    // the owner rather than dropped.
+    if (!alert.user_id && prefs[alert.type] === false) {
+      continue;
+    }
+
+    if (alert.user_id) {
+      const link = await chatLinkForUser(env, alert.user_id);
+
+      if (!link) {
+        // No linked chat yet — nothing to deliver to, and re-trying would only
+        // repeat the lookup. Mark it sent so it does not loop on every drain.
+        await markAlert(env, alert.id, "sent");
+        continue;
+      }
+
+      const sent = await sendText(
+        String(link.chat_id),
+        customerAlertText(alert, customerLocale(link.language_code)),
+        token,
+      );
+
+      if (sent) {
+        await markAlert(env, alert.id, "sent");
+      } else {
+        await markAlert(env, alert.id, "failed");
+        botLog("alert_failed", { id: alert.id, type: alert.type, userId: alert.user_id });
+      }
+      continue;
+    }
+
+    const sent = await sendText(owner, ownerAlertText(alert), token);
 
     if (sent) {
       await markAlert(env, alert.id, "sent");

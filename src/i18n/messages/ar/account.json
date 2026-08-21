@@ -64,6 +64,8 @@
     "linkAction": "الحصول على رمز الربط",
     "newCodeAction": "الحصول على رمز جديد",
     "codeHint": "أرسل هذا الرمز إلى بوت المتجر في تيليغرام:",
+    "codeCopy": "نسخ",
+    "codeCopied": "تم النسخ",
     "codeExpiry": "ينتهي السريان عند",
     "unlinkAction": "إلغاء الربط",
     "linked": "تم الربط.",
