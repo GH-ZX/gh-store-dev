@@ -12,6 +12,8 @@ export type TelegramActionState = {
   bot: { username: string | null } | null;
   /** Reported by Telegram about the registered webhook. */
   webhook: { url: string | null; pendingUpdateCount: number; lastError: string | null } | null;
+  /** The secret a successful registration generated, so the form can show it. */
+  generatedSecret: string | null;
 };
 
 export const INITIAL_TELEGRAM_STATE: TelegramActionState = {
@@ -19,4 +21,5 @@ export const INITIAL_TELEGRAM_STATE: TelegramActionState = {
   notice: null,
   bot: null,
   webhook: null,
+  generatedSecret: null,
 };

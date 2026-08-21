@@ -108,6 +108,7 @@ export async function verifyTelegramBotAction(
     notice: "verified",
     bot: { username: bot.username },
     webhook: webhook.ok ? webhook : null,
+    generatedSecret: null,
   };
 }
 
@@ -115,10 +116,14 @@ export async function verifyTelegramBotAction(
  * Register the bot's webhook with Telegram from the dashboard.
  *
  * The manual `setWebhook` curl is replaced by this button: a fresh webhook
- * secret is generated and saved, then Telegram is told to call the Worker's
- * `/telegram-webhook` with it. The action is idempotent — re-registering with
- * the same token simply refreshes the registration — so it doubles as "turn it
- * back on" after a secret rotation.
+ * secret is always generated and saved, then Telegram is told to call the
+ * Worker's `/telegram-webhook` with it. A fresh token every time is what makes
+ * the button a real regenerate — re-running it rotates the secret, which is
+ * the point when the current one may have leaked.
+ *
+ * The Worker accepts both the environment secret and the stored one, so a
+ * previously configured `TELEGRAM_WEBHOOK_SECRET` never disagrees with a
+ * dashboard-registered secret.
  */
 export async function registerTelegramWebhookAction(
   _state: TelegramActionState,
@@ -132,15 +137,7 @@ export async function registerTelegramWebhookAction(
     return { ...INITIAL_TELEGRAM_STATE, error: "missing_key" };
   }
 
-  /*
-   * The Worker accepts the environment secret first and the stored one as a
-   * fallback. If the owner already set a Worker secret (the original setup
-   * path), the webhook must be registered with that same value or Telegram
-   * would call with a secret the Worker refuses. Otherwise a fresh secret is
-   * generated, mirroring the G2Bulk callback.
-   */
-  const envSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
-  const secret = envSecret || newCallbackSecret();
+  const secret = newCallbackSecret();
 
   // Save first so the Worker accepts the secret from the moment Telegram starts
   // calling with it. If Telegram registration then fails, the stored secret has
@@ -162,5 +159,5 @@ export async function registerTelegramWebhookAction(
 
   revalidatePath(`/${resolveLocale(formText(formData, "locale"))}/dashboard/providers`);
 
-  return { ...INITIAL_TELEGRAM_STATE, notice: "webhook_ready" };
+  return { ...INITIAL_TELEGRAM_STATE, notice: "webhook_ready", generatedSecret: secret };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { FormResult } from "@/components/admin/admin-form";
 import { SecretField } from "@/components/admin/secret-field";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,7 @@ export function TelegramSettingsForm({
     registerTelegramWebhookAction,
     INITIAL_TELEGRAM_STATE,
   );
+  const [copiedSecret, setCopiedSecret] = useState(false);
 
   const error = resolveError(messages, saveState.error ?? verifyState.error ?? webhookState.error);
   const notice =
@@ -163,6 +164,44 @@ export function TelegramSettingsForm({
           </Badge>
         </div>
         <p className="text-xs leading-5 text-[var(--ink-muted)]">{messages.webhookHelp}</p>
+
+        {/*
+          * The secret Telegram verifies every update against. Shown in full
+          * because it is what a `TELEGRAM_WEBHOOK_SECRET` Worker secret would
+          * have to match — the same stance as the G2Bulk callback address.
+          */}
+        {status.webhookConfigured || webhookState.generatedSecret ? (
+          <div className="grid gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-4 py-3">
+            <span className="text-xs text-[var(--ink-faint)]">{messages.webhookSecretLabel}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <code
+                dir="ltr"
+                className="min-w-0 flex-1 break-all font-mono text-xs text-[var(--ink-soft)]"
+              >
+                {webhookState.generatedSecret ?? status.webhookSecret ?? "—"}
+              </code>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const value = webhookState.generatedSecret ?? status.webhookSecret;
+
+                  if (value) {
+                    void navigator.clipboard.writeText(value).then(
+                      () => setCopiedSecret(true),
+                      () => setCopiedSecret(false),
+                    );
+                  }
+                }}
+                leadingIcon={copiedSecret ? <CheckIcon /> : undefined}
+              >
+                {copiedSecret ? messages.webhookSecretCopied : messages.webhookSecretCopy}
+              </Button>
+            </div>
+            <span className="text-xs leading-5 text-[var(--ink-faint)]">{messages.webhookSecretHelp}</span>
+          </div>
+        ) : null}
 
         {verifiedWebhook?.url ? (
           <div className="grid gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--shell)] px-4 py-3 text-xs leading-5">

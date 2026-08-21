@@ -57,6 +57,13 @@ export type TelegramStatus = {
   chatId: string | null;
   /** Whether a webhook secret exists, and therefore the bot is registered. */
   webhookConfigured: boolean;
+  /**
+   * The webhook secret in full. Admin-only and treated like a password, the
+   * same stance the G2Bulk callback takes: it is the secret the webhook is
+   * registered under, and an owner may need to compare it against the Worker
+   * secret or re-enter it elsewhere.
+   */
+  webhookSecret: string | null;
   alertPrefs: Record<string, boolean>;
   updatedAt: string | null;
 };
@@ -113,6 +120,7 @@ export function toTelegramStatus(settings: unknown): TelegramStatus {
     chatLinked: Boolean(telegram?.chat_id?.trim()),
     chatId: telegram?.chat_id?.trim() ?? null,
     webhookConfigured: credentials.webhookSecret !== null,
+    webhookSecret: credentials.webhookSecret,
     alertPrefs: readTelegramAlertPrefs(settings),
     updatedAt: telegram?.updated_at ?? null,
   };
