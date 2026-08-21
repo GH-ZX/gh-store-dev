@@ -525,7 +525,20 @@ is reachable from the dashboard without a SQL statement.
 - Production domain: `https://gh-store.me`.
 - Production Supabase configured for the Cloudflare Worker.
 - Cloudflare production Worker and secrets configured.
-- Production migrations and seed data applied, pending final release verification.
+- Production migrations and seed data applied; Supabase reports the remote database is up to date.
+- `sam-webhook`, `g2bulk-webhook`, and `binance-webhook` deployed to the production Supabase project.
+
+### Live customer review findings
+
+- The Arabic and English homepages, catalog, login, content pages, sitemap, and
+  robots file respond successfully over HTTPS.
+- The public contact page currently says that no contact channels have been
+  configured. Add at least one real support channel before opening sales.
+- Privacy and terms currently contain text saying they need legal review. Replace
+  or approve that wording before launch.
+- The visible catalog needs an owner content pass: entries such as `0106`, raw
+  supplier instructions, translations, prices, delivery type, provider mapping,
+  and required account fields must be confirmed before publishing.
 
 **Exit criteria:** Staging UAT is approved, production secrets are separated, rollback is tested, and all critical customer/admin/payment/fulfillment flows pass.
 

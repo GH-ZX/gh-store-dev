@@ -24,15 +24,16 @@ GH-Store is a bilingual digital gaming store for game top-ups, redeem codes, and
 |-----------|------|--------|
 | Provider keys and catalog import | Dashboard -> Providers and API | Available |
 | Store overview | Dashboard -> Home | Available |
-| Games and offers editing | Dashboard -> Catalog | Planned |
-| Orders and delivery | Dashboard -> Orders | Planned |
-| Wallet recharge | Dashboard -> Recharges / Payments | Planned |
-| Homepage and theme | Dashboard -> Website | Planned |
-| Reviews and messages | Dashboard -> Reviews / Support | Planned |
-| Audit and health | Dashboard -> Operations | Planned |
+| Games and offers editing | Dashboard -> Catalog | Available |
+| Orders and delivery | Dashboard -> Orders | Available |
+| Wallet recharge | Dashboard -> Recharges / Payments | Available |
+| Homepage and theme | Dashboard -> Website | Available |
+| Reviews and messages | Dashboard -> Reviews / Support | Available |
+| Audit and health | Dashboard -> Operations | Available |
 
-Planned sections appear in the dashboard navigation marked "in progress", so the
-shape of the finished dashboard is visible without any link leading nowhere.
+All listed areas are implemented. Before opening sales, verify the provider keys,
+contact channels, payment methods, callback secrets, and visible catalog entries
+from the dashboard.
 
 ## Important Safety Rules
 
@@ -40,4 +41,8 @@ shape of the finished dashboard is visible without any link leading nowhere.
 - Never place provider API keys in the browser.
 - Do not retry a delayed provider order as a new order.
 - Do not refund a provider order until its final state is known.
-- Keep the existing `echocore-store` project untouched while GH-Store is built.
+- Keep the existing `echocore-store` project untouched.
+- Never publish an offer until its provider mapping, price, delivery method, and
+  required customer fields have been checked.
+- Keep at least one small-value test product unpublished until the owner has
+  verified the complete payment and fulfillment path.

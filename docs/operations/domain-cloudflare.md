@@ -2,7 +2,9 @@
 
 ## Target Hosting
 
-GH-Store runs on Cloudflare Workers through OpenNext. The future domain may be purchased through GoDaddy, but DNS should be managed by Cloudflare.
+GH-Store runs on Cloudflare Workers through OpenNext at `https://gh-store.me`.
+DNS and the domain are already configured outside this repository; keep the
+canonical apex domain and redirect any alternate host to it with HTTPS 301.
 
 ## Workers Builds Settings
 
@@ -18,16 +20,16 @@ The existing `gh-store` Worker should use Cloudflare Workers Builds, not Pages:
 
 Do not use `pnpm run build:cf`; that script is not part of GH-Store. Do not configure this application as a Pages static site because OpenNext produces a Worker runtime and server routes.
 
-## Cutover Sequence
+## Current release sequence
 
-1. Purchase the domain through GoDaddy.
-2. Add the domain to Cloudflare.
-3. Replace GoDaddy nameservers with the Cloudflare nameservers.
-4. Attach the domain to the GH-Store Worker.
-5. Choose one canonical host, normally the apex or `www`, and redirect the other host with HTTPS 301.
-6. Update Supabase Auth Site URL and redirect URLs.
-7. Update canonical metadata, sitemap, robots, and provider webhook URLs.
-8. Verify login, password recovery, checkout, payment callbacks, and fulfillment callbacks.
+1. Push changes to `main`; GitHub Actions/Cloudflare Workers Builds deploy the
+   Worker from the production branch.
+2. Confirm `https://gh-store.me` serves the new Worker version.
+3. Keep Supabase Auth Site URL and redirect URLs aligned with the domain.
+4. Keep canonical metadata, sitemap, robots, and provider webhook URLs on the
+   same HTTPS origin.
+5. Verify payment callbacks, fulfillment callbacks, reconciliation, and the
+   owner support workflow before opening new offers.
 
 ## Required Cloudflare Controls
 
@@ -37,4 +39,4 @@ Do not use `pnpm run build:cf`; that script is not part of GH-Store. Do not conf
 - Separate staging and production environments.
 - Deployment rollback to the previous Worker version.
 
-The old GitHub Pages DNS instructions are historical reference only and must not be used for GH-Store.
+The old GitHub Pages DNS instructions are historical reference only and must not be used for GH-Store. Do not run a manual `wrangler deploy` from an unauthenticated workspace when the connected GitHub deployment is the source of truth.

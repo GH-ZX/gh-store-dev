@@ -4,8 +4,9 @@ A plain-language guide to every flow that exists today, what each one guarantees
 and where to go in the dashboard. Written for the store owner, not for a
 developer.
 
-Anything marked **not built yet** genuinely does not exist. Nothing in this
-document describes a feature that is only planned.
+This document describes the implemented customer and owner flows. The final
+release items are production configuration, visible catalog/content review, safe
+UAT, and operational readiness—not missing dashboard pages.
 
 ---
 
@@ -277,15 +278,23 @@ page says exactly this.
 
 ---
 
-## 10. Not built yet
+## 10. Release readiness checklist
 
-- Binance Pay
-- Invoices as downloadable documents
-- Notifications page
-- Review moderation
-- Support inbox
-- Order operations for you (manual retry, manual delivery)
-- Deployment to your own domain
+The application and dashboard flows are implemented. Before opening the store to
+customers, the owner must verify these production items:
+
+- Production Auth URL, recovery URL, and OAuth redirect URL.
+- Sam, G2Bulk, and Binance callback URLs and secrets.
+- Cloudflare Worker secrets and five-minute reconciliation cron.
+- Provider API keys, provider balances, and active provider mappings.
+- Every published offer's name, translation, price, currency, image, delivery
+  type, and required account fields.
+- Contact channels, support expectations, privacy policy, terms, and refund copy.
+- One small approved customer journey from recharge through delivery/refund.
+- A rollback plan for a bad deployment, provider outage, or payment mismatch.
+
+Keep uncertain products unpublished until their provider behavior and customer
+instructions have been confirmed.
 
 ## 11. Two rules that keep the money honest
 
