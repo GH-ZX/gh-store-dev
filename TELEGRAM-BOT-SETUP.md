@@ -1,8 +1,9 @@
 # Telegram Bot Setup — Quick Steps
 
-The owner bot is already built and committed. It delivers order, failed-order,
-recharge, support, and low-wallet alerts to your Telegram chat. You only need to
-complete these steps to go live.
+The bot is already built and committed. It delivers order, failed-order,
+recharge, support, and low-wallet alerts to the owner's Telegram chat, and it
+lets customers link their account to see orders and balance inside the chat. You
+only need to complete these steps to go live.
 
 Full details: [`docs/operations/telegram-bot.md`](docs/operations/telegram-bot.md)
 
@@ -74,10 +75,18 @@ manual setups.
 
 ## Prerequisites already handled
 
-- Migration `20260821030000_telegram_alerts.sql` — **already applied** to
+- Migrations `20260821030000_telegram_alerts.sql` and
+  `20260822010000_telegram_customer_links.sql` — **already applied** to
   Supabase.
 - Database types regenerated — the build typechecks.
 - The webhook lives in a Supabase Edge Function and deploys via the `Deploy
   Supabase Edge Functions` GitHub workflow (or manually with
   `supabase functions deploy telegram-webhook`). The alert drain stays in the
   Cloudflare Worker.
+
+## For customers
+
+Customers link their account from **My account → Telegram bot** on the site:
+press **Get a link code**, then send the code to the bot. The bot then answers
+with orders, balance, and store/support buttons. No password ever goes through
+the bot.

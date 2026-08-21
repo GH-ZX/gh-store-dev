@@ -1541,6 +1541,79 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_chat_links: {
+        Row: {
+          chat_id: number
+          created_at: string
+          first_name: string | null
+          linked_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          first_name?: string | null
+          linked_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          first_name?: string | null
+          linked_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_chat_links_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_link_codes: {
+        Row: {
+          chat_id: number | null
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          chat_id?: number | null
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          chat_id?: number | null
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_link_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_transactions: {
         Row: {
           amount: number

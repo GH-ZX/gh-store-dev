@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { TelegramLinkPanel } from "@/components/account/telegram-link-panel";
 import { PasswordForm, ProfileForm } from "@/components/account/profile-forms";
 import { WalletSummaryPanel } from "@/components/account/wallet-panels";
 import { EmptyState, ErrorState } from "@/components/shared/states";
@@ -9,6 +10,7 @@ import { Section, SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getMyProfile } from "@/lib/services/profile.service";
+import { getMyTelegramLink } from "@/lib/services/telegram-link.service";
 import { getMyWallet } from "@/lib/services/wallet.service";
 import { getSessionSummary } from "@/lib/services/session.service";
 
@@ -55,6 +57,7 @@ export default async function ProfilePage({ params }: PageProps<"/[locale]/profi
   // The admin has no customer wallet; the wallet panel would show a zero balance
   // that means nothing to someone whose purchases are gift orders.
   const wallet = session.isAdmin ? null : await getMyWallet();
+  const telegramLink = await getMyTelegramLink();
 
   return (
     <Section spacing="page" mesh>
@@ -87,6 +90,14 @@ export default async function ProfilePage({ params }: PageProps<"/[locale]/profi
               rechargeHref={`/${locale}/recharge`}
             />
           ) : null}
+
+          <TelegramLinkPanel
+            locale={locale}
+            messages={messages}
+            linked={telegramLink.linked}
+            chatLabel={telegramLink.chatLabel}
+            linkedAt={telegramLink.linkedAt}
+          />
 
           <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6">
             <h2 className="text-base font-semibold text-[var(--ink)]">{messages.orders.title}</h2>

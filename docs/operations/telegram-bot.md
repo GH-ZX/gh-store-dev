@@ -1,6 +1,8 @@
-# Owner Telegram Bot
+# Telegram Bot
 
-GH-Store notifies the store owner over Telegram. The bot has two halves:
+GH-Store has one Telegram bot for both audiences: the store owner receives
+operations alerts, and customers can link their account to see orders and
+balance inside the chat. The bot has two halves:
 
 1. **Webhook** — a Supabase Edge Function
    (`https://njlzgfddfnnqujaodbta.supabase.co/functions/v1/telegram-webhook`),
@@ -108,6 +110,35 @@ Dashboard → Providers and API → **Telegram owner alerts**:
   dashboard. Uses the Worker secret if one is set, otherwise generates and
   stores a fresh secret.
 
+## Customers
+
+The bot also serves customers, not just the owner. A customer links their
+Telegram chat to their store account once, and the bot then answers with their
+orders and wallet balance — no password ever goes through the bot.
+
+### How a customer links (sign in)
+
+The linking proof is a short-lived code, exactly like a two-factor backup:
+
+1. On the site: **My account → Telegram bot** → **Get a link code**. The code
+   (e.g. `GS-1F4K2X`) is shown only to the signed-in account owner and expires
+   in ten minutes. Re-minting retires the previous code.
+2. In the bot: send the code as a message (or `/link <code>`). The bot
+   validates it, binds the chat to the account, and marks the code used.
+
+From then on the chat is linked: `/orders` shows the last five orders with
+status, `/wallet` shows the balance, `/account` shows the profile, and the menu
+buttons offer Orders, Wallet, Browse the store, Support, and Unlink. The owner
+chat is unaffected — it keeps the store operations.
+
+### Data
+
+- `telegram_chat_links` — `chat_id` → `user_id`, one chat per account. RLS
+  lets a customer read or delete only their own row; the bot writes with the
+  service key.
+- `telegram_link_codes` — one-use, ten-minute codes minted on the profile page
+  and consumed by the bot.
+
 ## Notes
 
 - The bot token can live either as the Worker secret or in
@@ -120,6 +151,5 @@ Dashboard → Providers and API → **Telegram owner alerts**:
   is set to `false`. Failed Telegram sends are retried on the next drain.
 - Alert types disabled in the dashboard are skipped at delivery time, so a
   toggled-off event never reaches the chat even if it was queued.
-- Customer-facing Telegram account linking (orders and balance inside the chat)
-  is intentionally not part of this build; it is a larger feature that needs a
-  chat-id link flow in the store.
+- The bot never asks for a password. Customer sign-in is the code flow above;
+  an email is only ever handled by the store itself.
