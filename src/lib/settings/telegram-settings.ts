@@ -38,10 +38,6 @@ const telegramSettingsSchema = z.object({
   updated_at: z.string().nullish(),
 });
 
-const storeSettingsSchema = z.object({
-  telegram: telegramSettingsSchema.optional().catch(undefined),
-});
-
 export type TelegramCredentials = {
   botToken: string | null;
   webhookSecret: string | null;
@@ -73,9 +69,29 @@ export function defaultAlertPrefs(): Record<string, boolean> {
   return Object.fromEntries(TELEGRAM_ALERT_TYPES.map((type) => [type, true]));
 }
 
+/**
+ * Normalize the stored `telegram` column value to the settings object.
+ *
+ * The app writes the column as `{ telegram: { ... } }` (wrapped) and reads it
+ * back through the schema. The edge function used to write it flat
+ * (`{ bot_token, ... }`) — accept both so a row written either way keeps
+ * working everywhere.
+ */
+function unwrapTelegram(settings: unknown): unknown {
+  if (settings && typeof settings === "object" && !Array.isArray(settings)) {
+    const record = settings as Record<string, unknown>;
+
+    if (record.telegram && typeof record.telegram === "object" && !Array.isArray(record.telegram)) {
+      return record.telegram;
+    }
+  }
+
+  return settings;
+}
+
 export function readTelegramCredentials(settings: unknown): TelegramCredentials {
-  const parsed = storeSettingsSchema.safeParse(settings ?? {});
-  const telegram = parsed.success ? parsed.data.telegram : undefined;
+  const parsed = telegramSettingsSchema.safeParse(unwrapTelegram(settings));
+  const telegram = parsed.success ? parsed.data : undefined;
 
   return {
     botToken: telegram?.bot_token?.trim() || null,
@@ -88,8 +104,8 @@ export function readTelegramWebhookSecret(settings: unknown): string | null {
 }
 
 export function readTelegramAlertPrefs(settings: unknown): Record<string, boolean> {
-  const parsed = storeSettingsSchema.safeParse(settings ?? {});
-  const prefs = parsed.success ? parsed.data.telegram?.alert_prefs : undefined;
+  const parsed = telegramSettingsSchema.safeParse(unwrapTelegram(settings));
+  const prefs = parsed.success ? parsed.data?.alert_prefs : undefined;
 
   if (!prefs) {
     return defaultAlertPrefs();
@@ -109,8 +125,8 @@ export function readTelegramAlertPrefs(settings: unknown): Record<string, boolea
 }
 
 export function toTelegramStatus(settings: unknown): TelegramStatus {
-  const parsed = storeSettingsSchema.safeParse(settings ?? {});
-  const telegram = parsed.success ? parsed.data.telegram : undefined;
+  const parsed = telegramSettingsSchema.safeParse(unwrapTelegram(settings));
+  const telegram = parsed.success ? parsed.data : undefined;
   const credentials = readTelegramCredentials(settings);
 
   return {
@@ -148,27 +164,26 @@ export function mergeTelegramSettings(
   updatedAt: string,
 ): Json {
   const base: Record<string, Json | undefined> =
-    settings && typeof settings === "object" && !Array.isArray(settings) ? { ...settings } : {};
+    unwrapTelegram(settings) && typeof unwrapTelegram(settings) === "object" && !Array.isArray(unwrapTelegram(settings))
+      ? { ...(unwrapTelegram(settings) as Record<string, Json>) }
+      : {};
 
-  const parsed = storeSettingsSchema.safeParse(settings ?? {});
-  const storedFlag = parsed.success ? parsed.data.telegram?.enabled : undefined;
+  const parsed = telegramSettingsSchema.safeParse(unwrapTelegram(settings));
+  const storedFlag = parsed.success ? parsed.data?.enabled : undefined;
   const current = readTelegramCredentials(settings);
   const suppliedToken = update.botToken?.trim();
   const nextToken = update.botToken === undefined ? current.botToken : suppliedToken || null;
 
-  const stored =
-    base.telegram && typeof base.telegram === "object" && !Array.isArray(base.telegram)
-      ? (base.telegram as Record<string, Json>)
-      : {};
-
-  base.telegram = {
-    ...stored,
-    bot_token: nextToken,
-    webhook_secret: update.webhookSecret ?? current.webhookSecret,
-    enabled: update.enabled ?? (nextToken === null ? false : suppliedToken ? true : storedFlag !== false),
-    alert_prefs: update.alertPrefs ?? readTelegramAlertPrefs(settings),
-    updated_at: updatedAt,
+  // The app writes the column as `{ telegram: { ... } }`. Always wrap so a
+  // flat row (older edge function write) is normalized on the next save.
+  return {
+    telegram: {
+      ...base,
+      bot_token: nextToken,
+      webhook_secret: update.webhookSecret ?? current.webhookSecret,
+      enabled: update.enabled ?? (nextToken === null ? false : suppliedToken ? true : storedFlag !== false),
+      alert_prefs: update.alertPrefs ?? readTelegramAlertPrefs(settings),
+      updated_at: updatedAt,
+    },
   };
-
-  return base;
 }

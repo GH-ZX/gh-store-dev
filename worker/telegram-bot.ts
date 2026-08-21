@@ -156,9 +156,14 @@ async function readSettings(env: BotEnv): Promise<{ telegram: TelegramSettings }
 
   const row = Array.isArray(json) ? (json[0] as { telegram?: unknown } | undefined) : undefined;
 
-  return {
-    telegram: (row?.telegram && typeof row.telegram === "object" ? row.telegram : {}) as TelegramSettings,
-  };
+  // The app stores the settings double-wrapped (`telegram: { telegram: {...} }`
+  // — its readers unwrap with a schema). Unwrap defensively either way.
+  const outer =
+    row?.telegram && typeof row.telegram === "object" ? (row.telegram as Record<string, unknown>) : {};
+  const inner =
+    outer.telegram && typeof outer.telegram === "object" ? (outer.telegram as Record<string, unknown>) : outer;
+
+  return { telegram: inner as TelegramSettings };
 }
 
 async function fetchPendingAlerts(env: BotEnv, limit: number): Promise<AlertRow[]> {

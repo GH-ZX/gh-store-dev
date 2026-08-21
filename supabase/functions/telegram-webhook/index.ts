@@ -140,7 +140,15 @@ Deno.serve(async (request: Request): Promise<Response> => {
     return json({ ok: false, error: "settings_unavailable" }, 503);
   }
 
-  const telegramSettings = settings?.telegram as {
+  /*
+   * The app stores the settings double-wrapped (the column value is
+   * `{ telegram: { ... } }` — its own readers unwrap it with a schema). Unwrap
+   * defensively so the secret is found either way.
+   */
+  const stored = settings?.telegram as Record<string, unknown> | undefined;
+  const telegramSettings = (stored?.telegram && typeof stored.telegram === "object"
+    ? stored.telegram
+    : stored) as {
     bot_token?: unknown;
     chat_id?: unknown;
     webhook_secret?: unknown;
@@ -188,9 +196,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
       if (command === "/start") {
         if (currentOwner === null) {
+          // Store the same wrapped shape the app's own writers use
+          // (`telegram` column value = `{ telegram: { ... } }`) so the dashboard
+          // readers see the settings. A flat write here would confuse them.
           await supabase
             .from("store_settings")
-            .update({ telegram: { ...telegramSettings, chat_id: String(chatId) } })
+            .update({ telegram: { telegram: { ...telegramSettings, chat_id: String(chatId) } } })
             .eq("id", "global");
         } else if (!registered) {
           await sendText(
