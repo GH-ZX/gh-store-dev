@@ -136,9 +136,9 @@ export async function registerTelegramWebhookAction(
 
   const secret = newCallbackSecret();
 
-  // Save first so the Worker accepts the secret from the moment Telegram starts
-  // calling with it. If Telegram registration then fails, the stored secret has
-  // rotated but the worker simply refuses the old address — the dashboard
+  // Save first so the Edge Function accepts the secret from the moment Telegram
+  // starts calling with it. If Telegram registration then fails, the stored
+  // secret has rotated but the function refuses the old address — the dashboard
   // button stays usable and the owner is told what happened.
   try {
     await saveTelegramSettings({ webhookSecret: secret });

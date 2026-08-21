@@ -629,9 +629,9 @@ export async function readTelegramWebhookState(token: string): Promise<{
  * Register (or re-register) the bot's webhook with Telegram.
  *
  * The dashboard performs the curl itself: it saves a fresh webhook secret, then
- * tells Telegram to call the Worker's `/telegram-webhook` with that secret. One
- * action replaces the manual setWebhook step, mirroring how the G2Bulk callback
- * is generated rather than typed.
+ * tells Telegram to call the Supabase Edge Function with that secret as part of
+ * the address. One action replaces the manual setWebhook step, mirroring how
+ * the G2Bulk callback is generated rather than typed.
  *
  * Returns a message key the page can localize; `null` means success.
  */
