@@ -5,6 +5,7 @@ import { G2BulkFulfillmentClient } from "@/providers/g2bulk/client";
 import { classifyProviderStatus } from "@/providers/g2bulk/fulfillment-schemas";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 import { notify } from "@/lib/services/notification.service";
+import { enqueueTelegramAlert } from "@/lib/services/telegram-alerts.service";
 import {
   decideReconciliation,
   GRACE_MINUTES,
@@ -1340,6 +1341,17 @@ async function announceOutcome(
    * is already the provider's customer-facing wording — the jargon went to
    * `error_code` — so it is safe to repeat here.
    */
+  await enqueueTelegramAlert({
+    type: "order_failed",
+    payload: {
+      order_id: context.orderId,
+      order_number: context.orderNumber,
+      quantity: context.quantity,
+      reason: outcome.reason,
+      refunded: outcome.refunded,
+    },
+  });
+
   await notify({
     userId: order.user_id,
     type: "order_failed",

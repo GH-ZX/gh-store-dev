@@ -5,6 +5,7 @@ import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 import { MAXSTORE_PROVIDER_NAME } from "@/providers/maxstore/mapping";
 import { G2BulkClient } from "@/providers/g2bulk/client";
 import { readG2BulkCredentials } from "@/lib/settings/provider-settings";
+import { enqueueTelegramAlert } from "@/lib/services/telegram-alerts.service";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { Json } from "@/types/database";
 
@@ -68,7 +69,12 @@ async function readG2BulkWalletBalance(apiKey: string): Promise<number | null> {
   return inFlight;
 }
 
-async function checkG2BulkOfferAffordable(offerId: string, quantity: number): Promise<boolean> {
+type Availability = { affordable: boolean; insufficient: boolean };
+
+async function checkG2BulkOfferAffordable(
+  offerId: string,
+  quantity: number,
+): Promise<Availability> {
   const supabase = createSupabaseServiceClient();
   const { data: mappings, error: mappingError } = await supabase
     .from("provider_offer_mappings")
@@ -78,7 +84,7 @@ async function checkG2BulkOfferAffordable(offerId: string, quantity: number): Pr
   if (mappingError) {
     // Fail closed: an unreadable mapping must not allow a charge that cannot be
     // checked against the supplier wallet.
-    return false;
+    return { affordable: false, insufficient: false };
   }
 
   const g2BulkMapping = mappings?.find(
@@ -89,16 +95,19 @@ async function checkG2BulkOfferAffordable(offerId: string, quantity: number): Pr
     // Provider-owned MaxStore/BatStore offers use their own fulfillment guards.
     // An unknown or unmapped offer is refused because fulfillment defaults to no
     // provider rather than silently charging a customer for an undeliverable item.
-    return mappings?.length === 1 && (
-      mappings[0].provider_name === MAXSTORE_PROVIDER_NAME ||
-      mappings[0].provider_name === BATSTORE_PROVIDER_NAME
-    );
+    return {
+      affordable:
+        mappings?.length === 1 &&
+        (mappings[0].provider_name === MAXSTORE_PROVIDER_NAME ||
+          mappings[0].provider_name === BATSTORE_PROVIDER_NAME),
+      insufficient: false,
+    };
   }
 
   const supplierCost = Number(g2BulkMapping.supplier_cost_usd);
 
   if (!Number.isFinite(supplierCost) || supplierCost <= 0) {
-    return false;
+    return { affordable: false, insufficient: false };
   }
 
   const { data: settings, error: settingsError } = await supabase
@@ -108,24 +117,40 @@ async function checkG2BulkOfferAffordable(offerId: string, quantity: number): Pr
     .maybeSingle();
 
   if (settingsError) {
-    return false;
+    return { affordable: false, insufficient: false };
   }
 
   const { apiKey, enabled } = readG2BulkCredentials((settings?.providers ?? {}) as Json);
 
   if (!apiKey || !enabled) {
-    return false;
+    return { affordable: false, insufficient: false };
   }
 
   const balance = await readG2BulkWalletBalance(apiKey);
 
   if (balance === null) {
-    return false;
+    return { affordable: false, insufficient: false };
   }
 
   const requestedQuantity = Math.max(1, Math.min(10, Math.floor(quantity)));
+  const sufficient = balance + BALANCE_EPSILON >= supplierCost * requestedQuantity;
 
-  return balance + BALANCE_EPSILON >= supplierCost * requestedQuantity;
+  if (!sufficient) {
+    await enqueueTelegramAlert({
+      type: "low_wallet",
+      payload: {
+        provider: G2BULK_PROVIDER_NAME,
+        balance,
+        required: supplierCost * requestedQuantity,
+      },
+      // Repeated checkouts must not flood the owner with the same message, but
+      // the wallet can drain again after a top-up, so the key is a six-hour
+      // bucket rather than a permanent one.
+      dedupKey: `low_wallet:g2bulk:${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
+    });
+  }
+
+  return { affordable: sufficient, insufficient: !sufficient };
 }
 
 /**
@@ -137,7 +162,7 @@ export async function isG2BulkOfferAffordable(
   quantity: number,
 ): Promise<boolean> {
   try {
-    return await checkG2BulkOfferAffordable(offerId, quantity);
+    return (await checkG2BulkOfferAffordable(offerId, quantity)).affordable;
   } catch {
     return false;
   }

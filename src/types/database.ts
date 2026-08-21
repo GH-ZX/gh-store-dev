@@ -1382,6 +1382,7 @@ export type Database = {
           providers: Json
           seo: Json
           social_links: Json
+          telegram: Json
           theme: Json
           updated_at: string
           updated_by: string | null
@@ -1399,6 +1400,7 @@ export type Database = {
           providers?: Json
           seo?: Json
           social_links?: Json
+          telegram?: Json
           theme?: Json
           updated_at?: string
           updated_by?: string | null
@@ -1416,6 +1418,7 @@ export type Database = {
           providers?: Json
           seo?: Json
           social_links?: Json
+          telegram?: Json
           theme?: Json
           updated_at?: string
           updated_by?: string | null
@@ -1504,6 +1507,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      telegram_alerts: {
+        Row: {
+          created_at: string
+          dedup_key: string | null
+          id: number
+          last_attempted_at: string | null
+          payload: Json
+          sent_at: string | null
+          status: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          dedup_key?: string | null
+          id?: never
+          last_attempted_at?: string | null
+          payload?: Json
+          sent_at?: string | null
+          status?: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          dedup_key?: string | null
+          id?: never
+          last_attempted_at?: string | null
+          payload?: Json
+          sent_at?: string | null
+          status?: string
+          type?: string
+        }
+        Relationships: []
       }
       wallet_transactions: {
         Row: {

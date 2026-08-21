@@ -3,6 +3,7 @@ import "server-only";
 import { isAdminProfile, requireAuth, UnauthorizedError } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isG2BulkOfferAffordable } from "@/lib/services/g2bulk-availability.service";
+import { enqueueTelegramAlert } from "@/lib/services/telegram-alerts.service";
 import { fulfillOrder } from "@/lib/services/fulfillment.service";
 import { logFailure, logOutcome } from "@/lib/logging/logger";
 
@@ -168,6 +169,16 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   if (!data) {
     return { ok: false, reason: "unknown" };
   }
+
+  await enqueueTelegramAlert({
+    type: "order_placed",
+    payload: {
+      order_id: data.order_id,
+      order_number: data.order_number,
+      total: data.total,
+      offer_id: offer.id,
+    },
+  });
 
   /*
    * Fulfilment runs after the order is safely paid, and its failure must never

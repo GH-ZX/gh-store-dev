@@ -102,6 +102,11 @@ configuration is reported in Worker logs rather than silently ignored. This is
 the only order-reconciliation scheduler; Supabase callbacks are event receivers,
 not competing cron jobs.
 
+The Worker also hosts the owner Telegram bot: `TELEGRAM_BOT_TOKEN`,
+`TELEGRAM_WEBHOOK_SECRET`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` must
+be set as Worker secrets for alerts to be delivered. See
+`docs/operations/telegram-bot.md` for the full setup.
+
 Before production launch, verify the domain, Auth redirect URLs, payment and
 provider callbacks, Worker secrets, reconciliation logs, smoke tests, and
 rollback procedure using the release checklist in `ROADMAP.md`.

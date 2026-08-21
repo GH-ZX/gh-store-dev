@@ -3,6 +3,7 @@ import "server-only";
 import { requireAuth } from "@/lib/auth/guards";
 import { logOutcome } from "@/lib/logging/logger";
 import { normalizeRechargeConfig, type RechargeConfig } from "@/lib/settings/recharge-settings";
+import { enqueueTelegramAlert } from "@/lib/services/telegram-alerts.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -187,6 +188,16 @@ async function attemptRechargeRequest(input: {
   if (!data) {
     return { ok: false, reason: "unknown" };
   }
+
+  await enqueueTelegramAlert({
+    type: "recharge_request",
+    payload: {
+      request_id: data.request_id,
+      reference: data.reference,
+      amount: input.amount,
+      method: input.method,
+    },
+  });
 
   return { ok: true, requestId: data.request_id, reference: data.reference, credited: false };
 }

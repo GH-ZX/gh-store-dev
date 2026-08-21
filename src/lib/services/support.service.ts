@@ -2,6 +2,7 @@ import "server-only";
 
 import { requireAdmin, requireAuth } from "@/lib/auth/guards";
 import { logOutcome } from "@/lib/logging/logger";
+import { enqueueTelegramAlert } from "@/lib/services/telegram-alerts.service";
 import { PAGE_SIZE, pageRange } from "@/lib/paging";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { SupportStatus } from "@/lib/support/status";
@@ -172,6 +173,16 @@ async function attemptOpenThread(input: {
 
     return { ok: false, reason: "unknown" };
   }
+
+  await enqueueTelegramAlert({
+    type: "support_message",
+    payload: {
+      thread_id: thread.id,
+      user_id: user.id,
+      subject,
+      body: body.slice(0, 600),
+    },
+  });
 
   return { ok: true, threadId: thread.id };
 }
