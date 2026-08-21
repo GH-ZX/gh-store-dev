@@ -36,6 +36,22 @@ All listed areas are implemented. Before opening sales, verify the provider keys
 contact channels, payment methods, callback secrets, and visible catalog entries
 from the dashboard.
 
+## Automation and Provider Monitoring
+
+- The Cloudflare Worker checks delayed orders every five minutes through the
+  protected reconciliation endpoint. It polls existing supplier orders only and
+  never starts a second purchase.
+- G2Bulk top-ups use the game-order ledger; G2Bulk vouchers use the delivery
+  endpoint and are not completed without actual delivery items.
+- Supabase Edge Functions receive Sam, G2Bulk, and Binance callbacks. The
+  `Deploy Supabase Edge Functions` GitHub workflow redeploys them after relevant
+  changes when the repository has a `SUPABASE_ACCESS_TOKEN` secret.
+- Do not add another scheduled reconciliation job. Two schedulers would create
+  duplicate provider polling and make operational diagnosis harder.
+
+The workflow does not apply database migrations automatically. Apply and verify
+migrations as an explicit release operation before relying on schema changes.
+
 ## Important Safety Rules
 
 - Do not run random SQL files against production.

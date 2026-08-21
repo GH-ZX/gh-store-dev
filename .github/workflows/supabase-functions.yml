@@ -1,0 +1,59 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/config.toml"
+      - "supabase/functions/**"
+      - "src/lib/orders/g2bulk-callback.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-functions-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-configuration:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Check deployment secret
+        id: check
+        run: |
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "SUPABASE_ACCESS_TOKEN is not configured; skipping Edge Function deployment."
+          fi
+
+  deploy:
+    needs: check-configuration
+    if: ${{ needs.check-configuration.outputs.configured == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: njlzgfddfnnqujaodbta
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy webhook functions
+        run: |
+          supabase login --token "$SUPABASE_ACCESS_TOKEN"
+          supabase functions deploy sam-webhook --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy g2bulk-webhook --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy binance-webhook --project-ref "$SUPABASE_PROJECT_REF"

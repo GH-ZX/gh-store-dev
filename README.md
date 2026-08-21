@@ -79,7 +79,15 @@ never committed.
 Migrations live in `supabase/migrations`. Apply only the approved migration set
 to the intended project, then verify generated database types and RLS tests.
 Supabase Edge Functions provide payment/provider callbacks and must be deployed
-with their required secrets and JWT settings.
+with their required secrets and JWT settings. The `Deploy Supabase Edge Functions`
+workflow deploys `sam-webhook`, `g2bulk-webhook`, and `binance-webhook` after
+relevant changes on `main` when the GitHub `SUPABASE_ACCESS_TOKEN` secret exists.
+The project reference is `njlzgfddfnnqujaodbta`; database migrations remain an
+explicit release step and are not pushed automatically by this workflow.
+
+The Cloudflare Worker remains the only reconciliation scheduler. It runs every
+five minutes and calls the protected `POST /api/reconcile` endpoint; do not add a
+second cron for the same work.
 
 ## Cloudflare preview and deployment
 
@@ -90,7 +98,9 @@ pnpm run deploy
 
 The Worker cron invokes `POST /api/reconcile` every five minutes. It requires
 both `NEXT_PUBLIC_APP_URL` and `RECONCILE_CRON_SECRET`; missing or failed
-configuration is reported in Worker logs rather than silently ignored.
+configuration is reported in Worker logs rather than silently ignored. This is
+the only order-reconciliation scheduler; Supabase callbacks are event receivers,
+not competing cron jobs.
 
 Before production launch, verify the domain, Auth redirect URLs, payment and
 provider callbacks, Worker secrets, reconciliation logs, smoke tests, and
