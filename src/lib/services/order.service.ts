@@ -2,6 +2,7 @@ import "server-only";
 
 import { isAdminProfile, requireAuth, UnauthorizedError } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isG2BulkOfferAffordable } from "@/lib/services/g2bulk-availability.service";
 import { fulfillOrder } from "@/lib/services/fulfillment.service";
 import { logFailure, logOutcome } from "@/lib/logging/logger";
 
@@ -29,6 +30,7 @@ export type PlaceOrderResult =
         | "suspended"
         | "unavailable"
         | "insufficient_balance"
+        | "supplier_unavailable"
         | "in_progress"
         | "invalid_fields"
         | "unknown";
@@ -52,6 +54,10 @@ function reasonFromError(message: string): PlaceOrderResult {
 
   if (text.includes("already in progress")) {
     return { ok: false, reason: "in_progress" };
+  }
+
+  if (text.includes("supplier unavailable")) {
+    return { ok: false, reason: "supplier_unavailable" };
   }
 
   if (text.includes("offer unavailable") || text.includes("wallet not found")) {
@@ -140,6 +146,10 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
 
   if (offerError || !offer) {
     return { ok: false, reason: "unavailable" };
+  }
+
+  if (!isAdmin && !(await isG2BulkOfferAffordable(offer.id, input.quantity))) {
+    return { ok: false, reason: "supplier_unavailable" };
   }
 
   const { data, error } = await supabase

@@ -48,6 +48,7 @@
     "suspended": "This account is suspended and cannot place orders. Please contact support.",
     "unavailable": "This package is no longer available. Browse the other packages we have.",
     "insufficient_balance": "Your wallet balance does not cover this order. Add balance, then try again.",
+    "supplier_unavailable": "This offer is temporarily unavailable while the supplier is being checked. Please try again later.",
     "in_progress": "An order with these same details is already being placed. Check My orders before trying again.",
     "invalid_fields": "Check the required account details, then try again.",
     "unknown": "We could not place this order. Try again, and contact support if it keeps happening."

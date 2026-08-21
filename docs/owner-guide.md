@@ -63,6 +63,8 @@ migrations as an explicit release operation before relying on schema changes.
   required customer fields have been checked.
 - Keep at least one small-value test product unpublished until the owner has
   verified the complete payment and fulfillment path.
-- With a low supplier balance, keep G2Bulk offers unpublished or disabled. A
-  provider account balance is separate from the customer's wallet: a successful
-  wallet checkout can still be charged before the supplier rejects the delivery.
+- With a low supplier balance, keep G2Bulk offers unpublished or disabled. The
+  checkout now performs a server-side G2Bulk wallet preflight and refuses a
+  mapped offer before debiting the customer when the supplier balance cannot
+  cover its recorded cost. A provider account balance is still separate from the
+  customer's wallet, and the final supplier response remains authoritative.

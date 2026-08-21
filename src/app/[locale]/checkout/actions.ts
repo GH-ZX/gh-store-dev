@@ -37,6 +37,7 @@ const REASON_MESSAGE_KEYS: Record<PlaceOrderReason, string> = {
   insufficient_balance: "insufficient_balance",
   in_progress: "in_progress",
   invalid_fields: "invalid_fields",
+  supplier_unavailable: "supplier_unavailable",
   unknown: "unknown",
 };
 
