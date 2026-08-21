@@ -7,6 +7,7 @@ import { G2BulkSettingsForm } from "@/components/admin/g2bulk-settings-form";
 import { MaxStoreSettingsForm } from "@/components/admin/maxstore-settings-form";
 import { ProviderGroup, ProviderSection } from "@/components/admin/provider-section";
 import { SamSettingsForm } from "@/components/admin/sam-settings-form";
+import { TelegramSettingsForm } from "@/components/admin/telegram-settings-form";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { ArrowIcon } from "@/components/ui/icons";
@@ -24,6 +25,7 @@ import {
   getMaxStoreStatus,
   getRecentSyncLogs,
   getSamStatus,
+  getTelegramStatus,
 } from "@/lib/services/admin-settings.service";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 
@@ -50,10 +52,11 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const sam = messages.providers.sam;
   const binance = messages.providers.binance;
   const logging = messages.providers.logging;
+  const telegram = messages.providers.telegram;
   const fulfillmentPolicy = messages.providers.fulfillmentPolicy;
   const groups = messages.providers.groups;
   const secrets = messages.providers.secrets;
-  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings] =
+  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings, telegramStatus] =
     await Promise.all([
       getG2BulkStatus(),
       getG2BulkCallback(),
@@ -67,6 +70,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
       getSamOverview(),
       getAxiomStatus(),
       getFulfillmentSettings(),
+      getTelegramStatus(),
     ]);
 
   return (
@@ -292,6 +296,34 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
           }
         >
           <AxiomSettingsForm locale={locale} messages={logging} status={axiomStatus} secrets={secrets} />
+        </ProviderSection>
+
+        <ProviderSection
+          name={telegram.name}
+          summary={telegram.summary}
+          defaultOpen={!telegramStatus.configured}
+          badges={[
+            {
+              label: telegramStatus.configured ? telegram.statusConfigured : telegram.statusMissing,
+              tone: telegramStatus.configured ? "success" : "neutral",
+            },
+            ...(telegramStatus.enabled
+              ? [{ label: telegram.onLabel, tone: "success" as const }]
+              : []),
+            ...(telegramStatus.configured && !telegramStatus.chatLinked
+              ? [{ label: telegram.chatMissingLabel, tone: "warning" as const }]
+              : []),
+          ]}
+          hint={
+            telegramStatus.keyHint ? { label: telegram.keyHintLabel, value: telegramStatus.keyHint } : null
+          }
+        >
+          <TelegramSettingsForm
+            locale={locale}
+            messages={telegram}
+            status={telegramStatus}
+            secrets={secrets}
+          />
         </ProviderSection>
       </ProviderGroup>
 

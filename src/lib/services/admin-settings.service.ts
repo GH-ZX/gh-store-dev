@@ -51,6 +51,15 @@ import {
 import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  mergeTelegramSettings,
+  readTelegramAlertPrefs,
+  readTelegramCredentials,
+  toTelegramStatus,
+  type TelegramCredentials,
+  type TelegramSettingsUpdate,
+  type TelegramStatus,
+} from "@/lib/settings/telegram-settings";
+import {
   mergeRefundOnFulfillmentFailure,
   readRefundOnFulfillmentFailure,
   type FulfillmentSettings,
@@ -458,4 +467,209 @@ export async function saveFulfillmentSettings(refundOnFailure: boolean): Promise
   }
 
   return { refundOnFailure };
+}
+
+// ─── Owner Telegram alerts ───────────────────────────────────────────────────
+
+async function readTelegram(): Promise<Json> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("store_settings")
+    .select("telegram")
+    .eq("id", SETTINGS_ID)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Reading Telegram settings failed: ${error.message}`);
+  }
+
+  return data?.telegram ?? {};
+}
+
+export async function getTelegramStatus(): Promise<TelegramStatus> {
+  await requireAdmin();
+
+  return toTelegramStatus(await readTelegram());
+}
+
+/** Server-only: returns the plaintext bot token and webhook secret. Never hand these to a component. */
+export async function getTelegramCredentials(): Promise<TelegramCredentials> {
+  await requireAdmin();
+
+  return readTelegramCredentials(await readTelegram());
+}
+
+export async function saveTelegramSettings(update: TelegramSettingsUpdate): Promise<TelegramStatus> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const current = await readTelegram();
+  const next = mergeTelegramSettings(current, update, new Date().toISOString());
+
+  const { data, error } = await supabase
+    .from("store_settings")
+    .update({ telegram: next })
+    .eq("id", SETTINGS_ID)
+    .select("telegram")
+    .single();
+
+  if (error) {
+    throw new Error(`Saving Telegram settings failed: ${error.message}`);
+  }
+
+  return toTelegramStatus(data.telegram);
+}
+
+/**
+ * The address the Telegram webhook is registered at.
+ *
+ * The Worker owns `/telegram-webhook`, so this is the one public path on the
+ * store itself rather than a Supabase function URL.
+ */
+export function telegramWebhookUrl(): string | null {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? "";
+
+  if (!appUrl) {
+    return null;
+  }
+
+  try {
+    const url = new URL(appUrl);
+    url.pathname = "/telegram-webhook";
+    url.search = "";
+    url.hash = "";
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prove the bot token and read who it belongs to.
+ *
+ * `getMe` is Telegram's cheapest call and returns the bot's own username, which
+ * is the number an owner actually wants to see — the same role the G2Bulk
+ * `getAccount` call plays. A webhook check is deliberately separate: a token
+ * can be valid while the webhook is unregistered, and the two should not look
+ * like the same failure.
+ */
+export async function verifyTelegramBotToken(token: string): Promise<{
+  ok: boolean;
+  username: string | null;
+  kind: string;
+}> {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    const payload = (await response.json().catch(() => null)) as {
+      ok?: boolean;
+      result?: { username?: string | null; first_name?: string | null };
+      description?: string;
+    } | null;
+
+    if (!response.ok || payload?.ok !== true) {
+      const description = payload?.description ?? "";
+
+      // 404 means the token is not a bot token at all; 401 means it is wrong.
+      return { ok: false, username: null, kind: /could not find|unauthorized/i.test(description) ? "auth" : "unknown" };
+    }
+
+    return {
+      ok: true,
+      username: payload.result?.username ?? payload.result?.first_name ?? null,
+      kind: "ok",
+    };
+  } catch {
+    return { ok: false, username: null, kind: "network" };
+  }
+}
+
+/**
+ * What Telegram reports about the registered webhook.
+ *
+ * A registered webhook answers with our URL; anything else is either nothing
+ * (never registered) or a stale address pointing somewhere else. The last error
+ * is shown when present so an owner sees why deliveries stopped.
+ */
+export async function readTelegramWebhookState(token: string): Promise<{
+  ok: boolean;
+  url: string | null;
+  pendingUpdateCount: number;
+  lastError: string | null;
+}> {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    const payload = (await response.json().catch(() => null)) as {
+      ok?: boolean;
+      result?: {
+        url?: string | null;
+        pending_update_count?: number;
+        last_error_message?: string | null;
+      };
+    } | null;
+
+    if (!response.ok || payload?.ok !== true) {
+      return { ok: false, url: null, pendingUpdateCount: 0, lastError: null };
+    }
+
+    return {
+      ok: true,
+      url: payload.result?.url || null,
+      pendingUpdateCount: payload.result?.pending_update_count ?? 0,
+      lastError: payload.result?.last_error_message || null,
+    };
+  } catch {
+    return { ok: false, url: null, pendingUpdateCount: 0, lastError: null };
+  }
+}
+
+/**
+ * Register (or re-register) the bot's webhook with Telegram.
+ *
+ * The dashboard performs the curl itself: it saves a fresh webhook secret, then
+ * tells Telegram to call the Worker's `/telegram-webhook` with that secret. One
+ * action replaces the manual setWebhook step, mirroring how the G2Bulk callback
+ * is generated rather than typed.
+ *
+ * Returns a message key the page can localize; `null` means success.
+ */
+export async function registerTelegramWebhook(token: string, secret: string): Promise<{
+  ok: boolean;
+  kind: string;
+}> {
+  const url = telegramWebhookUrl();
+
+  if (!url) {
+    return { ok: false, kind: "invalid_url" };
+  }
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url, secret_token: secret, allowed_updates: ["message", "callback_query"] }),
+    });
+    const payload = (await response.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
+
+    if (!response.ok || payload?.ok !== true) {
+      const description = payload?.description ?? "";
+
+      return {
+        ok: false,
+        kind: /could not find|unauthorized/i.test(description) ? "auth" : "unknown",
+      };
+    }
+
+    return { ok: true, kind: "ok" };
+  } catch {
+    return { ok: false, kind: "network" };
+  }
 }

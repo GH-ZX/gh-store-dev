@@ -54,6 +54,7 @@ type TelegramUpdate = {
 type TelegramSettings = {
   bot_token?: string | null;
   chat_id?: string | null;
+  webhook_secret?: string | null;
   enabled?: boolean;
   linked_at?: string | null;
   alert_prefs?: Record<string, boolean> | null;
@@ -528,7 +529,20 @@ export async function handleTelegramWebhook(
     return new Response("method not allowed", { status: 405 });
   }
 
-  const expected = env.TELEGRAM_WEBHOOK_SECRET?.trim();
+  /*
+   * The dashboard can register the webhook itself, which stores the secret in
+   * the database; the environment secret wins when both exist. The settings are
+   * only read when no environment secret is set, so a database outage never
+   * breaks an already-registered webhook.
+   */
+  let expected = env.TELEGRAM_WEBHOOK_SECRET?.trim() ?? "";
+
+  if (!expected) {
+    const { telegram: storedTelegram } = await readSettings(env);
+    expected =
+      typeof storedTelegram.webhook_secret === "string" ? storedTelegram.webhook_secret.trim() : "";
+  }
+
   const provided = request.headers.get("x-telegram-bot-api-secret-token")?.trim() ?? "";
 
   if (!expected || !provided || !(await secretMatches(provided, expected))) {
@@ -601,7 +615,12 @@ export async function deliverTelegramAlerts(env: BotEnv): Promise<void> {
     return;
   }
 
-  const alerts = await fetchPendingAlerts(env, BATCH);
+  const prefs = telegram.alert_prefs ?? {};
+  const alerts = (await fetchPendingAlerts(env, BATCH)).filter(
+    // The dashboard lets the owner turn individual alert types off; an unknown
+    // type (a newer build than this worker) is delivered rather than dropped.
+    (alert) => prefs[alert.type] !== false,
+  );
 
   for (const alert of alerts) {
     const sent = await sendText(owner, alertText(alert), token);
