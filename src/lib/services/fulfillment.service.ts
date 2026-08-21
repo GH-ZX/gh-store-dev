@@ -1187,12 +1187,33 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
           deliveredPayload = deliveredItems(result).payload;
         }
       } else {
-        const status = await new G2BulkFulfillmentClient({
-          apiKey: credentials,
-        }).findGameOrderStatus(attempt.external_order_id);
+        const client = new G2BulkFulfillmentClient({ apiKey: credentials });
 
-        providerState = status ? classifyProviderStatus(status.status) : null;
-        refunded = status?.refunded === true;
+        if (context.offerType === "topup") {
+          const status = await client.findGameOrderStatus(attempt.external_order_id);
+
+          providerState = status ? classifyProviderStatus(status.status) : null;
+          refunded = status?.refunded === true;
+        } else {
+          // Voucher delivery is a separate endpoint. The game-order history only
+          // tells us a purchase finished; it does not carry the codes the customer
+          // paid for, so using it here could complete an order with no delivery.
+          const delivery = await client.pollVoucherDelivery(attempt.external_order_id);
+
+          providerState =
+            delivery.state === "delivered"
+              ? "completed"
+              : delivery.state === "failed"
+                ? "failed"
+                : delivery.state === "missing"
+                  ? null
+                  : "pending";
+          refunded = delivery.state === "failed";
+
+          if (providerState === "completed") {
+            deliveredPayload = { items: delivery.items };
+          }
+        }
       }
     } catch (error) {
       // An unreachable supplier is not an answer about the order. Record why the

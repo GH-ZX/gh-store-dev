@@ -474,7 +474,16 @@ export class G2BulkFulfillmentClient extends G2BulkClient {
     }
 
     const parsed = voucherDeliverySchema.safeParse(json);
+    const items = parsed.success ? parsed.data.delivery_items : null;
 
-    return { state: "delivered", items: parsed.success ? (parsed.data.delivery_items ?? []) : [] };
+    // A 200 without at least one delivery item is not a usable delivery. Treating
+    // it as completed would leave the customer charged with no code to receive.
+    if (!items || items.length === 0) {
+      throw new G2BulkContractError(
+        "G2Bulk delivery returned success without delivery items.",
+      );
+    }
+
+    return { state: "delivered", items };
   }
 }
