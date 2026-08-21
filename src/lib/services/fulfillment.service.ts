@@ -1255,7 +1255,11 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
     const outcome = await failAndRefund(context, attempt.id, decision.reason);
     await announceOutcome(context, outcome);
 
-    return outcome.refunded
+    // `failAndRefund` settles a failure, so only the `failed` state is possible
+    // here; the narrowed access below is what the typechecker can prove.
+    const refunded = outcome.state === "failed" ? outcome.refunded : false;
+
+    return refunded
       ? { action: "refunded", reason: decision.reason }
       : {
           action: "escalated",
