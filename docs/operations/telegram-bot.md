@@ -98,12 +98,18 @@ owner alerts**, without touching Cloudflare or a terminal:
 
 ## Dashboard panel
 
-Dashboard → Providers and API → **Telegram owner alerts**:
+Dashboard → Providers and API → **Telegram bot**:
 
+- **What the bot does** — a plain-language list of the customer and owner
+  features, so the panel reads as the bot's control center rather than a
+  notifications-only toggle.
 - **Bot token** — saved, write-only, replaced through the Edit button.
 - **Deliver alerts** switch — turns delivery off without deleting the token.
 - **Alert types** — per-event toggles: new orders, failed orders, manual
   recharge requests, new support messages, low supplier wallet.
+- **Install the command menu** — calls `setMyCommands` on its own, so the ☰
+  button can be (re)installed without rotating the webhook secret. Webhook
+  registration installs it too.
 - **Verify bot** — checks the token with Telegram, shows the bot's username,
   the registered webhook address, and whether the owner chat is linked.
 - **Register / re-register the webhook** — performs `setWebhook` from the

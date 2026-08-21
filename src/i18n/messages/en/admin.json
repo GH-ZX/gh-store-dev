@@ -235,8 +235,8 @@
       }
     },
     "telegram": {
-      "name": "Telegram owner alerts",
-      "summary": "Orders, failures, recharges, support messages, and low supplier balance delivered to your Telegram chat.",
+      "name": "Telegram bot",
+      "summary": "Your store bot on Telegram: customers browse the catalog, link their account, and get order alerts; you get the operations alerts.",
       "statusConfigured": "Bot token saved",
       "statusMissing": "No bot token",
       "onLabel": "Alerts on",
@@ -246,6 +246,18 @@
       "botTokenPlaceholder": "From @BotFather",
       "botTokenHelp": "Created in Telegram with @BotFather. Stored server-side and never shown again. The token only sends messages to the chat you register — it never lets anyone read customer data.",
       "botTokenKeepHelp": "Leave empty to keep the saved token.",
+      "featuresTitle": "What the bot does",
+      "featuresHelp": "One bot serves both audiences. The customer side works from any chat; your alerts go to the owner chat you link with /start.",
+      "features": [
+        "Customers browse the catalog, deals, and search from the chat — no images, no checkout needed to look.",
+        "Customers link their account with a code and see their orders, wallet, and order updates in their language.",
+        "Customers open support threads and get a one-tap sign-in link straight from the chat.",
+        "You get new order, failure, recharge, support, and low-wallet alerts in the owner chat.",
+        "The menu (☰) shows every command once installed."
+      ],
+      "commandsAction": "Install the command menu",
+      "commandsHelp": "Makes the ☰ button appear in Telegram with all commands. Safe to run again any time.",
+      "commandsReady": "Command menu installed.",
       "enabledLabel": "Deliver alerts to Telegram",
       "enabledHelp": "When on, queued alerts are sent to your chat on the Worker's five-minute schedule. Turning it off keeps the token.",
       "alertTypesLabel": "Alert types",

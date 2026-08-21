@@ -16,6 +16,7 @@ import {
 import {
   registerTelegramWebhookAction,
   saveTelegramSettingsAction,
+  setTelegramCommandsAction,
   verifyTelegramBotAction,
 } from "@/app/[locale]/dashboard/providers/telegram-actions";
 
@@ -61,11 +62,24 @@ export function TelegramSettingsForm({
     registerTelegramWebhookAction,
     INITIAL_TELEGRAM_STATE,
   );
+  const [commandsState, commandsAction, settingCommands] = useActionState<TelegramActionState, FormData>(
+    setTelegramCommandsAction,
+    INITIAL_TELEGRAM_STATE,
+  );
   const [copiedSecret, setCopiedSecret] = useState(false);
 
-  const error = resolveError(messages, saveState.error ?? verifyState.error ?? webhookState.error);
+  const error = resolveError(
+    messages,
+    saveState.error ?? verifyState.error ?? webhookState.error ?? commandsState.error,
+  );
   const notice =
-    saveState.notice === "saved" ? messages.saved : webhookState.notice === "webhook_ready" ? messages.webhookReady : null;
+    saveState.notice === "saved"
+      ? messages.saved
+      : webhookState.notice === "webhook_ready"
+        ? messages.webhookReady
+        : commandsState.notice === "commands_ready"
+          ? messages.commandsReady
+          : null;
   const verifiedBot = verifyState.bot ?? (verifyState.notice === "verified" ? { username: null } : null);
   const verifiedWebhook = verifyState.webhook;
 
@@ -130,6 +144,31 @@ export function TelegramSettingsForm({
           ) : null}
         </div>
       </form>
+
+      <div className="grid gap-3 border-t border-[var(--line)] pt-6">
+        <h3 className="text-sm font-semibold text-[var(--ink)]">{messages.featuresTitle}</h3>
+        <p className="text-xs leading-5 text-[var(--ink-muted)]">{messages.featuresHelp}</p>
+        <ul className="grid gap-1.5 text-sm text-[var(--ink-soft)]">
+          {messages.features.map((feature) => (
+            <li key={feature} className="flex items-start gap-2">
+              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+        <form action={commandsAction} className="flex flex-wrap items-center gap-3">
+          <input type="hidden" name="locale" value={locale} />
+          <Button type="submit" variant="secondary" size="sm" disabled={settingCommands || !status.configured}>
+            {messages.commandsAction}
+          </Button>
+          <span className="text-xs leading-5 text-[var(--ink-faint)]">{messages.commandsHelp}</span>
+          {commandsState.notice === "commands_ready" ? (
+            <Badge tone="success" icon={<CheckIcon />}>
+              {messages.commandsReady}
+            </Badge>
+          ) : null}
+        </form>
+      </div>
 
       <form action={verifyAction} className="flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-6">
         <input type="hidden" name="locale" value={locale} />

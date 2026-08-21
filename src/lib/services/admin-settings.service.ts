@@ -635,6 +635,56 @@ export async function readTelegramWebhookState(token: string): Promise<{
  *
  * Returns a message key the page can localize; `null` means success.
  */
+/** The bot's command menu, shown by Telegram in private chats. */
+const TELEGRAM_COMMANDS = [
+  { command: "start", description: "Menu" },
+  { command: "catalog", description: "Browse the catalog" },
+  { command: "orders", description: "My orders" },
+  { command: "wallet", description: "My balance" },
+  { command: "deals", description: "Deals and featured" },
+  { command: "search", description: "Search games and packages" },
+  { command: "support", description: "Contact support" },
+  { command: "language", description: "Switch language" },
+  { command: "login", description: "Open my account signed in" },
+  { command: "link", description: "Link this chat to my account" },
+  { command: "unlink", description: "Unlink this chat" },
+  { command: "help", description: "Help" },
+];
+
+async function telegramPost(token: string, method: string, body: Record<string, unknown>): Promise<{ ok: boolean; kind: string }> {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = (await response.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
+
+    if (!response.ok || payload?.ok !== true) {
+      const description = payload?.description ?? "";
+
+      return { ok: false, kind: /could not find|unauthorized/i.test(description) ? "auth" : "unknown" };
+    }
+
+    return { ok: true, kind: "ok" };
+  } catch {
+    return { ok: false, kind: "network" };
+  }
+}
+
+/**
+ * Install the bot's command menu (the ☰ button in Telegram).
+ *
+ * Webhook registration does this too; this standalone call exists so an owner
+ * can re-install the menu without rotating the webhook secret.
+ */
+export async function registerTelegramCommands(token: string): Promise<{ ok: boolean; kind: string }> {
+  return telegramPost(token, "setMyCommands", {
+    commands: TELEGRAM_COMMANDS,
+    scope: { type: "all_private_chats" },
+  });
+}
+
 export async function registerTelegramWebhook(token: string, secret: string): Promise<{
   ok: boolean;
   kind: string;
@@ -647,47 +697,20 @@ export async function registerTelegramWebhook(token: string, secret: string): Pr
   }
 
   try {
-    const [webhookResult] = await Promise.allSettled([
-      fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url, allowed_updates: ["message", "callback_query"] }),
-      }),
-      // The command list is part of the same setup: register it with the
-      // webhook so Telegram shows a menu button. It is best-effort — a failure
-      // here must not fail the registration.
-      fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          commands: [
-            { command: "start", description: "Menu" },
-            { command: "catalog", description: "Browse the catalog" },
-            { command: "orders", description: "My orders" },
-            { command: "wallet", description: "My balance" },
-            { command: "deals", description: "Deals and featured" },
-            { command: "search", description: "Search games and packages" },
-            { command: "support", description: "Contact support" },
-            { command: "language", description: "Switch language" },
-            { command: "login", description: "Open my account signed in" },
-            { command: "link", description: "Link this chat to my account" },
-            { command: "unlink", description: "Unlink this chat" },
-            { command: "help", description: "Help" },
-          ],
-          scope: { type: "all_private_chats" },
-        }),
-      }),
-    ]);
+    // The command list is part of the same setup: register it with the webhook
+    // so Telegram shows a menu button. It is best-effort — a failure here must
+    // not fail the registration.
+    await registerTelegramCommands(token);
 
-    const webhookFulfilled = webhookResult.status === "fulfilled" ? webhookResult.value : null;
+    const webhookResult = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url, allowed_updates: ["message", "callback_query"] }),
+    });
 
-    if (!webhookFulfilled) {
-      return { ok: false, kind: "network" };
-    }
+    const payload = (await webhookResult.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
 
-    const payload = (await webhookFulfilled.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
-
-    if (!webhookFulfilled.ok || payload?.ok !== true) {
+    if (!webhookResult.ok || payload?.ok !== true) {
       const description = payload?.description ?? "";
 
       return {

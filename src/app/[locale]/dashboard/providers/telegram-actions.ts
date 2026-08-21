@@ -11,6 +11,7 @@ import { TELEGRAM_ALERT_TYPES } from "@/lib/settings/telegram-settings";
 import {
   getTelegramCredentials,
   readTelegramWebhookState,
+  registerTelegramCommands,
   registerTelegramWebhook,
   saveTelegramSettings,
   verifyTelegramBotToken,
@@ -157,4 +158,32 @@ export async function registerTelegramWebhookAction(
   revalidatePath(`/${resolveLocale(formText(formData, "locale"))}/dashboard/providers`);
 
   return { ...INITIAL_TELEGRAM_STATE, notice: "webhook_ready", generatedSecret: secret };
+}
+
+/**
+ * Install the bot's command menu (the ☰ button in Telegram) on its own.
+ *
+ * Webhook registration already installs the menu, but it also rotates the
+ * webhook secret — not something to do just to refresh a menu. This action
+ * only calls setMyCommands, so it is safe to run whenever the commands change.
+ */
+export async function setTelegramCommandsAction(
+  _state: TelegramActionState,
+  formData: FormData,
+): Promise<TelegramActionState> {
+  await requireAdmin();
+
+  const { botToken } = await getTelegramCredentials();
+
+  if (!botToken) {
+    return { ...INITIAL_TELEGRAM_STATE, error: "missing_key" };
+  }
+
+  const result = await registerTelegramCommands(botToken);
+
+  if (!result.ok) {
+    return { ...INITIAL_TELEGRAM_STATE, error: result.kind };
+  }
+
+  return { ...INITIAL_TELEGRAM_STATE, notice: "commands_ready" };
 }

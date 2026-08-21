@@ -972,14 +972,20 @@ Deno.serve(async (request: Request): Promise<Response> => {
           [
             "👋 <b>GH-Store owner bot</b> — this chat is registered.",
             "",
-            "<b>Commands</b>",
+            "<b>Owner commands</b>",
             "/stats — store totals and balances",
             "/pending — recharges waiting for review",
             "/alerts — alert type guidance",
             "/help — this message",
             "",
+            "The buttons below are the customer menu — catalog, deals, search,",
+            "language, and support. They work from any chat, including this one.",
+            "",
             "Dashboard: https://gh-store.me/dashboard",
           ].join("\n"),
+          // The owner gets the customer menu too, so the bot's buttons are
+          // visible from the very first /start and testable in place.
+          menuKeyboard(locale, linked),
         );
         return;
       }
