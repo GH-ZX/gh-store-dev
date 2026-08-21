@@ -40,18 +40,15 @@ function resolveLocale(value: unknown): Locale {
  * to another site with a fresh session. `//host` is rejected explicitly: it is
  * protocol-relative and would leave the origin despite starting with a slash.
  *
- * The default is the account page, not the dashboard. Most people signing in are
- * customers, and sending them to an admin route only to be told they lack access
- * is both confusing and — because the guard redirects an unauthenticated request
- * back to sign-in — a way to bounce between the two while the session cookie
- * settles. An admin arriving from a guarded page still carries `next`.
+ * The default is the home page for the locale, the least surprising landing
+ * spot after sign-in.
  */
 function safeRedirect(value: unknown, locale: Locale): string {
   if (typeof value === "string" && value.startsWith("/") && !value.startsWith("//")) {
     return value;
   }
 
-  return `/${locale}/profile`;
+  return `/${locale}`;
 }
 
 export async function signInAction(

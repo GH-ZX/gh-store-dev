@@ -15,7 +15,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  *
  * `next` is honoured only when it is a same-origin path, mirroring the guard on
  * the email/password actions so a crafted URL cannot bounce someone around.
- * Without it the user lands on the default account page for their locale.
+ * Without it the user lands on the home page for the default locale.
  */
 export const dynamic = "force-dynamic";
 
@@ -120,7 +120,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         return NextResponse.redirect(new URL(next, url.origin));
       }
 
-      return NextResponse.redirect(new URL(`/${DEFAULT_LOCALE}/profile`, url.origin));
+      return NextResponse.redirect(new URL(`/${DEFAULT_LOCALE}`, url.origin));
     }
 
     log.warn("auth", "oauth_callback_failed", { error: error.message });
