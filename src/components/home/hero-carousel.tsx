@@ -232,33 +232,12 @@ export function HeroCarousel({
                     className="group absolute inset-0"
                   >
                     {/*
-                      * The backdrop. Supplier uploads are often square and low
-                      * in resolution; shown "as is" in a 16:9 frame they
-                      * letterbox. A quiet blurred copy fills the whole frame so
-                      * the slide never reads as a floating rectangle — light
-                      * blur, no saturation, just enough to keep the edges
-                      * legible. The Ken Burns zoom breathes on this field rather
-                      * than the artwork.
-                      */}
-                    <div
-                      aria-hidden="true"
-                      className={cn(
-                        "absolute inset-0 scale-110 bg-cover bg-center blur-xl transition-transform duration-[3200ms] ease-[var(--ease-out-expo)] will-change-transform",
-                        isActive ? "scale-[1.18]" : "scale-110",
-                      )}
-                      style={{
-                        backgroundImage: game.imageUrl ? `url(${game.imageUrl})` : undefined,
-                      }}
-                    />
-
-                    {/*
                       * The artwork itself, framed at 4:3 and centred. A square
-                      * upload shown whole leaves a wide blurred margin on a
-                      * landscape frame, and shown cover-cropped it loses the
-                      * icon — 4:3 is the middle: most of the image, a natural
-                      * crop, and only a narrow band of backdrop around it. On a
-                      * portrait frame the box reaches the frame edges and the
-                      * backdrop simply stops being visible.
+                      * upload shown whole leaves wide margins on a landscape
+                      * frame, and shown cover-cropped it loses the icon — 4:3
+                      * is the middle: most of the image, a natural crop, and a
+                      * quiet theme-coloured band either side where the frame
+                      * is wider than the box.
                       */}
                     <div className="absolute inset-0 grid place-items-center">
                       <div className="aspect-[4/3] h-full max-w-full">
