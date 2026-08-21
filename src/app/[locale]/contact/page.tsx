@@ -51,7 +51,7 @@ export default async function ContactPage({ params }: PageProps<"/[locale]/conta
               className="mt-5"
               title={messages.contact.emptyTitle}
               description={messages.contact.emptyDescription}
-              action={{ href: `/${locale}/faq`, label: common.links.faq }}
+              action={{ href: `/${locale}/support`, label: common.links.support }}
             />
           ) : (
             <ul className="mt-5 grid gap-3 sm:grid-cols-2">

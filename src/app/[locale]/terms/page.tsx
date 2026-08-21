@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { ProseSections } from "@/components/content/content-blocks";
-import { NoticePanel } from "@/components/shared/states";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
@@ -33,7 +32,6 @@ export default async function TermsPage({ params }: PageProps<"/[locale]/terms">
 
       <ProseSections className="mt-10" sections={messages.terms.sections} />
 
-      <NoticePanel className="mt-10" description={messages.terms.reviewNote} />
     </Section>
   );
 }

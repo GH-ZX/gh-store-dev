@@ -66,8 +66,8 @@
     "description": "Reach us on whichever channel suits you and we will get back to you shortly.",
     "channelsHeading": "Contact channels",
     "orderNote": "To speed things up, include your order number, the game, and your account ID.",
-    "emptyTitle": "No contact channels yet",
-    "emptyDescription": "We are adding contact channels soon. Until then, the FAQ has quick answers."
+    "emptyTitle": "Open a support request",
+    "emptyDescription": "Sign in to contact GH Store support and keep your conversation linked to your orders."
   },
   "privacy": {
     "eyebrow": "Legal",
@@ -94,8 +94,7 @@
         "heading": "Your rights",
         "body": "You can ask for a copy of your data or have it corrected at any time. When you ask us to close your account we remove your personal details — name, email, and in-game account data — and keep the financial record without identity, for accounting reasons. Contact support to arrange it."
       }
-    ],
-    "reviewNote": "This page is an initial draft and needs legal review before launch."
+    ]
   },
   "terms": {
     "eyebrow": "Legal",
@@ -126,8 +125,7 @@
         "heading": "Changes to these terms",
         "body": "We may update these terms, and an update applies from the date it is published on this page."
       }
-    ],
-    "reviewNote": "This page is an initial draft and needs legal review before launch."
+    ]
   },
   "links": {
     "eyebrow": "Our links",
