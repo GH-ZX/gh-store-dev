@@ -2,6 +2,7 @@ import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
 import { notify } from "@/lib/services/notification.service";
+import { enqueueTelegramAlert } from "@/lib/services/telegram-alerts.service";
 import { normalizeRechargeConfig, type RechargeConfig } from "@/lib/settings/recharge-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
@@ -254,6 +255,16 @@ async function notifyRechargeOutcome(
       entityId: requestId,
     });
 
+    await enqueueTelegramAlert({
+      type: "recharge_approved",
+      userId: data.user_id,
+      payload: {
+        request_id: requestId,
+        reference: data.reference,
+        amount: credited ?? data.requested_amount,
+      },
+    });
+
     return;
   }
 
@@ -271,6 +282,16 @@ async function notifyRechargeOutcome(
     href: "/recharge",
     entityType: "recharge",
     entityId: requestId,
+  });
+
+  await enqueueTelegramAlert({
+    type: "recharge_rejected",
+    userId: data.user_id,
+    payload: {
+      request_id: requestId,
+      reference: data.reference,
+      reason: reason ?? null,
+    },
   });
 }
 

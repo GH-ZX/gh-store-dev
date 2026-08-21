@@ -29,7 +29,10 @@ export type TelegramAlertType =
   | "recharge_request"
   | "support_message"
   | "low_wallet"
-  | "order_delivered";
+  | "order_delivered"
+  | "recharge_approved"
+  | "recharge_rejected"
+  | "support_reply";
 
 export async function enqueueTelegramAlert(input: {
   type: TelegramAlertType;

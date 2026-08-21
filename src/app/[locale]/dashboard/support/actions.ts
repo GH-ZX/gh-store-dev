@@ -11,6 +11,7 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { formText } from "@/lib/forms/form-data";
 import { recordAudit } from "@/lib/services/admin-audit.service";
 import { notify } from "@/lib/services/notification.service";
+import { enqueueTelegramAlert } from "@/lib/services/telegram-alerts.service";
 import {
   getSupportConversation,
   replyAsAdmin,
@@ -120,6 +121,15 @@ export async function replyAction(
       href: `/${locale}/support?thread=${parsed.data.threadId}`,
       entityType: "support_thread",
       entityId: parsed.data.threadId,
+    });
+
+    await enqueueTelegramAlert({
+      type: "support_reply",
+      userId,
+      payload: {
+        thread_id: parsed.data.threadId,
+        reply: parsed.data.body.slice(0, 400),
+      },
     });
   }
 

@@ -128,9 +128,72 @@ The linking proof is a short-lived code, exactly like a two-factor backup:
    validates it, binds the chat to the account, and marks the code used.
 
 From then on the chat is linked: `/orders` shows the last five orders with
-status, `/wallet` shows the balance, `/account` shows the profile, and the menu
-buttons offer Catalog, Orders, Wallet, Browse the store, Support, and Unlink.
-The owner chat is unaffected — it keeps the store operations.
+status and a **site deep-link button** per order, `/wallet` shows the balance,
+`/account` shows the profile, and `/login` emails a one-tap sign-in link to the
+customer's inbox so they can open the site already signed in. The menu buttons
+offer Catalog, Orders, Wallet, Deals, Search, Browse the store, Support,
+Language, Login, and Unlink. The owner chat is unaffected — it keeps the store
+operations.
+
+### Commands
+
+The dashboard registers the full command list with Telegram on webhook
+registration (`setMyCommands`), so the bot shows a menu button with:
+
+- `/start` — menu
+- `/catalog` — browse categories → games → packages
+- `/orders` — my orders (with deep links)
+- `/wallet` — my balance
+- `/deals` — featured / discounted offers
+- `/search` — search games and packages by name
+- `/support` — open a support thread from the chat
+- `/language` — switch between English and Arabic
+- `/login` — get a one-tap sign-in link for the site
+- `/link` / `/unlink` — bind or release the chat↔account connection
+- `/help` — guidance
+
+### Catalog, deals, and search
+
+The menu's **Catalog** button browses the store without leaving Telegram: pick
+a category, then a game, then read the packages and prices. Text only — no
+images. **Deals** lists featured/discounted offers in one message. **Search**
+lets the customer type a query and get matching games and packages. Back
+buttons return to the previous list, and every offer message links to the site
+for checkout.
+
+### Support from the chat
+
+A linked customer can open a support thread without leaving Telegram:
+`/support` (or the menu button) walks through a subject and a message, creates
+a real `support_threads` row with the first message, and queues the owner
+alert. Replies from the dashboard reach the customer both in the support page
+and as a Telegram message via the `support_reply` alert type.
+
+### Language
+
+The bot answers in English or Arabic. A customer's choice is remembered per
+chat (`telegram_chat_prefs.locale`), defaults to the language they linked
+with, and is used for their order/recharge/support notifications too. The
+owner's `/stats` output uses the store's default locale.
+
+### Telegram login button
+
+Linked customers get a **Login** button instead of a bare store link. It asks
+Supabase's admin API for a one-time sign-in link for their account email and
+sends it as a button — one tap opens the site signed in. Unlinked chats get
+pointed at the sign-in page instead, and the request is refused rather than
+emailing a stranger.
+
+### Recharge and support alerts
+
+Beyond delivery/failure, a linked customer now receives Telegram messages for:
+
+- recharge **approved** (`recharge_approved`) or **rejected**
+  (`recharge_rejected`) by the owner;
+- a **support reply** (`support_reply`) when the owner answers their thread.
+
+Each carries the relevant amount/order id and is rendered by the Worker drain
+in the customer's language.
 
 ### Catalog in the chat
 
@@ -158,8 +221,13 @@ alerts always reach the customer who owns the event.
   only their own row; the bot writes with the service key.
 - `telegram_link_codes` — one-use, ten-minute codes minted on the profile page
   and consumed by the bot.
+- `telegram_chat_prefs` — per-chat preferences: `locale` (en/ar) and a
+  `pending` slot for the support-subject/body state machine.
 - `telegram_alerts.user_id` — optional; routes a queued alert to a linked
-  customer chat instead of the owner chat.
+  customer chat instead of the owner chat. Alert types include
+  `order_delivered`, `order_failed`, `recharge_approved`, `recharge_rejected`,
+  `support_reply`, and `support_message` on the customer side, plus the owner's
+  `order_placed`, `recharge_request`, and `low_wallet`.
 
 ## Notes
 

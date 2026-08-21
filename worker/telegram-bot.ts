@@ -339,6 +339,59 @@ function customerAlertText(row: AlertRow, locale: "ar" | "en"): string {
             .filter((line) => line.length > 0)
             .join("\n");
 
+    case "recharge_approved":
+      return locale === "ar"
+        ? [
+            "💳 <b>تمت إضافة الرصيد</b>",
+            `المرجع: <code>${escapeHtml(p.reference ?? "—")}</code>`,
+            `المبلغ: <b>${money(p.amount)}</b>`,
+            "أصبح رصيدك جاهزًا للشراء الآن.",
+            "المحفظة: https://gh-store.me/ar/wallet",
+          ].join("\n")
+        : [
+            "💳 <b>Your balance was topped up</b>",
+            `Reference: <code>${escapeHtml(p.reference ?? "—")}</code>`,
+            `Amount: <b>${money(p.amount)}</b>`,
+            "It is ready to spend now.",
+            "Wallet: https://gh-store.me/en/wallet",
+          ].join("\n");
+
+    case "recharge_rejected":
+      return locale === "ar"
+        ? [
+            "❌ <b>لم نتمكّن من تأكيد طلب التعبئة</b>",
+            `المرجع: <code>${escapeHtml(p.reference ?? "—")}</code>`,
+            p.reason ? `السبب: ${escapeHtml(p.reason)}` : "تواصل معنا مع إثبات التحويل.",
+            "الشحن: https://gh-store.me/ar/recharge",
+          ]
+            .filter((line) => line.length > 0)
+            .join("\n")
+        : [
+            "❌ <b>We could not confirm your top-up</b>",
+            `Reference: <code>${escapeHtml(p.reference ?? "—")}</code>`,
+            p.reason ? `Reason: ${escapeHtml(p.reason)}` : "Contact us with proof of payment.",
+            "Recharge: https://gh-store.me/en/recharge",
+          ]
+            .filter((line) => line.length > 0)
+            .join("\n");
+
+    case "support_reply":
+      return locale === "ar"
+        ? [
+            "💬 <b>وصلك رد على طلب الدعم</b>",
+            p.reply ? `\n${escapeHtml(p.reply)}` : "",
+            "الدعم: https://gh-store.me/ar/support",
+          ]
+            .filter((line) => line.length > 0)
+            .join("\n")
+        : [
+            "💬 <b>We replied to your request</b>",
+            p.reply ? `\n${escapeHtml(p.reply)}` : "",
+            "Support: https://gh-store.me/en/support",
+          ]
+            .filter((line) => line.length > 0)
+            .join("\n");
+
     default:
       return locale === "ar" ? `📢 ${escapeHtml(row.type)}` : `📢 ${escapeHtml(row.type)}`;
   }

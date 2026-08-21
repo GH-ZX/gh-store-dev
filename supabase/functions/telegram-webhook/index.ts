@@ -74,6 +74,21 @@ type Texts = {
   back: string;
   emptyCatalog: string;
   noOffers: string;
+  deals: string;
+  dealsEmpty: string;
+  search: string;
+  searchPrompt: string;
+  searchEmpty: string;
+  language: string;
+  languageChanged: string;
+  support: string;
+  supportSubjectPrompt: string;
+  supportBodyPrompt: string;
+  supportSent: string;
+  supportCancel: string;
+  login: string;
+  loginIntro: string;
+  openAccount: string;
 };
 
 const TEXTS: Record<Locale, Texts> = {
@@ -108,6 +123,21 @@ const TEXTS: Record<Locale, Texts> = {
     back: "↩ رجوع",
     emptyCatalog: "لا يوجد كتالوج بعد. عد لاحقًا.",
     noOffers: "لا توجد باقات متاحة لهذا اللعبة حاليًا.",
+    deals: "🔥 العروض",
+    dealsEmpty: "لا توجد عروض حاليًا.",
+    search: "🔍 بحث",
+    searchPrompt: "أرسل اسم اللعبة أو الباقة للبحث عنها.",
+    searchEmpty: "لا نتائج مطابقة.",
+    language: "🌐 اللغة",
+    languageChanged: "تم تغيير اللغة.",
+    support: "💬 الدعم",
+    supportSubjectPrompt: "ما موضوع طلبك؟ أرسله الآن (أو اضغط /cancel للإلغاء).",
+    supportBodyPrompt: "اشرح لنا المشكلة بالتفصيل (أو اضغط /cancel للإلغاء).",
+    supportSent: "✅ وصل طلبك. سنرد عليك هنا وفي صفحة الدعم.",
+    supportCancel: "تم إلغاء طلب الدعم.",
+    login: "🔐 دخول",
+    loginIntro: "اضغط الزر لفتح المتجر ودخول حسابك مباشرة.",
+    openAccount: "🔐 فتح حسابي",
   },
   en: {
     welcome:
@@ -140,6 +170,21 @@ const TEXTS: Record<Locale, Texts> = {
     back: "↩ Back",
     emptyCatalog: "The catalog is empty for now. Check back later.",
     noOffers: "No packages available for this game right now.",
+    deals: "🔥 Deals",
+    dealsEmpty: "No deals right now.",
+    search: "🔍 Search",
+    searchPrompt: "Send a game or package name to search.",
+    searchEmpty: "No matching results.",
+    language: "🌐 Language",
+    languageChanged: "Language changed.",
+    support: "💬 Support",
+    supportSubjectPrompt: "What is this about? Send it now (or send /cancel to cancel).",
+    supportBodyPrompt: "Tell us what happened in detail (or send /cancel to cancel).",
+    supportSent: "✅ Got it. We will reply here and on the support page.",
+    supportCancel: "Support request cancelled.",
+    login: "🔐 Sign in",
+    loginIntro: "Tap the button to open the store signed in.",
+    openAccount: "🔐 Open my account",
   },
 };
 
@@ -200,15 +245,20 @@ function menuKeyboard(locale: Locale, linked: boolean): unknown {
   return {
     inline_keyboard: [
       [{ text: t(locale, "catalog"), callback_data: "catalog" }],
+      [
+        { text: t(locale, "deals"), callback_data: "deals" },
+        { text: t(locale, "search"), callback_data: "search" },
+      ],
       linked
         ? [
             { text: t(locale, "orders"), callback_data: "orders" },
             { text: t(locale, "wallet"), callback_data: "wallet" },
           ]
         : [{ text: t(locale, "link"), callback_data: "link" }],
+      linked ? [{ text: t(locale, "openAccount"), callback_data: "login" }] : [],
       [
-        { text: t(locale, "browse"), url: "https://gh-store.me" },
-        { text: t(locale, "support"), url: "https://gh-store.me/support" },
+        { text: t(locale, "support"), callback_data: "support" },
+        { text: t(locale, "language"), callback_data: "language" },
       ],
       linked ? [{ text: t(locale, "unlink"), callback_data: "unlink" }] : [],
     ].filter((row) => row.length > 0),
@@ -281,20 +331,137 @@ async function readWallet(
 async function readOrders(
   supabase: ReturnType<typeof createClient>,
   userId: string,
-): Promise<{ order_number: string; status: string; total: number; currency: string }[]> {
+): Promise<{ id: string; order_number: string; status: string; total: number; currency: string }[]> {
   const { data } = await supabase
     .from("orders")
-    .select("order_number, status, total, currency")
+    .select("id, order_number, status, total, currency")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(5);
 
   return (data ?? []).map((row) => ({
+    id: row.id,
     order_number: row.order_number,
     status: row.status,
     total: row.total,
     currency: row.currency,
   }));
+}
+
+/**
+ * The customer's last orders, each row a button that opens the order page.
+ */
+async function showOrdersList(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  userId: string,
+): Promise<void> {
+  const orders = await readOrders(supabase, userId);
+
+  if (orders.length === 0) {
+    await sendText(botToken, chatId, t(locale, "ordersEmpty"));
+    return;
+  }
+
+  await sendText(botToken, chatId, t(locale, "orders"), {
+    inline_keyboard: orders.map((order) => [
+      {
+        text: `${order.order_number} — ${money(order.total)} · ${escapeHtml(order.status)}`,
+        url: `https://gh-store.me/${locale}/orders/${order.id}`,
+      },
+    ]),
+  });
+}
+
+/**
+ * Send a real sign-in link for the linked customer's account.
+ *
+ * `generateLink` creates the same magic link the site's own recovery flow
+ * uses, and it is sent straight into the chat as a button — the customer taps
+ * it and lands on the site already signed in, no password or code. Works only
+ * when the chat is linked, because the email comes from the stored profile.
+ */
+async function sendLoginLink(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  userId: string,
+): Promise<void> {
+  const profile = await readProfile(supabase, userId);
+  const email = text(profile?.email);
+
+  if (!email) {
+    await sendText(botToken, chatId, t(locale, "notFound"));
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: { redirectTo: `https://gh-store.me/${locale}/profile` },
+    });
+
+    const actionLink = text(data?.properties?.action_link);
+
+    if (error || !actionLink) {
+      await sendText(botToken, chatId, t(locale, "notFound"));
+      return;
+    }
+
+    await sendText(botToken, chatId, t(locale, "loginIntro"), {
+      inline_keyboard: [[{ text: t(locale, "openAccount"), url: actionLink }]],
+    });
+  } catch {
+    await sendText(botToken, chatId, t(locale, "notFound"));
+  }
+}
+
+/**
+ * Open a support thread from the chat, as the linked customer.
+ *
+ * Mirrors the site's own flow: a thread plus a first message, both written with
+ * the service key (the bot is not a logged-in session). The owner's queue is
+ * alerted through the same queue the site uses.
+ */
+async function openBotSupportThread(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  subject: string,
+  body: string,
+): Promise<{ ok: boolean; threadId?: string }> {
+  const { data: thread, error: threadError } = await supabase
+    .from("support_threads")
+    .insert({ user_id: userId, subject: subject.slice(0, 200), status: "open" })
+    .select("id")
+    .maybeSingle();
+
+  if (threadError || !thread) {
+    return { ok: false };
+  }
+
+  const { error: messageError } = await supabase.from("support_messages").insert({
+    thread_id: thread.id,
+    sender_id: userId,
+    sender_role: "customer",
+    body: body.slice(0, 4000),
+  });
+
+  if (messageError) {
+    await supabase.from("support_threads").delete().eq("id", thread.id);
+    return { ok: false };
+  }
+
+  // Alert the owner queue, same as the site does.
+  await supabase.from("telegram_alerts").insert({
+    type: "support_message",
+    payload: { thread_id: thread.id, user_id: userId, subject, body: body.slice(0, 600) },
+  });
+
+  return { ok: true, threadId: thread.id };
 }
 
 async function readProfile(
@@ -308,6 +475,56 @@ async function readProfile(
     .maybeSingle();
 
   return data ?? null;
+}
+
+// ─── Chat preferences (locale override + support flow state) ──────────────
+
+async function readPrefs(
+  supabase: ReturnType<typeof createClient>,
+  chatId: number,
+): Promise<{ locale: Locale | null; pending: string | null }> {
+  const { data } = await supabase
+    .from("telegram_chat_prefs")
+    .select("locale, pending")
+    .eq("chat_id", chatId)
+    .maybeSingle();
+
+  return {
+    locale: data?.locale === "ar" ? "ar" : data?.locale === "en" ? "en" : null,
+    pending: typeof data?.pending === "string" && data.pending ? data.pending : null,
+  };
+}
+
+async function writePref(
+  supabase: ReturnType<typeof createClient>,
+  chatId: number,
+  patch: { locale?: Locale | null; pending?: string | null },
+): Promise<void> {
+  const body: Record<string, unknown> = {};
+
+  if (patch.locale !== undefined) {
+    body.locale = patch.locale;
+  }
+
+  if (patch.pending !== undefined) {
+    body.pending = patch.pending;
+  }
+
+  await supabase.from("telegram_chat_prefs").upsert(
+    { chat_id: chatId, ...body },
+    { onConflict: "chat_id" },
+  );
+}
+
+/** A locale that prefers an explicit /language choice, then the interface. */
+async function effectiveLocale(
+  supabase: ReturnType<typeof createClient>,
+  chatId: number,
+  interfaceLocale: Locale,
+): Promise<Locale> {
+  const prefs = await readPrefs(supabase, chatId);
+
+  return prefs.locale ?? interfaceLocale;
 }
 
 // ─── Catalog reads ──────────────────────────────────────────────────────────
@@ -466,6 +683,141 @@ async function showOffers(
 }
 
 /**
+ * Deals and featured games — the text-only version of the homepage sections.
+ */
+async function readDeals(
+  supabase: ReturnType<typeof createClient>,
+  locale: Locale,
+): Promise<{ name: string; price: number; currency: string }[]> {
+  const { data } = await supabase
+    .from("offers")
+    .select("name_ar, name_en, price, currency, games!inner (name_ar, name_en)")
+    .eq("is_active", true)
+    .eq("is_sale", true)
+    .eq("games.is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("price", { ascending: true })
+    .limit(10);
+
+  return (data ?? []).map((row) => {
+    const game = Array.isArray(row.games) ? row.games[0] : row.games;
+    const name = locale === "ar" ? row.name_ar : row.name_en;
+    const gameName = game ? (locale === "ar" ? game.name_ar : game.name_en) : null;
+
+    return {
+      name: gameName ? `${gameName} — ${name}` : name,
+      price: row.price,
+      currency: row.currency,
+    };
+  });
+}
+
+async function showDeals(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+): Promise<void> {
+  const deals = await readDeals(supabase, locale);
+
+  if (deals.length === 0) {
+    await sendText(botToken, chatId, t(locale, "dealsEmpty"));
+    return;
+  }
+
+  await sendText(
+    botToken,
+    chatId,
+    [
+      t(locale, "deals"),
+      ...deals.map((deal) => {
+        const unit = deal.currency === "SYP" ? "SYP" : deal.currency === "EUR" ? "€" : "$";
+        return `${deal.name} — <b>${unit}${deal.price.toFixed(2)}</b>`;
+      }),
+      "",
+      "https://gh-store.me",
+    ].join("\n"),
+  );
+}
+
+/** Search games and offers by name — the bot's /search. */
+async function searchCatalogText(
+  supabase: ReturnType<typeof createClient>,
+  locale: Locale,
+  query: string,
+): Promise<{ games: { name: string; slug: string }[]; offers: { name: string; price: number; currency: string }[] }> {
+  const token = query.trim().slice(0, 60);
+
+  if (!token) {
+    return { games: [], offers: [] };
+  }
+
+  const [gamesResult, offersResult] = await Promise.all([
+    supabase
+      .from("games")
+      .select("name_ar, name_en, slug")
+      .eq("is_active", true)
+      .or(`name_ar.ilike.%${token}%,name_en.ilike.%${token}%`)
+      .limit(6),
+    supabase
+      .from("offers")
+      .select("name_ar, name_en, price, currency")
+      .eq("is_active", true)
+      .or(`name_ar.ilike.%${token}%,name_en.ilike.%${token}%`)
+      .limit(6),
+  ]);
+
+  return {
+    games: (gamesResult.data ?? []).map((game) => ({
+      name: locale === "ar" ? game.name_ar : game.name_en,
+      slug: game.slug,
+    })),
+    offers: (offersResult.data ?? []).map((offer) => ({
+      name: locale === "ar" ? offer.name_ar : offer.name_en,
+      price: offer.price,
+      currency: offer.currency,
+    })),
+  };
+}
+
+async function showSearchResults(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  query: string,
+): Promise<void> {
+  const { games, offers } = await searchCatalogText(supabase, locale, query);
+
+  if (games.length === 0 && offers.length === 0) {
+    await sendText(botToken, chatId, t(locale, "searchEmpty"));
+    return;
+  }
+
+  const lines: string[] = [];
+
+  if (games.length > 0) {
+    lines.push(t(locale, "games"));
+    lines.push(...games.map((game) => `🎮 ${game.name} — https://gh-store.me/${locale}/games/${game.slug}`));
+  }
+
+  if (offers.length > 0) {
+    if (lines.length > 0) {
+      lines.push("");
+    }
+    lines.push(t(locale, "offers"));
+    lines.push(
+      ...offers.map((offer) => {
+        const unit = offer.currency === "SYP" ? "SYP" : offer.currency === "EUR" ? "€" : "$";
+        return `${offer.name} — <b>${unit}${offer.price.toFixed(2)}</b>`;
+      }),
+    );
+  }
+
+  await sendText(botToken, chatId, lines.join("\n"));
+}
+
+/**
  * Try to consume a link code and bind the chat to its account.
  *
  * Returns `null` when the code is unknown/used/expired — the caller decides what
@@ -590,11 +942,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return;
     }
 
-    const locale = localeOf(message?.from?.language_code ?? callback?.from?.language_code);
+    const interfaceLocale = localeOf(message?.from?.language_code ?? callback?.from?.language_code);
     const ownerChatId = text(telegramSettings?.chat_id);
     const isOwner = ownerChatId !== null && ownerChatId === String(chatId);
     const link = await readChatLink(supabase, chatId);
     const linked = link !== null;
+    const locale = await effectiveLocale(supabase, chatId, interfaceLocale);
+    const prefs = await readPrefs(supabase, chatId);
 
     if (message?.text) {
       const command = message.text.trim().split(/\s+/)[0] ?? "";
@@ -756,22 +1110,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
           return;
         }
-        const orders = await readOrders(supabase, link.user_id);
-        if (orders.length === 0) {
-          await sendText(botToken, chatId, t(locale, "ordersEmpty"));
-          return;
-        }
-        await sendText(
-          botToken,
-          chatId,
-          [
-            t(locale, "orders"),
-            ...orders.map(
-              (order) =>
-                `${order.order_number} — <b>${money(order.total)}</b> · ${escapeHtml(order.status)}`,
-            ),
-          ].join("\n"),
-        );
+        await showOrdersList(supabase, botToken, chatId, locale, link.user_id);
         return;
       }
 
@@ -820,6 +1159,97 @@ Deno.serve(async (request: Request): Promise<Response> => {
         return;
       }
 
+      if (command === "/cancel") {
+        if (prefs.pending) {
+          await writePref(supabase, chatId, { pending: null });
+          await sendText(botToken, chatId, t(locale, "supportCancel"), menuKeyboard(locale, linked));
+        }
+        return;
+      }
+
+      // ── Support flow state machine ───────────────────────────────────────
+      // `/support` asks for a subject; the next message is the subject; the one
+      // after that is the body. State lives in `telegram_chat_prefs.pending`.
+      if (prefs.pending === "support_subject") {
+        const subject = message.text.trim().slice(0, 200);
+
+        if (!subject) {
+          await sendText(botToken, chatId, t(locale, "supportSubjectPrompt"));
+          return;
+        }
+
+        await writePref(supabase, chatId, { pending: `support_body:${subject}` });
+        await sendText(botToken, chatId, t(locale, "supportBodyPrompt"));
+        return;
+      }
+
+      if (prefs.pending?.startsWith("support_body:")) {
+        const subject = prefs.pending.slice("support_body:".length);
+        const body = message.text.trim();
+
+        await writePref(supabase, chatId, { pending: null });
+
+        if (!body) {
+          await sendText(botToken, chatId, t(locale, "supportBodyPrompt"));
+          return;
+        }
+
+        if (!linked) {
+          await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+          return;
+        }
+
+        const result = await openBotSupportThread(supabase, link.user_id, subject, body);
+
+        await sendText(
+          botToken,
+          chatId,
+          result.ok ? t(locale, "supportSent") : t(locale, "notFound"),
+          menuKeyboard(locale, true),
+        );
+        return;
+      }
+
+      if (command === "/support") {
+        if (!linked) {
+          await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+          return;
+        }
+
+        await writePref(supabase, chatId, { pending: "support_subject" });
+        await sendText(botToken, chatId, t(locale, "supportSubjectPrompt"));
+        return;
+      }
+
+      if (command === "/language") {
+        const next: Locale = locale === "ar" ? "en" : "ar";
+        await writePref(supabase, chatId, { locale: next });
+        await sendText(botToken, chatId, `${t(next, "languageChanged")} (${next})`, menuKeyboard(next, linked));
+        return;
+      }
+
+      if (command === "/search") {
+        const query = rest;
+
+        if (!query) {
+          await sendText(botToken, chatId, t(locale, "searchPrompt"));
+          return;
+        }
+
+        await showSearchResults(supabase, botToken, chatId, locale, query);
+        return;
+      }
+
+      if (command === "/login") {
+        if (!linked) {
+          await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+          return;
+        }
+
+        await sendLoginLink(supabase, botToken, chatId, locale, link.user_id);
+        return;
+      }
+
       // Anything else from an unlinked customer: point at the menu.
       if (!linked) {
         await sendText(botToken, chatId, t(locale, "welcome"), menuKeyboard(locale, false));
@@ -837,6 +1267,38 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
         case "catalog":
           await showCatalog(supabase, botToken, chatId, locale);
+          break;
+
+        case "deals":
+          await showDeals(supabase, botToken, chatId, locale);
+          break;
+
+        case "search":
+          await sendText(botToken, chatId, t(locale, "searchPrompt"));
+          break;
+
+        case "language": {
+          const next: Locale = locale === "ar" ? "en" : "ar";
+          await writePref(supabase, chatId, { locale: next });
+          await sendText(botToken, chatId, `${t(next, "languageChanged")} (${next})`, menuKeyboard(next, linked));
+          break;
+        }
+
+        case "support":
+          if (!linked) {
+            await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+          } else {
+            await writePref(supabase, chatId, { pending: "support_subject" });
+            await sendText(botToken, chatId, t(locale, "supportSubjectPrompt"));
+          }
+          break;
+
+        case "login":
+          if (!linked) {
+            await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+          } else {
+            await sendLoginLink(supabase, botToken, chatId, locale, link.user_id);
+          }
           break;
 
         default:
@@ -861,20 +1323,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           if (!linked) {
             await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
           } else {
-            const orders = await readOrders(supabase, link.user_id);
-            await sendText(
-              botToken,
-              chatId,
-              orders.length === 0
-                ? t(locale, "ordersEmpty")
-                : [
-                    t(locale, "orders"),
-                    ...orders.map(
-                      (order) =>
-                        `${order.order_number} — <b>${money(order.total)}</b> · ${escapeHtml(order.status)}`,
-                    ),
-                  ].join("\n"),
-            );
+            await showOrdersList(supabase, botToken, chatId, locale, link.user_id);
           }
           break;
 

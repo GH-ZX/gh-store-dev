@@ -647,14 +647,47 @@ export async function registerTelegramWebhook(token: string, secret: string): Pr
   }
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url, allowed_updates: ["message", "callback_query"] }),
-    });
-    const payload = (await response.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
+    const [webhookResult] = await Promise.allSettled([
+      fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url, allowed_updates: ["message", "callback_query"] }),
+      }),
+      // The command list is part of the same setup: register it with the
+      // webhook so Telegram shows a menu button. It is best-effort — a failure
+      // here must not fail the registration.
+      fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          commands: [
+            { command: "start", description: "Menu" },
+            { command: "catalog", description: "Browse the catalog" },
+            { command: "orders", description: "My orders" },
+            { command: "wallet", description: "My balance" },
+            { command: "deals", description: "Deals and featured" },
+            { command: "search", description: "Search games and packages" },
+            { command: "support", description: "Contact support" },
+            { command: "language", description: "Switch language" },
+            { command: "login", description: "Open my account signed in" },
+            { command: "link", description: "Link this chat to my account" },
+            { command: "unlink", description: "Unlink this chat" },
+            { command: "help", description: "Help" },
+          ],
+          scope: { type: "all_private_chats" },
+        }),
+      }),
+    ]);
 
-    if (!response.ok || payload?.ok !== true) {
+    const webhookFulfilled = webhookResult.status === "fulfilled" ? webhookResult.value : null;
+
+    if (!webhookFulfilled) {
+      return { ok: false, kind: "network" };
+    }
+
+    const payload = (await webhookFulfilled.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
+
+    if (!webhookFulfilled.ok || payload?.ok !== true) {
       const description = payload?.description ?? "";
 
       return {
