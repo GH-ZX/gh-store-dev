@@ -14,6 +14,11 @@ Full details: [`docs/operations/telegram-bot.md`](docs/operations/telegram-bot.m
 2. Send `/newbot` and follow the prompts (name, username).
 3. Copy the **bot token** BotFather gives you.
 
+> **Before registering the webhook**, make sure `SUPABASE_SERVICE_ROLE_KEY` is
+> set as a `gh-store` Worker secret. The webhook verifies incoming updates by
+> reading the stored secret from Supabase; without the key it answers 401/503
+> and Telegram shows a webhook error.
+
 ## Step 2 — Add the Worker secrets
 
 In Cloudflare → Workers → `gh-store` → Settings → **Variables and Secrets**,
@@ -26,8 +31,11 @@ add these four secrets:
 | `SUPABASE_URL` | `https://njlzgfddfnnqujaodbta.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Your project's service-role key |
 
-> `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are required for the alert
-> drain. Without them the bot logs `alerts_not_configured` and does nothing.
+> `SUPABASE_SERVICE_ROLE_KEY` is **required**: the Worker reads the stored
+> webhook secret and the alert queue from Supabase with it, so without it the
+> webhook answers 401/503 and Telegram reports the webhook as failing.
+> `SUPABASE_URL` may be omitted if `NEXT_PUBLIC_SUPABASE_URL` is already set
+> as a var — the Worker falls back to it.
 
 ## Step 3 — Point Telegram at the Worker (run once)
 

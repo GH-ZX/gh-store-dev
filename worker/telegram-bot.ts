@@ -22,6 +22,7 @@
 
 export type BotEnv = {
   NEXT_PUBLIC_APP_URL?: string;
+  NEXT_PUBLIC_SUPABASE_URL?: string;
   RECONCILE_CRON_SECRET?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
@@ -59,6 +60,8 @@ type TelegramSettings = {
   linked_at?: string | null;
   alert_prefs?: Record<string, boolean> | null;
 };
+
+export type TelegramWebhookSettings = { telegram: TelegramSettings; providers: Record<string, unknown> };
 
 type AlertRow = {
   id: string;
@@ -146,29 +149,47 @@ async function supabaseJson(
   path: string,
   init: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<{ ok: boolean; status: number; json: unknown }> {
-  const url = `${env.SUPABASE_URL?.replace(/\/$/, "")}/rest/v1/${path}`;
+  // The URL var ships with the Worker (wrangler `vars`); the service key must
+  // be a secret. Missing either must fail the call, never throw.
+  const baseUrl = env.SUPABASE_URL?.trim() || env.NEXT_PUBLIC_SUPABASE_URL?.trim() || "";
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
+
+  if (!baseUrl || !serviceKey) {
+    botLog("supabase_not_configured", { hasUrl: Boolean(baseUrl), hasKey: Boolean(serviceKey) });
+    return { ok: false, status: 0, json: null };
+  }
+
+  const url = `${baseUrl.replace(/\/$/, "")}/rest/v1/${path}`;
   const headers: Record<string, string> = {
-    apikey: env.SUPABASE_SERVICE_ROLE_KEY ?? "",
-    authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`,
+    apikey: serviceKey,
+    authorization: `Bearer ${serviceKey}`,
     ...(init.method === "PATCH" || init.method === "POST"
       ? { "content-type": "application/json", prefer: "return=minimal" }
       : {}),
     ...(init.headers ?? {}),
   };
 
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers,
-    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-  });
+  try {
+    const response = await fetch(url, {
+      method: init.method ?? "GET",
+      headers,
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+    });
 
-  let json: unknown = null;
+    let json: unknown = null;
 
-  if (response.status !== 204) {
-    json = await response.json().catch(() => null);
+    if (response.status !== 204) {
+      json = await response.json().catch(() => null);
+    }
+
+    return { ok: response.ok, status: response.status, json };
+  } catch (error) {
+    botLog("supabase_fetch_threw", {
+      path,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+    return { ok: false, status: 0, json: null };
   }
-
-  return { ok: response.ok, status: response.status, json };
 }
 
 async function readSettings(env: BotEnv): Promise<{ telegram: TelegramSettings; providers: Record<string, unknown> }> {
@@ -520,6 +541,26 @@ async function fetchG2BulkBalance(apiKey: string): Promise<number | null> {
 
 // ─── Public entry points used by the Worker ────────────────────────────────
 
+/**
+ * Verify the shared secret Telegram sends, and return it for the handlers.
+ *
+ * The dashboard registers the webhook with a stored secret; the environment
+ * secret wins when both exist. Every failure mode answers `false` rather than
+ * throwing, because the alternative is a 500 that Telegram retries forever.
+ */
+async function resolveWebhookSecret(env: BotEnv): Promise<string | null> {
+  const envSecret = env.TELEGRAM_WEBHOOK_SECRET?.trim();
+
+  if (envSecret) {
+    return envSecret;
+  }
+
+  const settings = await readSettings(env);
+  const stored = textValue(settings.telegram.webhook_secret);
+
+  return stored ?? null;
+}
+
 export async function handleTelegramWebhook(
   request: Request,
   env: BotEnv,
@@ -529,75 +570,75 @@ export async function handleTelegramWebhook(
     return new Response("method not allowed", { status: 405 });
   }
 
-  /*
-   * The dashboard can register the webhook itself, which stores the secret in
-   * the database; the environment secret wins when both exist. The settings are
-   * only read when no environment secret is set, so a database outage never
-   * breaks an already-registered webhook.
-   */
-  let expected = env.TELEGRAM_WEBHOOK_SECRET?.trim() ?? "";
-
-  if (!expected) {
-    const { telegram: storedTelegram } = await readSettings(env);
-    expected =
-      typeof storedTelegram.webhook_secret === "string" ? storedTelegram.webhook_secret.trim() : "";
-  }
-
-  const provided = request.headers.get("x-telegram-bot-api-secret-token")?.trim() ?? "";
-
-  if (!expected || !provided || !(await secretMatches(provided, expected))) {
-    botLog("webhook_unauthorized", { presented: Boolean(provided) });
-    return new Response("unauthorized", { status: 401 });
-  }
-
-  let update: TelegramUpdate;
-
   try {
-    update = (await request.json()) as TelegramUpdate;
-  } catch {
-    return new Response("invalid json", { status: 400 });
-  }
+    const expected = await resolveWebhookSecret(env);
+    const provided = request.headers.get("x-telegram-bot-api-secret-token")?.trim() ?? "";
 
-  // Reply immediately; Telegram retries anything slower. The command runs after.
-  ctx.waitUntil(
-    (async () => {
-      const { telegram } = await readSettings(env);
-      const token = textValue(telegram.bot_token) ?? textValue(env.TELEGRAM_BOT_TOKEN);
-
-      if (!token) {
-        botLog("webhook_no_token");
-        return;
-      }
-
-      const message = update.message;
-      const chatId = message?.chat?.id ?? update.callback_query?.message?.chat?.id;
-
-      if (chatId === undefined) {
-        return;
-      }
-
-      const chatIdText = String(chatId);
-
-      if (message?.text) {
-        const name = message.text.trim().split(/\s+/)[0] ?? "";
-        const command = COMMANDS[name];
-
-        if (command) {
-          if (name === "/start" || (await requireOwner(env, chatIdText))) {
-            await command(env, chatIdText);
-          }
-        }
-      } else if (update.callback_query) {
-        await handleCallback(env, update, token);
-      }
-    })().catch((error: unknown) => {
-      botLog("webhook_processing_failed", {
-        error: error instanceof Error ? error.message : "Unknown",
+    if (!expected || !provided || !(await secretMatches(provided, expected))) {
+      botLog("webhook_unauthorized", {
+        presented: Boolean(provided),
+        storedSecretPresent: Boolean(expected),
       });
-    }),
-  );
+      return new Response("unauthorized", { status: 401 });
+    }
 
-  return new Response("ok", { status: 200 });
+    let update: TelegramUpdate;
+
+    try {
+      update = (await request.json()) as TelegramUpdate;
+    } catch {
+      return new Response("invalid json", { status: 400 });
+    }
+
+    // Reply immediately; Telegram retries anything slower. The command runs after.
+    ctx.waitUntil(
+      (async () => {
+        const { telegram } = await readSettings(env);
+        const token = textValue(telegram.bot_token) ?? textValue(env.TELEGRAM_BOT_TOKEN);
+
+        if (!token) {
+          botLog("webhook_no_token");
+          return;
+        }
+
+        const message = update.message;
+        const chatId = message?.chat?.id ?? update.callback_query?.message?.chat?.id;
+
+        if (chatId === undefined) {
+          return;
+        }
+
+        const chatIdText = String(chatId);
+
+        if (message?.text) {
+          const name = message.text.trim().split(/\s+/)[0] ?? "";
+          const command = COMMANDS[name];
+
+          if (command) {
+            if (name === "/start" || (await requireOwner(env, chatIdText))) {
+              await command(env, chatIdText);
+            }
+          }
+        } else if (update.callback_query) {
+          await handleCallback(env, update, token);
+        }
+      })().catch((error: unknown) => {
+        botLog("webhook_processing_failed", {
+          error: error instanceof Error ? error.message : "Unknown",
+        });
+      }),
+    );
+
+    return new Response("ok", { status: 200 });
+  } catch (error) {
+    // A settings outage must not look like a Telegram problem. 503 tells
+    // Telegram to try again later; the unhandled 500 it replaces would do the
+    // same but without the diagnostic in our logs.
+    botLog("webhook_internal_error", {
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+    return new Response("service unavailable", { status: 503 });
+  }
 }
 
 export async function deliverTelegramAlerts(env: BotEnv): Promise<void> {

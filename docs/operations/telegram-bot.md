@@ -33,13 +33,18 @@ The whole bot is configured from **Dashboard → Providers and API → Telegram
 owner alerts**, without touching Cloudflare or a terminal:
 
 1. Create the bot with [@BotFather](https://t.me/BotFather) and copy the token.
-2. In the dashboard's Telegram panel, paste the token, save, and press **Verify
+2. Set `SUPABASE_SERVICE_ROLE_KEY` as a **Worker secret** in the Cloudflare
+   dashboard (Workers → gh-store → Settings → Variables and Secrets). This is
+   what lets the Worker read the webhook secret and the alert queue back from
+   Supabase — without it the webhook returns 401/503 and Telegram reports it
+   as failing.
+3. In the dashboard's Telegram panel, paste the token, save, and press **Verify
    bot**.
-3. Press **Register the webhook** — the dashboard performs the `setWebhook`
+4. Press **Register the webhook** — the dashboard performs the `setWebhook`
    call itself. No curl needed.
-4. Open the bot in Telegram and send `/start` from the chat that should receive
+5. Open the bot in Telegram and send `/start` from the chat that should receive
    alerts.
-5. Verify: place a test order or send a support message; the alert arrives
+6. Verify: place a test order or send a support message; the alert arrives
    within five minutes.
 
 ### Manual setup (equivalent)
@@ -61,9 +66,14 @@ owner alerts**, without touching Cloudflare or a terminal:
    | `SUPABASE_URL` | `https://njlzgfddfnnqujaodbta.supabase.co` |
    | `SUPABASE_SERVICE_ROLE_KEY` | Your project's service-role key |
 
-   `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are required for the alert
-   drain (the reconciliation cron only needs `RECONCILE_CRON_SECRET`). Set both
-   on the Worker or the bot will log `alerts_not_configured` and do nothing.
+   `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are **required** for two
+   things: the alert drain, and the webhook itself — when the dashboard
+   registers the webhook, the secret it stores lives in Supabase, so every
+   incoming Telegram update is verified by reading it back from the database.
+   Without the service key on the Worker the webhook cannot verify anything and
+   answers 401/503, which Telegram logs as a failing webhook. `SUPABASE_URL`
+   may be omitted if `NEXT_PUBLIC_SUPABASE_URL` is already set as a var — the
+   Worker falls back to it.
 
 3. **Point Telegram at the Worker** (run once):
 
