@@ -542,23 +542,31 @@ async function fetchG2BulkBalance(apiKey: string): Promise<number | null> {
 // ─── Public entry points used by the Worker ────────────────────────────────
 
 /**
- * Verify the shared secret Telegram sends, and return it for the handlers.
+ * The candidate secrets the webhook may be registered with.
  *
- * The dashboard registers the webhook with a stored secret; the environment
- * secret wins when both exist. Every failure mode answers `false` rather than
- * throwing, because the alternative is a 500 that Telegram retries forever.
+ * The dashboard registers the webhook with a secret it stores in the database;
+ * the manual setup path uses a `TELEGRAM_WEBHOOK_SECRET` Worker secret. Either
+ * one may be in use on a given deployment, so a request is accepted when it
+ * matches any candidate — both are only ever chosen by the owner. Every failure
+ * mode answers an empty list rather than throwing, because the alternative is a
+ * 500 that Telegram retries forever.
  */
-async function resolveWebhookSecret(env: BotEnv): Promise<string | null> {
+async function resolveWebhookSecrets(env: BotEnv): Promise<string[]> {
+  const secrets = new Set<string>();
   const envSecret = env.TELEGRAM_WEBHOOK_SECRET?.trim();
 
   if (envSecret) {
-    return envSecret;
+    secrets.add(envSecret);
   }
 
   const settings = await readSettings(env);
   const stored = textValue(settings.telegram.webhook_secret);
 
-  return stored ?? null;
+  if (stored) {
+    secrets.add(stored);
+  }
+
+  return [...secrets];
 }
 
 export async function handleTelegramWebhook(
@@ -571,13 +579,30 @@ export async function handleTelegramWebhook(
   }
 
   try {
-    const expected = await resolveWebhookSecret(env);
+    const candidates = await resolveWebhookSecrets(env);
     const provided = request.headers.get("x-telegram-bot-api-secret-token")?.trim() ?? "";
 
-    if (!expected || !provided || !(await secretMatches(provided, expected))) {
+    if (candidates.length === 0 || !provided) {
       botLog("webhook_unauthorized", {
         presented: Boolean(provided),
-        storedSecretPresent: Boolean(expected),
+        candidateCount: candidates.length,
+      });
+      return new Response("unauthorized", { status: 401 });
+    }
+
+    let authorized = false;
+
+    for (const candidate of candidates) {
+      if (await secretMatches(provided, candidate)) {
+        authorized = true;
+        break;
+      }
+    }
+
+    if (!authorized) {
+      botLog("webhook_unauthorized", {
+        presented: Boolean(provided),
+        candidateCount: candidates.length,
       });
       return new Response("unauthorized", { status: 401 });
     }
