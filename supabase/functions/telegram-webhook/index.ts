@@ -105,6 +105,9 @@ type Texts = {
   orderLink: string;
   rechargeTitle: string;
   rechargeHelp: string;
+  shamcash: string;
+  syriatel: string;
+  binance: string;
   memberSince: string;
   orderCount: string;
   buyCancel: string;
@@ -173,6 +176,9 @@ const TEXTS: Record<Locale, Texts> = {
     orderLink: "تفاصيل الطلب",
     rechargeTitle: "💰 تعبئة الرصيد",
     rechargeHelp: "عبّئ محفظتك من المتجر ثم أكمل الشراء هنا. طرق التعبئة:",
+    shamcash: "شام كاش (ShamCash)",
+    syriatel: "سيريتل كاش (Syriatel Cash)",
+    binance: "بايننس (Binance)",
     memberSince: "عضو منذ",
     orderCount: "عدد الطلبات",
     buyCancel: "تم إلغاء عملية الشراء.",
@@ -239,6 +245,9 @@ const TEXTS: Record<Locale, Texts> = {
     orderLink: "Order details",
     rechargeTitle: "💰 Top up your balance",
     rechargeHelp: "Top up your wallet on the store, then finish the purchase here. Methods:",
+    shamcash: "ShamCash",
+    syriatel: "Syriatel Cash",
+    binance: "Binance",
     memberSince: "Member since",
     orderCount: "Orders",
     buyCancel: "Purchase cancelled.",
@@ -1033,7 +1042,7 @@ async function handleBuyRecharge(
   chatId: number,
   locale: Locale,
 ): Promise<void> {
-  const methods = await readRechargeMethods(supabase);
+  const methods = await readRechargeMethods(supabase, locale);
   const lines: string[] = [t(locale, "rechargeTitle"), t(locale, "rechargeHelp")];
 
   if (methods.length > 0) {
@@ -1047,13 +1056,40 @@ async function handleBuyRecharge(
   });
 }
 
-/** The enabled recharge methods, in the customer's language. */
-async function readRechargeMethods(supabase: ReturnType<typeof createClient>): Promise<string[]> {
+/**
+ * The enabled recharge methods, in the customer's language.
+ *
+ * Reads the same sources the site's recharge page reads: the SAM/ShamCash
+ * options (via `get_sam_payment_options`), the manual bank methods (via
+ * `get_recharge_methods`), and the Binance toggle.
+ */
+async function readRechargeMethods(
+  supabase: ReturnType<typeof createClient>,
+  locale: Locale,
+): Promise<string[]> {
+  const names: string[] = [];
+
+  try {
+    const { data: sam } = await supabase.rpc("get_sam_payment_options");
+
+    if (sam?.enabled === true && Array.isArray(sam.methods)) {
+      for (const method of sam.methods as string[]) {
+        if (method === "shamcash") {
+          names.push(t(locale, "shamcash"));
+        } else if (method === "syriatel") {
+          names.push(t(locale, "syriatel"));
+        }
+      }
+    }
+  } catch {
+    // The RPC is public; a failure means ShamCash is simply not offered.
+  }
+
   try {
     const { data } = await supabase.rpc("get_recharge_methods");
     const methods = Array.isArray(data?.methods) ? data.methods : [];
 
-    return methods.flatMap((raw: unknown) => {
+    for (const raw of methods) {
       if (raw && typeof raw === "object" && !Array.isArray(raw)) {
         const record = raw as Record<string, unknown>;
 
@@ -1061,16 +1097,33 @@ async function readRechargeMethods(supabase: ReturnType<typeof createClient>): P
           const label = text(record.label_en) ?? text(record.label_ar);
 
           if (label) {
-            return [label];
+            names.push(label);
           }
         }
       }
-
-      return [];
-    });
+    }
   } catch {
-    return [];
+    // Manual methods unavailable; the SAM and Binance lines still show.
   }
+
+  try {
+    const { data: settings } = await supabase
+      .from("store_settings")
+      .select("payments")
+      .eq("id", "global")
+      .maybeSingle();
+
+    const payments = settings?.payments as Record<string, unknown> | null;
+    const binance = payments?.binance as Record<string, unknown> | null | undefined;
+
+    if (binance?.enabled === true) {
+      names.push(t(locale, "binance"));
+    }
+  } catch {
+    // Binance unknown; the other lines still show.
+  }
+
+  return names;
 }
 
 async function handleBuyConfirm(
