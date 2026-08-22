@@ -74,6 +74,41 @@ export async function mintTelegramLinkCode(): Promise<{ code: string; expiresAt:
   return { code, expiresAt: expiresAt.toISOString() };
 }
 
+/**
+ * Mint a 6-digit code from the Telegram connect page.
+ *
+ * Same one-use, short-lived contract as {@link mintTelegramLinkCode} but the
+ * code is all digits, because the connect flow asks the customer to type it
+ * back in the chat rather than copy it. The bot accepts it through the same
+ * table and code path.
+ */
+export async function mintTelegramConnectCode(): Promise<{ code: string; expiresAt: string }> {
+  const user = await requireAuth();
+  const supabase = await createSupabaseServerClient();
+
+  // Retire any previously minted, still-pending code for this account.
+  await supabase
+    .from("telegram_link_codes")
+    .update({ used_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .is("used_at", null);
+
+  const code = generateConnectCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  const { error } = await supabase.from("telegram_link_codes").insert({
+    user_id: user.id,
+    code,
+    expires_at: expiresAt.toISOString(),
+  });
+
+  if (error) {
+    throw new Error(`Minting a Telegram connect code failed: ${error.message}`);
+  }
+
+  return { code, expiresAt: expiresAt.toISOString() };
+}
+
 /** Unlink the signed-in account's chat, if any. */
 export async function unlinkMyTelegram(): Promise<void> {
   const user = await requireAuth();
@@ -98,4 +133,9 @@ function generateLinkCode(): string {
   }
 
   return `GS-${chars.join("")}`;
+}
+
+/** A 6-digit code like `483920`, zero-padded, for the connect page. */
+function generateConnectCode(): string {
+  return String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
 }

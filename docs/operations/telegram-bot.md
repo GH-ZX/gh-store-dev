@@ -126,12 +126,17 @@ orders and wallet balance — no password ever goes through the bot.
 
 The linking proof is a short-lived code, exactly like a two-factor backup:
 
-1. On the site: **My account → Telegram bot** → **Get a link code** (with a
-   **Copy** button). The code (e.g. `GS-1F4K2X`) is shown only to the signed-in
-   account owner and expires in ten minutes. Re-minting retires the previous
-   code.
-2. In the bot: send the code as a message (or `/link <code>`). The bot
+1. In the bot, tap **🔗 Sign in** (or send `/link`). The bot replies with a
+   **Open the store** button pointing at `/telegram-connect`.
+2. On that page (login required), the customer taps **Get your 6-digit code**.
+   The code (e.g. `483920`) is shown only to the signed-in account owner and
+   expires in ten minutes. Re-minting retires the previous code.
+3. Back in the chat, send the code as a message (or `/link <code>`). The bot
    validates it, binds the chat to the account, and marks the code used.
+
+The profile page offers the same flow with a copyable `GS-XXXXXX` code under
+**My account → Telegram bot**; both write the same one-use codes the bot
+consumes.
 
 From then on the chat is linked: `/orders` shows the last five orders with
 status and a **site deep-link button** per order, `/wallet` shows the balance,

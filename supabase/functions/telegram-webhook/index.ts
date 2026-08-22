@@ -48,6 +48,7 @@ type Texts = {
   welcome: string;
   linkedMenu: string;
   signInHint: string;
+  openConnect: string;
   orders: string;
   ordersEmpty: string;
   wallet: string;
@@ -96,7 +97,8 @@ const TEXTS: Record<Locale, Texts> = {
     welcome:
       "👋 أهلاً بك في <b>GH Store</b>!\n\nاختر ما تريد من الأزرار بالأسفل. لربط حسابك بالمحادثة اضغط «دخول». إذا لم يكن لديك حساب، أنشئه من المتجر أولًا.",
     linkedMenu: "مرحبًا بعودتك! استخدم الأزرار للاطلاع على طلباتك ورصيدك.",
-    signInHint: "لربط حسابك بالمحادثة: افتح المتجر وادخل إلى حسابك، ثم «ربط تيليغرام» وانسخ الرمز وأرسله هنا.",
+    signInHint: "لربط هذه المحادثة بحسابك: افتح المتجر، احصل على رمز من 6 أرقام، ثم أرسله هنا.",
+    openConnect: "افتح المتجر",
     orders: "📦 طلباتك الأخيرة",
     ordersEmpty: "لا توجد طلبات بعد.",
     wallet: "👛 رصيد محفظتك",
@@ -143,7 +145,8 @@ const TEXTS: Record<Locale, Texts> = {
     welcome:
       "👋 Welcome to <b>GH Store</b>!\n\nPick what you need from the buttons below. To connect your account to this chat, tap Sign in. No account yet? Create one on the store first.",
     linkedMenu: "Welcome back! Use the buttons to see your orders and balance.",
-    signInHint: "To link this chat to your account: open the store, sign in, then under “Telegram” copy the code and send it here.",
+    signInHint: "To connect this chat to your account: open the store, get your 6-digit code, and send it here.",
+    openConnect: "Open the store",
     orders: "📦 Your latest orders",
     ordersEmpty: "No orders yet.",
     wallet: "👛 Your wallet balance",
@@ -262,6 +265,15 @@ function menuKeyboard(locale: Locale, linked: boolean): unknown {
       ],
       linked ? [{ text: t(locale, "unlink"), callback_data: "unlink" }] : [],
     ].filter((row) => row.length > 0),
+  };
+}
+
+/** The button that takes an unlinked customer to the connect page. */
+function connectKeyboard(locale: Locale): unknown {
+  return {
+    inline_keyboard: [
+      [{ text: t(locale, "openConnect"), url: `https://gh-store.me/${locale}/telegram-connect` }],
+    ],
   };
 }
 
@@ -1107,7 +1119,11 @@ Deno.serve(async (request: Request): Promise<Response> => {
       }
 
       if (command === "/link" || command === "/signin") {
-        await sendText(botToken, chatId, t(locale, linked ? "linkedMenu" : "signInHint"));
+        if (linked) {
+          await sendText(botToken, chatId, t(locale, "linkedMenu"));
+        } else {
+          await sendText(botToken, chatId, t(locale, "signInHint"), connectKeyboard(locale));
+        }
         return;
       }
 
@@ -1322,7 +1338,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           break;
 
         case "link":
-          await sendText(botToken, chatId, t(locale, "signInHint"));
+          await sendText(botToken, chatId, t(locale, "signInHint"), connectKeyboard(locale));
           break;
 
         case "orders":

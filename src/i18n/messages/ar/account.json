@@ -71,6 +71,24 @@
     "linked": "تم الربط.",
     "unlinked": "تم إلغاء الربط."
   },
+  "telegramConnect": {
+    "eyebrow": "تيليغرام",
+    "title": "ربط تيليغرام",
+    "description": "اربط محادثتك بهذا الحساب ليتمكن البوت من عرض طلباتك ورصيدك.",
+    "linkedDescription": "هذه المحادثة متصلة. البوت يجيبك بطلباتك ورصيدك.",
+    "unlinkedDescription": "احصل على رمز من 6 أرقام وأرسله إلى بوت المتجر في تيليغرام لربط هذا الحساب.",
+    "getCodeAction": "الحصول على الرمز",
+    "newCodeAction": "الحصول على رمز جديد",
+    "codeHint": "أرسل هذا الرمز إلى",
+    "codeCopy": "نسخ",
+    "codeCopied": "تم النسخ",
+    "codeExpiry": "ينتهي السريان عند",
+    "openBotAction": "فتح البوت",
+    "openBotHint": "أرسل الرمز إلى بوت المتجر:",
+    "unlinkAction": "قطع الاتصال",
+    "linked": "تم الاتصال.",
+    "unlinked": "تم قطع الاتصال."
+  },
   "notifications": {
     "eyebrow": "الإشعارات",
     "title": "الإشعارات",

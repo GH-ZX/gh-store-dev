@@ -32,6 +32,8 @@ const telegramSettingsSchema = z.object({
   bot_token: z.string().nullish(),
   webhook_secret: z.string().nullish(),
   chat_id: z.string().nullish(),
+  /** The bot's @username, so customer pages can say which bot to contact. */
+  bot_username: z.string().nullish(),
   enabled: z.boolean().optional().catch(undefined),
   alert_prefs: alertPrefsSchema.nullish(),
   linked_at: z.string().nullish(),
@@ -145,9 +147,18 @@ export function toTelegramStatus(settings: unknown): TelegramStatus {
 export type TelegramSettingsUpdate = {
   botToken?: string;
   webhookSecret?: string;
+  botUsername?: string;
   enabled?: boolean;
   alertPrefs?: Record<string, boolean>;
 };
+
+/** The stored bot @username, if the admin has verified the bot at least once. */
+export function readTelegramBotUsername(settings: unknown): string | null {
+  const parsed = telegramSettingsSchema.safeParse(unwrapTelegram(settings));
+  const username = parsed.success ? parsed.data?.bot_username : undefined;
+
+  return typeof username === "string" && username.trim() ? username.trim() : null;
+}
 
 /**
  * Merge an update into the stored `store_settings.telegram` object.
@@ -181,6 +192,7 @@ export function mergeTelegramSettings(
       ...base,
       bot_token: nextToken,
       webhook_secret: update.webhookSecret ?? current.webhookSecret,
+      bot_username: update.botUsername?.trim() || readTelegramBotUsername(settings),
       enabled: update.enabled ?? (nextToken === null ? false : suppliedToken ? true : storedFlag !== false),
       alert_prefs: update.alertPrefs ?? readTelegramAlertPrefs(settings),
       updated_at: updatedAt,

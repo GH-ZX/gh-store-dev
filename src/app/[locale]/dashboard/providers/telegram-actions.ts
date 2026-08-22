@@ -102,6 +102,13 @@ export async function verifyTelegramBotAction(
     return { ...INITIAL_TELEGRAM_STATE, error: bot.kind };
   }
 
+  // Remember the bot's @username: the customer connect page says which bot to
+  // send the linking code to. Best-effort — a failure here is not a failure of
+  // the verification itself.
+  if (bot.username) {
+    await saveTelegramSettings({ botUsername: bot.username }).catch(() => undefined);
+  }
+
   const webhook = await readTelegramWebhookState(botToken);
 
   return {

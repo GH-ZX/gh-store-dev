@@ -71,6 +71,24 @@
     "linked": "Linked.",
     "unlinked": "Unlinked."
   },
+  "telegramConnect": {
+    "eyebrow": "Telegram",
+    "title": "Connect Telegram",
+    "description": "Link your chat to this account so the bot can show your orders and balance.",
+    "linkedDescription": "This chat is connected. The bot answers with your orders and balance.",
+    "unlinkedDescription": "Get a 6-digit code, then send it to the store's bot in Telegram to connect this account.",
+    "getCodeAction": "Get your 6-digit code",
+    "newCodeAction": "Get a new code",
+    "codeHint": "Send this code to",
+    "codeCopy": "Copy",
+    "codeCopied": "Copied",
+    "codeExpiry": "Expires at",
+    "openBotAction": "Open the bot",
+    "openBotHint": "Send the code to the store bot:",
+    "unlinkAction": "Disconnect",
+    "linked": "Connected.",
+    "unlinked": "Disconnected."
+  },
   "notifications": {
     "eyebrow": "Notifications",
     "title": "Notifications",

@@ -98,6 +98,7 @@ const publicSettingsSchema = z.object({
   maintenance_message_ar: z.string().trim().max(400).nullish(),
   maintenance_message_en: z.string().trim().max(400).nullish(),
   home_layout: z.unknown().optional(),
+  telegram_bot_username: z.string().trim().max(64).nullish(),
 });
 
 export type SocialLink = {
@@ -136,11 +137,12 @@ export type PublicStoreSettings = {
     nameAr: string;
     nameEn: string;
     useEverywhere: boolean;
+  };    maintenanceMode: boolean;
+    maintenanceMessageAr: string;
+    maintenanceMessageEn: string;
+    /** The store's Telegram bot @username, for connect instructions. */
+    telegramBotUsername: string | null;
   };
-  maintenanceMode: boolean;
-  maintenanceMessageAr: string;
-  maintenanceMessageEn: string;
-};
 
 export const EMPTY_PUBLIC_SETTINGS: PublicStoreSettings = {
   socialLinks: [],
@@ -162,6 +164,7 @@ export const EMPTY_PUBLIC_SETTINGS: PublicStoreSettings = {
     useEverywhere: false,
   },
   maintenanceMode: false,
+  telegramBotUsername: null,
   maintenanceMessageAr: "",
   maintenanceMessageEn: "",
 };
@@ -280,6 +283,10 @@ export function normalizePublicSettings(value: unknown): PublicStoreSettings {
     maintenanceMode: settings.maintenance_mode ?? false,
     maintenanceMessageAr: settings.maintenance_message_ar ?? "",
     maintenanceMessageEn: settings.maintenance_message_en ?? "",
+    telegramBotUsername:
+      typeof settings.telegram_bot_username === "string" && settings.telegram_bot_username.trim()
+        ? settings.telegram_bot_username.trim()
+        : null,
   };
 }
 
