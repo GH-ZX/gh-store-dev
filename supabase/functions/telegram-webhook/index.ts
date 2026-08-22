@@ -90,6 +90,13 @@ type Texts = {
   login: string;
   loginIntro: string;
   openAccount: string;
+  profile: string;
+  profileSettings: string;
+  profileChangeLanguage: string;
+  profileDisconnect: string;
+  profileVisitStore: string;
+  profileRecharge: string;
+  rechargePage: string;
   buy: string;
   howToPay: string;
   payWallet: string;
@@ -161,6 +168,13 @@ const TEXTS: Record<Locale, Texts> = {
     login: "🔐 دخول",
     loginIntro: "اضغط الزر لفتح المتجر ودخول حسابك مباشرة.",
     openAccount: "🔐 فتح حسابي",
+    profile: "👤 حسابي",
+    profileSettings: "⚙️ الإعدادات",
+    profileChangeLanguage: "🌐 تغيير اللغة",
+    profileDisconnect: "🔓 فصل الربط",
+    profileVisitStore: "🛍 زيارة المتجر",
+    profileRecharge: "💰 تعبئة الرصيد",
+    rechargePage: "فتح صفحة التعبئة",
     buy: "🛒 شراء",
     howToPay: "كيف تريد الدفع؟",
     payWallet: "💳 المحفظة",
@@ -230,6 +244,13 @@ const TEXTS: Record<Locale, Texts> = {
     login: "🔐 Sign in",
     loginIntro: "Tap the button to open the store signed in.",
     openAccount: "🔐 Open my account",
+    profile: "👤 My Profile",
+    profileSettings: "⚙️ Settings",
+    profileChangeLanguage: "🌐 Change language",
+    profileDisconnect: "🔓 Disconnect",
+    profileVisitStore: "🛍 Visit store",
+    profileRecharge: "💰 Recharge",
+    rechargePage: "Open recharge page",
     buy: "🛒 Buy",
     howToPay: "How do you want to pay?",
     payWallet: "💳 Wallet",
@@ -321,12 +342,11 @@ function menuKeyboard(locale: Locale, linked: boolean): unknown {
             { text: t(locale, "wallet"), callback_data: "wallet" },
           ]
         : [{ text: t(locale, "link"), callback_data: "link" }],
-      linked ? [{ text: t(locale, "openAccount"), callback_data: "login" }] : [],
+      linked ? [{ text: t(locale, "profile"), callback_data: "profile" }] : [],
       [
         { text: t(locale, "support"), callback_data: "support" },
         { text: t(locale, "language"), callback_data: "language" },
       ],
-      linked ? [{ text: t(locale, "unlink"), callback_data: "unlink" }] : [],
     ].filter((row) => row.length > 0),
   };
 }
@@ -375,6 +395,27 @@ async function sendText(
 }
 
 /**
+ * Edit an existing message instead of sending a new one.
+ * Falls back silently if the edit fails (same text, message deleted, etc.).
+ */
+async function editText(
+  token: string,
+  chatId: number,
+  messageId: number,
+  textValue: string,
+  keyboard?: unknown,
+): Promise<void> {
+  await telegram(token, "editMessageText", {
+    chat_id: chatId,
+    message_id: messageId,
+    text: textValue.slice(0, 4000),
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    ...(keyboard ? { reply_markup: keyboard } : {}),
+  });
+}
+
+/**
  * Show the "typing…" bubble so the customer knows the bot is working.
  *
  * The webhook answers immediately and the real work happens after; without
@@ -382,6 +423,25 @@ async function sendText(
  */
 async function showTyping(token: string, chatId: number): Promise<void> {
   await telegram(token, "sendChatAction", { chat_id: chatId, action: "typing" });
+}
+
+/**
+ * Unified reply helper: edits the existing message when a messageId is present,
+ * otherwise sends a new message. Callbacks always provide a messageId so the
+ * conversation stays in a single thread; message handlers never do.
+ */
+async function reply(
+  token: string,
+  chatId: number,
+  textValue: string,
+  keyboard?: unknown,
+  messageId?: number,
+): Promise<void> {
+  if (messageId) {
+    await editText(token, chatId, messageId, textValue, keyboard);
+  } else {
+    await sendText(token, chatId, textValue, keyboard);
+  }
 }
 
 /** A code like `GS1F4K2X` or `1F4K2X` — uppercase letters and digits. */
@@ -442,22 +502,23 @@ async function showOrdersList(
   chatId: number,
   locale: Locale,
   userId: string,
+  messageId?: number,
 ): Promise<void> {
   const orders = await readOrders(supabase, userId);
 
   if (orders.length === 0) {
-    await sendText(botToken, chatId, t(locale, "ordersEmpty"));
+    await reply(botToken, chatId, t(locale, "ordersEmpty"), undefined, messageId);
     return;
   }
 
-  await sendText(botToken, chatId, t(locale, "orders"), {
+  await reply(botToken, chatId, t(locale, "orders"), {
     inline_keyboard: orders.map((order) => [
       {
         text: `${order.order_number} — ${money(order.total)} · ${escapeHtml(order.status)}`,
         url: `https://gh-store.me/${locale}/orders/${order.id}`,
       },
     ]),
-  });
+  }, messageId);
 }
 
 /**
@@ -474,12 +535,13 @@ async function sendLoginLink(
   chatId: number,
   locale: Locale,
   userId: string,
+  messageId?: number,
 ): Promise<void> {
   const profile = await readProfile(supabase, userId);
   const email = text(profile?.email);
 
   if (!email) {
-    await sendText(botToken, chatId, t(locale, "notFound"));
+    await reply(botToken, chatId, t(locale, "notFound"), undefined, messageId);
     return;
   }
 
@@ -493,15 +555,15 @@ async function sendLoginLink(
     const actionLink = text(data?.properties?.action_link);
 
     if (error || !actionLink) {
-      await sendText(botToken, chatId, t(locale, "notFound"));
+      await reply(botToken, chatId, t(locale, "notFound"), undefined, messageId);
       return;
     }
 
-    await sendText(botToken, chatId, t(locale, "loginIntro"), {
+    await reply(botToken, chatId, t(locale, "loginIntro"), {
       inline_keyboard: [[{ text: t(locale, "openAccount"), url: actionLink }]],
-    });
+    }, messageId);
   } catch {
-    await sendText(botToken, chatId, t(locale, "notFound"));
+    await reply(botToken, chatId, t(locale, "notFound"), undefined, messageId);
   }
 }
 
@@ -574,6 +636,7 @@ async function showProfile(
   chatId: number,
   locale: Locale,
   userId: string,
+  messageId?: number,
 ): Promise<void> {
   const [profile, wallet, orders] = await Promise.all([
     readProfile(supabase, userId),
@@ -596,15 +659,25 @@ async function showProfile(
     `${t(locale, "orderCount")}: <b>${orders.count ?? 0}</b>`,
   ];
 
-  await sendText(botToken, chatId, lines.filter((line) => line.length > 0).join("\n"), {
+  await reply(botToken, chatId, lines.filter((line) => line.length > 0).join("\n"), {
     inline_keyboard: [
       [
         { text: t(locale, "orders"), callback_data: "orders" },
         { text: t(locale, "wallet"), callback_data: "wallet" },
       ],
+      [
+        { text: t(locale, "profileRecharge"), callback_data: "profile_recharge" },
+        { text: t(locale, "profileChangeLanguage"), callback_data: "language" },
+      ],
+      [
+        { text: t(locale, "profileVisitStore"), url: `https://gh-store.me/${locale}/profile` },
+      ],
+      [
+        { text: t(locale, "profileDisconnect"), callback_data: "unlink" },
+      ],
       [backRow(locale, "menu")[0]],
     ],
-  });
+  }, messageId);
 }
 
 // ─── Chat preferences (locale override + support flow state) ──────────────
@@ -749,22 +822,26 @@ async function showCatalog(
   botToken: string,
   chatId: number,
   locale: Locale,
+  messageId?: number,
 ): Promise<void> {
   const categories = await readCategories(supabase, locale);
 
   if (categories.length === 0) {
-    await sendText(botToken, chatId, t(locale, "emptyCatalog"));
+    if (messageId) await editText(botToken, chatId, messageId, t(locale, "emptyCatalog"));
+    else await sendText(botToken, chatId, t(locale, "emptyCatalog"));
     return;
   }
 
-  await sendText(botToken, chatId, t(locale, "categories"), {
+  const kb = {
     inline_keyboard: [
       ...categories.map((category) => [
         { text: category.name, callback_data: `cat:${category.id}` },
       ]),
       backRow(locale, "menu"),
     ],
-  });
+  };
+  if (messageId) await editText(botToken, chatId, messageId, t(locale, "categories"), kb);
+  else await sendText(botToken, chatId, t(locale, "categories"), kb);
 }
 
 async function showGames(
@@ -773,29 +850,28 @@ async function showGames(
   chatId: number,
   locale: Locale,
   categoryId: string,
+  messageId?: number,
 ): Promise<void> {
   let games = await readGames(supabase, locale, categoryId);
 
-  // A category with no assigned games should never dead-end the browse: fall
-  // back to the full active catalogue so the customer still reaches offers.
   if (games.length === 0) {
     games = await readGames(supabase, locale, null);
   }
 
   if (games.length === 0) {
-    await sendText(botToken, chatId, t(locale, "noOffers"));
+    if (messageId) await editText(botToken, chatId, messageId, t(locale, "noOffers"));
+    else await sendText(botToken, chatId, t(locale, "noOffers"));
     return;
   }
 
-  await sendText(botToken, chatId, t(locale, "games"), {
+  const kb = {
     inline_keyboard: [
-      // The category is not part of the callback: a game id plus a category id
-      // would exceed Telegram's 64-byte callback_data limit. The back target is
-      // looked up from the game row instead.
       ...games.map((game) => [{ text: game.name, callback_data: `game:${game.id}` }]),
       backRow(locale, "catalog"),
     ],
-  });
+  };
+  if (messageId) await editText(botToken, chatId, messageId, t(locale, "games"), kb);
+  else await sendText(botToken, chatId, t(locale, "games"), kb);
 }
 
 async function showOffers(
@@ -804,16 +880,16 @@ async function showOffers(
   chatId: number,
   locale: Locale,
   gameId: string,
+  messageId?: number,
 ): Promise<void> {
   const offers = await readOffers(supabase, locale, gameId);
 
   if (offers.length === 0) {
-    await sendText(botToken, chatId, t(locale, "noOffers"));
+    if (messageId) await editText(botToken, chatId, messageId, t(locale, "noOffers"));
+    else await sendText(botToken, chatId, t(locale, "noOffers"));
     return;
   }
 
-  // Where "back" lands: the game's own category list, or the categories if the
-  // game has no category.
   const { data: game } = await supabase
     .from("games")
     .select("category_id")
@@ -822,37 +898,33 @@ async function showOffers(
 
   const unit = (currency: string) => (currency === "SYP" ? "SYP" : currency === "EUR" ? "€" : "$");
 
-  await sendText(
-    botToken,
-    chatId,
-    t(locale, "offers"),
-    {
-      inline_keyboard: [
-        // Every package starts the in-chat checkout — no jumping to the site.
-        ...offers.map((offer) => {
-          const fmt = (value: number) => `${unit(offer.currency)}${value.toFixed(2)}`;
-          const price =
-            offer.original_price && offer.original_price > offer.price
-              ? `~~${fmt(offer.original_price)}~~ ${fmt(offer.price)}`
-              : fmt(offer.price);
+  const kb = {
+    inline_keyboard: [
+      ...offers.map((offer) => {
+        const fmt = (value: number) => `${unit(offer.currency)}${value.toFixed(2)}`;
+        const price =
+          offer.original_price && offer.original_price > offer.price
+            ? `~~${fmt(offer.original_price)}~~ ${fmt(offer.price)}`
+            : fmt(offer.price);
 
-          return [
-            {
-              text: `${offer.name} — ${price}`,
-              callback_data: `buy:${offer.id}`,
-            },
-          ];
-        }),
-        [
+        return [
           {
-            text: t(locale, "buyCancel"),
-            callback_data: "bp:cancel",
+            text: `${offer.name} — ${price}`,
+            callback_data: `buy:${offer.id}`,
           },
-        ],
-        backRow(locale, game?.category_id ? `cat:${game.category_id}` : "catalog"),
+        ];
+      }),
+      [
+        {
+          text: t(locale, "buyCancel"),
+          callback_data: "bp:cancel",
+        },
       ],
-    },
-  );
+      backRow(locale, game?.category_id ? `cat:${game.category_id}` : "catalog"),
+    ],
+  };
+  if (messageId) await editText(botToken, chatId, messageId, t(locale, "offers"), kb);
+  else await sendText(botToken, chatId, t(locale, "offers"), kb);
 }
 
 // ─── In-chat checkout ─────────────────────────────────────────────────────
@@ -945,11 +1017,13 @@ async function startBuy(
   locale: Locale,
   userId: string,
   offerId: string,
+  messageId?: number,
 ): Promise<void> {
   const offer = await readOfferForBuy(supabase, locale, offerId);
 
   if (!offer) {
-    await sendText(botToken, chatId, t(locale, "notFound"), menuKeyboard(locale, true));
+    if (messageId) await editText(botToken, chatId, messageId, t(locale, "notFound"), menuKeyboard(locale, true));
+    else await sendText(botToken, chatId, t(locale, "notFound"), menuKeyboard(locale, true));
     return;
   }
 
@@ -958,24 +1032,22 @@ async function startBuy(
 
   await writePref(supabase, chatId, { pending: encodeBuyState({ o: offerId, g: offer.gameId, s: "pay" }) });
 
-  await sendText(
-    botToken,
-    chatId,
-    [
-      `🛒 <b>${offer.name}</b>`,
-      `${t(locale, "offers")}: <b>${fmtMoney(offer.price, offer.currency)}</b>`,
-      "",
-      t(locale, "howToPay"),
-      balanceText,
-    ].join("\n"),
-    {
-      inline_keyboard: [
-        [{ text: t(locale, "payWallet"), callback_data: "bp:wallet" }],
-        [{ text: t(locale, "payRecharge"), callback_data: "bp:recharge" }],
-        [backRow(locale, "bp:cancel")[0]],
-      ],
-    },
-  );
+  const text = [
+    `🛒 <b>${offer.name}</b>`,
+    `${t(locale, "offers")}: <b>${fmtMoney(offer.price, offer.currency)}</b>`,
+    "",
+    t(locale, "howToPay"),
+    balanceText,
+  ].join("\n");
+  const kb = {
+    inline_keyboard: [
+      [{ text: t(locale, "payWallet"), callback_data: "bp:wallet" }],
+      [{ text: t(locale, "payRecharge"), callback_data: "bp:recharge" }],
+      [backRow(locale, "bp:cancel")[0]],
+    ],
+  };
+  if (messageId) await editText(botToken, chatId, messageId, text, kb);
+  else await sendText(botToken, chatId, text, kb);
 }
 
 async function handleBuyWallet(
@@ -985,55 +1057,52 @@ async function handleBuyWallet(
   locale: Locale,
   userId: string,
   state: BuyState,
+  messageId?: number,
 ): Promise<void> {
   const offer = await readOfferForBuy(supabase, locale, state.o);
   const wallet = await readWallet(supabase, userId);
 
   if (!offer) {
-    await sendText(botToken, chatId, t(locale, "notFound"), menuKeyboard(locale, true));
+    if (messageId) await editText(botToken, chatId, messageId, t(locale, "notFound"), menuKeyboard(locale, true));
+    else await sendText(botToken, chatId, t(locale, "notFound"), menuKeyboard(locale, true));
     return;
   }
 
   const balance = wallet?.balance ?? 0;
 
   if (balance < offer.price) {
-    await sendText(
-      botToken,
-      chatId,
-      [
-        `${t(locale, "insufficient")}`,
-        `${t(locale, "needAmount")}: <b>${fmtMoney(offer.price - balance, offer.currency)}</b>`,
-        `${t(locale, "balance")}: <b>${fmtMoney(balance, wallet?.currency ?? offer.currency)}</b>`,
-      ].join("\n"),
-      {
-        inline_keyboard: [
-          [{ text: t(locale, "payRecharge"), callback_data: "bp:recharge" }],
-          [backRow(locale, "bp:cancel")[0]],
-        ],
-      },
-    );
+    const text = [
+      `${t(locale, "insufficient")}`,
+      `${t(locale, "needAmount")}: <b>${fmtMoney(offer.price - balance, offer.currency)}</b>`,
+      `${t(locale, "balance")}: <b>${fmtMoney(balance, wallet?.currency ?? offer.currency)}</b>`,
+    ].join("\n");
+    const kb = {
+      inline_keyboard: [
+        [{ text: t(locale, "payRecharge"), callback_data: "bp:recharge" }],
+        [backRow(locale, "bp:cancel")[0]],
+      ],
+    };
+    if (messageId) await editText(botToken, chatId, messageId, text, kb);
+    else await sendText(botToken, chatId, text, kb);
     return;
   }
 
   await writePref(supabase, chatId, { pending: encodeBuyState({ ...state, s: "confirm" }) });
 
-  await sendText(
-    botToken,
-    chatId,
-    [
-      `🛒 <b>${offer.name}</b>`,
-      `${t(locale, "offers")}: <b>${fmtMoney(offer.price, offer.currency)}</b>`,
-      `${t(locale, "balance")} <b>${fmtMoney(balance, wallet?.currency ?? offer.currency)}</b>`,
-      "",
-      `${t(locale, "confirmBuy")}?`,
-    ].join("\n"),
-    {
-      inline_keyboard: [
-        [{ text: t(locale, "confirmBuy"), callback_data: "bp:confirm" }],
-        [backRow(locale, "bp:cancel")[0]],
-      ],
-    },
-  );
+  const confirmText = [
+    `🛒 <b>${offer.name}</b>`,
+    `${t(locale, "offers")}: <b>${fmtMoney(offer.price, offer.currency)}</b>`,
+    `${t(locale, "balance")} <b>${fmtMoney(balance, wallet?.currency ?? offer.currency)}</b>`,
+    "",
+    `${t(locale, "confirmBuy")}?`,
+  ].join("\n");
+  const confirmKb = {
+    inline_keyboard: [
+      [{ text: t(locale, "confirmBuy"), callback_data: "bp:confirm" }],
+      [backRow(locale, "bp:cancel")[0]],
+    ],
+  };
+  await reply(botToken, chatId, confirmText, confirmKb, messageId);
 }
 
 async function handleBuyRecharge(
@@ -1041,6 +1110,7 @@ async function handleBuyRecharge(
   botToken: string,
   chatId: number,
   locale: Locale,
+  messageId?: number,
 ): Promise<void> {
   const methods = await readRechargeMethods(supabase, locale);
   const lines: string[] = [t(locale, "rechargeTitle"), t(locale, "rechargeHelp")];
@@ -1051,9 +1121,12 @@ async function handleBuyRecharge(
 
   lines.push("", `https://gh-store.me/${locale}/recharge`);
 
-  await sendText(botToken, chatId, lines.join("\n"), {
-    inline_keyboard: [[backRow(locale, "bp:cancel")[0]]],
-  });
+  await reply(botToken, chatId, lines.join("\n"), {
+    inline_keyboard: [
+      [{ text: t(locale, "rechargePage"), url: `https://gh-store.me/${locale}/recharge` }],
+      [backRow(locale, "bp:cancel")[0]],
+    ],
+  }, messageId);
 }
 
 /**
@@ -1133,11 +1206,12 @@ async function handleBuyConfirm(
   locale: Locale,
   userId: string,
   state: BuyState,
+  messageId?: number,
 ): Promise<void> {
   const fields = await readGameInputFields(supabase, state.g, locale);
 
   if (fields.length === 0) {
-    await placeBuyOrder(supabase, botToken, chatId, locale, userId, state, {});
+    await placeBuyOrder(supabase, botToken, chatId, locale, userId, state, {}, messageId);
     return;
   }
 
@@ -1145,6 +1219,7 @@ async function handleBuyConfirm(
     pending: encodeBuyState({ ...state, s: "fields", i: 0, f: fields, c: {} }),
   });
 
+  // Fields are text input — send a new message since there's no button to edit
   await sendText(botToken, chatId, `${t(locale, "fieldsPrompt")}\n<b>${fields[0].label}</b>`);
 }
 
@@ -1156,6 +1231,7 @@ async function placeBuyOrder(
   userId: string,
   state: BuyState,
   collected: Record<string, string>,
+  messageId?: number,
 ): Promise<void> {
   const crypto = globalThis.crypto;
   const idempotencyKey =
@@ -1172,11 +1248,11 @@ async function placeBuyOrder(
   await writePref(supabase, chatId, { pending: null });
 
   if (error || !data) {
-    await sendText(botToken, chatId, t(locale, "orderFailed"), menuKeyboard(locale, true));
+    await reply(botToken, chatId, t(locale, "orderFailed"), menuKeyboard(locale, true), messageId);
     return;
   }
 
-  await sendText(
+  await reply(
     botToken,
     chatId,
     [
@@ -1196,6 +1272,7 @@ async function placeBuyOrder(
         [{ text: t(locale, "menu"), callback_data: "menu" }],
       ],
     },
+    messageId,
   );
 }
 
@@ -1204,9 +1281,10 @@ async function cancelBuy(
   botToken: string,
   chatId: number,
   locale: Locale,
+  messageId?: number,
 ): Promise<void> {
   await writePref(supabase, chatId, { pending: null });
-  await sendText(botToken, chatId, t(locale, "buyCancel"), menuKeyboard(locale, true));
+  await reply(botToken, chatId, t(locale, "buyCancel"), menuKeyboard(locale, true), messageId);
 }
 
 /**
@@ -1244,15 +1322,16 @@ async function showDeals(
   botToken: string,
   chatId: number,
   locale: Locale,
+  messageId?: number,
 ): Promise<void> {
   const deals = await readDeals(supabase, locale);
 
   if (deals.length === 0) {
-    await sendText(botToken, chatId, t(locale, "dealsEmpty"));
+    await reply(botToken, chatId, t(locale, "dealsEmpty"), undefined, messageId);
     return;
   }
 
-  await sendText(
+  await reply(
     botToken,
     chatId,
     [
@@ -1264,6 +1343,8 @@ async function showDeals(
       "",
       "https://gh-store.me",
     ].join("\n"),
+    undefined,
+    messageId,
   );
 }
 
@@ -1313,11 +1394,12 @@ async function showSearchResults(
   chatId: number,
   locale: Locale,
   query: string,
+  messageId?: number,
 ): Promise<void> {
   const { games, offers } = await searchCatalogText(supabase, locale, query);
 
   if (games.length === 0 && offers.length === 0) {
-    await sendText(botToken, chatId, t(locale, "searchEmpty"));
+    await reply(botToken, chatId, t(locale, "searchEmpty"), undefined, messageId);
     return;
   }
 
@@ -1341,7 +1423,7 @@ async function showSearchResults(
     );
   }
 
-  await sendText(botToken, chatId, lines.join("\n"));
+  await reply(botToken, chatId, lines.join("\n"), undefined, messageId);
 }
 
 /**
@@ -1670,6 +1752,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
           botToken,
           chatId,
           wallet ? `${t(locale, "wallet")}\n<b>${money(wallet.balance)}</b> ${escapeHtml(wallet.currency)}` : t(locale, "walletEmpty"),
+          {
+            inline_keyboard: [
+              [{ text: t(locale, "profileRecharge"), url: `https://gh-store.me/${locale}/recharge` }],
+              [backRow(locale, "menu")[0]],
+            ],
+          },
         );
         return;
       }
@@ -1829,45 +1917,46 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
     if (callback) {
       const data = callback.data ?? "";
+      const mid = callback.message?.message_id;
 
       switch (data) {
         case "menu":
-          await sendText(botToken, chatId, linked ? t(locale, "linkedMenu") : t(locale, "welcome"), menuKeyboard(locale, linked));
+          await reply(botToken, chatId, linked ? t(locale, "linkedMenu") : t(locale, "welcome"), menuKeyboard(locale, linked), mid);
           break;
 
         case "catalog":
-          await showCatalog(supabase, botToken, chatId, locale);
+          await showCatalog(supabase, botToken, chatId, locale, mid);
           break;
 
         case "deals":
-          await showDeals(supabase, botToken, chatId, locale);
+          await showDeals(supabase, botToken, chatId, locale, mid);
           break;
 
         case "search":
-          await sendText(botToken, chatId, t(locale, "searchPrompt"));
+          await reply(botToken, chatId, t(locale, "searchPrompt"), undefined, mid);
           break;
 
         case "language": {
           const next: Locale = locale === "ar" ? "en" : "ar";
           await writePref(supabase, chatId, { locale: next });
-          await sendText(botToken, chatId, `${t(next, "languageChanged")} (${next})`, menuKeyboard(next, linked));
+          await reply(botToken, chatId, `${t(next, "languageChanged")} (${next})`, menuKeyboard(next, linked), mid);
           break;
         }
 
         case "support":
           if (!linked) {
-            await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+            await reply(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false), mid);
           } else {
             await writePref(supabase, chatId, { pending: "support_subject" });
-            await sendText(botToken, chatId, t(locale, "supportSubjectPrompt"));
+            await reply(botToken, chatId, t(locale, "supportSubjectPrompt"), undefined, mid);
           }
           break;
 
         case "login":
           if (!linked) {
-            await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+            await reply(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false), mid);
           } else {
-            await sendLoginLink(supabase, botToken, chatId, locale, link.user_id);
+            await sendLoginLink(supabase, botToken, chatId, locale, link.user_id, mid);
           }
           break;
 
@@ -1875,78 +1964,95 @@ Deno.serve(async (request: Request): Promise<Response> => {
           if (data.startsWith("cat:")) {
             const categoryId = data.slice(4);
             if (categoryId) {
-              await showGames(supabase, botToken, chatId, locale, categoryId);
+              await showGames(supabase, botToken, chatId, locale, categoryId, mid);
             }
           } else if (data.startsWith("game:")) {
             const gameId = data.slice(5);
             if (gameId) {
-              await showOffers(supabase, botToken, chatId, locale, gameId);
+              await showOffers(supabase, botToken, chatId, locale, gameId, mid);
             }
           } else if (data.startsWith("buy:")) {
             const offerId = data.slice(4);
             if (offerId) {
               if (!linked) {
-                await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+                await reply(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false), mid);
               } else {
-                await startBuy(supabase, botToken, chatId, locale, link.user_id, offerId);
+                await startBuy(supabase, botToken, chatId, locale, link.user_id, offerId, mid);
               }
             }
           } else if (data === "bp:wallet") {
             const buyState = decodeBuyState(prefs.pending);
             if (linked && buyState) {
-              await handleBuyWallet(supabase, botToken, chatId, locale, link.user_id, buyState);
+              await handleBuyWallet(supabase, botToken, chatId, locale, link.user_id, buyState, mid);
             }
           } else if (data === "bp:recharge") {
             const buyState = decodeBuyState(prefs.pending);
             if (buyState) {
-              await handleBuyRecharge(supabase, botToken, chatId, locale);
+              await handleBuyRecharge(supabase, botToken, chatId, locale, mid);
             }
           } else if (data === "bp:confirm") {
             const buyState = decodeBuyState(prefs.pending);
             if (linked && buyState && buyState.s === "confirm") {
-              await handleBuyConfirm(supabase, botToken, chatId, locale, link.user_id, buyState);
+              await handleBuyConfirm(supabase, botToken, chatId, locale, link.user_id, buyState, mid);
             }
           } else if (data === "bp:cancel") {
-            await cancelBuy(supabase, botToken, chatId, locale);
+            await cancelBuy(supabase, botToken, chatId, locale, mid);
           }
           break;
 
         case "link":
-          await sendText(botToken, chatId, t(locale, "signInHint"), connectKeyboard(locale));
+          await reply(botToken, chatId, t(locale, "signInHint"), connectKeyboard(locale), mid);
           break;
 
         case "orders":
           if (!linked) {
-            await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+            await reply(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false), mid);
           } else {
-            await showOrdersList(supabase, botToken, chatId, locale, link.user_id);
+            await showOrdersList(supabase, botToken, chatId, locale, link.user_id, mid);
           }
           break;
 
         case "wallet":
           if (!linked) {
-            await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+            await reply(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false), mid);
           } else {
             const wallet = await readWallet(supabase, link.user_id);
-            await sendText(
+            await reply(
               botToken,
               chatId,
-              wallet ? `${t(locale, "wallet")}\n<b>${money(wallet.balance)}</b> ${escapeHtml(wallet.currency)}` : t(locale, "walletEmpty"),
+              wallet
+                ? `${t(locale, "wallet")}\n<b>${money(wallet.balance)}</b> ${escapeHtml(wallet.currency)}`
+                : t(locale, "walletEmpty"),
+              {
+                inline_keyboard: [
+                  [{ text: t(locale, "profileRecharge"), url: `https://gh-store.me/${locale}/recharge` }],
+                  [backRow(locale, "menu")[0]],
+                ],
+              },
+              mid,
             );
           }
           break;
 
-        case "account":
+        case "profile":
           if (!linked) {
-            await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+            await reply(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false), mid);
           } else {
-            await showProfile(supabase, botToken, chatId, locale, link.user_id);
+            await showProfile(supabase, botToken, chatId, locale, link.user_id, mid);
           }
           break;
 
         case "unlink":
           await supabase.from("telegram_chat_links").delete().eq("chat_id", chatId);
-          await sendText(botToken, chatId, t(locale, "unlinkConfirm"), menuKeyboard(locale, false));
+          await reply(botToken, chatId, t(locale, "unlinkConfirm"), menuKeyboard(locale, false), mid);
+          break;
+
+        case "profile_recharge":
+          if (!linked) {
+            await reply(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false), mid);
+          } else {
+            await handleBuyRecharge(supabase, botToken, chatId, locale, mid);
+          }
           break;
 
         case "pending":
@@ -1960,7 +2066,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
             .order("created_at", { ascending: true })
             .limit(10);
           if (rows && rows.length > 0) {
-            await sendText(
+            await reply(
               botToken,
               chatId,
               [
@@ -1970,9 +2076,11 @@ Deno.serve(async (request: Request): Promise<Response> => {
                     `${index + 1}. <code>${escapeHtml(row.reference)}</code> — <b>${money(row.requested_amount)}</b> · ${escapeHtml(row.payment_method ?? "—")}`,
                 ),
               ].join("\n"),
+              undefined,
+              mid,
             );
           } else {
-            await sendText(botToken, chatId, "✅ No recharge requests waiting.");
+            await reply(botToken, chatId, "✅ No recharge requests waiting.", undefined, mid);
           }
           break;
       }
