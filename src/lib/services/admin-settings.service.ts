@@ -635,7 +635,13 @@ export async function readTelegramWebhookState(token: string): Promise<{
  *
  * Returns a message key the page can localize; `null` means success.
  */
-/** The bot's command menu, shown by Telegram in private chats. */
+/**
+ * The bot's command menu, shown by Telegram in private chats.
+ *
+ * Linking and unlinking are deliberately not commands: they are buttons on the
+ * menu keyboard (🔗 Sign in / 🔓 Unlink), which is where customers look for
+ * them.
+ */
 const TELEGRAM_COMMANDS = [
   { command: "start", description: "Menu" },
   { command: "catalog", description: "Browse the catalog" },
@@ -646,8 +652,6 @@ const TELEGRAM_COMMANDS = [
   { command: "support", description: "Contact support" },
   { command: "language", description: "Switch language" },
   { command: "login", description: "Open my account signed in" },
-  { command: "link", description: "Link this chat to my account" },
-  { command: "unlink", description: "Unlink this chat" },
   { command: "help", description: "Help" },
 ];
 

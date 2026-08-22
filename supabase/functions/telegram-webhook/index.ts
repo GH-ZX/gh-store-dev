@@ -311,6 +311,16 @@ async function sendText(
   });
 }
 
+/**
+ * Show the "typing…" bubble so the customer knows the bot is working.
+ *
+ * The webhook answers immediately and the real work happens after; without
+ * this the chat looks frozen for the second or two a catalog query takes.
+ */
+async function showTyping(token: string, chatId: number): Promise<void> {
+  await telegram(token, "sendChatAction", { chat_id: chatId, action: "typing" });
+}
+
 /** A code like `GS1F4K2X` or `1F4K2X` — uppercase letters and digits. */
 const CODE_PATTERN = /^(?:GS-?)?[A-Z0-9]{6,8}$/;
 
@@ -589,23 +599,37 @@ async function readOffers(
   supabase: ReturnType<typeof createClient>,
   locale: Locale,
   gameId: string,
-): Promise<{ slug: string; name: string; price: number; currency: string; original_price: number | null }[]> {
+): Promise<
+  {
+    slug: string;
+    name: string;
+    price: number;
+    currency: string;
+    original_price: number | null;
+    gameSlug: string | null;
+  }[]
+> {
   const { data } = await supabase
     .from("offers")
-    .select("slug, name_ar, name_en, price, currency, original_price")
+    .select("slug, name_ar, name_en, price, currency, original_price, games!inner (slug)")
     .eq("game_id", gameId)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true })
     .limit(15);
 
-  return (data ?? []).map((row) => ({
-    slug: row.slug,
-    name: locale === "ar" ? row.name_ar : row.name_en,
-    price: row.price,
-    currency: row.currency,
-    original_price: row.original_price,
-  }));
+  return (data ?? []).map((row) => {
+    const game = Array.isArray(row.games) ? row.games[0] : row.games;
+
+    return {
+      slug: row.slug,
+      name: locale === "ar" ? row.name_ar : row.name_en,
+      price: row.price,
+      currency: row.currency,
+      original_price: row.original_price,
+      gameSlug: game?.slug ?? null,
+    };
+  });
 }
 
 function backRow(locale: Locale, data: string): unknown[] {
@@ -688,23 +712,33 @@ async function showOffers(
     .eq("id", gameId)
     .maybeSingle();
 
+  const unit = (currency: string) => (currency === "SYP" ? "SYP" : currency === "EUR" ? "€" : "$");
+
   await sendText(
     botToken,
     chatId,
-    [
-      t(locale, "offers"),
-      ...offers.map((offer) => {
-        const sale = offer.original_price && offer.original_price > offer.price;
-        const unit = offer.currency === "SYP" ? "SYP" : offer.currency === "EUR" ? "€" : "$";
-        const fmt = (value: number) => `${unit}${value.toFixed(2)}`;
-        const price = sale ? `~~${fmt(offer.original_price)}~~ ${fmt(offer.price)}` : fmt(offer.price);
-        return `${offer.name} — <b>${price}</b>`;
-      }),
-      "",
-      "https://gh-store.me",
-    ].join("\n"),
+    t(locale, "offers"),
     {
-      inline_keyboard: [backRow(locale, game?.category_id ? `cat:${game.category_id}` : "catalog")],
+      inline_keyboard: [
+        // Every package is a button straight to its checkout page on the site.
+        ...offers.map((offer) => {
+          const fmt = (value: number) => `${unit(offer.currency)}${value.toFixed(2)}`;
+          const price =
+            offer.original_price && offer.original_price > offer.price
+              ? `~~${fmt(offer.original_price)}~~ ${fmt(offer.price)}`
+              : fmt(offer.price);
+
+          return [
+            {
+              text: `${offer.name} — ${price}`,
+              url: offer.gameSlug
+                ? `https://gh-store.me/${locale}/games/${offer.gameSlug}/${offer.slug}`
+                : "https://gh-store.me",
+            },
+          ];
+        }),
+        backRow(locale, game?.category_id ? `cat:${game.category_id}` : "catalog"),
+      ],
     },
   );
 }
@@ -876,6 +910,11 @@ async function consumeLinkCode(
     return { ok: false, reason: "expired" };
   }
 
+  // One account has one chat. If the account is already linked to a different
+  // chat, drop that link first — the `user_id` unique index would otherwise
+  // reject the upsert and the customer would see a useless "invalid code".
+  await supabase.from("telegram_chat_links").delete().eq("user_id", row.user_id).neq("chat_id", chatId);
+
   const { error: linkError } = await supabase.from("telegram_chat_links").upsert(
     {
       chat_id: chatId,
@@ -976,6 +1015,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
     const linked = link !== null;
     const locale = await effectiveLocale(supabase, chatId, interfaceLocale);
     const prefs = await readPrefs(supabase, chatId);
+
+    // Let the customer see that the bot is working before the (possibly slow)
+    // read below. Fire and forget — a typing bubble is cosmetic.
+    await showTyping(botToken, chatId);
 
     if (message?.text) {
       const command = message.text.trim().split(/\s+/)[0] ?? "";
@@ -1104,9 +1147,9 @@ Deno.serve(async (request: Request): Promise<Response> => {
           return;
         }
 
-        // An unknown command from the owner falls through to the customer path;
-        // nothing below applies to an owner without a link, so stop quietly.
-        return;
+        // Not an owner command — fall through to the customer path. The owner
+        // chat is also a customer chat: a link code, /orders, or the support
+        // flow must work from it exactly like from any other chat.
       }
 
       // ── Customer: link code ──────────────────────────────────────────────
