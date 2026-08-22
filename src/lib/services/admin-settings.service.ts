@@ -640,7 +640,7 @@ export async function readTelegramWebhookState(token: string): Promise<{
  *
  * Linking and unlinking are deliberately not commands: they are buttons on the
  * menu keyboard (🔗 Sign in / 🔓 Unlink), which is where customers look for
- * them.
+ * them. These are the store commands every chat sees.
  */
 const TELEGRAM_COMMANDS = [
   { command: "start", description: "Menu" },
@@ -653,6 +653,20 @@ const TELEGRAM_COMMANDS = [
   { command: "language", description: "Switch language" },
   { command: "login", description: "Open my account signed in" },
   { command: "help", description: "Help" },
+];
+
+/**
+ * The owner's chat gets the store commands plus the operations ones.
+ *
+ * A chat-scoped command list replaces the default in that chat, so the owner's
+ * set must include the customer commands too — the admin menu is a superset,
+ * not a different list.
+ */
+const TELEGRAM_OWNER_COMMANDS = [
+  { command: "stats", description: "Store totals and balances" },
+  { command: "pending", description: "Recharges waiting for review" },
+  { command: "alerts", description: "Alert type guidance" },
+  ...TELEGRAM_COMMANDS,
 ];
 
 async function telegramPost(token: string, method: string, body: Record<string, unknown>): Promise<{ ok: boolean; kind: string }> {
@@ -677,15 +691,21 @@ async function telegramPost(token: string, method: string, body: Record<string, 
 }
 
 /**
- * Install the bot's command menu (the ☰ button in Telegram).
+ * Install the bot's command menus (the ☰ button in Telegram).
  *
- * No scope is passed: scoped commands (`all_private_chats`) only appear in
- * chats Telegram's clients consider active, and the menu button stays missing
- * otherwise. The default scope applies everywhere and shows the button
- * reliably. Webhook registration does this too; this standalone call exists so
- * an owner can re-install the menu without rotating the webhook secret.
+ * Two menus, so the button is useful to both audiences:
+ *
+ * - **Default scope** — the store commands every chat sees.
+ * - **Owner chat scope** — when the owner chat is registered, it replaces the
+ *   default with the operations + store commands, so the owner's ☰ shows
+ *   /stats, /pending and the store.
+ *
+ * A leftover `all_private_chats` scope would shadow the default, so it is
+ * cleared first. Webhook registration installs the menus too; this standalone
+ * call exists so an owner can re-install them without rotating the webhook
+ * secret.
  */
-export async function registerTelegramCommands(token: string): Promise<{ ok: boolean; kind: string }> {
+export async function registerTelegramCommands(token: string, ownerChatId: string | null): Promise<{ ok: boolean; kind: string }> {
   // Clear any previously scoped commands first: a leftover `all_private_chats`
   // scope takes precedence over the default and would keep the menu button
   // missing. Then install the default-scope list that shows everywhere.
@@ -694,12 +714,33 @@ export async function registerTelegramCommands(token: string): Promise<{ ok: boo
     scope: { type: "all_private_chats" },
   });
 
-  return telegramPost(token, "setMyCommands", {
-    commands: TELEGRAM_COMMANDS,
-  });
+  const results = [
+    await telegramPost(token, "setMyCommands", {
+      commands: TELEGRAM_COMMANDS,
+    }),
+  ];
+
+  if (ownerChatId) {
+    // The owner's own menu: admin commands first, then the store commands.
+    results.push(
+      await telegramPost(token, "setMyCommands", {
+        commands: TELEGRAM_OWNER_COMMANDS,
+        scope: { type: "chat", chat_id: ownerChatId },
+      }),
+    );
+
+    // Make the square button explicitly the command menu in the owner chat, so
+    // a client that has cached an empty list re-reads it.
+    await telegramPost(token, "setChatMenuButton", {
+      chat_id: ownerChatId,
+      menu_button: { type: "commands" },
+    });
+  }
+
+  return results.every((result) => result.ok) ? { ok: true, kind: "ok" } : results.find((result) => !result.ok) ?? { ok: true, kind: "ok" };
 }
 
-export async function registerTelegramWebhook(token: string, secret: string): Promise<{
+export async function registerTelegramWebhook(token: string, secret: string, ownerChatId: string | null): Promise<{
   ok: boolean;
   kind: string;
 }> {
@@ -714,7 +755,7 @@ export async function registerTelegramWebhook(token: string, secret: string): Pr
     // The command list is part of the same setup: register it with the webhook
     // so Telegram shows a menu button. It is best-effort — a failure here must
     // not fail the registration.
-    await registerTelegramCommands(token);
+    await registerTelegramCommands(token, ownerChatId);
 
     const webhookResult = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
       method: "POST",

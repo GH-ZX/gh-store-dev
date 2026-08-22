@@ -10,6 +10,7 @@ import { newCallbackSecret } from "@/lib/settings/callback-secret";
 import { TELEGRAM_ALERT_TYPES } from "@/lib/settings/telegram-settings";
 import {
   getTelegramCredentials,
+  getTelegramStatus,
   readTelegramWebhookState,
   registerTelegramCommands,
   registerTelegramWebhook,
@@ -156,7 +157,8 @@ export async function registerTelegramWebhookAction(
     return { ...INITIAL_TELEGRAM_STATE, error: "unknown" };
   }
 
-  const result = await registerTelegramWebhook(botToken, secret);
+  const status = await getTelegramStatus();
+  const result = await registerTelegramWebhook(botToken, secret, status.chatId);
 
   if (!result.ok) {
     return { ...INITIAL_TELEGRAM_STATE, error: result.kind };
@@ -186,7 +188,8 @@ export async function setTelegramCommandsAction(
     return { ...INITIAL_TELEGRAM_STATE, error: "missing_key" };
   }
 
-  const result = await registerTelegramCommands(botToken);
+  const status = await getTelegramStatus();
+  const result = await registerTelegramCommands(botToken, status.chatId);
 
   if (!result.ok) {
     return { ...INITIAL_TELEGRAM_STATE, error: result.kind };
