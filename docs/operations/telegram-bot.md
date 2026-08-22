@@ -140,8 +140,10 @@ consumes.
 
 From then on the chat is linked: `/orders` shows the last five orders with
 status and a **site deep-link button** per order, `/wallet` shows the balance,
-`/account` shows the profile, and `/login` emails a one-tap sign-in link to the
-customer's inbox so they can open the site already signed in. The menu buttons
+`/account` shows the full profile card — name, username, email, member-since,
+wallet balance, and order count, all read from the same rows the site reads —
+and `/login` emails a one-tap sign-in link to the customer's inbox so they can
+open the site already signed in. The menu buttons
 offer Catalog, Orders, Wallet, Deals, Search, Browse the store, Support,
 Language, Login, and Unlink. The owner chat is unaffected — it keeps the store
 operations.
@@ -212,6 +214,25 @@ The menu's **Catalog** button browses the store without leaving Telegram: pick
 a category, then a game, then read the packages and prices. Text only — no
 images. Back buttons return to the previous list, and the offers message links
 to the site for checkout.
+
+### In-chat checkout
+
+A linked customer can buy straight from the chat. Tapping a package starts the
+flow instead of opening a site URL:
+
+1. **How do you want to pay?** — Wallet (shows the live balance, which is the
+   same wallet row the site reads) or **Top up balance**.
+2. If the balance covers the price, **Confirm purchase**. If not, the bot says
+   what is missing and links to the site's recharge page (SAM manual methods
+   and Binance) — top up there and come back.
+3. The bot collects the game's required input fields (player id, server, …)
+   one message at a time, then places the order through a service-role RPC
+   (`place_wallet_order_for_user`) that mirrors `place_wallet_order` exactly.
+4. The order reply shows the order number, the price paid, and the new balance,
+   with a button to the order page. Delivery happens on the reconciliation
+   sweep (the bot has no server-side fulfilment code), so a completed order
+   usually lands within about fifteen minutes and the customer gets the usual
+   order-delivered alert.
 
 ### Customer order notifications
 

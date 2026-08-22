@@ -1907,6 +1907,23 @@ export type Database = {
           total: number
         }[]
       }
+      place_wallet_order_for_user: {
+        Args: {
+          p_customer_note?: string
+          p_dynamic_fields: Json
+          p_idempotency_key: string
+          p_offer_id: string
+          p_quantity: number
+          p_user_id: string
+        }
+        Returns: {
+          balance: number
+          idempotent: boolean
+          order_id: string
+          order_number: string
+          total: number
+        }[]
+      }
       refund_failed_order: {
         Args: {
           p_idempotency_key: string

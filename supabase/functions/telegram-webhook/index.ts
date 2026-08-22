@@ -90,6 +90,24 @@ type Texts = {
   login: string;
   loginIntro: string;
   openAccount: string;
+  buy: string;
+  howToPay: string;
+  payWallet: string;
+  payRecharge: string;
+  balance: string;
+  confirmBuy: string;
+  cancelBuy: string;
+  insufficient: string;
+  needAmount: string;
+  fieldsPrompt: string;
+  orderPlaced: string;
+  orderFailed: string;
+  orderLink: string;
+  rechargeTitle: string;
+  rechargeHelp: string;
+  memberSince: string;
+  orderCount: string;
+  buyCancel: string;
 };
 
 const TEXTS: Record<Locale, Texts> = {
@@ -140,6 +158,24 @@ const TEXTS: Record<Locale, Texts> = {
     login: "🔐 دخول",
     loginIntro: "اضغط الزر لفتح المتجر ودخول حسابك مباشرة.",
     openAccount: "🔐 فتح حسابي",
+    buy: "🛒 شراء",
+    howToPay: "كيف تريد الدفع؟",
+    payWallet: "💳 المحفظة",
+    payRecharge: "💰 تعبئة الرصيد",
+    balance: "رصيدك",
+    confirmBuy: "✅ تأكيد الشراء",
+    cancelBuy: "↩ إلغاء",
+    insufficient: "رصيدك لا يكفي لهذه الباقة.",
+    needAmount: "تحتاج",
+    fieldsPrompt: "أرسل قيمة الحقل التالي:",
+    orderPlaced: "🎉 تم استلام طلبك!",
+    orderFailed: "لم نتمكن من إتمام الطلب. حاول مجددًا أو تواصل مع الدعم.",
+    orderLink: "تفاصيل الطلب",
+    rechargeTitle: "💰 تعبئة الرصيد",
+    rechargeHelp: "عبّئ محفظتك من المتجر ثم أكمل الشراء هنا. طرق التعبئة:",
+    memberSince: "عضو منذ",
+    orderCount: "عدد الطلبات",
+    buyCancel: "تم إلغاء عملية الشراء.",
   },
   en: {
     welcome:
@@ -188,6 +224,24 @@ const TEXTS: Record<Locale, Texts> = {
     login: "🔐 Sign in",
     loginIntro: "Tap the button to open the store signed in.",
     openAccount: "🔐 Open my account",
+    buy: "🛒 Buy",
+    howToPay: "How do you want to pay?",
+    payWallet: "💳 Wallet",
+    payRecharge: "💰 Top up balance",
+    balance: "Your balance",
+    confirmBuy: "✅ Confirm purchase",
+    cancelBuy: "↩ Cancel",
+    insufficient: "Your balance is not enough for this package.",
+    needAmount: "You need",
+    fieldsPrompt: "Send the value for the following field:",
+    orderPlaced: "🎉 Your order is in!",
+    orderFailed: "We could not complete the order. Try again or contact support.",
+    orderLink: "Order details",
+    rechargeTitle: "💰 Top up your balance",
+    rechargeHelp: "Top up your wallet on the store, then finish the purchase here. Methods:",
+    memberSince: "Member since",
+    orderCount: "Orders",
+    buyCancel: "Purchase cancelled.",
   },
 };
 
@@ -489,14 +543,59 @@ async function openBotSupportThread(
 async function readProfile(
   supabase: ReturnType<typeof createClient>,
   userId: string,
-): Promise<{ email: string | null; full_name: string | null; username: string | null } | null> {
+): Promise<{ email: string | null; full_name: string | null; username: string | null; created_at: string | null } | null> {
   const { data } = await supabase
     .from("profiles")
-    .select("email, full_name, username")
+    .select("email, full_name, username, created_at")
     .eq("id", userId)
     .maybeSingle();
 
   return data ?? null;
+}
+
+/**
+ * The full profile card — the bot's mirror of the site's account page.
+ *
+ * Wallet and orders come from the same rows the website reads, so the balance
+ * and history shown here are always the ones on the site.
+ */
+async function showProfile(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  userId: string,
+): Promise<void> {
+  const [profile, wallet, orders] = await Promise.all([
+    readProfile(supabase, userId),
+    readWallet(supabase, userId),
+    supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", userId),
+  ]);
+
+  const lines: string[] = [
+    `👤 <b>${t(locale, "account")}</b>`,
+    profile?.full_name ? `👤 ${escapeHtml(profile.full_name)}` : "",
+    profile?.username ? `@${escapeHtml(profile.username)}` : "",
+    profile?.email ? `📧 ${escapeHtml(profile.email)}` : "",
+    profile?.created_at
+      ? `${t(locale, "memberSince")}: ${new Intl.DateTimeFormat(locale === "ar" ? "ar" : "en", { year: "numeric", month: "short" }).format(new Date(profile.created_at))}`
+      : "",
+    "",
+    wallet
+      ? `${t(locale, "wallet")}: <b>${fmtMoney(wallet.balance, wallet.currency)}</b> ${escapeHtml(wallet.currency)}`
+      : t(locale, "walletEmpty"),
+    `${t(locale, "orderCount")}: <b>${orders.count ?? 0}</b>`,
+  ];
+
+  await sendText(botToken, chatId, lines.filter((line) => line.length > 0).join("\n"), {
+    inline_keyboard: [
+      [
+        { text: t(locale, "orders"), callback_data: "orders" },
+        { text: t(locale, "wallet"), callback_data: "wallet" },
+      ],
+      [backRow(locale, "menu")[0]],
+    ],
+  });
 }
 
 // ─── Chat preferences (locale override + support flow state) ──────────────
@@ -720,7 +819,7 @@ async function showOffers(
     t(locale, "offers"),
     {
       inline_keyboard: [
-        // Every package is a button straight to its checkout page on the site.
+        // Every package starts the in-chat checkout — no jumping to the site.
         ...offers.map((offer) => {
           const fmt = (value: number) => `${unit(offer.currency)}${value.toFixed(2)}`;
           const price =
@@ -731,16 +830,330 @@ async function showOffers(
           return [
             {
               text: `${offer.name} — ${price}`,
-              url: offer.gameSlug
-                ? `https://gh-store.me/${locale}/games/${offer.gameSlug}/${offer.slug}`
-                : "https://gh-store.me",
+              callback_data: `buy:${offer.id}`,
             },
           ];
         }),
+        [
+          {
+            text: t(locale, "buyCancel"),
+            callback_data: "bp:cancel",
+          },
+        ],
         backRow(locale, game?.category_id ? `cat:${game.category_id}` : "catalog"),
       ],
     },
   );
+}
+
+// ─── In-chat checkout ─────────────────────────────────────────────────────
+
+/**
+ * The checkout state lives in `telegram_chat_prefs.pending` as
+ * `buy:{json}`. `s` is the stage: `pay` (pick a method), `confirm`
+ * (about to place), `fields` (collecting the game's input fields).
+ */
+type BuyState = {
+  o: string;
+  g: string;
+  s: "pay" | "confirm" | "fields";
+  i?: number;
+  f?: { k: string; l: string; p: string | null }[];
+  c?: Record<string, string>;
+};
+
+function encodeBuyState(state: BuyState): string {
+  return `buy:${JSON.stringify(state)}`;
+}
+
+function decodeBuyState(pending: string | null): BuyState | null {
+  if (!pending?.startsWith("buy:")) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(pending.slice(4)) as BuyState;
+    return parsed && typeof parsed === "object" && typeof parsed.o === "string" && typeof parsed.g === "string" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readOfferForBuy(
+  supabase: ReturnType<typeof createClient>,
+  locale: Locale,
+  offerId: string,
+): Promise<{ name: string; price: number; currency: string; gameId: string; gameName: string } | null> {
+  const { data } = await supabase
+    .from("offers")
+    .select("name_ar, name_en, price, currency, games!inner (id, name_ar, name_en)")
+    .eq("id", offerId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!data) {
+    return null;
+  }
+
+  const game = Array.isArray(data.games) ? data.games[0] : data.games;
+
+  return {
+    name: locale === "ar" ? data.name_ar : data.name_en,
+    price: data.price,
+    currency: data.currency,
+    gameId: game?.id ?? "",
+    gameName: (game?.name_ar || game?.name_en) ?? "",
+  };
+}
+
+function fmtMoney(value: number, currency: string): string {
+  const unit = currency === "SYP" ? "SYP" : currency === "EUR" ? "€" : "$";
+  return `${unit}${value.toFixed(2)}`;
+}
+
+async function readGameInputFields(
+  supabase: ReturnType<typeof createClient>,
+  gameId: string,
+  locale: Locale,
+): Promise<{ key: string; label: string; placeholder: string | null }[]> {
+  const { data } = await supabase
+    .from("game_input_fields")
+    .select("field_key, label_ar, label_en, placeholder_ar, placeholder_en")
+    .eq("game_id", gameId)
+    .order("sort_order", { ascending: true });
+
+  return (data ?? []).map((row) => ({
+    key: row.field_key,
+    label: locale === "ar" ? row.label_ar : row.label_en,
+    placeholder: locale === "ar" ? row.placeholder_ar : row.placeholder_en,
+  }));
+}
+
+async function startBuy(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  userId: string,
+  offerId: string,
+): Promise<void> {
+  const offer = await readOfferForBuy(supabase, locale, offerId);
+
+  if (!offer) {
+    await sendText(botToken, chatId, t(locale, "notFound"), menuKeyboard(locale, true));
+    return;
+  }
+
+  const wallet = await readWallet(supabase, userId);
+  const balanceText = wallet ? `${t(locale, "balance")}: <b>${fmtMoney(wallet.balance, wallet.currency)}</b>` : t(locale, "walletEmpty");
+
+  await writePref(supabase, chatId, { pending: encodeBuyState({ o: offerId, g: offer.gameId, s: "pay" }) });
+
+  await sendText(
+    botToken,
+    chatId,
+    [
+      `🛒 <b>${offer.name}</b>`,
+      `${t(locale, "offers")}: <b>${fmtMoney(offer.price, offer.currency)}</b>`,
+      "",
+      t(locale, "howToPay"),
+      balanceText,
+    ].join("\n"),
+    {
+      inline_keyboard: [
+        [{ text: t(locale, "payWallet"), callback_data: "bp:wallet" }],
+        [{ text: t(locale, "payRecharge"), callback_data: "bp:recharge" }],
+        [backRow(locale, "bp:cancel")[0]],
+      ],
+    },
+  );
+}
+
+async function handleBuyWallet(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  userId: string,
+  state: BuyState,
+): Promise<void> {
+  const offer = await readOfferForBuy(supabase, locale, state.o);
+  const wallet = await readWallet(supabase, userId);
+
+  if (!offer) {
+    await sendText(botToken, chatId, t(locale, "notFound"), menuKeyboard(locale, true));
+    return;
+  }
+
+  const balance = wallet?.balance ?? 0;
+
+  if (balance < offer.price) {
+    await sendText(
+      botToken,
+      chatId,
+      [
+        `${t(locale, "insufficient")}`,
+        `${t(locale, "needAmount")}: <b>${fmtMoney(offer.price - balance, offer.currency)}</b>`,
+        `${t(locale, "balance")}: <b>${fmtMoney(balance, wallet?.currency ?? offer.currency)}</b>`,
+      ].join("\n"),
+      {
+        inline_keyboard: [
+          [{ text: t(locale, "payRecharge"), callback_data: "bp:recharge" }],
+          [backRow(locale, "bp:cancel")[0]],
+        ],
+      },
+    );
+    return;
+  }
+
+  await writePref(supabase, chatId, { pending: encodeBuyState({ ...state, s: "confirm" }) });
+
+  await sendText(
+    botToken,
+    chatId,
+    [
+      `🛒 <b>${offer.name}</b>`,
+      `${t(locale, "offers")}: <b>${fmtMoney(offer.price, offer.currency)}</b>`,
+      `${t(locale, "balance")} <b>${fmtMoney(balance, wallet?.currency ?? offer.currency)}</b>`,
+      "",
+      `${t(locale, "confirmBuy")}?`,
+    ].join("\n"),
+    {
+      inline_keyboard: [
+        [{ text: t(locale, "confirmBuy"), callback_data: "bp:confirm" }],
+        [backRow(locale, "bp:cancel")[0]],
+      ],
+    },
+  );
+}
+
+async function handleBuyRecharge(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+): Promise<void> {
+  const methods = await readRechargeMethods(supabase);
+  const lines: string[] = [t(locale, "rechargeTitle"), t(locale, "rechargeHelp")];
+
+  if (methods.length > 0) {
+    lines.push(...methods.map((method) => `• ${method}`));
+  }
+
+  lines.push("", `https://gh-store.me/${locale}/recharge`);
+
+  await sendText(botToken, chatId, lines.join("\n"), {
+    inline_keyboard: [[backRow(locale, "bp:cancel")[0]]],
+  });
+}
+
+/** The enabled recharge methods, in the customer's language. */
+async function readRechargeMethods(supabase: ReturnType<typeof createClient>): Promise<string[]> {
+  try {
+    const { data } = await supabase.rpc("get_recharge_methods");
+    const methods = Array.isArray(data?.methods) ? data.methods : [];
+
+    return methods.flatMap((raw: unknown) => {
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        const record = raw as Record<string, unknown>;
+
+        if (record.enabled === true) {
+          const label = text(record.label_en) ?? text(record.label_ar);
+
+          if (label) {
+            return [label];
+          }
+        }
+      }
+
+      return [];
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function handleBuyConfirm(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  userId: string,
+  state: BuyState,
+): Promise<void> {
+  const fields = await readGameInputFields(supabase, state.g, locale);
+
+  if (fields.length === 0) {
+    await placeBuyOrder(supabase, botToken, chatId, locale, userId, state, {});
+    return;
+  }
+
+  await writePref(supabase, chatId, {
+    pending: encodeBuyState({ ...state, s: "fields", i: 0, f: fields, c: {} }),
+  });
+
+  await sendText(botToken, chatId, `${t(locale, "fieldsPrompt")}\n<b>${fields[0].label}</b>`);
+}
+
+async function placeBuyOrder(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+  userId: string,
+  state: BuyState,
+  collected: Record<string, string>,
+): Promise<void> {
+  const crypto = globalThis.crypto;
+  const idempotencyKey =
+    crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const { data, error } = await supabase.rpc("place_wallet_order_for_user", {
+    p_user_id: userId,
+    p_offer_id: state.o,
+    p_quantity: 1,
+    p_dynamic_fields: collected,
+    p_idempotency_key: idempotencyKey,
+  }).maybeSingle();
+
+  await writePref(supabase, chatId, { pending: null });
+
+  if (error || !data) {
+    await sendText(botToken, chatId, t(locale, "orderFailed"), menuKeyboard(locale, true));
+    return;
+  }
+
+  await sendText(
+    botToken,
+    chatId,
+    [
+      t(locale, "orderPlaced"),
+      `${t(locale, "orders")}: <code>${escapeHtml(data.order_number)}</code>`,
+      `${t(locale, "offers")}: <b>${fmtMoney(data.total, "USD")}</b>`,
+      `${t(locale, "balance")}: <b>${fmtMoney(data.balance, "USD")}</b>`,
+    ].join("\n"),
+    {
+      inline_keyboard: [
+        [
+          {
+            text: t(locale, "orderLink"),
+            url: `https://gh-store.me/${locale}/orders/${data.order_id}`,
+          },
+        ],
+        [{ text: t(locale, "menu"), callback_data: "menu" }],
+      ],
+    },
+  );
+}
+
+async function cancelBuy(
+  supabase: ReturnType<typeof createClient>,
+  botToken: string,
+  chatId: number,
+  locale: Locale,
+): Promise<void> {
+  await writePref(supabase, chatId, { pending: null });
+  await sendText(botToken, chatId, t(locale, "buyCancel"), menuKeyboard(locale, true));
 }
 
 /**
@@ -1213,19 +1626,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
           return;
         }
-        const profile = await readProfile(supabase, link.user_id);
-        await sendText(
-          botToken,
-          chatId,
-          [
-            t(locale, "account"),
-            profile?.email ? `📧 ${escapeHtml(profile.email)}` : "",
-            profile?.full_name ? `👤 ${escapeHtml(profile.full_name)}` : "",
-            profile?.username ? `@${escapeHtml(profile.username)}` : "",
-          ]
-            .filter((line) => line.length > 0)
-            .join("\n"),
-        );
+        await showProfile(supabase, botToken, chatId, locale, link.user_id);
         return;
       }
 
@@ -1244,6 +1645,42 @@ Deno.serve(async (request: Request): Promise<Response> => {
           await writePref(supabase, chatId, { pending: null });
           await sendText(botToken, chatId, t(locale, "supportCancel"), menuKeyboard(locale, linked));
         }
+        return;
+      }
+
+      // ── In-chat checkout: collecting the game's input fields ─────────────
+      const buyState = decodeBuyState(prefs.pending);
+
+      if (buyState && buyState.s === "fields" && linked) {
+        const value = message.text.trim();
+        const fields = buyState.f ?? [];
+        const index = buyState.i ?? 0;
+
+        if (!value || index >= fields.length) {
+          await sendText(botToken, chatId, t(locale, "buyCancel"), menuKeyboard(locale, true));
+          await writePref(supabase, chatId, { pending: null });
+          return;
+        }
+
+        const collected = { ...(buyState.c ?? {}), [fields[index].key]: value };
+        const nextIndex = index + 1;
+
+        if (nextIndex >= fields.length) {
+          await placeBuyOrder(supabase, botToken, chatId, locale, link.user_id, { ...buyState, s: "confirm" }, collected);
+          return;
+        }
+
+        await writePref(supabase, chatId, {
+          pending: encodeBuyState({ ...buyState, i: nextIndex, c: collected }),
+        });
+
+        const next = fields[nextIndex];
+        await sendText(botToken, chatId, `${t(locale, "fieldsPrompt")}\n<b>${next.label}</b>`);
+        return;
+      }
+
+      if (buyState) {
+        await cancelBuy(supabase, botToken, chatId, locale);
         return;
       }
 
@@ -1392,6 +1829,32 @@ Deno.serve(async (request: Request): Promise<Response> => {
             if (gameId) {
               await showOffers(supabase, botToken, chatId, locale, gameId);
             }
+          } else if (data.startsWith("buy:")) {
+            const offerId = data.slice(4);
+            if (offerId) {
+              if (!linked) {
+                await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
+              } else {
+                await startBuy(supabase, botToken, chatId, locale, link.user_id, offerId);
+              }
+            }
+          } else if (data === "bp:wallet") {
+            const buyState = decodeBuyState(prefs.pending);
+            if (linked && buyState) {
+              await handleBuyWallet(supabase, botToken, chatId, locale, link.user_id, buyState);
+            }
+          } else if (data === "bp:recharge") {
+            const buyState = decodeBuyState(prefs.pending);
+            if (buyState) {
+              await handleBuyRecharge(supabase, botToken, chatId, locale);
+            }
+          } else if (data === "bp:confirm") {
+            const buyState = decodeBuyState(prefs.pending);
+            if (linked && buyState && buyState.s === "confirm") {
+              await handleBuyConfirm(supabase, botToken, chatId, locale, link.user_id, buyState);
+            }
+          } else if (data === "bp:cancel") {
+            await cancelBuy(supabase, botToken, chatId, locale);
           }
           break;
 
@@ -1424,19 +1887,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           if (!linked) {
             await sendText(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false));
           } else {
-            const profile = await readProfile(supabase, link.user_id);
-            await sendText(
-              botToken,
-              chatId,
-              [
-                t(locale, "account"),
-                profile?.email ? `📧 ${escapeHtml(profile.email)}` : "",
-                profile?.full_name ? `👤 ${escapeHtml(profile.full_name)}` : "",
-                profile?.username ? `@${escapeHtml(profile.username)}` : "",
-              ]
-                .filter((line) => line.length > 0)
-                .join("\n"),
-            );
+            await showProfile(supabase, botToken, chatId, locale, link.user_id);
           }
           break;
 

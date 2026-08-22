@@ -22,8 +22,14 @@ import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/s
 /** Kept small: a Worker has a wall-clock budget, and unfinished orders carry to the next run. */
 const DEFAULT_BATCH = 25;
 
-/** Statuses that mean the customer has paid and the goods are not out yet. */
-const STUCK_STATUSES = ["fulfilling", "processing"];
+/**
+ * Statuses that mean the customer has paid and the goods are not out yet.
+ *
+ * `paid` is included because in-chat checkout (the Telegram bot) places the
+ * order and leaves it `paid` — the supplier is asked by this sweep, since the
+ * bot has no server-side fulfilment code to run itself.
+ */
+const STUCK_STATUSES = ["paid", "fulfilling", "processing"];
 
 export type ReconcileRun = {
   checked: number;

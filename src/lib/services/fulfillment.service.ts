@@ -191,6 +191,8 @@ type FulfillmentContext = {
   gameCode: string | null;
   catalogueName: string | null;
   externalProductId: string | null;
+  /** The order's own status; `paid` means money taken and nothing attempted yet. */
+  status: string | null;
   /**
    * `gift` orders are paid-on-arrival admin purchases with no wallet behind
    * them. A fulfilment failure must not try to refund one, because there is no
@@ -295,6 +297,7 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
     externalProductId,
     paymentMethod: data.payment_method,
     providerName,
+    status: data.status,
   };
 }
 
@@ -1133,7 +1136,23 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
 
   if (!attempt) {
     // Nothing was ever attempted, so nothing was bought and nothing is owed to
-    // the supplier — but the customer has paid, so this needs a person.
+    // the supplier. A `paid` order in this state is one the bot placed: the
+    // customer has paid and the supplier was never asked, so ask now. The
+    // purchase path is idempotent per order item, and the sweep runs after the
+    // grace period, so this cannot double-buy.
+    if (context.status === "paid") {
+      const outcome = await fulfillOrder(orderId);
+
+      return outcome.state === "completed"
+        ? { action: "completed", reason: "Fulfilled by the reconciliation sweep." }
+        : {
+            action: "escalated",
+            reason: `Fulfilment was attempted by the sweep but did not complete (${outcome.state}).`,
+          };
+    }
+
+    // A non-paid order that was never attempted has no money to reconcile; a
+    // person decides what it is.
     return { action: "escalated", reason: "No fulfilment was ever attempted for this order." };
   }
 
