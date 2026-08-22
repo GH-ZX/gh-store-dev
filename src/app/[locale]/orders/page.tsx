@@ -113,6 +113,12 @@ export default async function OrdersPage({ params }: PageProps<"/[locale]/orders
     redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/orders`)}`);
   }
 
+  // The admin has no customer orders — their purchases are gift orders.
+  // Pointing them at a customer orders page would just show nothing.
+  if (session.isAdmin) {
+    redirect(`/${locale}/dashboard`);
+  }
+
   const orders = await getMyOrders(locale);
 
   return (

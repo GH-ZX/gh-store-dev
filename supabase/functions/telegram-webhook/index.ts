@@ -360,6 +360,19 @@ function connectKeyboard(locale: Locale): unknown {
   };
 }
 
+/** Admin-only keyboard: store management, no customer features. */
+function adminKeyboard(locale: Locale): unknown {
+  return {
+    inline_keyboard: [
+      [{ text: "📊 Stats", callback_data: "pending" }],
+      [{ text: "🛠 Dashboard", url: "https://gh-store.me/dashboard" }],
+      [
+        { text: t(locale, "language"), callback_data: "language" },
+      ],
+    ],
+  };
+}
+
 async function telegram(
   token: string,
   method: string,
@@ -1596,14 +1609,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
             "/alerts — alert type guidance",
             "/help — this message",
             "",
-            "The buttons below are the customer menu — catalog, deals, search,",
-            "language, and support. They work from any chat, including this one.",
+            "You are the store owner. Use the buttons below for management.",
+            "Customer features (catalog, wallet, orders, support) are not",
+            "available here — use the dashboard instead.",
             "",
             "Dashboard: https://gh-store.me/dashboard",
           ].join("\n"),
-          // The owner gets the customer menu too, so the bot's buttons are
-          // visible from the very first /start and testable in place.
-          menuKeyboard(locale, linked),
+          adminKeyboard(locale),
         );
         return;
       }
@@ -1695,9 +1707,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
           return;
         }
 
-        // Not an owner command — fall through to the customer path. The owner
-        // chat is also a customer chat: a link code, /orders, or the support
-        // flow must work from it exactly like from any other chat.
+        // Not an owner command — fall through to the customer path.
+      }
+
+      // ── Owner blocked from customer features ──────────────────────────────
+      if (isOwner) {
+        await sendText(botToken, chatId, "You are the store owner. Use the dashboard for customer features: https://gh-store.me/dashboard", adminKeyboard(locale));
+        return;
       }
 
       // ── Customer: link code ──────────────────────────────────────────────
@@ -1919,6 +1935,50 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const data = callback.data ?? "";
       const mid = callback.message?.message_id;
 
+      // ── Owner: only admin actions ─────────────────────────────────────────
+      if (isOwner) {
+        switch (data) {
+          case "menu":
+            await reply(botToken, chatId, "\ud83d\udc4b <b>GH-Store owner bot</b>\n\nUse the buttons below for management.", adminKeyboard(locale), mid);
+            break;
+          case "language": {
+            const next: Locale = locale === "ar" ? "en" : "ar";
+            await writePref(supabase, chatId, { locale: next });
+            await reply(botToken, chatId, `${t(next, "languageChanged")} (${next})`, adminKeyboard(next), mid);
+            break;
+          }
+          case "pending": {
+            const { data: rows } = await supabase
+              .from("recharge_requests")
+              .select("reference, requested_amount, payment_method")
+              .eq("status", "pending")
+              .order("created_at", { ascending: true })
+              .limit(10);
+            if (rows && rows.length > 0) {
+              await reply(
+                botToken, chatId,
+                [`\u23f3 <b>Pending recharges (${rows.length})</b>`,
+                  ...rows.map((row, i) => `${i+1}. <code>${escapeHtml(row.reference)}</code> \u2014 <b>${money(row.requested_amount)}</b> \u00b7 ${escapeHtml(row.payment_method ?? "\u2014")}`),
+                ].join("\n"),
+                undefined, mid,
+              );
+            } else {
+              await reply(botToken, chatId, "\u2705 No recharge requests waiting.", undefined, mid);
+            }
+            break;
+          }
+          default:
+            // Block all customer actions for owner
+            await reply(botToken, chatId, "Use the dashboard for store management: https://gh-store.me/dashboard", adminKeyboard(locale), mid);
+            break;
+        }
+        if (callback.id) {
+          await telegram(botToken, "answerCallbackQuery", { callback_query_id: callback.id });
+        }
+        return;
+      }
+
+      // ── Customer callbacks ────────────────────────────────────────────────
       switch (data) {
         case "menu":
           await reply(botToken, chatId, linked ? t(locale, "linkedMenu") : t(locale, "welcome"), menuKeyboard(locale, linked), mid);
@@ -1953,10 +2013,11 @@ Deno.serve(async (request: Request): Promise<Response> => {
           break;
 
         case "login":
+          // Renamed to profile; redirect any stale "login" button
           if (!linked) {
             await reply(botToken, chatId, t(locale, "needLink"), menuKeyboard(locale, false), mid);
           } else {
-            await sendLoginLink(supabase, botToken, chatId, locale, link.user_id, mid);
+            await showProfile(supabase, botToken, chatId, locale, link.user_id, mid);
           }
           break;
 
@@ -2055,34 +2116,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
           }
           break;
 
-        case "pending":
-          if (!isOwner) {
-            break;
-          }
-          const { data: rows } = await supabase
-            .from("recharge_requests")
-            .select("reference, requested_amount, payment_method")
-            .eq("status", "pending")
-            .order("created_at", { ascending: true })
-            .limit(10);
-          if (rows && rows.length > 0) {
-            await reply(
-              botToken,
-              chatId,
-              [
-                `⏳ <b>Pending recharges (${rows.length})</b>`,
-                ...rows.map(
-                  (row, index) =>
-                    `${index + 1}. <code>${escapeHtml(row.reference)}</code> — <b>${money(row.requested_amount)}</b> · ${escapeHtml(row.payment_method ?? "—")}`,
-                ),
-              ].join("\n"),
-              undefined,
-              mid,
-            );
-          } else {
-            await reply(botToken, chatId, "✅ No recharge requests waiting.", undefined, mid);
-          }
-          break;
+
       }
 
       if (callback.id) {

@@ -34,6 +34,11 @@ export default async function SupportPage({
     redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/support`)}`);
   }
 
+  // The admin manages support from the dashboard, not the customer support page.
+  if (session.isAdmin) {
+    redirect(`/${locale}/dashboard/support`);
+  }
+
   const query = await searchParams;
   const selectedId = typeof query.thread === "string" ? query.thread : null;
 
