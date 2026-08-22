@@ -642,7 +642,13 @@ async function showGames(
   locale: Locale,
   categoryId: string,
 ): Promise<void> {
-  const games = await readGames(supabase, locale, categoryId);
+  let games = await readGames(supabase, locale, categoryId);
+
+  // A category with no assigned games should never dead-end the browse: fall
+  // back to the full active catalogue so the customer still reaches offers.
+  if (games.length === 0) {
+    games = await readGames(supabase, locale, null);
+  }
 
   if (games.length === 0) {
     await sendText(botToken, chatId, t(locale, "noOffers"));
@@ -651,8 +657,10 @@ async function showGames(
 
   await sendText(botToken, chatId, t(locale, "games"), {
     inline_keyboard: [
-      // The category rides along so "back" can return to this list.
-      ...games.map((game) => [{ text: game.name, callback_data: `game:${game.id}:${categoryId}` }]),
+      // The category is not part of the callback: a game id plus a category id
+      // would exceed Telegram's 64-byte callback_data limit. The back target is
+      // looked up from the game row instead.
+      ...games.map((game) => [{ text: game.name, callback_data: `game:${game.id}` }]),
       backRow(locale, "catalog"),
     ],
   });
@@ -664,7 +672,6 @@ async function showOffers(
   chatId: number,
   locale: Locale,
   gameId: string,
-  categoryId: string,
 ): Promise<void> {
   const offers = await readOffers(supabase, locale, gameId);
 
@@ -672,6 +679,14 @@ async function showOffers(
     await sendText(botToken, chatId, t(locale, "noOffers"));
     return;
   }
+
+  // Where "back" lands: the game's own category list, or the categories if the
+  // game has no category.
+  const { data: game } = await supabase
+    .from("games")
+    .select("category_id")
+    .eq("id", gameId)
+    .maybeSingle();
 
   await sendText(
     botToken,
@@ -689,7 +704,7 @@ async function showOffers(
       "https://gh-store.me",
     ].join("\n"),
     {
-      inline_keyboard: [backRow(locale, `cat:${categoryId}`)],
+      inline_keyboard: [backRow(locale, game?.category_id ? `cat:${game.category_id}` : "catalog")],
     },
   );
 }
@@ -1330,9 +1345,9 @@ Deno.serve(async (request: Request): Promise<Response> => {
               await showGames(supabase, botToken, chatId, locale, categoryId);
             }
           } else if (data.startsWith("game:")) {
-            const [gameId, categoryId] = data.slice(5).split(":");
+            const gameId = data.slice(5);
             if (gameId) {
-              await showOffers(supabase, botToken, chatId, locale, gameId, categoryId ?? "");
+              await showOffers(supabase, botToken, chatId, locale, gameId);
             }
           }
           break;

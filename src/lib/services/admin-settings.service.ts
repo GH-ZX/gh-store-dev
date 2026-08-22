@@ -675,13 +675,23 @@ async function telegramPost(token: string, method: string, body: Record<string, 
 /**
  * Install the bot's command menu (the ☰ button in Telegram).
  *
- * Webhook registration does this too; this standalone call exists so an owner
- * can re-install the menu without rotating the webhook secret.
+ * No scope is passed: scoped commands (`all_private_chats`) only appear in
+ * chats Telegram's clients consider active, and the menu button stays missing
+ * otherwise. The default scope applies everywhere and shows the button
+ * reliably. Webhook registration does this too; this standalone call exists so
+ * an owner can re-install the menu without rotating the webhook secret.
  */
 export async function registerTelegramCommands(token: string): Promise<{ ok: boolean; kind: string }> {
+  // Clear any previously scoped commands first: a leftover `all_private_chats`
+  // scope takes precedence over the default and would keep the menu button
+  // missing. Then install the default-scope list that shows everywhere.
+  await telegramPost(token, "setMyCommands", {
+    commands: [],
+    scope: { type: "all_private_chats" },
+  });
+
   return telegramPost(token, "setMyCommands", {
     commands: TELEGRAM_COMMANDS,
-    scope: { type: "all_private_chats" },
   });
 }
 
