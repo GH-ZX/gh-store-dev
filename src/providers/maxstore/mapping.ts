@@ -81,6 +81,77 @@ export function readCategoryNames(payload: unknown): Map<string, string> {
  * documented response example, so product-shaped rows are recognized by their
  * price/product fields instead of trusting one wrapper key.
  */
+export type MaxStoreContentCategory = {
+  id: string;
+  title: string;
+  productCount: number | null;
+  availableCount: number | null;
+};
+
+/**
+ * Read the provider's actual category navigation from `/content/0`.
+ *
+ * Product rows also carry an `id` and a `name`, so category entries are accepted
+ * only when they are not product-shaped and are found under category-like keys.
+ */
+export function readContentCategories(payload: unknown): MaxStoreContentCategory[] {
+  const categories = new Map<string, MaxStoreContentCategory>();
+  const visited = new Set<object>();
+
+  function numberValue(value: unknown): number | null {
+    const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
+  }
+
+  function visit(value: unknown, parentKey = ""): void {
+    if (!value || typeof value !== "object" || visited.has(value)) {
+      return;
+    }
+
+    visited.add(value);
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item, parentKey));
+      return;
+    }
+
+    const row = value as Record<string, unknown>;
+    const isProduct =
+      row.price !== undefined ||
+      row.product_id !== undefined ||
+      row.product_type !== undefined ||
+      row.params !== undefined ||
+      row.qty_values !== undefined;
+    const rawId = row.category_id ?? row.categoryId ?? row.id;
+    const rawTitle = row.category_title ?? row.category_name ?? row.categoryTitle ?? row.name ?? row.title;
+    const id = rawId === undefined || rawId === null ? "" : String(rawId).trim();
+    const title = typeof rawTitle === "string" ? rawTitle.trim() : "";
+    const categoryKey = parentKey.toLowerCase();
+    const looksLikeCategory =
+      categoryKey.includes("categor") ||
+      categoryKey === "data" ||
+      categoryKey === "content" ||
+      categoryKey === "items" ||
+      categoryKey === "children";
+
+    if (!isProduct && id && title && looksLikeCategory) {
+      categories.set(id, {
+        id,
+        title,
+        productCount: numberValue(row.product_count ?? row.productCount ?? row.products_count ?? row.count),
+        availableCount: numberValue(row.available_count ?? row.availableCount ?? row.in_stock ?? row.stock_count),
+      });
+    }
+
+    Object.entries(row).forEach(([key, child]) => visit(child, key));
+  }
+
+  visit(payload);
+
+  return [...categories.values()].sort((first, second) => first.title.localeCompare(second.title));
+}
+
 export function readContentProductIds(payload: unknown): string[] {
   const ids = new Set<string>();
   const visited = new Set<object>();

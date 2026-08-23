@@ -3,11 +3,13 @@ declare
   required_table text;
   required_tables text[] := array[
     'categories',
+    'products',
     'games',
     'game_regions',
     'game_input_fields',
     'offers',
     'provider_game_mappings',
+    'provider_product_mappings',
     'provider_offer_mappings'
   ];
   table_is_rls_enabled boolean;

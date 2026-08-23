@@ -52,6 +52,11 @@ export const productSchema = z.object({
   categoryTitle: z.string().optional(),
   category: z.unknown().optional(),
   available: z.union([z.boolean(), z.number(), z.string()]).optional(),
+  stock: z.union([z.number(), z.string()]).optional(),
+  stock_count: z.union([z.number(), z.string()]).optional(),
+  stockCount: z.union([z.number(), z.string()]).optional(),
+  inventory: z.union([z.number(), z.string()]).optional(),
+  quantity_available: z.union([z.number(), z.string()]).optional(),
   product_type: z.string().optional(),
   qty_values: z.unknown().optional(),
   params: z.unknown().optional(),
@@ -145,7 +150,33 @@ export type MaxStoreProduct = {
   /** Carried through unparsed: neither shape is documented beyond an example. */
   qtyValues: unknown;
   params: unknown;
+  /** Null means the provider exposes availability but no numeric inventory. */
+  stockCount: number | null;
 };
+
+/** Read a numeric inventory value from common MaxStore response variants. */
+export function readStockCount(product: unknown): number | null {
+  if (!product || typeof product !== "object") {
+    return null;
+  }
+
+  const value = product as {
+    stock?: unknown;
+    stock_count?: unknown;
+    stockCount?: unknown;
+    inventory?: unknown;
+    quantity_available?: unknown;
+  };
+  const raw = value.stock_count ?? value.stockCount ?? value.stock ?? value.inventory ?? value.quantity_available;
+
+  if (raw === undefined || raw === null || raw === "") {
+    return null;
+  }
+
+  const parsed = typeof raw === "number" ? raw : Number(raw);
+
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
+}
 
 /** `available` may arrive as a boolean, a 0/1, or the string form of either. */
 export function readAvailable(value: unknown): boolean {

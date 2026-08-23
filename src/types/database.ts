@@ -569,6 +569,71 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description_ar: string | null
+          description_en: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_featured: boolean
+          logo_url: string | null
+          metadata: Json
+          name_ar: string
+          name_en: string
+          product_kind: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          logo_url?: string | null
+          metadata?: Json
+          name_ar: string
+          name_en: string
+          product_kind?: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          logo_url?: string | null
+          metadata?: Json
+          name_ar?: string
+          name_en?: string
+          product_kind?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body_ar: string
@@ -631,7 +696,8 @@ export type Database = {
           currency: string
           description_ar: string | null
           description_en: string | null
-          game_id: string
+          game_id: string | null
+          product_id: string
           id: string
           is_active: boolean
           is_sale: boolean
@@ -651,7 +717,8 @@ export type Database = {
           currency?: string
           description_ar?: string | null
           description_en?: string | null
-          game_id: string
+          game_id?: string | null
+          product_id?: string
           id?: string
           is_active?: boolean
           is_sale?: boolean
@@ -671,7 +738,8 @@ export type Database = {
           currency?: string
           description_ar?: string | null
           description_en?: string | null
-          game_id?: string
+          game_id?: string | null
+          product_id?: string
           id?: string
           is_active?: boolean
           is_sale?: boolean
@@ -1079,6 +1147,44 @@ export type Database = {
             columns: ["offer_id"]
             isOneToOne: false
             referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_product_mappings: {
+        Row: {
+          created_at: string
+          external_product_code: string
+          id: string
+          metadata: Json
+          product_id: string
+          provider_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_product_code: string
+          id?: string
+          metadata?: Json
+          product_id: string
+          provider_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_product_code?: string
+          id?: string
+          metadata?: Json
+          product_id?: string
+          provider_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_product_mappings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]

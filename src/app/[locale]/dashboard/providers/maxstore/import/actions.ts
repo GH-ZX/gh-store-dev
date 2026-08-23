@@ -21,7 +21,8 @@ import type { MaxStoreImportActionState } from "@/app/[locale]/dashboard/provide
  * charges.
  */
 const importSchema = z.object({
-  categoryIds: z.array(z.string().trim().min(1).max(120)).min(1).max(200),
+  categoryIds: z.array(z.string().trim().min(1).max(120)).max(200),
+  productIds: z.array(z.string().trim().min(1).max(120)).min(1).max(2000),
   publish: z.boolean(),
   locale: z.string().optional(),
 });
@@ -38,6 +39,7 @@ export async function importMaxStoreAction(
 
   const parsed = importSchema.safeParse({
     categoryIds: formTextList(formData, "categoryIds"),
+    productIds: formTextList(formData, "productIds"),
     publish: formFlag(formData, "publish"),
     locale: formText(formData, "locale"),
   });
@@ -62,6 +64,7 @@ export async function importMaxStoreAction(
       parsed.data.categoryIds,
       { publish: parsed.data.publish, markupPercent },
       admin.id,
+      parsed.data.productIds,
     );
 
     // Imported products change the storefront, so its cached pages are stale.

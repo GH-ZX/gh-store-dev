@@ -16,6 +16,7 @@ import {
   profileSchema,
   readAvailable,
   readProductCategory,
+  readStockCount,
   type MaxStoreProduct,
   type MaxStoreProfile,
 } from "@/providers/maxstore/schemas";
@@ -266,6 +267,7 @@ export class MaxStoreClient {
         quantityFixed: (product.product_type ?? "").toLowerCase() === "package",
         qtyValues: product.qty_values ?? null,
         params: product.params ?? null,
+        stockCount: readStockCount(product),
       };
     });
   }
