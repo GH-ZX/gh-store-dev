@@ -97,7 +97,7 @@ async function cachedPublicHtml(
     return response;
   }
 
-  const response = await handler.fetch(request, env);
+  const response = await handler.fetch(request, env, ctx);
   const contentType = response.headers.get("content-type") ?? "";
 
   if (response.status !== 200 || !contentType.includes("text/html") || response.headers.has("set-cookie")) {
