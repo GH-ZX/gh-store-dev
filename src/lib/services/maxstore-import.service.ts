@@ -6,6 +6,8 @@ import { MaxStoreClient } from "@/providers/maxstore/client";
 import { MaxStoreError } from "@/providers/maxstore/errors";
 import {
   MAXSTORE_PROVIDER_NAME,
+  readCategoryNames,
+  readContentProductIds,
   readProductParams,
   readQuantityBounds,
   toMaxStoreGameCode,
@@ -94,43 +96,14 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown failure.";
 }
 
-/**
- * Category names out of `/api/v2/content/0`, if they can be found.
- *
- * The response shape is undocumented, so this walks whatever comes back looking
- * for objects that carry an id and something name-shaped, at the top level or
- * one `data` deep. Anything else yields an empty map and the caller falls back
- * to the id — a category called "Category 12" is worse than one called "PUBG",
- * and far better than an import that refuses to run.
- */
-export function readCategoryNames(payload: unknown): Map<string, string> {
-  const names = new Map<string, string>();
-  const rows = Array.isArray(payload)
-    ? payload
-    : Array.isArray((payload as { data?: unknown })?.data)
-      ? ((payload as { data: unknown[] }).data)
-      : [];
-
-  for (const row of rows) {
-    if (!row || typeof row !== "object") {
-      continue;
-    }
-
-    const entry = row as { id?: unknown; name?: unknown; title?: unknown };
-    const id = entry.id === undefined || entry.id === null ? "" : String(entry.id).trim();
-    const name =
-      typeof entry.name === "string" && entry.name.trim()
-        ? entry.name.trim()
-        : typeof entry.title === "string" && entry.title.trim()
-          ? entry.title.trim()
-          : "";
-
-    if (id && name) {
-      names.set(id, name);
-    }
+function categoryKey(product: MaxStoreProduct): string {
+  if (product.categoryId?.trim()) {
+    return product.categoryId.trim();
   }
 
-  return names;
+  const title = product.categoryTitle?.trim();
+
+  return title ? `name:${title.toLocaleLowerCase()}` : "uncategorised";
 }
 
 /**
@@ -144,7 +117,7 @@ export async function loadMaxStoreCatalogue(
   apiToken: string,
 ): Promise<{ categories: MaxStoreCategory[]; productsByCategory: Map<string, MaxStoreProduct[]> }> {
   const client = new MaxStoreClient({ apiToken });
-  const products = await client.listProducts();
+  let products = await client.listProducts();
 
   // Best-effort, and deliberately not fatal: see `readCategoryNames`.
   let names = new Map<string, string>();
@@ -155,12 +128,54 @@ export async function loadMaxStoreCatalogue(
     names = new Map();
   }
 
+  /*
+   * Some MaxStore responses omit category_id from `/products` even though the
+   * content endpoint still divides products correctly. Recover those links only
+   * when needed, and cap the lookups below the documented 60 calls/minute limit.
+   */
+  if (products.some((product) => !product.categoryId && !product.categoryTitle) && names.size > 0) {
+    const productCategory = new Map<string, string>();
+    const categoryIds = [...names.keys()].slice(0, 50);
+
+    for (const categoryId of categoryIds) {
+      try {
+        const productIds = readContentProductIds(await client.getContent(categoryId));
+
+        for (const productId of productIds) {
+          productCategory.set(productId, categoryId);
+        }
+      } catch {
+        // A single category's undocumented response must not discard the rest.
+      }
+    }
+
+    products = products.map((product) => {
+      const categoryId = productCategory.get(product.id);
+
+      return categoryId
+        ? { ...product, categoryId, categoryTitle: names.get(categoryId) ?? product.categoryTitle }
+        : product;
+    });
+  }
+
+  const categoryIdByTitle = new Map(
+    [...names.entries()].map(([id, title]) => [title.trim().toLocaleLowerCase(), id]),
+  );
+  const normalisedProducts = products.map((product) => {
+    if (product.categoryId || !product.categoryTitle) {
+      return product;
+    }
+
+    const categoryId = categoryIdByTitle.get(product.categoryTitle.trim().toLocaleLowerCase());
+
+    return categoryId ? { ...product, categoryId } : product;
+  });
   const productsByCategory = new Map<string, MaxStoreProduct[]>();
 
-  for (const product of products) {
+  for (const product of normalisedProducts) {
     // A product with no category still has to live somewhere, or it becomes
     // unsellable for a reason nobody can see.
-    const categoryId = product.categoryId ?? "uncategorised";
+    const categoryId = categoryKey(product);
     const bucket = productsByCategory.get(categoryId) ?? [];
 
     bucket.push(product);
@@ -177,7 +192,10 @@ export async function loadMaxStoreCatalogue(
   const categories: MaxStoreCategory[] = [...productsByCategory.entries()]
     .map(([categoryId, items]) => ({
       id: categoryId,
-      title: names.get(categoryId) ?? `Category ${categoryId}`,
+      title:
+        names.get(categoryId) ??
+        items.find((item) => item.categoryTitle)?.categoryTitle ??
+        (categoryId.startsWith("name:") ? categoryId.slice("name:".length) : `Category ${categoryId}`),
       productCount: items.length,
       availableCount: items.filter((item) => item.available).length,
       alreadyImported: imported.has(toMaxStoreGameCode(categoryId)),
@@ -225,29 +243,42 @@ async function importCategoryOffers(
 ): Promise<OfferCounts> {
   const counts: OfferCounts = { offersCreated: 0, offersUpdated: 0, offersDeactivated: 0 };
 
-  const { data: existingOffers } = await supabase
+  const { data: targetOffers } = await supabase
     .from("offers")
-    .select("id, slug, is_sale, is_active")
+    .select("id, game_id, slug, is_sale, is_active")
     .eq("game_id", gameId);
+  const offers = targetOffers ?? [];
+  const productIds = products.map((product) => product.id);
+  const { data: productMappings } = await supabase
+    .from("provider_offer_mappings")
+    .select("offer_id, external_product_id, pricing_mode")
+    .eq("provider_name", MAXSTORE_PROVIDER_NAME)
+    .in("external_product_id", productIds);
+  const mappedOfferIds = (productMappings ?? []).map((mapping) => mapping.offer_id);
+  const { data: mappedOffers } = mappedOfferIds.length
+    ? await supabase
+        .from("offers")
+        .select("id, game_id, slug, is_sale, is_active")
+        .in("id", mappedOfferIds)
+    : { data: [] };
+  const offerById = new Map([...(offers ?? []), ...(mappedOffers ?? [])].map((offer) => [offer.id, offer]));
+  const byProductId = new Map<
+    string,
+    { offerId: string; pricingMode: string | null; gameId: string; slug: string; isSale: boolean; isActive: boolean }
+  >();
 
-  const offers = existingOffers ?? [];
-  const offerIds = offers.map((offer) => offer.id);
-  const byProductId = new Map<string, { offerId: string; pricingMode: string | null }>();
+  for (const mapping of productMappings ?? []) {
+    const offer = offerById.get(mapping.offer_id);
 
-  if (offerIds.length > 0) {
-    const { data: mappings } = await supabase
-      .from("provider_offer_mappings")
-      .select("offer_id, external_product_id, pricing_mode")
-      .eq("provider_name", MAXSTORE_PROVIDER_NAME)
-      .in("offer_id", offerIds);
-
-    for (const mapping of mappings ?? []) {
-      if (mapping.external_product_id) {
-        byProductId.set(mapping.external_product_id, {
-          offerId: mapping.offer_id,
-          pricingMode: mapping.pricing_mode,
-        });
-      }
+    if (mapping.external_product_id && offer) {
+      byProductId.set(mapping.external_product_id, {
+        offerId: mapping.offer_id,
+        pricingMode: mapping.pricing_mode,
+        gameId: offer.game_id,
+        slug: offer.slug,
+        isSale: offer.is_sale,
+        isActive: offer.is_active,
+      });
     }
   }
 
@@ -277,8 +308,21 @@ async function importCategoryOffers(
     };
 
     if (existing) {
-      const current = offers.find((offer) => offer.id === existing.offerId);
-      const refreshPrice = (existing.pricingMode ?? "default") === "default" && !current?.is_sale;
+      const refreshPrice = (existing.pricingMode ?? "default") === "default" && !existing.isSale;
+      const moved = existing.gameId !== gameId;
+      const nextSlug = moved && offerSlugs.has(existing.slug)
+        ? uniqueSlug(`${existing.slug}-${product.id}`, offerSlugs)
+        : existing.slug;
+
+      if (moved) {
+        await supabase
+          .from("offers")
+          .update({ game_id: gameId, slug: nextSlug, updated_at: updatedAt })
+          .eq("id", existing.offerId);
+        existing.gameId = gameId;
+        existing.slug = nextSlug;
+        offerSlugs.add(nextSlug);
+      }
 
       await supabase
         .from("offers")
@@ -297,7 +341,7 @@ async function importCategoryOffers(
         .eq("offer_id", existing.offerId)
         .eq("provider_name", MAXSTORE_PROVIDER_NAME);
 
-      if (!product.available && current?.is_active) {
+      if (!product.available && existing.isActive) {
         counts.offersDeactivated += 1;
       } else {
         counts.offersUpdated += 1;
@@ -346,19 +390,56 @@ async function importCategoryOffers(
    * meaning with it.
    */
   for (const [productId, mapped] of byProductId.entries()) {
-    if (seen.has(productId)) {
+    // Only the target category owns absence-based deactivation. Mappings from
+    // other categories are loaded above so their products can move here, but
+    // importing one category must never turn another category off.
+    if (seen.has(productId) || mapped.gameId !== gameId) {
       continue;
     }
 
-    const current = offers.find((offer) => offer.id === mapped.offerId);
-
-    if (current?.is_active) {
+    if (mapped.isActive) {
       await supabase.from("offers").update({ is_active: false }).eq("id", mapped.offerId);
       counts.offersDeactivated += 1;
     }
   }
 
   return counts;
+}
+
+async function removeEmptyLegacyUncategorisedContainer(supabase: Client): Promise<void> {
+  const { data: mappings } = await supabase
+    .from("provider_game_mappings")
+    .select("game_id, external_game_code, metadata")
+    .eq("provider_name", MAXSTORE_PROVIDER_NAME);
+  const candidates = (mappings ?? []).filter((mapping) => {
+    if (mapping.external_game_code === "category:uncategorised") {
+      return true;
+    }
+
+    const metadata = mapping.metadata;
+
+    return (
+      metadata &&
+      typeof metadata === "object" &&
+      !Array.isArray(metadata) &&
+      (metadata as Record<string, unknown>).kind === "maxstore_category" &&
+      (metadata as Record<string, unknown>).category_id === "uncategorised"
+    );
+  });
+
+  if (candidates.length === 0) {
+    return;
+  }
+
+  const gameIds = candidates.map((candidate) => candidate.game_id);
+  const { data: offers } = await supabase.from("offers").select("game_id").in("game_id", gameIds);
+  const occupied = new Set((offers ?? []).map((offer) => offer.game_id));
+
+  for (const candidate of candidates) {
+    if (!occupied.has(candidate.game_id)) {
+      await supabase.from("games").delete().eq("id", candidate.game_id);
+    }
+  }
 }
 
 async function importOneCategory(
@@ -481,6 +562,8 @@ export async function importMaxStoreCategories(
 
   const created = outcomes.filter((outcome) => outcome.status === "created").length;
   const updated = outcomes.filter((outcome) => outcome.status === "updated").length;
+  await removeEmptyLegacyUncategorisedContainer(supabase);
+
   const failed = outcomes.filter((outcome) => outcome.status === "failed").length;
   const offersCreated = outcomes.reduce((total, outcome) => total + outcome.offersCreated, 0);
   const offersUpdated = outcomes.reduce((total, outcome) => total + outcome.offersUpdated, 0);

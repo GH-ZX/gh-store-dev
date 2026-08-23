@@ -6,6 +6,7 @@ import { toSearchTokens } from "@/lib/catalog/search";
 import { recordAudit } from "@/lib/services/admin-audit.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
+import { MAXSTORE_PROVIDER_NAME } from "@/providers/maxstore/mapping";
 import type { Database } from "@/types/database";
 
 /**
@@ -67,8 +68,16 @@ export type AdminGameListItem = {
   showInCarousel: boolean;
   sortOrder: number;
   offerCount: number;
-  /** G2Bulk game code, when the game came from that provider. */
+  providerName: string | null;
   providerCode: string | null;
+  providerCategoryId: string | null;
+  providerCategoryTitle: string | null;
+};
+
+export type AdminProviderCategory = {
+  id: string;
+  title: string;
+  count: number;
 };
 
 const LIST_COLUMNS =
@@ -107,38 +116,105 @@ async function countOffersByGame(client: Client, gameIds: string[]): Promise<Map
   return counts;
 }
 
-async function providerCodesByGame(client: Client, gameIds: string[]): Promise<Map<string, string>> {
-  const codes = new Map<string, string>();
+type ProviderGameInfo = {
+  providerName: string;
+  providerCode: string;
+  categoryId: string | null;
+  categoryTitle: string | null;
+};
+
+function textMetadata(metadata: unknown, key: string): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const value = (metadata as Record<string, unknown>)[key];
+
+  return (typeof value === "string" || typeof value === "number") && String(value).trim()
+    ? String(value).trim()
+    : null;
+}
+
+async function providerInfoByGame(client: Client, gameIds: string[]): Promise<Map<string, ProviderGameInfo>> {
+  const info = new Map<string, ProviderGameInfo>();
 
   if (gameIds.length === 0) {
-    return codes;
+    return info;
   }
 
   const { data, error } = await client
     .from("provider_game_mappings")
-    .select("game_id, external_game_code")
-    .eq("provider_name", G2BULK_PROVIDER_NAME)
-    .in("game_id", gameIds);
+    .select("game_id, provider_name, external_game_code, metadata")
+    .in("game_id", gameIds)
+    .order("provider_name", { ascending: true });
 
   if (error) {
     throw new Error(`Reading provider mappings failed: ${error.message}`);
   }
 
   for (const row of data) {
-    codes.set(row.game_id, row.external_game_code);
+    // A game should have one provider mapping, but keeping the first row makes
+    // this read stable if an operator temporarily maps it to two suppliers.
+    if (info.has(row.game_id)) {
+      continue;
+    }
+
+    info.set(row.game_id, {
+      providerName: row.provider_name,
+      providerCode: row.external_game_code,
+      categoryId: textMetadata(row.metadata, "category_id"),
+      categoryTitle: textMetadata(row.metadata, "category_title"),
+    });
   }
 
-  return codes;
+  return info;
 }
 
 export type ListAdminGamesOptions = {
   query?: string;
   publishedOnly?: boolean;
+  category?: string;
 };
+
+export async function listAdminProviderCategories(): Promise<AdminProviderCategory[]> {
+  await requireAdmin();
+
+  const client = await createSupabaseServerClient();
+  const { data, error } = await client
+    .from("provider_game_mappings")
+    .select("metadata")
+    .eq("provider_name", MAXSTORE_PROVIDER_NAME);
+
+  if (error) {
+    throw new Error(`Reading provider categories failed: ${error.message}`);
+  }
+
+  const categories = new Map<string, AdminProviderCategory>();
+
+  for (const row of data) {
+    const id = textMetadata(row.metadata, "category_id");
+    const title = textMetadata(row.metadata, "category_title");
+
+    if (!id) {
+      continue;
+    }
+
+    const current = categories.get(id);
+
+    categories.set(id, {
+      id,
+      title: title ?? `Category ${id}`,
+      count: (current?.count ?? 0) + 1,
+    });
+  }
+
+  return [...categories.values()].sort((first, second) => first.title.localeCompare(second.title));
+}
 
 export async function listAdminGames({
   query,
   publishedOnly = false,
+  category,
 }: ListAdminGamesOptions = {}): Promise<AdminGameListItem[]> {
   await requireAdmin();
 
@@ -166,24 +242,33 @@ export async function listAdminGames({
   }
 
   const gameIds = data.map((game) => game.id);
-  const [offerCounts, providerCodes] = await Promise.all([
+  const [offerCounts, providerInfo] = await Promise.all([
     countOffersByGame(client, gameIds),
-    providerCodesByGame(client, gameIds),
+    providerInfoByGame(client, gameIds),
   ]);
 
-  return data.map((game) => ({
-    id: game.id,
-    slug: game.slug,
-    nameAr: game.name_ar,
-    nameEn: game.name_en,
-    imageUrl: game.image_url,
-    isActive: game.is_active,
-    isFeatured: game.is_featured,
-    showInCarousel: game.show_in_carousel,
-    sortOrder: game.sort_order,
-    offerCount: offerCounts.get(game.id) ?? 0,
-    providerCode: providerCodes.get(game.id) ?? null,
-  }));
+  return data
+    .map((game) => {
+      const provider = providerInfo.get(game.id);
+
+      return {
+        id: game.id,
+        slug: game.slug,
+        nameAr: game.name_ar,
+        nameEn: game.name_en,
+        imageUrl: game.image_url,
+        isActive: game.is_active,
+        isFeatured: game.is_featured,
+        showInCarousel: game.show_in_carousel,
+        sortOrder: game.sort_order,
+        offerCount: offerCounts.get(game.id) ?? 0,
+        providerName: provider?.providerName ?? null,
+        providerCode: provider?.providerCode ?? null,
+        providerCategoryId: provider?.categoryId ?? null,
+        providerCategoryTitle: provider?.categoryTitle ?? null,
+      };
+    })
+    .filter((game) => !category || game.providerCategoryId === category);
 }
 
 /** The editable half of a game, shared by the read and the write. */
@@ -209,7 +294,10 @@ export type AdminGameFields = {
 
 export type AdminGame = AdminGameFields & {
   id: string;
+  providerName: string | null;
   providerCode: string | null;
+  providerCategoryId: string | null;
+  providerCategoryTitle: string | null;
 };
 
 export type AdminGameOffer = {
@@ -263,14 +351,14 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
     return null;
   }
 
-  const [offers, providerCodes] = await Promise.all([
+  const [offers, providerInfo] = await Promise.all([
     client
       .from("offers")
       .select(OFFER_COLUMNS)
       .eq("game_id", gameId)
       .order("sort_order", { ascending: true })
       .order("price", { ascending: true }),
-    providerCodesByGame(client, [gameId]),
+    providerInfoByGame(client, [gameId]),
   ]);
 
   if (offers.error) {
@@ -297,7 +385,10 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
       isFeatured: game.is_featured,
       showInCarousel: game.show_in_carousel,
       carouselOrder: game.carousel_order,
-      providerCode: providerCodes.get(gameId) ?? null,
+      providerName: providerInfo.get(gameId)?.providerName ?? null,
+      providerCode: providerInfo.get(gameId)?.providerCode ?? null,
+      providerCategoryId: providerInfo.get(gameId)?.categoryId ?? null,
+      providerCategoryTitle: providerInfo.get(gameId)?.categoryTitle ?? null,
     },
     offers: offers.data.map((offer) => {
       // The mapping is embedded as a collection because `offer_id` alone is not

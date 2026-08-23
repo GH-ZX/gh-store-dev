@@ -42,26 +42,102 @@ export type MaxStoreProfile = {
 export const productSchema = z.object({
   id: id,
   name: z.string().optional(),
+  title: z.string().optional(),
+  product_name: z.string().optional(),
   price: money.optional(),
   category_id: id.optional(),
+  categoryId: id.optional(),
+  category_title: z.string().optional(),
+  category_name: z.string().optional(),
+  categoryTitle: z.string().optional(),
+  category: z.unknown().optional(),
   available: z.union([z.boolean(), z.number(), z.string()]).optional(),
   product_type: z.string().optional(),
   qty_values: z.unknown().optional(),
   params: z.unknown().optional(),
 });
 
-export const productsSchema = z.union([
-  z.array(productSchema),
-  // Some endpoints on this API wrap their payload in `data`; the products list
-  // is documented bare, so both are accepted rather than betting on one.
-  z.object({ data: z.array(productSchema) }).transform((value) => value.data),
-]);
+/**
+ * MaxStore has used both a bare list and wrapped lists in its API responses.
+ * Normalize those envelopes before validation so a transport wrapper cannot
+ * erase every product's category during import.
+ */
+export const productsSchema = z.preprocess((value) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const record = value as { data?: unknown; products?: unknown };
+
+  if (Array.isArray(record.products)) {
+    return record.products;
+  }
+
+  if (Array.isArray(record.data)) {
+    return record.data;
+  }
+
+  if (record.data && typeof record.data === "object") {
+    const nested = record.data as { products?: unknown; items?: unknown };
+
+    if (Array.isArray(nested.products)) {
+      return nested.products;
+    }
+
+    if (Array.isArray(nested.items)) {
+      return nested.items;
+    }
+  }
+
+  return value;
+}, z.array(productSchema));
+
+export type MaxStoreProductCategory = {
+  id: string | null;
+  title: string | null;
+};
+
+/** Read the category from all shapes observed in MaxStore payloads. */
+export function readProductCategory(product: unknown): MaxStoreProductCategory {
+  if (!product || typeof product !== "object") {
+    return { id: null, title: null };
+  }
+
+  const value = product as {
+    category_id?: unknown;
+    categoryId?: unknown;
+    category_title?: unknown;
+    category_name?: unknown;
+    categoryTitle?: unknown;
+    category?: unknown;
+  };
+  const nested = value.category && typeof value.category === "object"
+    ? (value.category as { id?: unknown; category_id?: unknown; name?: unknown; title?: unknown })
+    : null;
+  const rawId = value.category_id ?? value.categoryId ?? nested?.id ?? nested?.category_id;
+  const rawTitle =
+    value.category_title ??
+    value.category_name ??
+    value.categoryTitle ??
+    (typeof value.category === "string" ? value.category : undefined) ??
+    nested?.name ??
+    nested?.title;
+  const categoryId = rawId === undefined || rawId === null ? null : String(rawId).trim() || null;
+  const categoryTitle = typeof rawTitle === "string" ? rawTitle.trim() || null : null;
+
+  return { id: categoryId, title: categoryTitle };
+}
 
 export type MaxStoreProduct = {
   id: string;
   name: string;
   price: number;
   categoryId: string | null;
+  categoryTitle: string | null;
   available: boolean;
   productType: string | null;
   /** Fixed at 1 for a package, per the documentation. */

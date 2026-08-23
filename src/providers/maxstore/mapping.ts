@@ -16,6 +16,126 @@ import type { MaxStoreProduct } from "@/providers/maxstore/schemas";
 export const MAXSTORE_PROVIDER_NAME = "maxstore";
 
 /**
+ * Read category names from the undocumented content response.
+ *
+ * MaxStore may wrap categories in `data`, `categories`, or another object, so
+ * this walks nested values while accepting the common id/title key variants.
+ */
+export function readCategoryNames(payload: unknown): Map<string, string> {
+  const names = new Map<string, string>();
+  const visited = new Set<object>();
+
+  function visit(value: unknown): void {
+    if (!value || typeof value !== "object" || visited.has(value)) {
+      return;
+    }
+
+    visited.add(value);
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item));
+      return;
+    }
+
+    const entry = value as {
+      id?: unknown;
+      category_id?: unknown;
+      categoryId?: unknown;
+      name?: unknown;
+      title?: unknown;
+      category_name?: unknown;
+      category_title?: unknown;
+      price?: unknown;
+      product_id?: unknown;
+      product_type?: unknown;
+      params?: unknown;
+      qty_values?: unknown;
+      available?: unknown;
+    };
+    const isProductLike =
+      entry.price !== undefined ||
+      entry.product_id !== undefined ||
+      entry.product_type !== undefined ||
+      entry.params !== undefined ||
+      entry.qty_values !== undefined ||
+      entry.available !== undefined;
+    const rawId = entry.id ?? entry.category_id ?? entry.categoryId;
+    const rawName = entry.name ?? entry.title ?? entry.category_name ?? entry.category_title;
+    const id = rawId === undefined || rawId === null ? "" : String(rawId).trim();
+    const name = typeof rawName === "string" ? rawName.trim() : "";
+
+    if (!isProductLike && id && name) {
+      names.set(id, name);
+    }
+
+    Object.values(value).forEach(visit);
+  }
+
+  visit(payload);
+
+  return names;
+}
+
+/**
+ * Extract product ids from a category content response. The endpoint has no
+ * documented response example, so product-shaped rows are recognized by their
+ * price/product fields instead of trusting one wrapper key.
+ */
+export function readContentProductIds(payload: unknown): string[] {
+  const ids = new Set<string>();
+  const visited = new Set<object>();
+
+  function visit(value: unknown, parentKey = ""): void {
+    if (!value || typeof value !== "object" || visited.has(value)) {
+      return;
+    }
+
+    visited.add(value);
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item, parentKey));
+      return;
+    }
+
+    const row = value as {
+      id?: unknown;
+      product_id?: unknown;
+      productId?: unknown;
+      price?: unknown;
+      product_type?: unknown;
+      params?: unknown;
+      qty_values?: unknown;
+      available?: unknown;
+    };
+    const productId = row.product_id ?? row.productId ?? row.id;
+    const isProductLike =
+      parentKey === "products" ||
+      parentKey === "items" ||
+      row.product_id !== undefined ||
+      row.productId !== undefined ||
+      row.price !== undefined ||
+      row.product_type !== undefined ||
+      row.params !== undefined ||
+      row.qty_values !== undefined ||
+      row.available !== undefined;
+
+    if (isProductLike && productId !== undefined && productId !== null) {
+      const id = String(productId).trim();
+
+      if (id) {
+        ids.add(id);
+      }
+    }
+
+    Object.entries(value).forEach(([key, child]) => visit(child, key));
+  }
+
+  visit(payload);
+
+  return [...ids];
+}
+
+/**
  * The code a category is mapped under.
  *
  * Namespaced, because `provider_game_mappings` is keyed by
@@ -43,8 +163,9 @@ export function fromMaxStoreGameCode(code: string): string | null {
 export function toMaxStoreGameSlug(input: { id: string | number; title?: string | null }): string {
   const fromTitle = toSlug(input.title ?? "");
   const id = String(input.id).trim();
+  const safeId = toSlug(id) || "category";
 
-  return fromTitle ? `${fromTitle}-${id}` : `maxstore-${id}`;
+  return fromTitle ? `${fromTitle}-${safeId}` : `maxstore-${safeId}`;
 }
 
 /** A URL segment for a product, unique within its category by construction. */

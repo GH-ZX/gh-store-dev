@@ -450,6 +450,8 @@
     "searchLabel": "Search games",
     "searchPlaceholder": "Game name or slug…",
     "countLabel": "{count} games",
+    "categoryFilterLabel": "MaxStore category",
+    "allCategories": "All categories",
     "publishedFilter": "Published only",
     "allFilter": "All",
     "emptyTitle": "No games yet",
@@ -463,6 +465,7 @@
     "editAction": "Edit",
     "backToCatalog": "Back to catalog",
     "providerLabel": "Provider",
+    "providerCategoryLabel": "Supplier category",
     "game": {
       "title": "Game details",
       "description": "The Arabic name is what most customers read, so keep it accurate.",

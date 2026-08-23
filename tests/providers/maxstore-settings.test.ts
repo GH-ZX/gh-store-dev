@@ -9,7 +9,17 @@ import {
   classifyMaxStoreStatus,
   MaxStoreAuthError,
 } from "@/providers/maxstore/errors";
-import { classifyOrderStatus, readAvailable } from "@/providers/maxstore/schemas";
+import {
+  classifyOrderStatus,
+  productsSchema,
+  readAvailable,
+  readProductCategory,
+} from "@/providers/maxstore/schemas";
+import {
+  readCategoryNames,
+  readContentProductIds,
+  toMaxStoreGameSlug,
+} from "@/providers/maxstore/mapping";
 import type { Json } from "@/types/database";
 
 const NOW = "2026-08-14T12:00:00.000Z";
@@ -133,6 +143,61 @@ describe("reading a MaxStore order", () => {
     expect(classifyOrderStatus("wait")).toBe("pending");
     expect(classifyOrderStatus("something-new")).toBe("pending");
     expect(classifyOrderStatus(undefined)).toBe("pending");
+  });
+});
+
+describe("reading MaxStore categories", () => {
+  it("reads category ids and names from product variants", () => {
+    expect(readProductCategory({ category_id: 12, category_title: "PUBG" })).toEqual({
+      id: "12",
+      title: "PUBG",
+    });
+    expect(readProductCategory({ category: { id: 13, name: "Free Fire" } })).toEqual({
+      id: "13",
+      title: "Free Fire",
+    });
+    expect(readProductCategory({ categoryId: "14", categoryTitle: "Top ups" })).toEqual({
+      id: "14",
+      title: "Top ups",
+    });
+  });
+
+  it("accepts wrapped product lists without losing category fields", () => {
+    const result = productsSchema.parse({
+      data: {
+        products: [{ id: 1, title: "UC", category_id: 12, category_title: "PUBG" }],
+      },
+    });
+
+    expect(result[0].category_id).toBe("12");
+    expect(result[0].category_title).toBe("PUBG");
+  });
+
+  it("walks nested content responses for category names", () => {
+    expect(
+      [...readCategoryNames({ data: { categories: [{ id: 12, title: "PUBG" }] } })],
+    ).toEqual([["12", "PUBG"]]);
+  });
+
+  it("uses the product title when the provider omits a category id", () => {
+    expect(readProductCategory({ category: "Social services" })).toEqual({
+      id: null,
+      title: "Social services",
+    });
+  });
+
+  it("recovers product ids from nested category content", () => {
+    expect(
+      readContentProductIds({
+        data: { products: [{ product_id: 12, price: 0.95 }, { id: 15, available: true }] },
+      }),
+    ).toEqual(["12", "15"]);
+  });
+
+  it("keeps category container slugs URL-safe", () => {
+    expect(toMaxStoreGameSlug({ id: "name:social services", title: "Services" })).toBe(
+      "services-name-social-services",
+    );
   });
 });
 

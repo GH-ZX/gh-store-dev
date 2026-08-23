@@ -15,6 +15,7 @@ import {
   productsSchema,
   profileSchema,
   readAvailable,
+  readProductCategory,
   type MaxStoreProduct,
   type MaxStoreProfile,
 } from "@/providers/maxstore/schemas";
@@ -250,18 +251,23 @@ export class MaxStoreClient {
       throw new MaxStoreContractError("MaxStore /products returned an unexpected shape.");
     }
 
-    return parsed.data.map((product) => ({
-      id: product.id,
-      name: product.name ?? product.id,
-      price: product.price ?? 0,
-      categoryId: product.category_id ?? null,
-      available: readAvailable(product.available),
-      productType: product.product_type ?? null,
-      // Documented: a package is always bought one at a time.
-      quantityFixed: (product.product_type ?? "").toLowerCase() === "package",
-      qtyValues: product.qty_values ?? null,
-      params: product.params ?? null,
-    }));
+    return parsed.data.map((product) => {
+      const category = readProductCategory(product);
+
+      return {
+        id: product.id,
+        name: product.name ?? product.title ?? product.product_name ?? product.id,
+        price: product.price ?? 0,
+        categoryId: category.id,
+        categoryTitle: category.title,
+        available: readAvailable(product.available),
+        productType: product.product_type ?? null,
+        // Documented: a package is always bought one at a time.
+        quantityFixed: (product.product_type ?? "").toLowerCase() === "package",
+        qtyValues: product.qty_values ?? null,
+        params: product.params ?? null,
+      };
+    });
   }
 
   /**

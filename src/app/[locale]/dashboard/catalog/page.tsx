@@ -12,7 +12,10 @@ import type { Locale } from "@/i18n/config";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { cn } from "@/lib/cn";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
-import { listAdminGames } from "@/lib/services/admin-catalog.service";
+import {
+  listAdminGames,
+  listAdminProviderCategories,
+} from "@/lib/services/admin-catalog.service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -29,21 +32,23 @@ const MAX_QUERY_LENGTH = 80;
 const filtersSchema = z.object({
   q: z.string().max(400).optional(),
   published: z.string().max(8).optional(),
+  category: z.string().max(120).optional(),
 });
 
-type CatalogFilters = { query: string; publishedOnly: boolean };
+type CatalogFilters = { query: string; publishedOnly: boolean; category: string };
 
 /** A malformed query string degrades to the unfiltered list rather than an error page. */
 function parseFilters(input: unknown): CatalogFilters {
   const parsed = filtersSchema.safeParse(input ?? {});
 
   if (!parsed.success) {
-    return { query: "", publishedOnly: false };
+    return { query: "", publishedOnly: false, category: "" };
   }
 
   return {
     query: (parsed.data.q ?? "").trim().slice(0, MAX_QUERY_LENGTH),
     publishedOnly: parsed.data.published === "1",
+    category: (parsed.data.category ?? "").trim().slice(0, 120),
   };
 }
 
@@ -56,6 +61,10 @@ function catalogPath(locale: Locale, filters: CatalogFilters): string {
 
   if (filters.publishedOnly) {
     search.set("published", "1");
+  }
+
+  if (filters.category) {
+    search.set("category", filters.category);
   }
 
   const queryString = search.toString();
@@ -75,10 +84,14 @@ export default async function CatalogPage({
   const locale = await resolveLocaleParam(params);
   const messages = getMessages(locale, "admin").catalog;
   const filters = parseFilters(await searchParams);
-  const games = await listAdminGames({
-    query: filters.query,
-    publishedOnly: filters.publishedOnly,
-  });
+  const [games, providerCategories] = await Promise.all([
+    listAdminGames({
+      query: filters.query,
+      publishedOnly: filters.publishedOnly,
+      category: filters.category,
+    }),
+    listAdminProviderCategories(),
+  ]);
 
   return (
     <div className="grid gap-8">
@@ -99,6 +112,22 @@ export default async function CatalogPage({
       <div className="grid gap-4 rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-5 sm:p-6">
         <form method="get" action={`/${locale}/dashboard/catalog`} className="flex flex-wrap items-end gap-3">
           {filters.publishedOnly ? <input type="hidden" name="published" value="1" /> : null}
+
+          <label className="grid min-w-48 gap-1.5">
+            <span className="text-xs font-semibold text-[var(--ink-soft)]">{messages.categoryFilterLabel}</span>
+            <select
+              name="category"
+              defaultValue={filters.category}
+              className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+            >
+              <option value="">{messages.allCategories}</option>
+              {providerCategories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.title} ({category.count})
+                </option>
+              ))}
+            </select>
+          </label>
 
           <TextField
             label={messages.searchLabel}
@@ -125,7 +154,11 @@ export default async function CatalogPage({
             return (
               <Link
                 key={option.label}
-                href={catalogPath(locale, { query: filters.query, publishedOnly: option.publishedOnly })}
+                href={catalogPath(locale, {
+                  query: filters.query,
+                  publishedOnly: option.publishedOnly,
+                  category: filters.category,
+                })}
                 aria-current={active ? "true" : undefined}
                 className={cn(
                   FILTER_LINK_CLASSES,
@@ -182,6 +215,11 @@ export default async function CatalogPage({
                     {game.providerCode ? (
                       <span>
                         {messages.providerLabel}: <span dir="ltr">{game.providerCode}</span>
+                      </span>
+                    ) : null}
+                    {game.providerCategoryTitle ? (
+                      <span>
+                        {messages.providerCategoryLabel}: {game.providerCategoryTitle}
                       </span>
                     ) : null}
                   </p>

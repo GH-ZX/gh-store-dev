@@ -66,6 +66,11 @@ export default async function CatalogGamePage({
               {messages.providerLabel}: <span dir="ltr">{game.providerCode}</span>
             </span>
           ) : null}
+          {game.providerCategoryTitle ? (
+            <span className="text-xs text-[var(--ink-faint)]">
+              {messages.providerCategoryLabel}: {game.providerCategoryTitle}
+            </span>
+          ) : null}
         </div>
       </div>
 

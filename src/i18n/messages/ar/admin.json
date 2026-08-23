@@ -450,6 +450,8 @@
     "searchLabel": "ابحث في الألعاب",
     "searchPlaceholder": "اسم اللعبة أو المعرّف…",
     "countLabel": "{count} لعبة",
+    "categoryFilterLabel": "فئة ماكس ستور",
+    "allCategories": "كل الفئات",
     "publishedFilter": "المنشورة فقط",
     "allFilter": "الكل",
     "emptyTitle": "لا توجد ألعاب بعد",
@@ -463,6 +465,7 @@
     "editAction": "تعديل",
     "backToCatalog": "عودة إلى الكتالوج",
     "providerLabel": "المورد",
+    "providerCategoryLabel": "فئة المورد",
     "game": {
       "title": "بيانات اللعبة",
       "description": "الاسم العربي هو ما يراه معظم الزبائن، فاحرص على دقته.",
