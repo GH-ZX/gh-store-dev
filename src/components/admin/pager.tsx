@@ -70,7 +70,7 @@ export function Pager({
   return (
     <nav className="flex items-center justify-between gap-3" aria-label={labels.navLabel}>
       {hasPrevious ? (
-        <Link href={hrefFor(page - 1)} rel="prev" className={STEP}>
+        <Link href={hrefFor(page - 1)} rel="prev" prefetch={false} className={STEP}>
           <ArrowIcon direction="start" className="size-3.5 rtl:rotate-180" aria-hidden="true" />
           {labels.previous}
         </Link>
@@ -84,7 +84,7 @@ export function Pager({
       <p className="text-xs text-[var(--ink-muted)] tabular-nums">{position}</p>
 
       {hasNext ? (
-        <Link href={hrefFor(page + 1)} rel="next" className={STEP}>
+        <Link href={hrefFor(page + 1)} rel="next" prefetch={false} className={STEP}>
           {labels.next}
           <ArrowIcon direction="end" className="size-3.5 rtl:rotate-180" aria-hidden="true" />
         </Link>

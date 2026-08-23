@@ -39,8 +39,74 @@ function reconciliationUrl(appUrl: string): string | null {
   }
 }
 
+function isPublicHtmlRequest(request: Request): boolean {
+  if (request.method !== "GET" || request.headers.get("cookie")) {
+    return false;
+  }
+
+  const accept = request.headers.get("accept") ?? "";
+  if (!accept.includes("text/html")) {
+    return false;
+  }
+
+  // RSC and router prefetch responses are not complete documents and must not
+  // share a cache entry with a browser navigation.
+  if (
+    request.headers.has("rsc") ||
+    request.headers.has("next-router-prefetch") ||
+    request.headers.has("next-url")
+  ) {
+    return false;
+  }
+
+  const url = new URL(request.url);
+  if (!/^\/(?:ar|en)(?:\/|$)/.test(url.pathname)) {
+    return false;
+  }
+
+  // Account, checkout, search, and admin routes can contain user-specific data.
+  return !/^\/(?:ar|en)\/(?:login|forgot-password|reset-password|profile|wallet|orders|checkout|recharge|notifications|support|dashboard|search|telegram-connect)(?:\/|$)/.test(
+    url.pathname,
+  );
+}
+
+async function cachedPublicHtml(
+  request: Request,
+  env: Record<string, unknown>,
+  ctx: WorkerContext,
+): Promise<Response> {
+  const cache = (globalThis as typeof globalThis & { caches?: { default: Cache } }).caches?.default;
+
+  if (!cache || !isPublicHtmlRequest(request)) {
+    return handler.fetch(request, env);
+  }
+
+  const cached = await cache.match(request);
+  if (cached) {
+    const response = new Response(cached.body, cached);
+    response.headers.set("x-gh-store-cache", "HIT");
+    return response;
+  }
+
+  const response = await handler.fetch(request, env);
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (response.status !== 200 || !contentType.includes("text/html") || response.headers.has("set-cookie")) {
+    return response;
+  }
+
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", "public, s-maxage=60, stale-while-revalidate=300");
+  headers.set("x-gh-store-cache", "MISS");
+  const cacheable = new Response(response.body, { status: response.status, headers });
+  ctx.waitUntil(cache.put(request, cacheable.clone()));
+  return cacheable;
+}
+
 const worker = {
-  fetch: handler.fetch,
+  async fetch(request: Request, env: Record<string, unknown>, ctx: WorkerContext) {
+    return cachedPublicHtml(request, env, ctx);
+  },
 
   async scheduled(_event: unknown, env: ReconcileEnv, ctx: ScheduledContext) {
     const secret = env.RECONCILE_CRON_SECRET?.trim();

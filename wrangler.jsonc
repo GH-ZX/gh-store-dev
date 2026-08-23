@@ -11,6 +11,7 @@
 	],
 	"vars": {
 		"NEXT_PUBLIC_SUPABASE_URL": "https://njlzgfddfnnqujaodbta.supabase.co",
+		"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_gtOxP1au24qFXwzVppy0vw_oFWaSIH2",
 		"NEXT_PUBLIC_APP_URL": "https://gh-store.me"
 	},
 	"triggers": {

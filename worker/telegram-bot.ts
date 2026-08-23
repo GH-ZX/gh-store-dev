@@ -30,7 +30,6 @@ export type BotEnv = {
 };
 
 const TG_API = "https://api.telegram.org";
-const G2BULK_API = "https://api.g2bulk.com/v1";
 const BATCH = 10;
 
 type TelegramSettings = {

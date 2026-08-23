@@ -23,6 +23,13 @@
     "next": "التالي",
     "previous": "السابق"
   },
+  "pagination": {
+    "previous": "الصفحة السابقة",
+    "next": "الصفحة التالية",
+    "position": "الصفحة {page} من {pages}",
+    "positionUnknown": "الصفحة {page}",
+    "navLabel": "التنقل بين الصفحات"
+  },
   "states": {
     "loading": "جارٍ التحميل…",
     "emptyTitle": "لا يوجد شيء لعرضه بعد",

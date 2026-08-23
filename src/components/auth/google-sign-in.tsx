@@ -29,28 +29,44 @@ export function GoogleSignInButton({
   errorLabel: string;
 }) {
   const [error, setError] = useState(false);
+  const [pending, setPending] = useState(false);
 
   async function handleClick() {
-    const supabase = createSupabaseBrowserClient();
-    const callbackUrl = new URL("/auth/callback", window.location.origin);
-
-    const target = redirectTo ?? `/${locale}`;
-    if (target.startsWith("/") && !target.startsWith("//")) {
-      callbackUrl.searchParams.set("next", target);
+    if (pending) {
+      return;
     }
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: callbackUrl.toString(),
-        queryParams: {
-          prompt: "select_account",
-        },
-      },
-    });
+    setError(false);
+    setPending(true);
 
-    if (error) {
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+
+      const target = redirectTo ?? `/${locale}`;
+      if (target.startsWith("/") && !target.startsWith("//")) {
+        callbackUrl.searchParams.set("next", target);
+      }
+
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl.toString(),
+          queryParams: {
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (oauthError) {
+        setError(true);
+        setPending(false);
+      }
+    } catch {
+      // Configuration errors happen before Supabase can create a network request.
+      // Keep the failure actionable without exposing environment values.
       setError(true);
+      setPending(false);
     }
   }
 
@@ -62,6 +78,8 @@ export function GoogleSignInButton({
         size="lg"
         fullWidth
         onClick={handleClick}
+        disabled={pending}
+        aria-busy={pending}
         leadingIcon={<GoogleMark />}
       >
         {label}

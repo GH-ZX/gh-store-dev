@@ -52,7 +52,6 @@ import { g2bulkCallbackUrl, functionUrl, telegramWebhookFunction } from "@/lib/s
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   mergeTelegramSettings,
-  readTelegramAlertPrefs,
   readTelegramCredentials,
   toTelegramStatus,
   type TelegramCredentials,

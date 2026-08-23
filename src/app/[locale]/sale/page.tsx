@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { EmptyState, ErrorState } from "@/components/shared/states";
 import { OfferGrid } from "@/components/store/collections";
+import { Pager } from "@/components/admin/pager";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { getOfferCardLabels } from "@/lib/catalog/labels";
+import { parsePage } from "@/lib/paging";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { buildStorePageMetadata } from "@/lib/seo-settings";
-import { getSaleOffers, tryCatalogRead } from "@/lib/services/catalog.service";
+import { getSaleOffersPage, tryCatalogRead } from "@/lib/services/catalog.service";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/sale">): Promise<Metadata> {
   const locale = await resolveLocaleParam(params);
@@ -20,11 +23,13 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/sale">):
   });
 }
 
-export default async function SalePage({ params }: PageProps<"/[locale]/sale">) {
+export default async function SalePage({ params, searchParams }: PageProps<"/[locale]/sale">) {
   const locale = await resolveLocaleParam(params);
+  const query = await searchParams;
+  const page = parsePage(query.page, 1000);
   const common = getMessages(locale, "common");
   const messages = getMessages(locale, "catalog");
-  const result = await tryCatalogRead(() => getSaleOffers(locale));
+  const result = await tryCatalogRead(() => getSaleOffersPage(locale, page));
 
   if (!result.ok) {
     return (
@@ -40,6 +45,12 @@ export default async function SalePage({ params }: PageProps<"/[locale]/sale">) 
 
   const offers = result.data;
 
+  if (page > offers.pages) {
+    redirect(`/${locale}/sale?page=${offers.pages}`);
+  }
+
+  const pageHref = (target: number) => `/${locale}/sale?page=${target}`;
+
   return (
     <Section spacing="page" mesh>
       <SectionHeader
@@ -49,7 +60,7 @@ export default async function SalePage({ params }: PageProps<"/[locale]/sale">) 
         subtitle={messages.sale.description}
       />
 
-      {offers.length === 0 ? (
+      {offers.items.length === 0 ? (
         <EmptyState
           className="mt-10"
           title={messages.sale.emptyTitle}
@@ -59,14 +70,23 @@ export default async function SalePage({ params }: PageProps<"/[locale]/sale">) 
       ) : (
         <>
           <p className="mt-8 text-sm text-[var(--ink-muted)] tabular-nums">
-            {formatMessage(messages.sale.count, { count: offers.length }, locale)}
+            {formatMessage(messages.sale.count, { count: offers.total }, locale)}
           </p>
           <OfferGrid
             className="mt-4"
-            offers={offers}
+            offers={offers.items}
             locale={locale}
             labels={getOfferCardLabels(common, messages)}
           />
+          <div className="mt-8">
+            <Pager
+              locale={locale}
+              hrefFor={pageHref}
+              page={offers.page}
+              pages={offers.pages}
+              labels={common.pagination}
+            />
+          </div>
         </>
       )}
     </Section>

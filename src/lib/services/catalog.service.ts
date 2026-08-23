@@ -7,6 +7,7 @@ import {
   type StoreOffer,
 } from "@/lib/catalog/offer-mapper";
 import { toSearchTokens, type SearchFilter } from "@/lib/catalog/search";
+import { catalogPageRange, type CatalogPage, toCatalogPage } from "@/lib/catalog/pagination";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { currentUserIsAdmin } from "@/lib/services/session.service";
@@ -107,6 +108,25 @@ export async function getActiveGames(locale: Locale, limit?: number): Promise<St
 }
 
 /** Games an admin flagged for the homepage hero, in the configured order. */
+export async function getActiveGamesPage(locale: Locale, page: number): Promise<CatalogPage<StoreGame>> {
+  const supabase = createSupabasePublicClient();
+  const { from, to } = catalogPageRange(page);
+  const { data, error, count } = await supabase
+    .from("games")
+    .select(GAME_SELECT, { count: "exact" })
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("name_en", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    throw new CatalogReadError();
+  }
+
+  const total = count ?? data.length;
+  return toCatalogPage(data.map((game) => toStoreGame(game, locale)), page, total);
+}
+
 export async function getCarouselGames(locale: Locale, limit: number): Promise<StoreGame[]> {
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
@@ -334,6 +354,32 @@ export async function getOffersByType(
   return withAdminCosts(data.map((offer) => toStoreOffer(offer, locale)));
 }
 
+export async function getOffersByTypePage(
+  locale: Locale,
+  offerType: "gift_card" | "redeem_code",
+  page: number,
+): Promise<CatalogPage<StoreOffer>> {
+  const supabase = createSupabasePublicClient();
+  const types = offerType === "gift_card" ? GIFT_CARD_OFFER_TYPES : [offerType];
+  const { from, to } = catalogPageRange(page);
+  const { data, error, count } = await supabase
+    .from("offers")
+    .select(OFFER_WITH_GAME_SELECT, { count: "exact" })
+    .in("offer_type", types)
+    .eq("is_active", true)
+    .eq("games.is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("price", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    throw new CatalogReadError();
+  }
+
+  const offers = await withAdminCosts(data.map((offer) => toStoreOffer(offer, locale)));
+  return toCatalogPage(offers, page, count ?? offers.length);
+}
+
 export async function getSaleOffers(locale: Locale, limit?: number): Promise<StoreOffer[]> {
   const supabase = createSupabasePublicClient();
   let query = supabase
@@ -365,6 +411,27 @@ export async function getSaleOffers(locale: Locale, limit?: number): Promise<Sto
  * and stays deterministic — a stable list is cacheable, and the ranking becomes
  * real once order data lands in a later stage.
  */
+export async function getSaleOffersPage(locale: Locale, page: number): Promise<CatalogPage<StoreOffer>> {
+  const supabase = createSupabasePublicClient();
+  const { from, to } = catalogPageRange(page);
+  const { data, error, count } = await supabase
+    .from("offers")
+    .select(OFFER_WITH_GAME_SELECT, { count: "exact" })
+    .eq("is_active", true)
+    .eq("is_sale", true)
+    .eq("games.is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("price", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    throw new CatalogReadError();
+  }
+
+  const offers = await withAdminCosts(data.map((offer) => toStoreOffer(offer, locale)));
+  return toCatalogPage(offers, page, count ?? offers.length);
+}
+
 export async function getSuggestedOffers(locale: Locale, limit: number): Promise<StoreOffer[]> {
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase

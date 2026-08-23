@@ -44,6 +44,7 @@ export function GameCard({
   const card = (
     <Link
       href={`/${locale}/games/${game.slug}`}
+      prefetch={false}
       className={cn(
         "group relative flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--elevation-2)]",
         "transition-[transform,border-color,box-shadow] duration-[var(--duration)] ease-[var(--ease-spring)]",

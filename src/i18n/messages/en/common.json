@@ -23,6 +23,13 @@
     "next": "Next",
     "previous": "Previous"
   },
+  "pagination": {
+    "previous": "Previous page",
+    "next": "Next page",
+    "position": "Page {page} of {pages}",
+    "positionUnknown": "Page {page}",
+    "navLabel": "Pagination"
+  },
   "states": {
     "loading": "Loading…",
     "emptyTitle": "Nothing to show yet",

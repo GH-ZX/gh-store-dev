@@ -86,6 +86,7 @@ export function OfferCard({
     return (
       <Link
         href={href}
+        prefetch={false}
         className={cn(
           "group flex h-full items-center justify-between gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--elevation-1)]",
           interactive,
@@ -130,6 +131,7 @@ export function OfferCard({
   return (
     <Link
       href={href}
+      prefetch={false}
       className={cn(
         "group flex h-full flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--elevation-1)]",
         interactive,

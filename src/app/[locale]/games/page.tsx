@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { EmptyState, ErrorState } from "@/components/shared/states";
 import { GameGrid } from "@/components/store/collections";
+import { Pager } from "@/components/admin/pager";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { getGameCardLabels } from "@/lib/catalog/labels";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { buildStorePageMetadata } from "@/lib/seo-settings";
-import { getActiveGames, tryCatalogRead } from "@/lib/services/catalog.service";
+import { parsePage } from "@/lib/paging";
+import { getActiveGamesPage, tryCatalogRead } from "@/lib/services/catalog.service";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/games">): Promise<Metadata> {
   const locale = await resolveLocaleParam(params);
@@ -20,11 +23,13 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/games">)
   });
 }
 
-export default async function GamesPage({ params }: PageProps<"/[locale]/games">) {
+export default async function GamesPage({ params, searchParams }: PageProps<"/[locale]/games">) {
   const locale = await resolveLocaleParam(params);
+  const query = await searchParams;
+  const page = parsePage(query.page, 1000);
   const common = getMessages(locale, "common");
   const messages = getMessages(locale, "catalog");
-  const result = await tryCatalogRead(() => getActiveGames(locale));
+  const result = await tryCatalogRead(() => getActiveGamesPage(locale, page));
 
   if (!result.ok) {
     return (
@@ -40,6 +45,12 @@ export default async function GamesPage({ params }: PageProps<"/[locale]/games">
 
   const games = result.data;
 
+  if (page > games.pages) {
+    redirect(`/${locale}/games?page=${games.pages}`);
+  }
+
+  const pageHref = (target: number) => `/${locale}/games?page=${target}`;
+
   return (
     <Section spacing="page" mesh>
       <SectionHeader
@@ -49,7 +60,7 @@ export default async function GamesPage({ params }: PageProps<"/[locale]/games">
         subtitle={messages.games.description}
       />
 
-      {games.length === 0 ? (
+      {games.items.length === 0 ? (
         <EmptyState
           className="mt-10"
           title={messages.games.emptyTitle}
@@ -58,15 +69,24 @@ export default async function GamesPage({ params }: PageProps<"/[locale]/games">
       ) : (
         <>
           <p className="mt-8 text-sm text-[var(--ink-muted)] tabular-nums">
-            {formatMessage(messages.games.count, { count: games.length }, locale)}
+            {formatMessage(messages.games.count, { count: games.total }, locale)}
           </p>
           <GameGrid
             className="mt-4"
-            games={games}
+            games={games.items}
             locale={locale}
             labels={getGameCardLabels(common)}
             priorityCount={5}
           />
+          <div className="mt-8">
+            <Pager
+              locale={locale}
+              hrefFor={pageHref}
+              page={games.page}
+              pages={games.pages}
+              labels={common.pagination}
+            />
+          </div>
         </>
       )}
     </Section>

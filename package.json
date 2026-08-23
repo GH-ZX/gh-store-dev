@@ -10,10 +10,12 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "next typegen && tsc --noEmit",
-    "check": "pnpm lint && pnpm typecheck && pnpm build",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "validate:production-config": "node scripts/validate-production-config.mjs",
+    "check": "pnpm validate:production-config && pnpm lint && pnpm typecheck && pnpm build",
+    "build:cloudflare": "pnpm validate:production-config && opennextjs-cloudflare build",
+    "preview": "pnpm build:cloudflare && opennextjs-cloudflare preview",
+    "deploy": "pnpm build:cloudflare && opennextjs-cloudflare deploy",
+    "upload": "pnpm build:cloudflare && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {

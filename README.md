@@ -61,7 +61,7 @@ pnpm test
 pnpm lint
 pnpm typecheck
 pnpm build
-pnpm exec opennextjs-cloudflare build
+pnpm build:cloudflare
 ```
 
 Run the browser suite when Chrome and a configured environment are available:

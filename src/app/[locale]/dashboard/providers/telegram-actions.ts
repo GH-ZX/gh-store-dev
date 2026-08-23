@@ -178,7 +178,7 @@ export async function registerTelegramWebhookAction(
  */
 export async function setTelegramCommandsAction(
   _state: TelegramActionState,
-  formData: FormData,
+  _formData: FormData,
 ): Promise<TelegramActionState> {
   await requireAdmin();
 

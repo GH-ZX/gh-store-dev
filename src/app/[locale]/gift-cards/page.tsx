@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { EmptyState, ErrorState } from "@/components/shared/states";
 import { OfferGrid } from "@/components/store/collections";
+import { Pager } from "@/components/admin/pager";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { getOfferCardLabels } from "@/lib/catalog/labels";
+import { parsePage } from "@/lib/paging";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { buildStorePageMetadata } from "@/lib/seo-settings";
-import { getOffersByType, tryCatalogRead } from "@/lib/services/catalog.service";
+import { getOffersByTypePage, tryCatalogRead } from "@/lib/services/catalog.service";
 
 export async function generateMetadata({
   params,
@@ -22,11 +25,13 @@ export async function generateMetadata({
   });
 }
 
-export default async function GiftCardsPage({ params }: PageProps<"/[locale]/gift-cards">) {
+export default async function GiftCardsPage({ params, searchParams }: PageProps<"/[locale]/gift-cards">) {
   const locale = await resolveLocaleParam(params);
+  const query = await searchParams;
+  const page = parsePage(query.page, 1000);
   const common = getMessages(locale, "common");
   const messages = getMessages(locale, "catalog");
-  const result = await tryCatalogRead(() => getOffersByType(locale, "gift_card"));
+  const result = await tryCatalogRead(() => getOffersByTypePage(locale, "gift_card", page));
 
   if (!result.ok) {
     return (
@@ -42,6 +47,12 @@ export default async function GiftCardsPage({ params }: PageProps<"/[locale]/gif
 
   const offers = result.data;
 
+  if (page > offers.pages) {
+    redirect(`/${locale}/gift-cards?page=${offers.pages}`);
+  }
+
+  const pageHref = (target: number) => `/${locale}/gift-cards?page=${target}`;
+
   return (
     <Section spacing="page" mesh>
       <SectionHeader
@@ -51,7 +62,7 @@ export default async function GiftCardsPage({ params }: PageProps<"/[locale]/gif
         subtitle={messages.giftCards.description}
       />
 
-      {offers.length === 0 ? (
+      {offers.items.length === 0 ? (
         <EmptyState
           className="mt-10"
           title={messages.giftCards.emptyTitle}
@@ -60,14 +71,23 @@ export default async function GiftCardsPage({ params }: PageProps<"/[locale]/gif
       ) : (
         <>
           <p className="mt-8 text-sm text-[var(--ink-muted)] tabular-nums">
-            {formatMessage(messages.giftCards.count, { count: offers.length }, locale)}
+            {formatMessage(messages.giftCards.count, { count: offers.total }, locale)}
           </p>
           <OfferGrid
             className="mt-4"
-            offers={offers}
+            offers={offers.items}
             locale={locale}
             labels={getOfferCardLabels(common, messages)}
           />
+          <div className="mt-8">
+            <Pager
+              locale={locale}
+              hrefFor={pageHref}
+              page={offers.page}
+              pages={offers.pages}
+              labels={common.pagination}
+            />
+          </div>
         </>
       )}
     </Section>

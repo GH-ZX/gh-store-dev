@@ -23,6 +23,35 @@ import { cn } from "@/lib/cn";
 
 const PLACEHOLDER =
   "bg-[linear-gradient(145deg,color-mix(in_srgb,var(--accent)_16%,var(--surface-strong)),var(--surface-inset))]";
+const RESPONSIVE_WIDTHS = [320, 640, 1024, 1536];
+
+/**
+ * Supabase Storage can resize public images at the edge. Supplier hosts are not
+ * assumed to support this endpoint, so unknown URLs keep the original source.
+ */
+function supabaseResponsiveSources(src: string): string | undefined {
+  try {
+    const url = new URL(src);
+    const marker = "/storage/v1/object/public/";
+
+    if (!url.pathname.includes(marker)) {
+      return undefined;
+    }
+
+    const renderPath = url.pathname.replace(marker, "/storage/v1/render/image/public/");
+
+    return RESPONSIVE_WIDTHS.map((width) => {
+      const transformed = new URL(url);
+      transformed.pathname = renderPath;
+      transformed.searchParams.set("width", String(width));
+      transformed.searchParams.set("quality", "75");
+      transformed.searchParams.set("format", "webp");
+      return `${transformed.toString()} ${width}w`;
+    }).join(", ");
+  } catch {
+    return undefined;
+  }
+}
 export type StoreImageProps = {
   src: string | null;
   alt: string;
@@ -52,9 +81,12 @@ export function StoreImage({
     return <div className={cn("size-full", PLACEHOLDER, className)} aria-hidden="true" />;
   }
 
+  const srcSet = supabaseResponsiveSources(src);
+
   return (
     <img
       src={src}
+      srcSet={srcSet}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
       decoding={priority ? "sync" : "async"}
