@@ -78,10 +78,19 @@ async function cachedPublicHtml(
   const cache = (globalThis as typeof globalThis & { caches?: { default: Cache } }).caches?.default;
 
   if (!cache || !isPublicHtmlRequest(request)) {
-    return handler.fetch(request, env);
+    return handler.fetch(request, env, ctx);
   }
 
-  const cached = await cache.match(request);
+  let cached: Response | undefined;
+
+  try {
+    cached = await cache.match(request);
+  } catch (error) {
+    workerLog("public_cache_read_failed", {
+      error: error instanceof Error ? error.message : "Unknown failure.",
+    });
+  }
+
   if (cached) {
     const response = new Response(cached.body, cached);
     response.headers.set("x-gh-store-cache", "HIT");
@@ -99,7 +108,13 @@ async function cachedPublicHtml(
   headers.set("cache-control", "public, s-maxage=60, stale-while-revalidate=300");
   headers.set("x-gh-store-cache", "MISS");
   const cacheable = new Response(response.body, { status: response.status, headers });
-  ctx.waitUntil(cache.put(request, cacheable.clone()));
+  ctx.waitUntil(
+    cache.put(request, cacheable.clone()).catch((error: unknown) => {
+      workerLog("public_cache_write_failed", {
+        error: error instanceof Error ? error.message : "Unknown failure.",
+      });
+    }),
+  );
   return cacheable;
 }
 
