@@ -237,7 +237,13 @@ async function readFieldLabels(offerIds: string[], locale: Locale): Promise<Map<
 
   const supabase = await createSupabaseServerClient();
   const { data: offers } = await supabase.from("offers").select("id, game_id").in("id", offerIds);
-  const gameIds = [...new Set((offers ?? []).map((offer) => offer.game_id))];
+  const gameIds = [
+    ...new Set(
+      (offers ?? [])
+        .map((offer) => offer.game_id)
+        .filter((gameId): gameId is string => gameId !== null),
+    ),
+  ];
 
   if (gameIds.length === 0) {
     return labels;

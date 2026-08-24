@@ -1,4 +1,6 @@
 import { networkInterfaces } from "node:os";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { NextConfig } from "next";
 
 /**
@@ -33,8 +35,52 @@ function lanOrigins(): string[] {
   ];
 }
 
+/**
+ * Public configuration lives in wrangler.jsonc, which is a runtime Worker
+ * binding: it reaches server code through OpenNext, but never the browser
+ * bundle. Next.js inlines only what exists at build time, so a Workers Builds
+ * run without matching build variables used to ship a client that threw on
+ * every browser-side Supabase call — Google sign-in died with "oauth_failed"
+ * while email/password (server actions) kept working. Reading the values here
+ * puts them into the bundle no matter how CI is configured; real environment
+ * variables still win when a deployment chooses to set them.
+ */
+function publicConfigFromWrangler(): Record<string, string> {
+  const source = readFileSync(join(process.cwd(), "wrangler.jsonc"), "utf8");
+  const names = [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_APP_URL",
+  ];
+
+  return Object.fromEntries(
+    names.map((name) => {
+      const match = source.match(new RegExp(`"${name}"\\s*:\\s*"([^"]+)"`));
+      const value = match?.[1]?.trim();
+
+      if (!value) {
+        throw new Error(`${name} is missing from wrangler.jsonc.`);
+      }
+
+      return [name, value];
+    }),
+  );
+}
+
+function inlinePublicEnv(): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(publicConfigFromWrangler()).filter(([name]) => {
+      const existing = process.env[name];
+
+      return !(existing && existing.trim());
+    }),
+  );
+}
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: lanOrigins(),
+
+  env: inlinePublicEnv(),
 
   /**
    * The reference store addressed a game as `/game/:slug`; this one uses the

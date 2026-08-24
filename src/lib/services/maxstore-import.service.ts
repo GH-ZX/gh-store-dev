@@ -300,7 +300,14 @@ async function importCategoryOffers(
   const offerById = new Map([...(offers ?? []), ...(mappedOffers ?? [])].map((offer) => [offer.id, offer]));
   const byProductId = new Map<
     string,
-    { offerId: string; pricingMode: string | null; gameId: string; slug: string; isSale: boolean; isActive: boolean }
+    {
+      offerId: string;
+      pricingMode: string | null;
+      gameId: string | null;
+      slug: string;
+      isSale: boolean;
+      isActive: boolean;
+    }
   >();
 
   for (const mapping of productMappings ?? []) {

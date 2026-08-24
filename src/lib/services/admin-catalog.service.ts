@@ -110,6 +110,10 @@ async function countOffersByGame(client: Client, gameIds: string[]): Promise<Map
   }
 
   for (const row of data) {
+    if (!row.game_id) {
+      continue;
+    }
+
     counts.set(row.game_id, (counts.get(row.game_id) ?? 0) + 1);
   }
 

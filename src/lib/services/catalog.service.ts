@@ -524,7 +524,7 @@ async function gameIdsSellingOfferTypes(types: string[]): Promise<Set<string>> {
     throw new CatalogReadError();
   }
 
-  return new Set(data.map((row) => row.game_id));
+  return new Set(data.flatMap((row) => (row.game_id ? [row.game_id] : [])));
 }
 
 /**
