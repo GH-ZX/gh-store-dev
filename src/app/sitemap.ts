@@ -24,6 +24,7 @@ const STATIC_PATHS = [
   { path: "/faq", priority: 0.5, changeFrequency: "monthly" as const },
   { path: "/contact", priority: 0.4, changeFrequency: "monthly" as const },
   { path: "/links", priority: 0.3, changeFrequency: "monthly" as const },
+  { path: "/refunds", priority: 0.3, changeFrequency: "yearly" as const },
   { path: "/privacy", priority: 0.2, changeFrequency: "yearly" as const },
   { path: "/terms", priority: 0.2, changeFrequency: "yearly" as const },
 ];

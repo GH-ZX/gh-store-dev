@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   AdminCard,
   CheckboxField,
@@ -9,6 +9,7 @@ import {
   TextAreaField,
   TextField,
 } from "@/components/admin/admin-form";
+import { IgdbArtworkPicker } from "@/components/admin/igdb-artwork-picker";
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
@@ -61,6 +62,15 @@ export function GameEditForm({ locale, messages, errors, categories, game }: Gam
     deleteGameAction,
     INITIAL_CATALOG_STATE,
   );
+
+  /*
+   * The two artwork URLs are controlled so the IGDB picker can fill them: a
+   * picker that could only suggest would still leave the admin copying a URL
+   * by hand, which is the step this exists to remove. Everything else stays
+   * uncontrolled — the picker has no opinion about a slug.
+   */
+  const [imageUrl, setImageUrl] = useState(game.imageUrl ?? "");
+  const [logoUrl, setLogoUrl] = useState(game.logoUrl ?? "");
 
   const error = resolveError(errors, saveState.error ?? deleteState.error);
 
@@ -158,11 +168,19 @@ export function GameEditForm({ locale, messages, errors, categories, game }: Gam
           />
         </div>
 
+        <IgdbArtworkPicker
+          locale={locale}
+          messages={messages.igdb}
+          onPickCover={setImageUrl}
+          onPickArtwork={setLogoUrl}
+        />
+
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
             label={messages.imageUrl}
             name="imageUrl"
-            defaultValue={game.imageUrl ?? ""}
+            value={imageUrl}
+            onChange={(event) => setImageUrl(event.target.value)}
             maxLength={600}
             dir="ltr"
             inputMode="url"
@@ -171,7 +189,8 @@ export function GameEditForm({ locale, messages, errors, categories, game }: Gam
           <TextField
             label={messages.logoUrl}
             name="logoUrl"
-            defaultValue={game.logoUrl ?? ""}
+            value={logoUrl}
+            onChange={(event) => setLogoUrl(event.target.value)}
             maxLength={600}
             dir="ltr"
             inputMode="url"

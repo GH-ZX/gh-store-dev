@@ -71,6 +71,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       escalated: run.escalated,
       waiting: run.waiting,
       skipped: run.skipped,
+      samExpired: run.samExpired,
     });
   } catch (error) {
     logFailure("fulfilment", "reconcile_failed", error);

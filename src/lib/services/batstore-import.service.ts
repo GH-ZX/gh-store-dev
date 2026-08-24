@@ -72,6 +72,8 @@ export type BatStoreImportableProduct = {
   id: string;
   name: string;
   priceUsd: number;
+  /** Supplier artwork, shown in the picker and used when creating the container. */
+  imageUrl: string | null;
   /** A test product, never sold for real money. */
   isTest: boolean;
   /** Whether delivery would work right now: no stock means nothing to deliver. */
@@ -125,6 +127,7 @@ export async function loadBatStoreCatalogue(
         id: product.id,
         name: product.name,
         priceUsd: product.priceUsd,
+        imageUrl: product.imageUrl,
         isTest: product.isTest,
         available: (product.stock ?? 0) > 0,
         alreadyImported: imported.has(code),
@@ -217,6 +220,7 @@ async function importOneProduct(
         name_ar: product.name,
         name_en: product.name,
         category_id: selection.categoryId,
+        ...(product.imageUrl ? { image_url: product.imageUrl } : {}),
         is_active: options.publish,
       })
       .select("id")

@@ -218,26 +218,54 @@ Deno.serve(async (request: Request): Promise<Response> => {
    * `certPublic` field of their certificate endpoint. Fetched per notification
    * rather than cached, which costs a round trip and removes any chance of
    * verifying against a certificate that has since been rotated.
+   *
+   * The endpoint can answer with several certificates — old and new during a
+   * rotation, and the notification is signed by whichever was current when it
+   * was made. So every returned key is tried until one verifies; picking the
+   * first blindly would reject half of all notifications for as long as the
+   * rotation lasts.
    */
   const certificate = await callBinance("/binancepay/openapi/certificates", {}, { apiKey, secret });
-  const certificates = Array.isArray(certificate) ? certificate : null;
-  const publicKey =
-    text((certificates?.[0] as { certPublic?: unknown } | undefined)?.certPublic) ??
-    text((certificate as { certPublic?: unknown } | null)?.certPublic);
+  const candidates: string[] = [];
 
-  if (!publicKey) {
-    // Without the key nothing can be verified, and an unverified notification is
+  if (Array.isArray(certificate)) {
+    for (const entry of certificate) {
+      const pem = text((entry as { certPublic?: unknown } | null)?.certPublic);
+
+      if (pem) {
+        candidates.push(pem);
+      }
+    }
+  } else if (certificate && typeof certificate === "object") {
+    const pem = text((certificate as { certPublic?: unknown }).certPublic);
+
+    if (pem) {
+      candidates.push(pem);
+    }
+  }
+
+  if (candidates.length === 0) {
+    // Without a key nothing can be verified, and an unverified notification is
     // not something to act on. 5xx so Binance retries once the endpoint is back.
     return json({ returnCode: "FAIL", returnMessage: "no_certificate" }, 503);
   }
 
-  const verified = await verifySignature({
-    publicKeyPem: publicKey,
-    timestamp,
-    nonce,
-    body,
-    signature,
-  });
+  let verified = false;
+
+  for (const publicKeyPem of candidates) {
+    if (
+      await verifySignature({
+        publicKeyPem,
+        timestamp,
+        nonce,
+        body,
+        signature,
+      })
+    ) {
+      verified = true;
+      break;
+    }
+  }
 
   if (!verified) {
     return json({ returnCode: "FAIL", returnMessage: "unauthorized" }, 401);

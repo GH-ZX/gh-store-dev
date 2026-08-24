@@ -22,8 +22,12 @@ import {
 } from "@/lib/services/admin-catalog.service";
 import {
   INITIAL_CATALOG_STATE,
+  INITIAL_IGDB_SEARCH_STATE,
   type CatalogActionState,
+  type IgdbSearchState,
 } from "@/app/[locale]/dashboard/catalog/action-state";
+import { getIgdbCredentials } from "@/lib/services/admin-settings.service";
+import { IgdbClient } from "@/providers/igdb/client";
 
 /**
  * Catalog administration actions.
@@ -366,4 +370,40 @@ export async function deleteOfferAction(
   revalidateCatalog(locale, parsed.data.gameId);
 
   return { ...INITIAL_CATALOG_STATE, notice: "offer_removed" };
+}
+
+/**
+ * Search IGDB for artwork, from inside the game editor.
+ *
+ * The picker holds no state of its own beyond this result list — choosing an
+ * image only fills the editor's URL fields, and nothing is saved until the
+ * admin saves the game itself. That keeps one write path for catalog changes.
+ */
+export async function searchIgdbArtworkAction(
+  _state: IgdbSearchState,
+  formData: FormData,
+): Promise<IgdbSearchState> {
+  await requireAdmin();
+
+  const query = formText(formData, "query") ?? "";
+
+  if (query.trim().length === 0) {
+    return { ...INITIAL_IGDB_SEARCH_STATE, error: "empty_query" };
+  }
+
+  const { clientId, clientSecret } = await getIgdbCredentials();
+
+  if (!clientId || !clientSecret) {
+    return { ...INITIAL_IGDB_SEARCH_STATE, query, error: "not_configured" };
+  }
+
+  try {
+    const results = await new IgdbClient({ clientId, clientSecret }).searchGames(query);
+
+    return { error: null, query, results };
+  } catch {
+    // The provider panels name the exact failure; the picker only needs to say
+    // that looking failed and why the owner might care (credentials first).
+    return { ...INITIAL_IGDB_SEARCH_STATE, query, error: "search_failed" };
+  }
 }

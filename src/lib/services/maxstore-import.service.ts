@@ -496,13 +496,24 @@ async function importOneCategory(
   const code = toMaxStoreGameCode(category.id);
   const { data: mapping } = await supabase
     .from("provider_game_mappings")
-    .select("game_id")
+    .select("game_id, games (image_url)")
     .eq("provider_name", MAXSTORE_PROVIDER_NAME)
     .eq("external_game_code", code)
     .maybeSingle();
 
   let gameId = mapping?.game_id ?? null;
   let status: "created" | "updated" = mapping ? "updated" : "created";
+
+  /*
+   * Artwork comes from whatever the supplier's payloads carry — MaxStore does
+   * not document an image field, so this stays best-effort: the first product
+   * that has one lends it to the container, and a container that already has
+   * art of any kind keeps what it has.
+   */
+  const productImage = products.find((product) => product.imageUrl)?.imageUrl ?? null;
+  const existingGame = Array.isArray(mapping?.games)
+    ? ((mapping?.games as unknown[])[0] as { image_url: string | null } | undefined)
+    : (mapping?.games as { image_url: string | null } | undefined);
 
   if (!gameId) {
     const { data: game, error } = await supabase
@@ -511,6 +522,7 @@ async function importOneCategory(
         slug: uniqueSlug(toMaxStoreGameSlug({ id: category.id, title: category.title }), slugs),
         name_ar: category.title,
         name_en: category.title,
+        ...(productImage ? { image_url: productImage } : {}),
         is_active: options.publish,
       })
       .select("id")
@@ -522,6 +534,8 @@ async function importOneCategory(
 
     gameId = game.id;
     status = "created";
+  } else if (!existingGame?.image_url && productImage) {
+    await supabase.from("games").update({ image_url: productImage }).eq("id", gameId);
   }
 
   const counts = await importCategoryOffers(supabase, gameId, products, options, deactivateMissing);

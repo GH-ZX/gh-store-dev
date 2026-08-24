@@ -28,6 +28,7 @@ export const SEO_PAGE_PATHS = [
   "/faq",
   "/how",
   "/contact",
+  "/refunds",
   "/privacy",
   "/terms",
   "/links",

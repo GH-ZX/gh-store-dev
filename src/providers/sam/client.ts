@@ -27,6 +27,19 @@ import type { SamMethod } from "@/lib/settings/sam-settings";
 const BASE_URL = "https://sam-api.pro/api";
 const REQUEST_TIMEOUT_MS = 15_000;
 
+/**
+ * Reads are retried; writes never are.
+ *
+ * A status poll or a wallet history is safe to ask twice — the answer is the
+ * same resource either time. `createInvoice` is not: Sam gives no idempotency
+ * contract for it, so a retried POST risks a second invoice for one top-up,
+ * and `verifyInvoice` re-matches a transaction reference, where a second yes
+ * would be indistinguishable from the first. One flaky read costs a retry;
+ * a doubled payment costs the customer's trust.
+ */
+const READ_MAX_ATTEMPTS = 3;
+const READ_BACKOFF_BASE_MS = 400;
+
 /** Sam's own hosted payment page, which is not under the `/api` prefix. */
 export function samPaymentPageUrl(invoiceId: string): string {
   return `https://sam-api.pro/pay/${encodeURIComponent(invoiceId)}`;
@@ -208,6 +221,54 @@ export class SamClient {
     options: { method?: "GET" | "POST"; body?: unknown; tolerate?: number[] } = {},
   ): Promise<{ status: number; json: unknown }> {
     const method = options.method ?? "GET";
+    const attempts = method === "GET" ? READ_MAX_ATTEMPTS : 1;
+    // The path is sanitised because Sam addresses a wallet by putting its
+    // identifier in the URL, and that identifier is a phone number or a wallet
+    // address.
+    const route = sanitisePath(path);
+
+    let lastFailure: SamError | null = null;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        return await this.requestOnce(path, method, options);
+      } catch (error) {
+        const failure =
+          error instanceof SamError
+            ? error
+            : new SamError("network", error instanceof Error ? error.message : "request failed");
+
+        // Auth and contract refusals are answers, not accidents: repeating one
+        // only produces the same answer slower. Only a network failure or an
+        // overloaded server (429/5xx) earns another attempt.
+        const retryable =
+          failure.kind === "network" ||
+          (failure.status !== null && (failure.status === 429 || failure.status >= 500));
+
+        if (!retryable || attempt === attempts) {
+          throw failure;
+        }
+
+        lastFailure = failure;
+        log.warn("provider.sam", "provider_retry", {
+          provider: "sam",
+          method,
+          path: route,
+          attempt,
+          kind: failure.kind,
+        });
+        await new Promise((resolve) => setTimeout(resolve, READ_BACKOFF_BASE_MS * attempt));
+      }
+    }
+
+    throw lastFailure ?? new SamError("network", "Sam API request failed");
+  }
+
+  private async requestOnce(
+    path: string,
+    method: "GET" | "POST",
+    options: { body?: unknown; tolerate?: number[] },
+  ): Promise<{ status: number; json: unknown }> {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.apiKey}`,
       Accept: "application/json",

@@ -86,6 +86,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const resolvedLocale = isLocale(locale) ? locale : "ar";
   const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
   /*
+   * Plausible is opt-in through a build-time variable: unset means no script,
+   * no request, and no tracking of any kind. It is a plain deferred script —
+   * cookieless, so it needs no consent banner and no state.
+   */
+  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim();
+  /*
    * The theme belongs to the document, so it is read here rather than in the
    * locale layout: the default mode has to reach the pre-paint script, and the
    * accents have to cover the dashboard as well as the storefront. The read is
@@ -120,6 +126,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         ) : null}
         {googleSiteVerification ? (
           <meta name="google-site-verification" content={googleSiteVerification} />
+        ) : null}
+        {plausibleDomain ? (
+          <script
+            defer
+            data-domain={plausibleDomain}
+            src="https://plausible.io/js/script.js"
+          />
         ) : null}
         {/*
          * Applies the stored theme before first paint, so a light-theme visitor

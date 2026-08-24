@@ -6,6 +6,7 @@ import { ImportRemoveButton } from "@/components/admin/import-remove-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowIcon, CheckIcon, SearchIcon } from "@/components/ui/icons";
+import { StoreImage } from "@/components/store/store-image";
 import type { Locale } from "@/i18n/config";
 import { formatMessage, type AdminMessages } from "@/i18n/messages";
 import {
@@ -218,6 +219,14 @@ export function BatStoreImportForm({
                     onChange={() => toggle(product.id)}
                     className="size-4 shrink-0 accent-[var(--accent)]"
                   />
+                  {/*
+                   * Supplier artwork, when the product carries one. Seeing the
+                   * picture beside the name is how an operator notices a test
+                   * product or a wrong import before it reaches customers.
+                   */}
+                  <span className="size-10 shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line)]">
+                    <StoreImage src={product.imageUrl} alt="" sizes="40px" />
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className="block truncate text-sm font-medium text-[var(--ink)]">

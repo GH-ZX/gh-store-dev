@@ -15,14 +15,17 @@ import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
   getBatStoreCredentials,
   getG2BulkCredentials,
+  getIgdbCredentials,
   getMaxStoreCredentials,
   saveFulfillmentSettings,
   saveBatStoreSettings,
   saveBinanceSettings,
+  saveIgdbSettings,
   regenerateG2BulkCallbackSecret,
   saveG2BulkSettings,
   saveMaxStoreSettings,
 } from "@/lib/services/admin-settings.service";
+import { IgdbClient, IgdbError } from "@/providers/igdb/client";
 import { removeImportedGame, type RemoveImportedResult } from "@/lib/services/admin-catalog.service";
 import { importG2BulkGames } from "@/lib/services/g2bulk-import.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -52,7 +55,12 @@ function resolveLocale(value: unknown): Locale {
 
 /** Map a provider failure onto a message key the page can localize. */
 function errorKey(error: unknown): string {
-  if (error instanceof G2BulkError || error instanceof MaxStoreError || error instanceof BatStoreError) {
+  if (
+    error instanceof G2BulkError ||
+    error instanceof MaxStoreError ||
+    error instanceof BatStoreError ||
+    error instanceof IgdbError
+  ) {
     // All the suppliers classify failures with the same vocabulary, so one
     // message catalogue serves them and another supplier costs nothing here.
     return error.kind;
@@ -409,6 +417,79 @@ const binanceSchema = z.object({
   enabled: z.boolean(),
   locale: z.string().optional(),
 });
+
+const igdbSchema = z.object({
+  clientId: z.string().max(200).optional(),
+  clientSecret: z.string().max(400).optional(),
+  locale: z.string().optional(),
+});
+
+export async function saveIgdbSettingsAction(
+  _state: ProviderActionState,
+  formData: FormData,
+): Promise<ProviderActionState> {
+  await requireAdmin();
+
+  const parsed = igdbSchema.safeParse({
+    clientId: formText(formData, "clientId"),
+    clientSecret: formText(formData, "clientSecret"),
+    locale: formText(formData, "locale"),
+  });
+
+  if (!parsed.success) {
+    return { ...INITIAL_PROVIDER_STATE, error: "invalid_input" };
+  }
+
+  const locale = resolveLocale(parsed.data.locale);
+
+  try {
+    await saveIgdbSettings({
+      // Empty means "keep what is stored", for both halves independently.
+      clientId: parsed.data.clientId?.trim() ? parsed.data.clientId : undefined,
+      clientSecret: parsed.data.clientSecret?.trim() ? parsed.data.clientSecret : undefined,
+    });
+  } catch (error) {
+    logFailure("admin.providers", "igdb_settings_save_failed", error);
+
+    return { ...INITIAL_PROVIDER_STATE, error: "unknown" };
+  }
+
+  revalidatePath(`/${locale}/dashboard/providers`);
+
+  return { ...INITIAL_PROVIDER_STATE, notice: "saved" };
+}
+
+/**
+ * Prove the credentials with a real search.
+ *
+ * The token endpoint would accept a wrong secret quietly until a search needs
+ * it, so the cheapest honest test is the call an operator was going to make
+ * anyway. A result arriving means both Twitch and IGDB accepted us.
+ */
+export async function verifyIgdbAction(
+  _state: ProviderActionState,
+  _formData: FormData,
+): Promise<ProviderActionState> {
+  await requireAdmin();
+
+  const { clientId, clientSecret } = await getIgdbCredentials();
+
+  if (!clientId || !clientSecret) {
+    return { ...INITIAL_PROVIDER_STATE, error: "missing_key" };
+  }
+
+  try {
+    const games = await new IgdbClient({ clientId, clientSecret }).searchGames("super Mario");
+
+    return {
+      error: null,
+      notice: games.length > 0 ? "verified" : "empty",
+      account: null,
+    };
+  } catch (error) {
+    return { ...INITIAL_PROVIDER_STATE, error: errorKey(error) };
+  }
+}
 
 /**
  * Choose what happens to a wallet charge after a terminal provider failure.

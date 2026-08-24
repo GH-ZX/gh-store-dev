@@ -388,6 +388,23 @@
       "emptyDescription": "BatStore returned no products for this token.",
       "viewCatalog": "Open catalog"
     },
+    "igdb": {
+      "name": "IGDB artwork",
+      "summary": "Game covers and artwork from IGDB, for hand-built catalog entries.",
+      "statusConfigured": "Connected",
+      "statusMissing": "Not connected",
+      "clientIdLabel": "Twitch client ID",
+      "clientIdPlaceholder": "From dev.twitch.tv console, your application",
+      "clientIdHelp": "Identifies the application to Twitch; safe to show.",
+      "secretLabel": "Twitch client secret",
+      "secretPlaceholder": "From the same application page",
+      "secretHelp": "Stored server-side and never shown again.",
+      "secretKeepHelp": "Leave empty to keep the saved secret.",
+      "saveAction": "Save",
+      "saved": "Saved",
+      "testAction": "Test the connection",
+      "verified": "IGDB works"
+    },
     "binance": {
       "name": "Binance Pay",
       "summary": "Crypto payments, for customers who would rather pay in USDT than through a transfer.",
@@ -504,7 +521,22 @@
       "saved": "Game saved.",
       "deleteAction": "Delete game",
       "deleteConfirm": "This deletes the game and all its packages. It cannot be undone.",
-      "deleted": "Game deleted."
+      "deleted": "Game deleted.",
+      "igdb": {
+        "title": "Find artwork on IGDB",
+        "description": "Search by game name and pick an image. Choosing fills the URL fields below; save the game to keep it.",
+        "searchLabel": "Game name",
+        "searchPlaceholder": "e.g. PUBG Mobile",
+        "searchAction": "Search",
+        "useAsCover": "Use as cover",
+        "useAsArtwork": "Use as artwork",
+        "pickHint": "Clicking a tile fills the cover field.",
+        "emptyQuery": "Type a game name first.",
+        "notConfigured": "Connect IGDB on the Providers page first.",
+        "failed": "The search failed. Check the IGDB connection on Providers, then try again.",
+        "emptyTitle": "Nothing found",
+        "emptyDescription": "No game by that name on IGDB. The URL fields still accept any link."
+      }
     },
     "offers": {
       "title": "Packages",
@@ -731,6 +763,7 @@
         "/faq": "FAQ",
         "/how": "How it works",
         "/contact": "Contact",
+        "/refunds": "Refund policy",
         "/privacy": "Privacy policy",
         "/terms": "Terms",
         "/links": "Links"

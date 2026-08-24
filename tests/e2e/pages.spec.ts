@@ -30,6 +30,7 @@ const PUBLIC_PAGES = [
   "/ar/how",
   "/ar/contact",
   "/ar/links",
+  "/ar/refunds",
   "/ar/privacy",
   "/ar/terms",
   "/ar/login",

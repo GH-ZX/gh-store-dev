@@ -14,3 +14,23 @@ export type CatalogActionState = {
 };
 
 export const INITIAL_CATALOG_STATE: CatalogActionState = { error: null, notice: null };
+
+/** One IGDB search result, as the artwork picker renders it. */
+export type IgdbArtworkResult = {
+  name: string;
+  coverUrl: string | null;
+  thumbUrl: string | null;
+  artworkUrl: string | null;
+};
+
+export type IgdbSearchState = {
+  error: string | null;
+  query: string;
+  results: IgdbArtworkResult[];
+};
+
+export const INITIAL_IGDB_SEARCH_STATE: IgdbSearchState = {
+  error: null,
+  query: "",
+  results: [],
+};

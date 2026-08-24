@@ -105,22 +105,26 @@ Game “logos” are rare on IGDB; we treat **square artworks** and **covers** a
 
 | Piece | Path |
 |--------|------|
-| Docs (this file) | `docs/igdb-api.md` |
-| DB columns | `store_settings.igdb_client_id`, `igdb_client_secret` |
-| Edge proxy | `supabase/functions/igdb` |
-| Client API | `src/lib/igdb.js` |
-| Image search UI | `src/components/admin/GameImageSearch.jsx` |
-| Settings UI | `src/components/admin/AdminIgdbSettings.jsx` (Products tab) |
-| Game edit | `AdminGameEditModal` → cover / logo pickers |
+| Docs (this file) | `docs/providers/igdb-api.md` |
+| Credentials | `store_settings.providers.igdb` (`client_id`, `client_secret`) — server-only, masked hints for UI |
+| Settings module | `src/lib/settings/igdb-settings.ts` |
+| API client | `src/providers/igdb/client.ts` (token cached in module scope, server-only) |
+| Admin service | `getIgdbStatus` / `saveIgdbSettings` in `src/lib/services/admin-settings.service.ts` |
+| Save + verify actions | `src/app/[locale]/dashboard/providers/actions.ts` |
+| Settings UI | Providers page → Operations group → "IGDB artwork" |
+| Artwork search UI | `src/components/admin/igdb-artwork-picker.tsx`, embedded in the game editor |
 
-### Edge actions
+The reference store proxied IGDB through an edge function because its SPA could
+not escape CORS; this stack's server actions are the same idea with less moving
+parts.
+
+### Actions
 
 | Action | Who | What |
 |--------|-----|------|
-| `getSettings` | admin | Masked status (configured yes/no) |
-| `saveSettings` | admin | Save Client ID / Secret (blank secret = keep existing) |
-| `search` | admin | `{ query }` → covers + logos for picker |
-| `test` | admin | Token + sample games query |
+| `saveIgdbSettingsAction` | admin | Save client ID / secret (blank secret = keep existing) |
+| `verifyIgdbAction` | admin | Token + a real sample search |
+| `searchIgdbArtworkAction` | admin | `{ query }` → covers + artwork for the picker |
 
 ---
 

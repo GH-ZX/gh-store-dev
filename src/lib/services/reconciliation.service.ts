@@ -31,6 +31,58 @@ const DEFAULT_BATCH = 25;
  */
 const STUCK_STATUSES = ["paid", "fulfilling", "processing"];
 
+/**
+ * Sam invoices whose deadline passed with no money arriving.
+ *
+ * An invoice normally dies one of two ways: the payment screen polls it past
+ * its 15 minutes, or Sam's own `invoice.expired` callback reports the death.
+ * Neither is guaranteed — a customer who closes the tab and never transfers
+ * produces neither event, and the row sits `pending` forever, holding a
+ * recharge request open. Closing it here is bookkeeping, not judgement: if the
+ * money somehow arrives after expiry, Sam's own callback path already routes
+ * that to a human instead of crediting automatically.
+ */
+async function expireStaleSamInvoices(): Promise<number> {
+  const supabase = createSupabaseServiceClient();
+  const now = new Date().toISOString();
+  const neverExpiresCutoff = new Date(Date.now() - 60 * 60_000).toISOString();
+
+  const { data, error } = await supabase
+    .from("sam_invoices")
+    .select("sam_invoice_id")
+    .eq("status", "pending")
+    .or(`expires_at.lt.${now},and(expires_at.is.null,created_at.lt.${neverExpiresCutoff})`)
+    .limit(50);
+
+  if (error) {
+    log.warn("payments", "sam_expiry_lookup_failed", { error: error.message });
+
+    return 0;
+  }
+
+  let expired = 0;
+
+  for (const invoice of data ?? []) {
+    const { error: failError } = await supabase.rpc("fail_sam_invoice", {
+      p_sam_invoice_id: invoice.sam_invoice_id,
+      p_status: "expired",
+      p_payload: { source: "sweep" },
+    });
+
+    if (failError) {
+      // One refusal must not block the rest; the next sweep picks it up again.
+      log.warn("payments", "sam_expiry_failed", {
+        error: failError.message,
+      });
+      continue;
+    }
+
+    expired += 1;
+  }
+
+  return expired;
+}
+
 export type ReconcileRun = {
   checked: number;
   completed: number;
@@ -38,6 +90,8 @@ export type ReconcileRun = {
   escalated: number;
   waiting: number;
   skipped: number;
+  /** Sam invoices this run closed as expired because their deadline passed. */
+  samExpired: number;
   results: { orderId: string; orderNumber: string; action: string; reason?: string }[];
 };
 
@@ -100,12 +154,15 @@ export async function reconcileStuckOrders(limit = DEFAULT_BATCH): Promise<Recon
     escalated: 0,
     waiting: 0,
     skipped: 0,
+    samExpired: 0,
     results: [],
   };
 
   if (!hasServiceRoleKey()) {
     return run;
   }
+
+  run.samExpired = await expireStaleSamInvoices();
 
   const orders = await findStuckOrders(limit);
 
@@ -149,7 +206,7 @@ export async function reconcileStuckOrders(limit = DEFAULT_BATCH): Promise<Recon
     }
   }
 
-  if (run.checked > 0) {
+  if (run.checked > 0 || run.samExpired > 0) {
     await recordRun(run, startedAt);
     log.info("fulfilment", "reconciliation_run", {
       checked: run.checked,
@@ -157,6 +214,7 @@ export async function reconcileStuckOrders(limit = DEFAULT_BATCH): Promise<Recon
       refunded: run.refunded,
       escalated: run.escalated,
       waiting: run.waiting,
+      samExpired: run.samExpired,
     });
   }
 

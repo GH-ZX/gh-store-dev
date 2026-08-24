@@ -25,6 +25,13 @@ import {
 } from "@/lib/settings/batstore-settings";
 import { checkCallbackUrl, type CallbackReachability } from "@/lib/settings/callback-url";
 import {
+  mergeIgdbSettings,
+  readIgdbCredentials,
+  toIgdbStatus,
+  type IgdbCredentials,
+  type IgdbStatus,
+} from "@/lib/settings/igdb-settings";
+import {
   mergeMaxStoreSettings,
   readMaxStoreCredentials,
   toMaxStoreStatus,
@@ -322,6 +329,43 @@ export async function getMaxStoreCredentials(): Promise<MaxStoreCredentials> {
   await requireAdmin();
 
   return readMaxStoreCredentials(await readProviders());
+}
+
+export async function getIgdbStatus(): Promise<IgdbStatus> {
+  await requireAdmin();
+
+  return toIgdbStatus(await readProviders());
+}
+
+/** Server-only: returns the plaintext IGDB secret. Never pass this to a client component. */
+export async function getIgdbCredentials(): Promise<IgdbCredentials> {
+  await requireAdmin();
+
+  return readIgdbCredentials(await readProviders());
+}
+
+export async function saveIgdbSettings(update: {
+  clientId?: string;
+  clientSecret?: string;
+}): Promise<IgdbStatus> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const providers = await readProviders();
+  const next = mergeIgdbSettings(providers, update, new Date().toISOString());
+
+  const { data, error } = await supabase
+    .from("store_settings")
+    .update({ providers: next })
+    .eq("id", SETTINGS_ID)
+    .select("providers")
+    .single();
+
+  if (error) {
+    throw new Error(`Saving provider settings failed: ${error.message}`);
+  }
+
+  return toIgdbStatus(data.providers);
 }
 
 export async function saveMaxStoreSettings(update: {

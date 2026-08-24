@@ -127,6 +127,37 @@
       }
     ]
   },
+  "refunds": {
+    "eyebrow": "Legal",
+    "title": "Refund policy.",
+    "description": "When an amount comes back, where it goes, and how long it takes.",
+    "sections": [
+      {
+        "heading": "The short version",
+        "body": "Everything GH Store sells is digital and fulfilled on the spot, so a package cannot be refunded once it has been delivered successfully. If fulfilment fails, the amount comes back to you without an argument."
+      },
+      {
+        "heading": "When fulfilment fails",
+        "body": "If your order cannot be delivered — a code that never arrives or a top-up that does not go through — the amount is returned automatically to your store wallet and a notification tells you so. Cases that need a human look are reviewed by the team, and the amount is credited once the check is done."
+      },
+      {
+        "heading": "Double charges and price mistakes",
+        "body": "A double charge for the same order, or a clear pricing error on a package, is corrected by returning the difference or the full amount to your wallet as soon as the records confirm it."
+      },
+      {
+        "heading": "Incorrect account details",
+        "body": "Top-ups are delivered to the account ID you type. An order fulfilled successfully against a wrong ID is not eligible for a refund, but contact us immediately — before fulfilment, or just after it, we may still be able to take it up with the supplier."
+      },
+      {
+        "heading": "Wallet balance",
+        "body": "Every refund lands in your in-store wallet and is ready to spend immediately. Returning money to the original payment method (a manual transfer or a digital payment) happens exceptionally and is agreed with you through support first."
+      },
+      {
+        "heading": "How to reach us",
+        "body": "Open the order from your orders page and send a support message from it, or use any of our contact channels with the order number. Every case is reviewed within one business day, and you hear the decision either way."
+      }
+    ]
+  },
   "links": {
     "eyebrow": "Our links",
     "title": "Every channel in one place.",

@@ -4,6 +4,7 @@ import { FulfillmentPolicyForm } from "@/components/admin/fulfillment-policy-for
 import { BatStoreSettingsForm } from "@/components/admin/batstore-settings-form";
 import { BinanceSettingsForm } from "@/components/admin/binance-settings-form";
 import { G2BulkSettingsForm } from "@/components/admin/g2bulk-settings-form";
+import { IgdbSettingsForm } from "@/components/admin/igdb-settings-form";
 import { MaxStoreSettingsForm } from "@/components/admin/maxstore-settings-form";
 import { ProviderGroup, ProviderSection } from "@/components/admin/provider-section";
 import { SamSettingsForm } from "@/components/admin/sam-settings-form";
@@ -22,6 +23,7 @@ import {
   getFulfillmentSettings,
   getG2BulkCallback,
   getG2BulkStatus,
+  getIgdbStatus,
   getMaxStoreStatus,
   getRecentSyncLogs,
   getSamStatus,
@@ -53,10 +55,11 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const binance = messages.providers.binance;
   const logging = messages.providers.logging;
   const telegram = messages.providers.telegram;
+  const igdb = messages.providers.igdb;
   const fulfillmentPolicy = messages.providers.fulfillmentPolicy;
   const groups = messages.providers.groups;
   const secrets = messages.providers.secrets;
-  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings, telegramStatus] =
+  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings, telegramStatus, igdbStatus] =
     await Promise.all([
       getG2BulkStatus(),
       getG2BulkCallback(),
@@ -71,6 +74,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
       getAxiomStatus(),
       getFulfillmentSettings(),
       getTelegramStatus(),
+      getIgdbStatus(),
     ]);
 
   return (
@@ -256,6 +260,26 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
       </ProviderGroup>
 
       <ProviderGroup title={groups.operations} description={groups.operationsDescription}>
+        <ProviderSection
+          name={igdb.name}
+          summary={igdb.summary}
+          defaultOpen={!igdbStatus.configured}
+          badges={[
+            {
+              label: igdbStatus.configured ? igdb.statusConfigured : igdb.statusMissing,
+              tone: igdbStatus.configured ? "success" : "neutral",
+            },
+          ]}
+        >
+          <IgdbSettingsForm
+            locale={locale}
+            messages={igdb}
+            errors={provider.errors}
+            status={igdbStatus}
+            secrets={secrets}
+          />
+        </ProviderSection>
+
         <ProviderSection
           name={fulfillmentPolicy.name}
           summary={fulfillmentPolicy.summary}

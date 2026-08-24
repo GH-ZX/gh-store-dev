@@ -1,14 +1,16 @@
 import { z } from "zod";
 
 /**
- * MaxStore response shapes, as `docs/providers/maxstore-api.md` describes them.
+ * MaxStore response shapes, as `docs/providers/maxstore-api.md` describes them
+ * and as live imports have amended them.
  *
  * Every field the documentation does not guarantee is optional, and every number
- * is coerced. This is not defensiveness for its own sake: nothing here has been
- * checked against a live key yet, and a schema that insists on a shape the
- * provider does not actually send turns a working integration into an empty
- * screen. Where the two disagree, the provider is right and this file is the
- * thing that changes.
+ * is coerced. The catalogue endpoints have been exercised against a live token
+ * through the imports; the permissive style stays, because the one lesson those
+ * runs keep teaching is that MaxStore renames and wraps fields freely — where
+ * the API disagrees with this file, the API is right and this file changes.
+ * Any endpoint not yet called in anger should be treated as unproven until its
+ * first real response has been seen.
  */
 
 /** Prices and balances arrive as either a number or a numeric string. */
@@ -60,6 +62,12 @@ export const productSchema = z.object({
   product_type: z.string().optional(),
   qty_values: z.unknown().optional(),
   params: z.unknown().optional(),
+  // Not in the published documentation, but the same free renaming as above:
+  // carried optionally so an artwork-bearing payload survives validation.
+  image_url: z.string().optional(),
+  image: z.string().optional(),
+  img: z.string().optional(),
+  photo: z.string().optional(),
 });
 
 /**
@@ -152,7 +160,26 @@ export type MaxStoreProduct = {
   params: unknown;
   /** Null means the provider exposes availability but no numeric inventory. */
   stockCount: number | null;
+  /** Artwork when MaxStore sends one; the documentation does not promise it. */
+  imageUrl: string | null;
 };
+
+/** Read an artwork URL from common MaxStore response variants. */
+export function readProductImage(product: unknown): string | null {
+  if (!product || typeof product !== "object") {
+    return null;
+  }
+
+  const value = product as {
+    image_url?: unknown;
+    image?: unknown;
+    img?: unknown;
+    photo?: unknown;
+  };
+  const raw = value.image_url ?? value.image ?? value.img ?? value.photo;
+
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
 
 /** Read a numeric inventory value from common MaxStore response variants. */
 export function readStockCount(product: unknown): number | null {

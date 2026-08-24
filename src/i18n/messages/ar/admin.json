@@ -388,6 +388,23 @@
       "emptyDescription": "لم يُرجع بات ستور أي منتجات لهذا الرمز.",
       "viewCatalog": "فتح الكتالوج"
     },
+    "igdb": {
+      "name": "صور IGDB",
+      "summary": "أغلفة الألعاب وصورها من IGDB، لإدخالات الكتالوج المُضافة يدويًا.",
+      "statusConfigured": "متصل",
+      "statusMissing": "غير متصل",
+      "clientIdLabel": "معرّف تطبيق Twitch",
+      "clientIdPlaceholder": "من لوحة مطوري twitch، تطبيقك",
+      "clientIdHelp": "يعرّف التطبيق لدى Twitch، ويمكن إظهاره.",
+      "secretLabel": "سر تطبيق Twitch",
+      "secretPlaceholder": "من صفحة التطبيق نفسها",
+      "secretHelp": "يُحفظ على السيرفر ولا يُعرض مرة أخرى.",
+      "secretKeepHelp": "اتركه فارغًا للإبقاء على السر المحفوظ.",
+      "saveAction": "حفظ",
+      "saved": "تم الحفظ",
+      "testAction": "اختبار الاتصال",
+      "verified": "IGDB يعمل"
+    },
     "binance": {
       "name": "Binance Pay",
       "summary": "الدفع بالعملات الرقمية، لمن يفضّل الدفع بـ USDT بدل الحوالة.",
@@ -504,7 +521,22 @@
       "saved": "تم حفظ اللعبة.",
       "deleteAction": "حذف اللعبة",
       "deleteConfirm": "سيحذف هذا اللعبة وكل باقاتها. لا يمكن التراجع.",
-      "deleted": "تم حذف اللعبة."
+      "deleted": "تم حذف اللعبة.",
+      "igdb": {
+        "title": "ابحث عن صورة في IGDB",
+        "description": "ابحث باسم اللعبة واختر صورة. الاختيار يملأ حقلي الروابط أدناه، واحفظ اللعبة لإبقاء التغيير.",
+        "searchLabel": "اسم اللعبة",
+        "searchPlaceholder": "مثال: PUBG Mobile",
+        "searchAction": "بحث",
+        "useAsCover": "استخدمها كغلاف",
+        "useAsArtwork": "استخدمها كصورة",
+        "pickHint": "الضغط على الصورة يملأ حقل الغلاف.",
+        "emptyQuery": "اكتب اسم اللعبة أولًا.",
+        "notConfigured": "اتصل بـ IGDB من صفحة المزودين أولًا.",
+        "failed": "فشل البحث. تحقق من اتصال IGDB في صفحة المزودين ثم أعد المحاولة.",
+        "emptyTitle": "لا نتائج",
+        "emptyDescription": "لا توجد لعبة بهذا الاسم على IGDB. حقول الروابط تقبل أي رابط."
+      }
     },
     "offers": {
       "title": "الباقات",
@@ -731,6 +763,7 @@
         "/faq": "الأسئلة الشائعة",
         "/how": "كيف يعمل",
         "/contact": "تواصل معنا",
+        "/refunds": "سياسة الاسترجاع",
         "/privacy": "سياسة الخصوصية",
         "/terms": "الشروط",
         "/links": "الروابط"

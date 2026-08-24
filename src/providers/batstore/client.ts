@@ -34,8 +34,35 @@ import {
  *   answers 409.
  */
 
-const BASE_URL = "https://ventetelegrambotrailway-production.up.railway.app";
 const REQUEST_TIMEOUT_MS = 15_000;
+
+/**
+ * The API host, overridable because the documented host is a Railway
+ * deployment URL — exactly the kind of address a supplier eventually moves or
+ * puts behind a proper domain. `BATSTORE_API_BASE_URL` (server-side only)
+ * retargets every call without a redeploy of this file; the trailing slash is
+ * trimmed so either spelling works.
+ */
+const DEFAULT_BASE_URL = "https://ventetelegrambotrailway-production.up.railway.app";
+
+function baseUrl(): string {
+  const override = process.env.BATSTORE_API_BASE_URL?.trim().replace(/\/+$/, "");
+
+  return override || DEFAULT_BASE_URL;
+}
+
+/**
+ * Reads are retried; order creation never is.
+ *
+ * A product list or an order lookup answers the same question twice safely.
+ * `createOrder` carries the provider's own idempotency key, so it would
+ * actually be safe too — but a retry that races the first response can still
+ * return two different order bodies to callers expecting one, and a read that
+ * fails once costs nothing. Reads retry on network faults, 429 and 5xx;
+ * everything else is an answer and comes back immediately.
+ */
+const READ_MAX_ATTEMPTS = 3;
+const READ_BACKOFF_BASE_MS = 400;
 
 const meSchema = z.object({
   success: z.boolean().nullish(),
@@ -71,12 +98,51 @@ export class BatStoreClient {
 
   private async request(path: string, options: RequestOptions = {}): Promise<{ status: number; json: unknown }> {
     const method = options.method ?? "GET";
+    const attempts = method === "GET" ? READ_MAX_ATTEMPTS : 1;
+
+    let lastFailure: BatStoreError | null = null;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        return await this.requestOnce(path, method, options);
+      } catch (error) {
+        const failure =
+          error instanceof BatStoreError
+            ? error
+            : new BatStoreError("network", error instanceof Error ? error.message : "request failed");
+        const retryable =
+          failure.kind === "network" ||
+          (failure.status !== null && (failure.status === 429 || failure.status >= 500));
+
+        if (!retryable || attempt === attempts) {
+          throw failure;
+        }
+
+        lastFailure = failure;
+        log.warn("provider.batstore", "provider_retry", {
+          provider: "batstore",
+          path: sanitisePath(path),
+          attempt,
+          kind: failure.kind,
+        });
+        await new Promise((resolve) => setTimeout(resolve, READ_BACKOFF_BASE_MS * attempt));
+      }
+    }
+
+    throw lastFailure ?? new BatStoreError("network", "BatStore API request failed");
+  }
+
+  private async requestOnce(
+    path: string,
+    method: "GET" | "POST",
+    options: RequestOptions,
+  ): Promise<{ status: number; json: unknown }> {
     const route = sanitisePath(path);
     const startedAt = Date.now();
     let response: Response;
 
     try {
-      response = await fetch(`${BASE_URL}${path}`, {
+      response = await fetch(`${baseUrl()}${path}`, {
         method,
         headers: {
           "X-Reseller-Key": this.apiKey,

@@ -52,6 +52,7 @@ export function SiteFooter({ locale, messages, socialLinks, year, brandName }: S
     {
       heading: messages.footer.legalHeading,
       links: [
+        { href: `/${locale}/refunds`, label: messages.links.refunds },
         { href: `/${locale}/privacy`, label: messages.links.privacy },
         { href: `/${locale}/terms`, label: messages.links.terms },
       ],

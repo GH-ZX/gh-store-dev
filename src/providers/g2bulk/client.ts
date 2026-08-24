@@ -408,24 +408,47 @@ export class G2BulkFulfillmentClient extends G2BulkClient {
    * Read from the documented order list rather than the status endpoint, whose
    * request and response the contract does not specify — and guessing a provider
    * payload is exactly how a "delivered" is misread.
+   *
+   * The list is paginated and this store's history outgrew one page, so pages
+   * are walked oldest-relevant-first until the order turns up or the list runs
+   * out. Stopping at page 1 turned every settled order past the newest hundred
+   * into a false "missing" and left it parked at `reconcile` forever.
    */
-  async findGameOrderStatus(externalOrderId: string): Promise<{ status: string; refunded: boolean } | null> {
-    const { json } = await this.request("/games/orders?page=1&limit=100", { auth: true });
-    const parsed = gameOrdersListSchema.safeParse(json);
+  async findGameOrderStatus(
+    externalOrderId: string,
+    options: { maxPages?: number } = {},
+  ): Promise<{ status: string; refunded: boolean } | null> {
+    const maxPages = Math.max(1, Math.min(options.maxPages ?? 10, 50));
+    const needle = String(externalOrderId);
+    let knownPages = 1;
 
-    if (!parsed.success) {
-      throw new G2BulkContractError("G2Bulk /games/orders returned an unexpected shape");
+    for (let page = 1; page <= Math.min(maxPages, knownPages); page += 1) {
+      const { json } = await this.request(`/games/orders?page=${page}&limit=100`, { auth: true });
+      const parsed = gameOrdersListSchema.safeParse(json);
+
+      if (!parsed.success) {
+        throw new G2BulkContractError("G2Bulk /games/orders returned an unexpected shape");
+      }
+
+      const match = parsed.data.orders.find((order) => String(order.order_id) === needle);
+
+      if (match) {
+        return { status: match.status, refunded: match.is_refunded === true };
+      }
+
+      const totalPages = parsed.data.pagination?.total_pages;
+
+      // Trust the provider's own page count when it sends one; otherwise an
+      // under-filled page means there is nothing further to walk.
+      knownPages =
+        typeof totalPages === "number" && Number.isFinite(totalPages) && totalPages > 0
+          ? totalPages
+          : parsed.data.orders.length < 100
+            ? page
+            : page + 1;
     }
 
-    const match = parsed.data.orders.find(
-      (order) => String(order.order_id) === String(externalOrderId),
-    );
-
-    if (!match) {
-      return null;
-    }
-
-    return { status: match.status, refunded: match.is_refunded === true };
+    return null;
   }
 
   async purchaseVoucher(

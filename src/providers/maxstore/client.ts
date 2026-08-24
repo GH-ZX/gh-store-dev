@@ -16,6 +16,7 @@ import {
   profileSchema,
   readAvailable,
   readProductCategory,
+  readProductImage,
   readStockCount,
   type MaxStoreProduct,
   type MaxStoreProfile,
@@ -27,11 +28,10 @@ import {
  * `import "server-only"` makes it a build error for this module — and therefore
  * the API token — to reach a client bundle.
  *
- * Behaviour follows `docs/providers/maxstore-api.md`, which is transcribed from
- * the published documentation and has not yet been checked against a live key.
- * That is why every read goes through a permissive schema and why the verify
- * call exists: the first thing an owner does with a token is prove this file
- * right or wrong.
+ * Behaviour follows `docs/providers/maxstore-api.md`, amended where live
+ * imports have shown the real payloads to differ. That is also why every read
+ * goes through a permissive schema and why the verify call exists: any endpoint
+ * whose first real response has not been seen yet is treated as unproven.
  *
  * Shaped like the G2Bulk client on purpose. Two suppliers that behave the same
  * way under failure are two suppliers an operator only has to learn once:
@@ -268,6 +268,7 @@ export class MaxStoreClient {
         qtyValues: product.qty_values ?? null,
         params: product.params ?? null,
         stockCount: readStockCount(product),
+        imageUrl: readProductImage(product),
       };
     });
   }

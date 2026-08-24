@@ -5,6 +5,7 @@ import { useActionState, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowIcon, CheckIcon, SearchIcon } from "@/components/ui/icons";
+import { StoreImage } from "@/components/store/store-image";
 import type { Locale } from "@/i18n/config";
 import { formatMessage, type AdminMessages } from "@/i18n/messages";
 import {
@@ -190,6 +191,10 @@ export function MaxStoreImportForm({
                     <li key={product.id}>
                       <label className={cn("flex cursor-pointer items-center gap-3 rounded-[var(--radius-control)] border px-4 py-3 transition-colors duration-[var(--duration)]", isSelected ? "border-[color-mix(in_srgb,var(--accent)_50%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]" : "border-transparent hover:bg-[var(--shell)]")}>
                         <input type="checkbox" checked={isSelected} onChange={() => toggleProduct(product.id)} className="size-4 shrink-0 accent-[var(--accent)]" />
+                        <span className="size-10 shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line)]">
+                          {/* MaxStore does not document artwork; when a payload carries one, show it. */}
+                          <StoreImage src={product.imageUrl} alt="" sizes="40px" />
+                        </span>
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
                             <span className="truncate text-sm font-medium text-[var(--ink)]">{product.name}</span>
