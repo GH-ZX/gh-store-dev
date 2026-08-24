@@ -9,6 +9,7 @@ import type { Locale } from "@/i18n/config";
 import { getMessages, type AdminMessages } from "@/i18n/messages";
 import { INITIAL_AUTH_STATE, type AuthActionState } from "@/lib/auth/action-state";
 import { signInAction, signUpAction } from "@/lib/auth/actions";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 
 /**
  * Sign-in and sign-up form.
@@ -77,12 +78,14 @@ export function AuthForm({ locale, messages, mode, redirectTo }: AuthFormProps) 
           type="password"
           name="password"
           required
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           autoComplete={isSignUp ? "new-password" : "current-password"}
           dir="ltr"
           className="min-h-12 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 text-sm text-[var(--ink)] outline-none transition-colors duration-[var(--duration)] focus:border-[color-mix(in_srgb,var(--accent)_55%,transparent)]"
         />
-        <span className="text-xs text-[var(--ink-faint)]">{messages.passwordHint}</span>
+        <span className="text-xs text-[var(--ink-faint)]">
+          {isSignUp ? messages.signUpPasswordHint : messages.passwordHint}
+        </span>
       </label>
 
       {error ? (

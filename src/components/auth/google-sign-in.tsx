@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { safeRedirectTarget } from "@/lib/auth/redirect-target";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 /**
@@ -43,10 +44,12 @@ export function GoogleSignInButton({
       const supabase = createSupabaseBrowserClient();
       const callbackUrl = new URL("/auth/callback", window.location.origin);
 
-      const target = redirectTo ?? `/${locale}`;
-      if (target.startsWith("/") && !target.startsWith("//")) {
-        callbackUrl.searchParams.set("next", target);
-      }
+      /*
+       * Same canonicalization the server applies, so an attacker-crafted
+       * `next` never even reaches the callback route as a parameter.
+       */
+      const target = safeRedirectTarget(redirectTo) ?? `/${locale}`;
+      callbackUrl.searchParams.set("next", target);
 
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",

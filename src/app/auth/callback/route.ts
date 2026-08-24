@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_LOCALE } from "@/i18n/config";
+import { safeRedirectTarget } from "@/lib/auth/redirect-target";
 import { log } from "@/lib/logging/logger";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -13,22 +14,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * `/auth/callback` path is outside any locale on purpose: it is a machine
  * endpoint, not a page, and the middleware is told to leave it alone.
  *
- * `next` is honoured only when it is a same-origin path, mirroring the guard on
- * the email/password actions so a crafted URL cannot bounce someone around.
- * Without it the user lands on the home page for the default locale.
+ * `next` is honoured only when it survives `safeRedirectTarget` — canonicalized
+ * with a WHATWG URL parser, backslashes and control characters rejected,
+ * protocol-relative and absolute URLs refused — mirroring the guard on the
+ * email/password actions so a crafted URL cannot bounce someone around.
+ * Without a valid target the user lands on the home page for the default locale.
  */
 export const dynamic = "force-dynamic";
 
 function safeNext(value: string | null): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  if (value.startsWith("/") && !value.startsWith("//")) {
-    return value;
-  }
-
-  return null;
+  return value === null ? null : safeRedirectTarget(value);
 }
 
 /* The Google provider stores the profile under these keys in Supabase's

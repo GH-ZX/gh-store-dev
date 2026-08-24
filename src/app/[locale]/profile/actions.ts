@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { UnauthorizedError } from "@/lib/auth/guards";
+import { strongPasswordSchema } from "@/lib/auth/password-policy";
 import { formText } from "@/lib/forms/form-data";
+import { log } from "@/lib/logging/logger";
 import { updateMyProfile, UsernameTakenError } from "@/lib/services/profile.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AccountActionState } from "@/app/[locale]/profile/action-state";
@@ -29,8 +31,8 @@ const profileSchema = z.object({
 });
 
 const passwordSchema = z.object({
-  password: z.string().min(8).max(128),
-  confirmPassword: z.string().min(8).max(128),
+  password: strongPasswordSchema,
+  confirmPassword: z.string().min(1).max(128),
   locale: z.string().optional(),
 });
 
@@ -108,6 +110,23 @@ export async function updatePasswordAction(
   if (error) {
     return { error: "unknown", notice: null };
   }
+
+  /*
+   * A password change is a statement that the old credentials may be
+   * compromised, so every other session dies here — refresh tokens included,
+   * which is what makes revocation real. `scope: "others"` spares the session
+   * on this device; the customer keeps working, a thief with the old cookie
+   * does not.
+   */
+  const { error: signOutError } = await supabase.auth.signOut({ scope: "others" });
+
+  if (signOutError) {
+    // Non-fatal: the password itself has already changed, and the next token
+    // rotation re-evaluates against the new one.
+    log.warn("auth", "password_change_revoke_failed", { error: signOutError.message });
+  }
+
+  log.info("auth", "password_changed_others_revoked", {});
 
   return { error: null, notice: "password_saved" };
 }

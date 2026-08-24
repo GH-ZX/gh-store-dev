@@ -5,6 +5,7 @@ import { AdminCard, FormResult, TextField } from "@/components/admin/admin-form"
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/config";
 import type { AccountMessages } from "@/i18n/messages";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import {
   INITIAL_ACCOUNT_STATE,
   type AccountActionState,
@@ -123,7 +124,8 @@ export function PasswordForm({
             label={messages.password.newPassword}
             name="password"
             type="password"
-            minLength={8}
+            hint={messages.password.hint}
+            minLength={MIN_PASSWORD_LENGTH}
             required
             dir="ltr"
             autoComplete="new-password"
@@ -132,7 +134,7 @@ export function PasswordForm({
             label={messages.password.confirmPassword}
             name="confirmPassword"
             type="password"
-            minLength={8}
+            minLength={MIN_PASSWORD_LENGTH}
             required
             dir="ltr"
             autoComplete="new-password"

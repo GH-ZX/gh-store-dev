@@ -2,6 +2,7 @@ import { networkInterfaces } from "node:os";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { NextConfig } from "next";
+import { SECURITY_HEADERS } from "./src/lib/security/response-headers";
 
 /**
  * Every IPv4 address this machine answers on, loopback excluded.
@@ -81,6 +82,22 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: lanOrigins(),
 
   env: inlinePublicEnv(),
+
+  /**
+   * Security headers on every response the origin produces, including the
+   * routes middleware never sees (`api`, `auth/callback`, static assets).
+   * Middleware applies the same set to its own responses; both write
+   * identical values with set semantics. See response-headers.ts for what
+   * each header closes.
+   */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: SECURITY_HEADERS.map(([key, value]) => ({ key, value })),
+      },
+    ];
+  },
 
   /**
    * The reference store addressed a game as `/game/:slug`; this one uses the

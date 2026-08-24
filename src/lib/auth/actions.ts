@@ -1,10 +1,19 @@
 "use server";
 
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import type { AuthActionState } from "@/lib/auth/action-state";
+import { strongPasswordSchema } from "@/lib/auth/password-policy";
+import {
+  clearLoginFailures,
+  isLoginBlockedForAccount,
+  isLoginBlockedForIp,
+  recordFailedLoginAttempt,
+} from "@/lib/auth/rate-limit";
+import { safeRedirectTarget } from "@/lib/auth/redirect-target";
 import { formText } from "@/lib/forms/form-data";
 import { log } from "@/lib/logging/logger";
 import { hashEmail } from "@/lib/logging/redact";
@@ -22,9 +31,21 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * into an account-enumeration oracle.
  */
 
-const credentialsSchema = z.object({
+/*
+ * Sign-in stays lenient about password shape: accounts created before the
+ * policy tightened must still be able to log in with their legacy password.
+ * The strong policy lives in signUpSchema, where a new password is chosen.
+ */
+const signInSchema = z.object({
   email: z.string().trim().min(3).max(320).pipe(z.email()),
-  password: z.string().min(8).max(128),
+  password: z.string().min(1).max(128),
+  locale: z.string().optional(),
+  redirectTo: z.string().optional(),
+});
+
+const signUpSchema = z.object({
+  email: z.string().trim().min(3).max(320).pipe(z.email()),
+  password: strongPasswordSchema,
   locale: z.string().optional(),
   redirectTo: z.string().optional(),
 });
@@ -36,26 +57,40 @@ function resolveLocale(value: unknown): Locale {
 /**
  * Where to land after signing in.
  *
- * Only a same-origin path is honoured, so a crafted `next` cannot bounce someone
- * to another site with a fresh session. `//host` is rejected explicitly: it is
- * protocol-relative and would leave the origin despite starting with a slash.
+ * Delegates to `safeRedirectTarget`, which canonicalizes the value with the
+ * WHATWG URL parser and refuses anything that is not a same-origin path —
+ * including the backslash trick (`/\host`), which browsers normalize into a
+ * protocol-relative URL and which plain prefix checks wave straight through.
  *
  * The default is the home page for the locale, the least surprising landing
  * spot after sign-in.
  */
 function safeRedirect(value: unknown, locale: Locale): string {
-  if (typeof value === "string" && value.startsWith("/") && !value.startsWith("//")) {
-    return value;
+  return safeRedirectTarget(value) ?? `/${locale}`;
+}
+
+/**
+ * Best-effort client address for throttling. Cloudflare sets
+ * `cf-connecting-ip`; the forwarded list is the fallback elsewhere, taking
+ * the leftmost hop. An absent address degrades gracefully: the limiter
+ * simply never matches that empty key.
+ */
+async function requestIp(): Promise<string> {
+  const headerList = await headers();
+  const cloudflareIp = headerList.get("cf-connecting-ip");
+
+  if (cloudflareIp?.trim()) {
+    return cloudflareIp.trim();
   }
 
-  return `/${locale}`;
+  return (headerList.get("x-forwarded-for")?.split(",")[0] ?? "").trim();
 }
 
 export async function signInAction(
   _state: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const parsed = credentialsSchema.safeParse({
+  const parsed = signInSchema.safeParse({
     email: formText(formData, "email"),
     password: formText(formData, "password"),
     locale: formText(formData, "locale"),
@@ -69,6 +104,20 @@ export async function signInAction(
   }
 
   const locale = resolveLocale(parsed.data.locale);
+  const ip = await requestIp();
+  const emailHash = hashEmail(parsed.data.email);
+
+  /*
+   * Checked before touching Supabase so a blocked key burns no credential
+   * checks at all. The reply says only "too many attempts": it admits someone
+   * is being throttled, never that an account exists.
+   */
+  if (isLoginBlockedForIp(ip) || isLoginBlockedForAccount(emailHash)) {
+    log.warn("auth", "sign_in_throttled", { emailHash });
+
+    return { error: "too_many_attempts", notice: null };
+  }
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
@@ -83,14 +132,17 @@ export async function signInAction(
    * field, and `redact` would blank it by name if it ever became one.
    */
   if (error) {
-    log.warn("auth", "sign_in_failed", { emailHash: hashEmail(parsed.data.email) });
+    log.warn("auth", "sign_in_failed", { emailHash });
+    recordFailedLoginAttempt(ip, emailHash);
 
     return { error: "invalid_credentials", notice: null };
   }
 
+  clearLoginFailures(ip, emailHash);
+
   // Before the redirect, always: `redirect` works by throwing, so anything after
   // it is unreachable.
-  log.info("auth", "signed_in", { emailHash: hashEmail(parsed.data.email) });
+  log.info("auth", "signed_in", { emailHash });
 
   revalidatePath("/", "layout");
   redirect(safeRedirect(parsed.data.redirectTo, locale));
@@ -100,7 +152,7 @@ export async function signUpAction(
   _state: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const parsed = credentialsSchema.safeParse({
+  const parsed = signUpSchema.safeParse({
     email: formText(formData, "email"),
     password: formText(formData, "password"),
     locale: formText(formData, "locale"),
@@ -110,7 +162,14 @@ export async function signUpAction(
   if (!parsed.success) {
     log.warn("auth", "sign_up_rejected", { reason: "invalid_input" });
 
-    return { error: "invalid_input", notice: null };
+    /*
+     * A password that fails the policy is reported as such, so the customer
+     * learns the rule instead of a generic rejection; anything else (a bad
+     * email, mostly) stays generic.
+     */
+    const passwordFailed = parsed.error.issues.some((issue) => issue.path[0] === "password");
+
+    return { error: passwordFailed ? "weak_password" : "invalid_input", notice: null };
   }
 
   const locale = resolveLocale(parsed.data.locale);

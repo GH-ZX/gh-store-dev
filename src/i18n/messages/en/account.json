@@ -19,6 +19,7 @@
     "description": "Choose a strong password you do not use anywhere else.",
     "newPassword": "New password",
     "confirmPassword": "Confirm password",
+    "hint": "At least 8 characters, with letters and numbers.",
     "saveAction": "Update password",
     "saved": "Password updated.",
     "mismatch": "The two passwords do not match."
@@ -155,7 +156,7 @@
   "errors": {
     "invalid_input": "Check the values you entered, then try again.",
     "username_taken": "That username is taken. Pick another.",
-    "weak_password": "That password is too short. Use at least 8 characters.",
+    "weak_password": "That password is too short or too simple. Use at least 8 characters, with letters and numbers.",
     "not_signed_in": "Your session expired. Sign in and try again.",
     "unknown": "We could not complete that. Please try again."
   }

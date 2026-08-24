@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { DEFAULT_LOCALE, getLocaleFromPathname } from "@/i18n/config";
+import { applySecurityHeaders } from "@/lib/security/response-headers";
+import { hardenSessionCookieOptions } from "@/lib/supabase/cookie-options";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
 // Cloudflare OpenNext currently requires the Edge middleware runtime.
@@ -11,7 +13,15 @@ export async function middleware(request: NextRequest) {
   if (!locale) {
     const localizedUrl = request.nextUrl.clone();
     localizedUrl.pathname = `/${DEFAULT_LOCALE}${request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname}`;
-    return NextResponse.redirect(localizedUrl);
+
+    /*
+     * Middleware-issued responses bypass next.config headers entirely, so the
+     * redirect carries its own copy of the security headers.
+     */
+    const redirectResponse = NextResponse.redirect(localizedUrl);
+    applySecurityHeaders(redirectResponse.headers);
+
+    return redirectResponse;
   }
 
   const requestHeaders = new Headers(request.headers);
@@ -23,6 +33,10 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // Set here rather than only in next.config so the values survive regardless
+  // of which layer produces the final response for this request.
+  applySecurityHeaders(response.headers);
+
   const { url, publishableKey } = getSupabaseEnv();
   const supabase = createServerClient(url, publishableKey, {
     cookies: {
@@ -31,7 +45,7 @@ export async function middleware(request: NextRequest) {
       },
       setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
+          response.cookies.set(name, value, hardenSessionCookieOptions(options));
         });
         Object.entries(headers).forEach(([key, value]) => {
           response.headers.set(key, value);

@@ -8,6 +8,7 @@
     "emailLabel": "Email",
     "passwordLabel": "Password",
     "passwordHint": "At least 8 characters.",
+    "signUpPasswordHint": "At least 8 characters, with letters and numbers.",
     "signInAction": "Sign in",
     "signUpAction": "Create account",
     "signOutAction": "Sign out",
@@ -19,7 +20,9 @@
       "invalid_input": "Check the email and password, then try again.",
       "invalid_credentials": "Those sign-in details are not correct.",
       "oauth_failed": "We could not connect to Google. Try again.",
-      "signup_failed": "We could not create the account. Try another email or again later."
+      "signup_failed": "We could not create the account. Try another email or again later.",
+      "weak_password": "That password does not meet the policy. Use at least 8 characters, with letters and numbers.",
+      "too_many_attempts": "Too many attempts. Wait a little, then try again."
     },
     "notices": {
       "confirm_email": "We sent a confirmation email. Open the link to activate the account.",

@@ -5,6 +5,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { AccountMessages, AdminMessages } from "@/i18n/messages";
+import { MIN_PASSWORD_LENGTH, strongPasswordSchema } from "@/lib/auth/password-policy";
 import { formText } from "@/lib/forms/form-data";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -31,8 +32,6 @@ type Status = "checking" | "ready" | "expired" | "done";
 
 const FIELD_CLASSES =
   "min-h-12 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 text-sm text-[var(--ink)] outline-none transition-colors duration-[var(--duration)] focus:border-[color-mix(in_srgb,var(--accent)_55%,transparent)]";
-
-const MIN_PASSWORD_LENGTH = 8;
 
 type ErrorKey = keyof AccountMessages["errors"];
 
@@ -103,7 +102,7 @@ export function ResetPasswordForm({
     const password = formText(formData, "password") ?? "";
     const confirmPassword = formText(formData, "confirmPassword") ?? "";
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
+    if (!strongPasswordSchema.safeParse(password).success) {
       setErrorKey("weak_password");
       return;
     }
@@ -118,6 +117,15 @@ export function ResetPasswordForm({
 
     const supabase = createSupabaseBrowserClient();
     const { error } = await supabase.auth.updateUser({ password });
+
+    /*
+     * Same rule as the profile page: a reset is a statement that the old
+     * credentials leaked, so every other session dies. The recovery session
+     * on this device survives.
+     */
+    if (!error) {
+      await supabase.auth.signOut({ scope: "others" });
+    }
 
     setPending(false);
 
@@ -203,7 +211,7 @@ export function ResetPasswordForm({
           dir="ltr"
           className={FIELD_CLASSES}
         />
-        <span className="text-xs text-[var(--ink-faint)]">{authMessages.passwordHint}</span>
+        <span className="text-xs text-[var(--ink-faint)]">{messages.password.hint}</span>
       </label>
 
       <label className="grid gap-2">
