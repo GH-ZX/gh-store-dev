@@ -29,6 +29,14 @@ import {
 } from "@/lib/services/admin-website.service";
 import { isSeoPagePath } from "@/lib/settings/page-seo";
 import {
+  BACKDROP_INTENSITIES,
+  CORNER_STYLES,
+  DARK_SHADES,
+  DENSITIES,
+  DEFAULT_THEME_SETTINGS,
+  HEADING_FONTS,
+  LIGHT_TINTS,
+  MOTION_LEVELS,
   readBackdrop,
   safeColour,
   THEME_MODES,
@@ -510,10 +518,22 @@ const themeSchema = z.object({
   accent_2: z.string().trim().max(9).optional(),
   default_mode: z.string().optional(),
   backdrop: z.string().optional(),
+  corner_style: z.string().optional(),
+  dark_shade: z.string().optional(),
+  light_tint: z.string().optional(),
+  backdrop_intensity: z.string().optional(),
+  density: z.string().optional(),
+  heading_font: z.string().optional(),
+  motion_level: z.string().optional(),
 });
 
 function resolveMode(value: string | undefined): ThemeMode {
   return value && (THEME_MODES as readonly string[]).includes(value) ? (value as ThemeMode) : "system";
+}
+
+/** Every enum theme dimension resolves the same way; this is that, once. */
+function enumField<T extends string>(values: readonly T[], fallback: T, value: string | undefined): T {
+  return value && (values as readonly string[]).includes(value) ? (value as T) : fallback;
 }
 
 export async function saveThemeAction(
@@ -527,6 +547,13 @@ export async function saveThemeAction(
     accent_2: formText(formData, "accent_2"),
     default_mode: formText(formData, "default_mode"),
     backdrop: formText(formData, "backdrop"),
+    corner_style: formText(formData, "corner_style"),
+    dark_shade: formText(formData, "dark_shade"),
+    light_tint: formText(formData, "light_tint"),
+    backdrop_intensity: formText(formData, "backdrop_intensity"),
+    density: formText(formData, "density"),
+    heading_font: formText(formData, "heading_font"),
+    motion_level: formText(formData, "motion_level"),
   });
 
   if (!parsed.success) {
@@ -546,6 +573,17 @@ export async function saveThemeAction(
       accent2: accent2 ? accent2 : null,
       defaultMode: resolveMode(parsed.data.default_mode),
       backdrop: readBackdrop(parsed.data.backdrop),
+      cornerStyle: enumField(CORNER_STYLES, DEFAULT_THEME_SETTINGS.cornerStyle, parsed.data.corner_style),
+      darkShade: enumField(DARK_SHADES, DEFAULT_THEME_SETTINGS.darkShade, parsed.data.dark_shade),
+      lightTint: enumField(LIGHT_TINTS, DEFAULT_THEME_SETTINGS.lightTint, parsed.data.light_tint),
+      backdropIntensity: enumField(
+        BACKDROP_INTENSITIES,
+        DEFAULT_THEME_SETTINGS.backdropIntensity,
+        parsed.data.backdrop_intensity,
+      ),
+      density: enumField(DENSITIES, DEFAULT_THEME_SETTINGS.density, parsed.data.density),
+      headingFont: enumField(HEADING_FONTS, DEFAULT_THEME_SETTINGS.headingFont, parsed.data.heading_font),
+      motionLevel: enumField(MOTION_LEVELS, DEFAULT_THEME_SETTINGS.motionLevel, parsed.data.motion_level),
     });
   } catch (error) {
     logFailure("admin.website", "theme_save_failed", error);

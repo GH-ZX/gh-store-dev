@@ -105,6 +105,16 @@ export function BoltIcon(props: IconProps) {
   );
 }
 
+/** Two arced arrows chasing each other — refresh, re-check, re-sync. */
+export function SyncIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3" />
+      <path d="M20 4v4h-4M4 20v-4h4" />
+    </Icon>
+  );
+}
+
 export function ShieldIcon(props: IconProps) {
   return (
     <Icon {...props}>

@@ -11,8 +11,12 @@ import {
   getOffersByType,
   getSaleOffers,
   getSuggestedOffers,
+  getTrendingOffers,
 } from "@/lib/services/catalog.service";
 import { getPublishedReviews, type StoreReview } from "@/lib/services/reviews.service";
+import { getBinancePaymentOptions } from "@/lib/services/binance-recharge.service";
+import { getSamPaymentOptions } from "@/lib/services/sam-recharge.service";
+import type { SamMethod } from "@/lib/settings/sam-settings";
 
 /**
  * Homepage section data.
@@ -27,7 +31,14 @@ export type ResolvedHomeSection =
   | { kind: "games"; section: HomeSection; games: StoreGame[] }
   | { kind: "offers"; section: HomeSection; offers: StoreOffer[] }
   | { kind: "reviews"; section: HomeSection; reviews: StoreReview[] }
-  | { kind: "social"; section: HomeSection };
+  | { kind: "social"; section: HomeSection }
+  | {
+      kind: "trust";
+      section: HomeSection;
+      /** The payment rails actually switched on, so the strip never promises one that is off. */
+      payments: string[];
+    }
+  | { kind: "how"; section: HomeSection };
 
 /** Featured games for the hero, resolved separately from the section list. */
 export type HomeCarousel = {
@@ -59,6 +70,40 @@ async function resolveSection(
   section: HomeSection,
 ): Promise<ResolvedHomeSection | null> {
   switch (section.type) {
+    case "trust_strip": {
+      // The wallet is always there; the transfer rails depend on configuration.
+      const [sam, binance] = await Promise.all([
+        safely("trust_strip", () => getSamPaymentOptions(), {
+          enabled: false,
+          methods: [] as SamMethod[],
+          invoiceCurrency: "USD",
+          manualReview: false,
+        }),
+        safely("trust_strip", () => getBinancePaymentOptions(), { enabled: false, currency: "USD" }),
+      ]);
+
+      const payments = ["wallet"];
+
+      if (sam.enabled) {
+        payments.push(...sam.methods.map((method) => (method === "syriatel" ? "syriatel" : "shamcash")));
+      }
+
+      if (binance.enabled) {
+        payments.push("binance");
+      }
+
+      return { kind: "trust", section, payments };
+    }
+    case "how_it_works":
+      return { kind: "how", section };
+    case "trending_offers": {
+      const offers = await safely(
+        section.type,
+        () => getTrendingOffers(locale, section.limit),
+        [],
+      );
+      return offers.length > 0 ? { kind: "offers", section, offers } : null;
+    }
     case "games": {
       const games = await safely(section.type, () => getActiveGames(locale, section.limit), []);
       return games.length > 0 ? { kind: "games", section, games } : null;

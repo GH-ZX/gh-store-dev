@@ -102,13 +102,6 @@ export function BinanceSettingsForm({
         </span>
       </label>
 
-      <p
-        role="note"
-        className="rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-4 py-3 text-xs leading-5 text-[var(--ink-muted)]"
-      >
-        {messages.pendingWork}
-      </p>
-
       <FormResult error={error} notice={state.notice === "saved" ? messages.saved : null} />
 
       <div className="flex flex-wrap items-center gap-3">

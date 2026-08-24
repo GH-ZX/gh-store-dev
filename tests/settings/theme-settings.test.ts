@@ -67,6 +67,38 @@ describe("reading stored theme settings", () => {
     expect(normalizeTheme({ backdrop: "fireworks" }).backdrop).toBe("none");
     expect(normalizeTheme({}).backdrop).toBe("none");
   });
+
+  it("reads every personality dimension, falling back to the house default", () => {
+    const chosen = normalizeTheme({
+      corner_style: "sharp",
+      dark_shade: "midnight",
+      light_tint: "warm",
+      backdrop_intensity: "rich",
+      density: "compact",
+      heading_font: "grotesk",
+      motion_level: "calm",
+    });
+
+    expect(chosen.cornerStyle).toBe("sharp");
+    expect(chosen.darkShade).toBe("midnight");
+    expect(chosen.lightTint).toBe("warm");
+    expect(chosen.backdropIntensity).toBe("rich");
+    expect(chosen.density).toBe("compact");
+    expect(chosen.headingFont).toBe("grotesk");
+    expect(chosen.motionLevel).toBe("calm");
+
+    const garbage = normalizeTheme({
+      corner_style: "wobbly",
+      dark_shade: "beige",
+      light_tint: "neon",
+      backdrop_intensity: "loud",
+      density: "dense",
+      heading_font: "comic-sans",
+      motion_level: "wild",
+    });
+
+    expect(garbage).toEqual(DEFAULT_THEME_SETTINGS);
+  });
 });
 
 describe("the stylesheet an owner's accents produce", () => {
@@ -74,12 +106,84 @@ describe("the stylesheet an owner's accents produce", () => {
     expect(themeStyle(DEFAULT_THEME_SETTINGS)).toBe("");
   });
 
+  it("reskins the radius scale only when the corners are not the house default", () => {
+    const sharp = themeStyle({ ...DEFAULT_THEME_SETTINGS, cornerStyle: "sharp" });
+    const round = themeStyle({ ...DEFAULT_THEME_SETTINGS, cornerStyle: "round" });
+
+    expect(sharp).toContain("--radius-card:0.45rem");
+    expect(round).toContain("--radius-card:1.75rem");
+    expect(themeStyle({ ...DEFAULT_THEME_SETTINGS, cornerStyle: "soft" })).toBe("");
+  });
+
+  it("re-derives the dark and light canvases around the chosen shade", () => {
+    const midnight = themeStyle({ ...DEFAULT_THEME_SETTINGS, darkShade: "midnight" });
+
+    expect(midnight).toContain("--canvas:#020509");
+
+    const warm = themeStyle({ ...DEFAULT_THEME_SETTINGS, lightTint: "warm" });
+
+    expect(warm).toContain('[data-theme="light"]');
+    expect(warm).toContain("--canvas:#faf6ee");
+  });
+
+  it("tunes density through the root font size", () => {
+    expect(themeStyle({ ...DEFAULT_THEME_SETTINGS, density: "compact" })).toContain(
+      "html{font-size:93.75%}",
+    );
+    expect(themeStyle({ ...DEFAULT_THEME_SETTINGS, density: "comfortable" })).not.toContain(
+      "font-size",
+    );
+  });
+
+  it("retunes the entrance from tokens alone, per motion level", () => {
+    // Full motion is the stylesheet's own fallback and writes nothing; calm
+    // overrides the tokens — shorter everywhere, no blur.
+    const calm = themeStyle({ ...DEFAULT_THEME_SETTINGS, motionLevel: "calm" });
+
+    expect(calm).toContain("--enter-blur:0px");
+    expect(calm).toContain("--enter-duration:260ms");
+    expect(calm).toContain("--duration:200ms");
+  });
+
+  it("points headings at the chosen voice", () => {
+    const grotesk = themeStyle({ ...DEFAULT_THEME_SETTINGS, headingFont: "grotesk" });
+
+    expect(grotesk).toContain("--font-display:var(--font-space-grotesk)");
+    // Clean is the stylesheet's own fallback and writes nothing.
+    expect(themeStyle(DEFAULT_THEME_SETTINGS)).not.toContain("--font-display");
+  });
+
   it("derives the hover and pressed shades rather than asking for them", () => {
     const css = themeStyle({ ...DEFAULT_THEME_SETTINGS, accent: "#06607b" });
 
     expect(css).toContain("--accent:#06607b");
-    expect(css).toContain("--accent-strong:color-mix(in srgb, #06607b 82%, #000)");
-    expect(css).toContain("--accent-deep:color-mix(in srgb, #06607b 66%, #000)");
+    // Mixed in OKLab, so a saturated accent darkens without going muddy.
+    expect(css).toContain("--accent-strong:color-mix(in oklab, #06607b 78%, #fff)");
+    expect(css).toContain("--accent-deep:color-mix(in oklab, #06607b 62%, #000)");
+    // Tinted fill and border tokens ship alongside the shades.
+    expect(css).toContain("--accent-soft:");
+    expect(css).toContain("--accent-line:");
+  });
+
+  it("picks the label ink by measured contrast, not by mode", () => {
+    // A deep accent carries pale text; a bright one wants the near-black.
+    const deep = themeStyle({ ...DEFAULT_THEME_SETTINGS, accent: "#06607b" });
+    const bright = themeStyle({ ...DEFAULT_THEME_SETTINGS, accent: "#5ad8ff" });
+
+    expect(deep).toContain("--accent-ink:#f6fcff");
+    expect(bright).toContain("--accent-ink:#04121c");
+  });
+
+  it("adapts a bright accent for the light theme instead of breaking it", () => {
+    // Vivid cyan passes on the dark canvas and fails under pale text; the
+    // light block must deepen it into a sibling rather than ship unreadable
+    // buttons. A colour that already passes goes through untouched.
+    const bright = themeStyle({ ...DEFAULT_THEME_SETTINGS, accent: "#5ad8ff" });
+    const deep = themeStyle({ ...DEFAULT_THEME_SETTINGS, accent: "#06607b" });
+
+    expect(bright).toContain('[data-theme="light"]');
+    expect(bright).toContain(`color-mix(in oklab, #5ad8ff 46%, #04121c)`);
+    expect(deep).toContain(`[data-theme="light"]{--accent:#06607b`);
   });
 
   it("leaves the second accent alone when only the first is set", () => {

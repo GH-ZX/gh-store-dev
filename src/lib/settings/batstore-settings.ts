@@ -61,7 +61,9 @@ export type BatStoreStatus = {
 export function readBatStoreCredentials(providers: unknown): BatStoreCredentials {
   const parsed = providersSchema.safeParse(providers ?? {});
   const settings = parsed.success ? parsed.data.batstore : undefined;
-  const apiToken = settings?.api_token?.trim() || null;
+  // Saved token wins; the environment variable fills the gap when nothing is
+  // stored yet — and can retarget a supplier whose host moved.
+  const apiToken = settings?.api_token?.trim() || process.env.BATSTORE_API_TOKEN?.trim() || null;
 
   return {
     apiToken,

@@ -51,10 +51,16 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
        * The owner's ambient layer, and nothing at all when they chose none —
        * the default. Decorative, so it is never announced, and it sits behind
        * the whole storefront rather than inside any section, which is what lets
-       * it stay still while the page scrolls.
+       * it stay still while the page scrolls. The intensity attribute is the
+       * owner's volume knob for it.
        */}
-      {settings.theme.backdrop === "none" ? null : (
-        <div className="gh-backdrop" data-backdrop={settings.theme.backdrop} aria-hidden="true" />
+      {settings.theme.backdrop === "none" || settings.theme.backdropIntensity === "off" ? null : (
+        <div
+          className="gh-backdrop"
+          data-backdrop={settings.theme.backdrop}
+          data-intensity={settings.theme.backdropIntensity}
+          aria-hidden="true"
+        />
       )}
 
       <a

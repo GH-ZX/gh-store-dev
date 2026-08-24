@@ -9,6 +9,7 @@ import { MaxStoreSettingsForm } from "@/components/admin/maxstore-settings-form"
 import { ProviderGroup, ProviderSection } from "@/components/admin/provider-section";
 import { SamSettingsForm } from "@/components/admin/sam-settings-form";
 import { TelegramSettingsForm } from "@/components/admin/telegram-settings-form";
+import { WalletCards } from "@/components/admin/wallet-cards";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { ArrowIcon } from "@/components/ui/icons";
@@ -16,6 +17,7 @@ import { SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getSamOverview } from "@/lib/services/admin-sam.service";
+import { getWalletCards } from "@/lib/services/admin-overview.service";
 import {
   getAxiomStatus,
   getBatStoreStatus,
@@ -59,7 +61,16 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const fulfillmentPolicy = messages.providers.fulfillmentPolicy;
   const groups = messages.providers.groups;
   const secrets = messages.providers.secrets;
-  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings, telegramStatus, igdbStatus] =
+  const walletLabels = {
+    syncAll: messages.overview.wallets.syncAll,
+    syncingAll: messages.overview.wallets.syncingAll,
+    update: messages.overview.wallets.update,
+    updating: messages.overview.wallets.updating,
+    lastSynced: messages.overview.wallets.lastSynced,
+    neverSynced: messages.overview.wallets.neverSynced,
+    failed: messages.overview.wallets.unreachable,
+  };
+  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings, telegramStatus, igdbStatus, walletCards] =
     await Promise.all([
       getG2BulkStatus(),
       getG2BulkCallback(),
@@ -75,6 +86,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
       getFulfillmentSettings(),
       getTelegramStatus(),
       getIgdbStatus(),
+      getWalletCards(),
     ]);
 
   return (
@@ -88,6 +100,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
 
       <ProviderGroup title={groups.suppliers} description={groups.suppliersDescription}>
         <ProviderSection
+          anchorId="g2bulk"
           name={provider.name}
           summary={provider.summary}
           defaultOpen={!status.configured}
@@ -121,6 +134,12 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             </>
           }
         >
+          <WalletCards
+            cards={walletCards.filter((card) => card.key === "g2bulk")}
+            locale={locale}
+            labels={walletLabels}
+            embedded
+          />
           <G2BulkSettingsForm
             locale={locale}
             messages={provider}
@@ -131,6 +150,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
         </ProviderSection>
 
         <ProviderSection
+          anchorId="maxstore"
           name={maxstore.name}
           summary={maxstore.summary}
           defaultOpen={!maxstoreStatus.configured}
@@ -139,9 +159,6 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
               label: maxstoreStatus.configured ? maxstore.statusConfigured : maxstore.statusMissing,
               tone: maxstoreStatus.configured ? "success" : "neutral",
             },
-            // Said in the summary, not only inside: a supplier that cannot yet
-            // sell anything should not look finished from the outside.
-            { label: maxstore.partialLabel, tone: "warning" },
           ]}
           hint={
             maxstoreStatus.tokenHint
@@ -158,6 +175,12 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             </ButtonLink>
           }
         >
+          <WalletCards
+            cards={walletCards.filter((card) => card.key === "maxstore")}
+            locale={locale}
+            labels={walletLabels}
+            embedded
+          />
           <MaxStoreSettingsForm
             locale={locale}
             messages={maxstore}
@@ -168,6 +191,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
         </ProviderSection>
 
         <ProviderSection
+          anchorId="batstore"
           name={batstore.name}
           summary={batstore.summary}
           defaultOpen={!batstoreStatus.configured}
@@ -176,9 +200,6 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
               label: batstoreStatus.configured ? batstore.statusConfigured : batstore.statusMissing,
               tone: batstoreStatus.configured ? "success" : "neutral",
             },
-            // Said in the summary, not only inside: a supplier that cannot yet
-            // sell anything should not look finished from the outside.
-            { label: batstore.partialLabel, tone: "warning" },
           ]}
           hint={
             batstoreStatus.tokenHint
@@ -195,6 +216,12 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             </ButtonLink>
           }
         >
+          <WalletCards
+            cards={walletCards.filter((card) => card.key === "batstore")}
+            locale={locale}
+            labels={walletLabels}
+            embedded
+          />
           <BatStoreSettingsForm
             locale={locale}
             messages={batstore}
@@ -207,6 +234,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
 
       <ProviderGroup title={groups.payments} description={groups.paymentsDescription}>
         <ProviderSection
+          anchorId="sam"
           name={sam.name}
           summary={sam.summary}
           defaultOpen={!samStatus.configured}
@@ -221,6 +249,12 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
           ]}
           hint={samStatus.keyHint ? { label: sam.keyHintLabel, value: samStatus.keyHint } : null}
         >
+          <WalletCards
+            cards={walletCards.filter((card) => card.provider === "sam")}
+            locale={locale}
+            labels={walletLabels}
+            embedded
+          />
           <SamSettingsForm
             locale={locale}
             messages={sam}
@@ -231,6 +265,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
         </ProviderSection>
 
         <ProviderSection
+          anchorId="binance"
           name={binance.name}
           summary={binance.summary}
           defaultOpen={!binanceStatus.configured}
@@ -261,6 +296,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
 
       <ProviderGroup title={groups.operations} description={groups.operationsDescription}>
         <ProviderSection
+          anchorId="igdb"
           name={igdb.name}
           summary={igdb.summary}
           defaultOpen={!igdbStatus.configured}
@@ -281,6 +317,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
         </ProviderSection>
 
         <ProviderSection
+          anchorId="fulfillment-policy"
           name={fulfillmentPolicy.name}
           summary={fulfillmentPolicy.summary}
           defaultOpen={true}
@@ -304,6 +341,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
 
       <ProviderGroup title={groups.monitoring} description={groups.monitoringDescription}>
         <ProviderSection
+          anchorId="logging"
           name={logging.name}
           summary={logging.summary}
           defaultOpen={!axiomStatus.enabled}
@@ -323,6 +361,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
         </ProviderSection>
 
         <ProviderSection
+          anchorId="telegram"
           name={telegram.name}
           summary={telegram.summary}
           defaultOpen={!telegramStatus.configured}

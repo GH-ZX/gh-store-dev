@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { Geist, Geist_Mono, Tektur } from "next/font/google";
+import { Geist, Geist_Mono, Sora, Space_Grotesk, Tektur } from "next/font/google";
 import { getLocaleDirection, isLocale } from "@/i18n/config";
 import { APP_NAME } from "@/lib/config/app";
 import { getSiteUrl } from "@/lib/seo";
@@ -37,6 +37,27 @@ const tektur = Tektur({
   variable: "--font-tektur",
   subsets: ["latin"],
   display: "swap",
+});
+
+/*
+ * Two more heading voices for the theme's "heading font" setting. Latin-only
+ * on purpose — Arabic headings fall back per glyph to the sans stack, which
+ * keeps the Arabic guard's rules in charge of that script. Preloaded never:
+ * a heading voice the owner may not even select has no business on the
+ * critical path.
+ */
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -106,7 +127,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={resolvedLocale}
       dir={getLocaleDirection(resolvedLocale)}
-      className={`${geistSans.variable} ${geistMono.variable} ${tektur.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${tektur.variable} ${spaceGrotesk.variable} ${sora.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

@@ -36,6 +36,7 @@ export function ProviderSection({
   hint,
   actions,
   defaultOpen = false,
+  anchorId,
   children,
 }: {
   name: string;
@@ -46,12 +47,15 @@ export function ProviderSection({
   /** Links out of this integration — an import lane, a console. */
   actions?: ReactNode;
   defaultOpen?: boolean;
+  /** DOM id, so deep links like `#g2bulk` land on the right integration. */
+  anchorId?: string;
   children: ReactNode;
 }) {
   return (
     <details
+      id={anchorId}
       open={defaultOpen}
-      className="group rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] open:shadow-[var(--shadow-soft)]"
+      className="group rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] open:shadow-[var(--shadow-soft)] scroll-mt-24"
     >
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5 sm:p-6">
         <div className="min-w-0">

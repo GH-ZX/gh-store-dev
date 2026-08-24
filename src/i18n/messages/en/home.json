@@ -11,7 +11,46 @@
     "giftCardsSubtitle": "Cards and codes ready for delivery.",
     "saleSubtitle": "Discounts running right now.",
     "suggestedSubtitle": "Packages most players start with.",
+    "trendingSubtitle": "What players have been buying this month.",
     "reviewsSubtitle": "Real experiences from store customers."
+  },
+  "trust": {
+    "items": {
+      "payments": {
+        "title": "Pay your way",
+        "caption": "Local transfers, crypto, or the in-store wallet."
+      },
+      "instant": {
+        "title": "Instant delivery",
+        "caption": "Top-ups and codes land on your order page in seconds."
+      },
+      "support": {
+        "title": "Real support",
+        "caption": "A person answers from inside your order thread."
+      }
+    },
+    "paymentMethods": {
+      "wallet": "Store wallet",
+      "shamcash": "ShamCash",
+      "syriatel": "SyriatelCash",
+      "binance": "Binance Pay"
+    }
+  },
+  "howMini": {
+    "steps": [
+      {
+        "title": "Pick a package",
+        "body": "Choose your game, then the package that fits."
+      },
+      {
+        "title": "Top up your wallet",
+        "body": "Add balance with ShamCash, SyriatelCash, or Binance Pay."
+      },
+      {
+        "title": "Get it instantly",
+        "body": "Your top-up or code is delivered to your order page."
+      }
+    ]
   },
   "reviews": {
     "ratingLabel": "{rating} out of 5",

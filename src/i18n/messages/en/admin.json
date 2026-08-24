@@ -35,9 +35,10 @@
     "forbiddenDescription": "This area is for store administrators. If you think this is a mistake, contact the store owner.",
     "groups": {
       "overview": "Overview",
-      "catalog": "Catalog",
-      "operations": "Operations",
-      "settings": "Settings"
+      "sales": "Sales",
+      "people": "Customers",
+      "storefront": "Storefront",
+      "system": "System"
     },
     "nav": {
       "overview": "Home",
@@ -51,6 +52,7 @@
       "reviews": "Reviews",
       "providers": "Providers and API",
       "website": "Website",
+    "appearance": "Appearance",
       "operations": "Logs"
     },
     "comingSoon": "In progress"
@@ -58,6 +60,63 @@
   "overview": {
     "title": "Overview",
     "description": "The current state of the store, straight from the database.",
+    "attention": {
+      "title": "Needs your attention",
+      "allClear": "All clear",
+      "totalHint": "{count} item(s) waiting",
+      "stuck": "Stuck orders — paid, not delivered",
+      "recharges": "Recharges to review",
+      "payments": "Payment mismatches",
+      "support": "Open support threads",
+      "reviews": "Reviews awaiting approval"
+    },
+    "kpis": {
+      "revenueToday": "Revenue today",
+      "revenue7": "Revenue · 7 days",
+      "vsPrev": "{percent}% vs previous week",
+      "newCustomers": "New customers · 7 days",
+      "avgOrder": "Average order · 7 days"
+    },
+    "chart": {
+      "title": "Sales — last 14 days",
+      "hint": "Paid orders per day",
+      "unavailable": "Could not read sales right now."
+    },
+    "earnings": {
+      "title": "Earnings (أرباح)",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days",
+      "revenue": "Revenue",
+      "cost": "Supplier cost",
+      "profit": "Gross profit",
+      "unknownCost": "Not fully known*",
+      "unavailable": "Could not read earnings right now."
+    },
+    "wallets": {
+      "title": "Supplier wallets",
+      "manage": "Manage providers",
+      "supplierBalance": "Available balance",
+      "unreachable": "Unreachable",
+      "none": "No provider with a wallet is enabled yet.",
+      "syncAll": "Sync all wallets",
+      "syncingAll": "Syncing…",
+      "update": "Update",
+      "updating": "Updating…",
+      "lastSynced": "Synced:",
+      "neverSynced": "Not synced yet — press Sync."
+    },
+    "latest": {
+      "title": "Latest orders",
+      "viewAll": "All orders",
+      "empty": "No orders yet."
+    },
+    "actions": {
+      "addGame": "Add a game",
+      "importG2B": "Import from G2Bulk",
+      "recharges": "Review recharges",
+      "appearance": "Store appearance",
+      "viewStore": "View store"
+    },
     "stats": {
       "games": "Games",
       "activeGames": "Published games",
@@ -322,7 +381,6 @@
       "summary": "A second supplier: game top-ups, numbers, social media services, support apps, and recharge accounts.",
       "statusConfigured": "Token saved",
       "statusMissing": "No token",
-      "partialLabel": "Not yet proven",
       "keyHintLabel": "Saved token",
       "apiTokenLabel": "API token",
       "apiTokenPlaceholder": "From the MaxStore Mini App, Account → API Keys",
@@ -335,8 +393,7 @@
       "testAction": "Test the token",
       "verified": "Token works",
       "accountLabel": "Account",
-      "balanceLabel": "Balance",
-      "pendingWork": "Settings, catalogue import, ordering, and settling are all built — but no call has ever been made against a live MaxStore token. Save a token and press the test button first; anything it contradicts is a bug in our reading of their docs, not in your token."
+      "balanceLabel": "Balance"
     },
     "maxstoreImport": {
       "title": "Import from MaxStore",
@@ -361,7 +418,6 @@
       "summary": "A Telegram-bot reseller: game top-ups, accounts, and activation services paid for from a wallet balance.",
       "statusConfigured": "Token saved",
       "statusMissing": "No token",
-      "partialLabel": "Not yet proven",
       "keyHintLabel": "Saved token",
       "apiTokenLabel": "API token",
       "apiTokenPlaceholder": "Paste your BatStore reseller key here",
@@ -421,8 +477,7 @@
       "enableLabel": "Offer Binance Pay at checkout",
       "enableHelp": "Off until you say otherwise, even once credentials are saved. Turning it off keeps them.",
       "saveAction": "Save",
-      "saved": "Saved",
-      "pendingWork": "Credentials and signing are built and tested. Taking an actual payment — the invoice record, the checkout hand-off, and the callback that credits a wallet — is not finished, so turning this on does not yet put it in front of customers."
+      "saved": "Saved"
     },
     "fulfillmentPolicy": {
       "name": "Failed-order policy",
@@ -492,6 +547,12 @@
     "backToCatalog": "Back to catalog",
     "providerLabel": "Provider",
     "providerCategoryLabel": "Supplier category",
+    "supplierLinkTitle": "Supplier link",
+    "supplierLinkDescription": "The provider's own page for this product, kept on its mapping and shown here as a quick link.",
+    "supplierLinkLabel": "Supplier link (URL)",
+    "supplierLinkHint": "Leave empty to clear it.",
+    "supplierLinkSave": "Save link",
+    "supplierLinkSaved": "Supplier link saved.",
     "game": {
       "title": "Game details",
       "description": "The Arabic name is what most customers read, so keep it accurate.",
@@ -568,6 +629,7 @@
       "invalid_input": "Check the values you entered, then try again.",
       "slug_taken": "That slug already belongs to another game.",
       "not_found": "We could not find that game.",
+      "provider_link_invalid": "The supplier link must start with http:// or https://.",
       "unknown": "We could not save. Please try again.",
       "offer_slug_taken": "Another package of this game already uses that address.",
       "offer_not_found": "That package no longer exists."
@@ -633,7 +695,10 @@
       "typeLabel": "Type",
       "types": {
         "carousel": "Hero carousel",
+        "trust_strip": "Trust strip",
+        "how_it_works": "How it works",
         "games": "All games",
+        "trending_offers": "Trending now",
         "gift_cards": "Cards and codes",
         "sale_offers": "Discounted offers",
         "suggested_offers": "Bestsellers",
@@ -712,6 +777,16 @@
     "theme": {
       "title": "Theme",
       "description": "The brand colours the storefront is built from, and what a first-time visitor sees.",
+      "eyebrow": "Appearance",
+      "editorTitle": "Theme editor",
+      "globalHint": "Everything here applies to every visitor the moment you save. The one exception is dark and light mode, which stays each visitor's own choice — your default only decides what someone sees on their very first visit. Changes preview across this page as you make them; nothing is live for customers until you press save.",
+      "groups": {
+        "presets": "Presets & brand colours",
+        "canvas": "Modes & canvas",
+        "shape": "Shape & density",
+        "type": "Heading font",
+        "motion": "Motion"
+      },
       "presetsLabel": "Ready-made pairs",
       "presetsHint": "Fills both colours below. Nothing is saved until you press save, and you can edit either colour afterwards.",
       "presetsCustom": "Your own colours",
@@ -722,7 +797,18 @@
         "violet": "Violet",
         "ember": "Ember",
         "crimson": "Crimson",
-        "graphite": "Graphite"
+        "graphite": "Graphite",
+      "ocean": "Ocean",
+      "cyber": "Cyber",
+      "steel": "Steel",
+      "forest": "Forest",
+      "teal": "Teal",
+      "royal": "Royal purple",
+      "orchid": "Orchid",
+      "magenta": "Magenta",
+      "raspberry": "Raspberry",
+      "volcano": "Volcano",
+      "bronze": "Bronze"
       },
       "accentLabel": "Accent colour",
       "accentHint": "Buttons, links, and highlights. Leave empty for the built-in colour.",
@@ -745,6 +831,51 @@
         "aurora": "Aurora — light along the top",
         "mesh": "Mesh — soft colour in the corners",
         "grid": "Dot grid — faint engineering paper"
+      },
+      "cornerLabel": "Corners",
+      "corners": {
+        "sharp": "Sharp — technical",
+        "soft": "Soft — the house default",
+        "round": "Round — friendly"
+      },
+      "darkShadeLabel": "Dark canvas",
+      "darkShades": {
+        "midnight": "Midnight — true black, OLED-friendly",
+        "navy": "Navy — the house default",
+        "slate": "Slate — softer grey-blue"
+      },
+      "lightTintLabel": "Light canvas",
+      "lightTints": {
+        "cool": "Cool paper — the default",
+        "warm": "Warm cream",
+        "white": "Pure white"
+      },
+      "intensityLabel": "Backdrop strength",
+      "intensityHint": "How loud the ambient layer is, when one is chosen.",
+      "intensities": {
+        "off": "Off",
+        "subtle": "Subtle",
+        "standard": "Standard",
+        "rich": "Rich"
+      },
+      "densityLabel": "Density",
+      "densities": {
+        "comfortable": "Comfortable",
+        "compact": "Compact — more on a phone screen"
+      },
+      "motionLabel": "Motion level",
+      "motionHint": "Calm shortens every animation and stills the page entrance's blur. Visitors who ask their device for reduced motion never see motion at all.",
+      "motionLevels": {
+        "full": "Full — rises and unblurs on every page",
+        "calm": "Calm — quick and plain"
+      },
+      "headingFontLabel": "Heading font",
+      "headingFontHint": "The voice headings speak in. Arabic text keeps its own type either way.",
+      "headingFonts": {
+        "clean": "Clean — Geist, the default",
+        "techy": "Techy — Tektur, the logo's face",
+        "grotesk": "Grotesk — Space Grotesk",
+        "sora": "Sora — rounded geometric"
       },
       "saveAction": "Save theme",
       "saved": "Theme saved."

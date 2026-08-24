@@ -48,10 +48,16 @@ export function rowField(prefix: string, index: number, field: string): string {
 /**
  * Section types whose item count is meaningful.
  *
- * The carousel shows every game flagged for it, and the social section shows
- * every configured link, so neither has a count to set.
+ * The carousel shows every game flagged for it, the social section shows every
+ * configured link, and the two static strips (trust, how-it-works) have no
+ * items at all — none of them has a count to set.
  */
-const SECTION_TYPES_WITHOUT_LIMIT = new Set<HomeSectionType>(["carousel", "social_links"]);
+const SECTION_TYPES_WITHOUT_LIMIT = new Set<HomeSectionType>([
+  "carousel",
+  "social_links",
+  "trust_strip",
+  "how_it_works",
+]);
 
 export function sectionUsesLimit(type: HomeSectionType): boolean {
   return !SECTION_TYPES_WITHOUT_LIMIT.has(type);

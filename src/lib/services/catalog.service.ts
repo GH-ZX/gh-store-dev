@@ -10,6 +10,10 @@ import { toSearchTokens, type SearchFilter } from "@/lib/catalog/search";
 import { catalogPageRange, type CatalogPage, toCatalogPage } from "@/lib/catalog/pagination";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServiceClient,
+  hasServiceRoleKey,
+} from "@/lib/supabase/service";
 import { currentUserIsAdmin } from "@/lib/services/session.service";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 
@@ -104,7 +108,52 @@ export async function getActiveGames(locale: Locale, limit?: number): Promise<St
     throw new CatalogReadError();
   }
 
-  return data.map((game) => toStoreGame(game, locale));
+  return attachPriceFrom(data.map((game) => toStoreGame(game, locale)));
+}
+
+/**
+ * The cheapest active offer per game, for the tile's "from" price line.
+ *
+ * One small query over active offers rather than a join in every game read: the
+ * number is decorative — a teaser, never a charged figure — so a failed read
+ * returns the games untouched instead of failing the page.
+ */
+async function attachPriceFrom(games: StoreGame[]): Promise<StoreGame[]> {
+  if (games.length === 0) {
+    return games;
+  }
+
+  const supabase = createSupabasePublicClient();
+  const { data, error } = await supabase
+    .from("offers")
+    .select("game_id, price")
+    .eq("is_active", true)
+    .in(
+      "game_id",
+      games.map((game) => game.id),
+    );
+
+  if (error || !data) {
+    return games;
+  }
+
+  const minByGame = new Map<string, number>();
+
+  for (const row of data) {
+    if (typeof row.game_id !== "string" || typeof row.price !== "number") {
+      continue;
+    }
+
+    const current = minByGame.get(row.game_id);
+
+    if (current === undefined || row.price < current) {
+      minByGame.set(row.game_id, row.price);
+    }
+  }
+
+  return games.map((game) =>
+    minByGame.has(game.id) ? { ...game, priceFrom: minByGame.get(game.id) } : game,
+  );
 }
 
 /** Games an admin flagged for the homepage hero, in the configured order. */
@@ -124,7 +173,8 @@ export async function getActiveGamesPage(locale: Locale, page: number): Promise<
   }
 
   const total = count ?? data.length;
-  return toCatalogPage(data.map((game) => toStoreGame(game, locale)), page, total);
+  const games = await attachPriceFrom(data.map((game) => toStoreGame(game, locale)));
+  return toCatalogPage(games, page, total);
 }
 
 export async function getCarouselGames(locale: Locale, limit: number): Promise<StoreGame[]> {
@@ -169,7 +219,11 @@ export async function getGamesByIds(locale: Locale, ids: string[]): Promise<Stor
 
   const byId = new Map(data.map((game) => [game.id, toStoreGame(game, locale)]));
 
-  return ids.map((id) => byId.get(id)).filter((game): game is StoreGame => game !== undefined);
+  const ordered = ids
+    .map((id) => byId.get(id))
+    .filter((game): game is StoreGame => game !== undefined);
+
+  return attachPriceFrom(ordered);
 }
 
 export type StoreGameDetail = {
@@ -493,6 +547,68 @@ export async function getOffersByIds(locale: Locale, ids: string[]): Promise<Sto
     .filter((offer): offer is StoreOffer => offer !== undefined);
 
   return withAdminCosts(matched);
+}
+
+/**
+ * The offers real orders have been buying, newest trend first.
+ *
+ * Sales counts live in `order_items`, which RLS rightly locks to its customer —
+ * so this one read goes through the service key while every other catalog read
+ * stays on the anon client. Only money that actually arrived counts: a pending
+ * or failed order is an intention, not a sale. Below a handful of distinct
+ * results the row says nothing true about "trending", so it returns fewer than
+ * asked and the homepage's own rule drops an empty section.
+ */
+const TRENDING_WINDOW_DAYS = 30;
+const TRENDING_MIN_RESULTS = 4;
+
+export async function getTrendingOffers(locale: Locale, limit: number): Promise<StoreOffer[]> {
+  if (!hasServiceRoleKey()) {
+    return [];
+  }
+
+  const service = createSupabaseServiceClient();
+  const cutoff = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60_000).toISOString();
+
+  const { data, error } = await service
+    .from("order_items")
+    .select("offer_id, quantity, orders!inner(payment_status)")
+    .eq("orders.payment_status", "paid")
+    .gte("created_at", cutoff);
+
+  if (error || !data) {
+    throw new CatalogReadError();
+  }
+
+  const counts = new Map<string, number>();
+
+  for (const row of data) {
+    if (typeof row.offer_id !== "string") {
+      // An offer deleted since the purchase keeps its snapshot but has
+      // nothing to link to, so it cannot trend.
+      continue;
+    }
+
+    const quantity = typeof row.quantity === "number" ? row.quantity : 1;
+
+    counts.set(row.offer_id, (counts.get(row.offer_id) ?? 0) + Math.max(1, quantity));
+  }
+
+  const ranked = [...counts.entries()]
+    .sort((first, second) => second[1] - first[1])
+    .slice(0, limit)
+    .map(([offerId]) => offerId);
+
+  if (ranked.length < TRENDING_MIN_RESULTS) {
+    return [];
+  }
+
+  const offers = await getOffersByIds(locale, ranked);
+  const rank = new Map(ranked.map((id, index) => [id, index]));
+
+  return offers.sort(
+    (first, second) => (rank.get(first.id) ?? ranked.length) - (rank.get(second.id) ?? ranked.length),
+  );
 }
 
 export type CatalogSearchResult = {

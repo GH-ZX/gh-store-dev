@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/shared/states";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { ChevronIcon, GamepadIcon, SearchIcon } from "@/components/ui/icons";
+import { ChevronIcon, GamepadIcon, LinkIcon, SearchIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import type { Locale } from "@/i18n/config";
 import { formatMessage, getMessages } from "@/i18n/messages";
@@ -216,6 +216,17 @@ export default async function CatalogPage({
                       <span>
                         {messages.providerLabel}: <span dir="ltr">{game.providerCode}</span>
                       </span>
+                    ) : null}
+                    {game.providerUrl ? (
+                      <a
+                        href={game.providerUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="inline-flex items-center gap-1 text-[var(--accent-strong)] underline-offset-4 transition-colors duration-[var(--duration)] hover:underline"
+                      >
+                        <LinkIcon className="size-3" />
+                        <span dir="ltr">{messages.supplierLinkTitle}</span>
+                      </a>
                     ) : null}
                     {game.providerCategoryTitle ? (
                       <span>

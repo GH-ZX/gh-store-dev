@@ -5,7 +5,7 @@ import { ReviewCard } from "@/components/store/review-card";
 import { GameGrid, OfferGrid } from "@/components/store/collections";
 import { ButtonLink } from "@/components/ui/button";
 import { SocialIcon } from "@/components/ui/brand-icons";
-import { ArrowIcon } from "@/components/ui/icons";
+import { ArrowIcon, BoltIcon, SupportIcon, WalletIcon } from "@/components/ui/icons";
 import { Rail, RailItem } from "@/components/ui/rail";
 import { Section, SectionHeader } from "@/components/ui/section";
 import type { Locale } from "@/i18n/config";
@@ -55,11 +55,20 @@ function fallbackSubtitle(section: HomeSection, home: HomeMessages): string | un
       return home.sections.saleSubtitle;
     case "suggested_offers":
       return home.sections.suggestedSubtitle;
+    case "trending_offers":
+      return home.sections.trendingSubtitle;
     case "customer_reviews":
       return home.sections.reviewsSubtitle;
     default:
       return undefined;
   }
+}
+
+/** Localized name of a payment rail the trust strip can claim. */
+function paymentMethodLabel(method: string, home: HomeMessages): string {
+  return (
+    home.trust.paymentMethods[method as keyof typeof home.trust.paymentMethods] ?? method
+  );
 }
 
 export function HomeSections({
@@ -104,6 +113,83 @@ export function HomeSections({
             }
           />
         );
+
+        if (resolved.kind === "trust") {
+          const trustItems = [
+            {
+              icon: <WalletIcon />,
+              title: home.trust.items.payments.title,
+              caption: home.trust.items.payments.caption,
+              value: resolved.payments.map((method) => paymentMethodLabel(method, home)).join(" · "),
+            },
+            {
+              icon: <BoltIcon />,
+              title: home.trust.items.instant.title,
+              caption: home.trust.items.instant.caption,
+              value: null,
+            },
+            {
+              icon: <SupportIcon />,
+              title: home.trust.items.support.title,
+              caption: home.trust.items.support.caption,
+              value: null,
+            },
+          ];
+
+          return (
+            <Section key={section.id} spacing="normal">
+              {header}
+              <ul className="mt-8 grid gap-3 sm:grid-cols-3">
+                {trustItems.map((item) => (
+                  <li
+                    key={item.title}
+                    className="flex items-start gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5"
+                  >
+                    <span className="grid size-11 shrink-0 place-items-center rounded-full border border-[var(--line)] bg-[var(--shell)] text-[var(--accent)] [&>svg]:size-5">
+                      {item.icon}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[var(--ink)]">{item.title}</span>
+                      <span className="mt-1 block text-xs leading-5 text-[var(--ink-muted)]">
+                        {item.caption}
+                      </span>
+                      {item.value ? (
+                        <span
+                          className="mt-2 block truncate text-xs font-medium text-[var(--accent-strong)]"
+                          title={item.value}
+                        >
+                          {item.value}
+                        </span>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          );
+        }
+
+        if (resolved.kind === "how") {
+          return (
+            <Section key={section.id} spacing="normal">
+              {header}
+              <ol className="mt-8 grid gap-3 sm:grid-cols-3">
+                {home.howMini.steps.map((step, index) => (
+                  <li
+                    key={step.title}
+                    className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5"
+                  >
+                    <span className="grid size-9 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-sm font-bold text-[var(--accent-strong)] tabular-nums">
+                      {index + 1}
+                    </span>
+                    <p className="mt-3 text-sm font-semibold text-[var(--ink)]">{step.title}</p>
+                    <p className="mt-1.5 text-xs leading-5 text-[var(--ink-muted)]">{step.body}</p>
+                  </li>
+                ))}
+              </ol>
+            </Section>
+          );
+        }
 
         if (resolved.kind === "games") {
           return (

@@ -54,6 +54,40 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-feature-settings: "ss01", "cv01";
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Text wrapping as typography.
+ *
+ * Balanced headings break so no line is left holding one orphan word — the
+ * difference between a title that reads set and one that reads typed. `pretty`
+ * does the quieter job for running text, avoiding the single-word last line.
+ * Both are progressive: a browser without them wraps exactly as before, and
+ * neither affects Arabic joining (the guard below handles what does).
+ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+  font-family: var(--font-display, var(--font-geist-sans)), system-ui, sans-serif;
+}
+
+p,
+li,
+dd,
+figcaption,
+blockquote {
+  text-wrap: pretty;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-faint);
 }
 
 /*
@@ -191,6 +225,22 @@ body:has([data-dashboard-shell]) .gh-backdrop {
 }
 
 /*
+ * The owner's volume knob for the backdrop, applied as plain opacity so the
+ * gradients underneath never need to know about it.
+ */
+.gh-backdrop[data-intensity="subtle"] {
+  opacity: 0.4;
+}
+
+.gh-backdrop[data-intensity="standard"] {
+  opacity: 0.75;
+}
+
+.gh-backdrop[data-intensity="rich"] {
+  opacity: 1;
+}
+
+/*
  * Theme-conditional content.
  *
  * `data-theme` is absent for the dark default and set to "light" only when a
@@ -243,6 +293,35 @@ html:not([data-theme="light"]) .gh-only-light {
 
 @utility gh-fade {
   animation: gh-fade var(--duration) var(--ease-out-expo) both;
+}
+
+/*
+ * The page entrance.
+ *
+ * Every navigation mounts a fresh template (Next remounts `template.tsx` where
+ * it would reuse a layout), so this animation plays once per arrival: the page
+ * rises a short distance, unblurring as it comes — fast, simple, and gone
+ * before it could ever be in the way. All three of its qualities are tokens,
+ * which is what lets the owner's motion level retune it from CSS alone.
+ *
+ * Visitors with reduced motion never see any of it: the global reduce rule
+ * clamps every animation to 1 ms.
+ */
+@keyframes gh-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--enter-rise, 22px));
+    filter: blur(var(--enter-blur, 14px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@utility gh-enter {
+  animation: gh-page-in var(--enter-duration, 520ms) var(--ease-out-expo) both;
 }
 
 /*

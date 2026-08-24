@@ -29,11 +29,32 @@ export const THEME_PRESETS: ThemePreset[] = [
   // The token file's own light-theme pair, so "back to the house colours" is one
   // press rather than a memory test.
   { id: "signal", accent: "#06607b", accent2: "#6a4fd8" },
+
+  // Cool end: blues, teals and cybers — the classic gaming register.
+  { id: "ocean", accent: "#0369a1", accent2: "#0f766e" },
+  { id: "cyber", accent: "#4338ca", accent2: "#0e7490" },
   { id: "indigo", accent: "#4b45d8", accent2: "#0e7490" },
+  { id: "steel", accent: "#334155", accent2: "#0e7490" },
+
+  // Greens: calm, money-adjacent, good for stores that lead with wallets.
   { id: "emerald", accent: "#047857", accent2: "#0369a1" },
+  { id: "forest", accent: "#15803d", accent2: "#065f46" },
+  { id: "teal", accent: "#0f766e", accent2: "#4338ca" },
+
+  // Warm end: violets through reds — loud where it counts.
   { id: "violet", accent: "#7326c4", accent2: "#be1e63" },
-  { id: "ember", accent: "#b03d09", accent2: "#a8410f" },
+  { id: "royal", accent: "#6d28d9", accent2: "#be185d" },
+  { id: "orchid", accent: "#7e22ce", accent2: "#0369a1" },
+  { id: "magenta", accent: "#a21caf", accent2: "#1d4ed8" },
   { id: "crimson", accent: "#b91c3c", accent2: "#7326c4" },
+  { id: "raspberry", accent: "#be123c", accent2: "#0369a1" },
+
+  // Fire and earth: sunset warmth without losing label contrast.
+  { id: "ember", accent: "#b03d09", accent2: "#a8410f" },
+  { id: "volcano", accent: "#b91c1c", accent2: "#9a3412" },
+  { id: "bronze", accent: "#92400e", accent2: "#334155" },
+
+  // The quiet option for an owner who wants the games to be the colour.
   { id: "graphite", accent: "#3f4c5f", accent2: "#0e7490" },
 ];
 

@@ -15,6 +15,8 @@ import {
   OfferNotFoundError,
   OfferSlugTakenError,
   PRICING_MODES,
+  ProviderLinkInvalidError,
+  setAdminGameProviderLink,
   SlugTakenError,
   updateAdminGame,
   updateAdminOffers,
@@ -121,6 +123,10 @@ function errorKey(error: unknown): string {
     return "offer_not_found";
   }
 
+  if (error instanceof ProviderLinkInvalidError) {
+    return "provider_link_invalid";
+  }
+
   return "unknown";
 }
 
@@ -205,6 +211,46 @@ export async function deleteGameAction(
   // The edited game no longer exists, so its page would 404: the list is the
   // only sensible place to land.
   redirect(`/${locale}/dashboard/catalog`);
+}
+
+const providerLinkSchema = z.object({
+  gameId: z.uuid(),
+  url: z.union([z.literal(""), z.string().trim().max(2048)]),
+});
+
+/**
+ * Save the supplier listing link shown beside a catalog entry.
+ *
+ * Kept separate from the game form on purpose: the link describes the
+ * supplier's page rather than our product, so it edits the provider mapping
+ * and survives game edits untouched.
+ */
+export async function saveProviderLinkAction(
+  _state: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  await requireAdmin();
+
+  const parsed = providerLinkSchema.safeParse({
+    gameId: formText(formData, "gameId"),
+    url: formText(formData, "providerUrl") ?? "",
+  });
+
+  if (!parsed.success) {
+    return failed("invalid_input");
+  }
+
+  const locale = resolveLocale(formText(formData, "locale"));
+
+  try {
+    await setAdminGameProviderLink(parsed.data.gameId, parsed.data.url);
+  } catch (error) {
+    return failed(errorKey(error));
+  }
+
+  revalidateCatalog(locale, parsed.data.gameId);
+
+  return { ...INITIAL_CATALOG_STATE, notice: "saved" };
 }
 
 export async function updateOffersAction(

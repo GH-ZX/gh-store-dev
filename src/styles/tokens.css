@@ -31,6 +31,9 @@
   --accent-strong: #a7ecff;
   --accent-deep: #0c7ea6;
   --accent-ink: #04121c;
+  /* Tinted fills and borders drawn from the accent, at two strengths */
+  --accent-soft: rgba(90, 216, 255, 0.14);
+  --accent-line: rgba(90, 216, 255, 0.36);
   --accent-2: #a08bff;
   --accent-2-ink: #0d0820;
   --accent-3: #ffb45c;
@@ -94,15 +97,23 @@
   --surface-inset: #e4edf4;
   --shell: rgba(16, 32, 51, 0.04);
 
+  /*
+   * Text ramp. Muted and faint sit just past 4:1 on the canvas — small meta
+   * text is where a light theme quietly becomes hard to read, so the floor is
+   * kept deliberately above the usual "decorative grey" and the step between
+   * soft → muted → faint stays even.
+   */
   --ink: #0d1c2e;
-  --ink-soft: #3b4f65;
-  --ink-muted: #5d7086;
-  --ink-faint: #78899b;
+  --ink-soft: #33475d;
+  --ink-muted: #52657b;
+  --ink-faint: #647689;
 
   --accent: #06607b;
   --accent-strong: #044a5e;
   --accent-deep: #023747;
   --accent-ink: #f6fcff;
+  --accent-soft: rgba(6, 96, 123, 0.1);
+  --accent-line: rgba(6, 96, 123, 0.32);
   --accent-2: #6a4fd8;
   --accent-2-ink: #f8f6ff;
   --accent-3: #a75f18;

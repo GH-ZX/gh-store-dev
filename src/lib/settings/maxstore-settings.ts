@@ -61,7 +61,9 @@ function clampMarkup(value: number | undefined): number {
 export function readMaxStoreCredentials(providers: unknown): MaxStoreCredentials {
   const parsed = providersSchema.safeParse(providers ?? {});
   const settings = parsed.success ? parsed.data.maxstore : undefined;
-  const apiToken = settings?.api_token?.trim() || null;
+  // Saved token wins; the environment variable fills the gap when nothing is
+  // stored yet (deployments configured by secret).
+  const apiToken = settings?.api_token?.trim() || process.env.MAXSTORE_API_TOKEN?.trim() || null;
 
   return {
     apiToken,

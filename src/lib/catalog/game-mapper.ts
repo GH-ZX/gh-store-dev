@@ -30,6 +30,12 @@ export type StoreGame = {
   carouselBadge: string | null;
   /** Background-position percentages for hero artwork, so faces stay in frame. */
   carouselFocus: { x: number; y: number };
+  /**
+   * Cheapest active offer, when the caller enriched the game with prices.
+   * Optional because the mapper itself stays row-pure; a tile without it
+   * simply renders no price line.
+   */
+  priceFrom?: number | null;
 };
 
 /** Columns every game read selects, so a mapped game renders the same everywhere. */

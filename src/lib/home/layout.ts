@@ -14,7 +14,10 @@ import type { Locale } from "@/i18n/config";
 
 export const HOME_SECTION_TYPES = [
   "carousel",
+  "trust_strip",
+  "how_it_works",
   "games",
+  "trending_offers",
   "gift_cards",
   "sale_offers",
   "suggested_offers",
@@ -29,6 +32,8 @@ export type HomeSectionType = (typeof HOME_SECTION_TYPES)[number];
 /** Section types that may only appear once in a layout. */
 const SINGLETON_SECTION_TYPES = new Set<HomeSectionType>([
   "carousel",
+  "trust_strip",
+  "how_it_works",
   "games",
   "gift_cards",
   "social_links",
@@ -123,7 +128,22 @@ type SectionDefaults = {
 
 const SECTION_DEFAULTS: Record<HomeSectionType, SectionDefaults> = {
   carousel: { titleAr: "الأبرز الآن", titleEn: "Featured now", limit: 8 },
+  trust_strip: {
+    titleAr: "لماذا GH Store؟",
+    titleEn: "Why GH Store",
+    subtitleAr: "دفع محلي، تنفيذ فوري، ودعم حقيقي.",
+    subtitleEn: "Local payments, instant delivery, and real support.",
+    limit: 1,
+  },
+  how_it_works: {
+    titleAr: "كيف تشتري؟",
+    titleEn: "How it works",
+    subtitleAr: "ثلاث خطوات من الاختيار إلى التسليم.",
+    subtitleEn: "Three steps from picking to delivery.",
+    limit: 1,
+  },
   games: { titleAr: "شحن الألعاب", titleEn: "Game top-ups", limit: 12 },
+  trending_offers: { titleAr: "الأكثر مبيعًا", titleEn: "Trending now", limit: 8 },
   gift_cards: { titleAr: "بطاقات وأكواد", titleEn: "Gift cards & codes", limit: 8 },
   sale_offers: { titleAr: "عروض وخصومات", titleEn: "On sale", limit: 8 },
   suggested_offers: { titleAr: "الأكثر طلبًا", titleEn: "Bestsellers", limit: 10 },
@@ -289,9 +309,12 @@ export function getHomeSectionPagePath(section: HomeSection): string | null {
     case "offer_picks":
     case "suggested_offers":
       return "/sale";
+    case "how_it_works":
+      return "/how";
     case "social_links":
       return "/links";
     default:
+      // The trust strip and trending row have no listing page to point at.
       return null;
   }
 }

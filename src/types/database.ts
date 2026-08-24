@@ -1067,6 +1067,7 @@ export type Database = {
         Row: {
           created_at: string
           external_game_code: string
+          external_url: string | null
           game_id: string
           id: string
           metadata: Json
@@ -1076,6 +1077,7 @@ export type Database = {
         Insert: {
           created_at?: string
           external_game_code: string
+          external_url?: string | null
           game_id: string
           id?: string
           metadata?: Json
@@ -1085,6 +1087,7 @@ export type Database = {
         Update: {
           created_at?: string
           external_game_code?: string
+          external_url?: string | null
           game_id?: string
           id?: string
           metadata?: Json
@@ -1155,6 +1158,7 @@ export type Database = {
         Row: {
           created_at: string
           external_product_code: string
+          external_url: string | null
           id: string
           metadata: Json
           product_id: string
@@ -1164,6 +1168,7 @@ export type Database = {
         Insert: {
           created_at?: string
           external_product_code: string
+          external_url?: string | null
           id?: string
           metadata?: Json
           product_id: string
@@ -1173,6 +1178,7 @@ export type Database = {
         Update: {
           created_at?: string
           external_product_code?: string
+          external_url?: string | null
           id?: string
           metadata?: Json
           product_id?: string
@@ -1243,6 +1249,39 @@ export type Database = {
           status?: string
           updated_at?: string
           updated_count?: number
+        }
+        Relationships: []
+      }
+      provider_wallet_balances: {
+        Row: {
+          id: string
+          wallet_key: string
+          provider: string
+          label: string | null
+          balances: Json
+          status: string
+          error_kind: string | null
+          synced_at: string
+        }
+        Insert: {
+          id?: string
+          wallet_key: string
+          provider: string
+          label?: string | null
+          balances?: Json
+          status?: string
+          error_kind?: string | null
+          synced_at?: string
+        }
+        Update: {
+          id?: string
+          wallet_key?: string
+          provider?: string
+          label?: string | null
+          balances?: Json
+          status?: string
+          error_kind?: string | null
+          synced_at?: string
         }
         Relationships: []
       }

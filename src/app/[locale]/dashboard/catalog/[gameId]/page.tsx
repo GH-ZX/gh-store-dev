@@ -5,8 +5,9 @@ import { AdminCard } from "@/components/admin/admin-form";
 import { GameEditForm } from "@/components/admin/game-edit-form";
 import { OfferManageForm } from "@/components/admin/offer-manage-form";
 import { OfferRowsForm } from "@/components/admin/offer-rows-form";
+import { ProviderLinkForm } from "@/components/admin/provider-link-form";
 import { Badge } from "@/components/ui/badge";
-import { ChevronIcon } from "@/components/ui/icons";
+import { ChevronIcon, LinkIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
@@ -71,8 +72,38 @@ export default async function CatalogGamePage({
               {messages.providerCategoryLabel}: {game.providerCategoryTitle}
             </span>
           ) : null}
+          {game.providerUrl ? (
+            <a
+              href={game.providerUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex items-center gap-1 text-xs text-[var(--accent-strong)] underline-offset-4 transition-colors duration-[var(--duration)] hover:underline"
+            >
+              <LinkIcon className="size-3.5" />
+              <span dir="ltr">{messages.supplierLinkTitle}</span>
+            </a>
+          ) : null}
         </div>
       </div>
+
+      <AdminCard
+        title={messages.supplierLinkTitle}
+        description={messages.supplierLinkDescription}
+      >
+        <ProviderLinkForm
+          locale={locale}
+          gameId={game.id}
+          url={game.providerUrl}
+          messages={{
+            label: messages.supplierLinkLabel,
+            hint: messages.supplierLinkHint,
+            save: messages.supplierLinkSave,
+            saved: messages.supplierLinkSaved,
+            errorInvalid: messages.errors.provider_link_invalid,
+            errorUnknown: messages.errors.unknown,
+          }}
+        />
+      </AdminCard>
 
       <GameEditForm
         locale={locale}

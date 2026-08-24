@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { DASHBOARD_NAV_GROUPS, isDashboardNavActive } from "@/lib/admin-dashboard/navigation";
 
 describe("dashboard navigation groups", () => {
-  it("orders operations before catalog", () => {
+  it("orders groups the way an owner works", () => {
     const order = DASHBOARD_NAV_GROUPS.map((group) => group.key);
-    expect(order).toEqual(["overview", "operations", "catalog", "settings"]);
+    expect(order).toEqual(["overview", "sales", "people", "storefront", "system"]);
   });
 
   it("keeps every expected page under its group", () => {
@@ -13,9 +13,10 @@ describe("dashboard navigation groups", () => {
     );
 
     expect(byGroup.overview).toEqual(["overview"]);
-    expect(byGroup.operations).toEqual(["orders", "recharges", "payments", "customers", "support"]);
-    expect(byGroup.catalog).toEqual(["games", "website", "reviews"]);
-    expect(byGroup.settings).toEqual(["providers", "operations"]);
+    expect(byGroup.sales).toEqual(["orders", "payments", "recharges"]);
+    expect(byGroup.people).toEqual(["customers", "support"]);
+    expect(byGroup.storefront).toEqual(["games", "website", "appearance", "reviews"]);
+    expect(byGroup.system).toEqual(["providers", "operations"]);
   });
 });
 

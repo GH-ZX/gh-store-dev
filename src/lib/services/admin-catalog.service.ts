@@ -70,6 +70,7 @@ export type AdminGameListItem = {
   offerCount: number;
   providerName: string | null;
   providerCode: string | null;
+  providerUrl: string | null;
   providerCategoryId: string | null;
   providerCategoryTitle: string | null;
 };
@@ -125,6 +126,7 @@ type ProviderGameInfo = {
   providerCode: string;
   categoryId: string | null;
   categoryTitle: string | null;
+  externalUrl: string | null;
 };
 
 function textMetadata(metadata: unknown, key: string): string | null {
@@ -148,7 +150,7 @@ async function providerInfoByGame(client: Client, gameIds: string[]): Promise<Ma
 
   const { data, error } = await client
     .from("provider_game_mappings")
-    .select("game_id, provider_name, external_game_code, metadata")
+    .select("game_id, provider_name, external_game_code, external_url, metadata")
     .in("game_id", gameIds)
     .order("provider_name", { ascending: true });
 
@@ -168,6 +170,7 @@ async function providerInfoByGame(client: Client, gameIds: string[]): Promise<Ma
       providerCode: row.external_game_code,
       categoryId: textMetadata(row.metadata, "category_id"),
       categoryTitle: textMetadata(row.metadata, "category_title"),
+      externalUrl: row.external_url ?? null,
     });
   }
 
@@ -268,6 +271,7 @@ export async function listAdminGames({
         offerCount: offerCounts.get(game.id) ?? 0,
         providerName: provider?.providerName ?? null,
         providerCode: provider?.providerCode ?? null,
+        providerUrl: provider?.externalUrl ?? null,
         providerCategoryId: provider?.categoryId ?? null,
         providerCategoryTitle: provider?.categoryTitle ?? null,
       };
@@ -300,6 +304,7 @@ export type AdminGame = AdminGameFields & {
   id: string;
   providerName: string | null;
   providerCode: string | null;
+  providerUrl: string | null;
   providerCategoryId: string | null;
   providerCategoryTitle: string | null;
 };
@@ -391,6 +396,7 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
       carouselOrder: game.carousel_order,
       providerName: providerInfo.get(gameId)?.providerName ?? null,
       providerCode: providerInfo.get(gameId)?.providerCode ?? null,
+      providerUrl: providerInfo.get(gameId)?.externalUrl ?? null,
       providerCategoryId: providerInfo.get(gameId)?.categoryId ?? null,
       providerCategoryTitle: providerInfo.get(gameId)?.categoryTitle ?? null,
     },
@@ -603,6 +609,58 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
  * it was, which is why the name and slug are read before the delete rather than
  * recovered from an id that no longer resolves.
  */
+export class ProviderLinkInvalidError extends Error {
+  constructor() {
+    super("A supplier link has to be an http(s) address.");
+    this.name = "ProviderLinkInvalidError";
+  }
+}
+
+/**
+ * Store (or clear) the supplier listing link for one catalog entry.
+ *
+ * The URL lives on the provider mapping rather than the game: it describes
+ * where the supplier sells it, not what we sell. Every mapping row of the
+ * game is updated so an operator who briefly maps two suppliers keeps both
+ * links honest, and the product core receives the change through its trigger.
+ */
+export async function setAdminGameProviderLink(gameId: string, rawUrl: string): Promise<void> {
+  const admin = await requireAdmin();
+
+  if (!UUID_PATTERN.test(gameId)) {
+    throw new GameNotFoundError();
+  }
+
+  const url = rawUrl.trim();
+
+  // An empty submission clears the link rather than erroring — removing a
+  // stale address is routine, and forcing a delete path for it would be cruel.
+  const nextUrl = url === "" ? null : url;
+  if (nextUrl !== null && (url.length > 2048 || !/^https?:\/\/\S+$/i.test(url))) {
+    throw new ProviderLinkInvalidError();
+  }
+
+  const client = await createSupabaseServerClient();
+  const { error } = await client
+    .from("provider_game_mappings")
+    .update({ external_url: nextUrl })
+    .eq("game_id", gameId);
+
+  if (error) {
+    throw new Error(`Saving the supplier link failed: ${error.message}`);
+  }
+
+  if (nextUrl !== null) {
+    await recordAudit({
+      actorId: admin.id,
+      action: "catalog.provider_link_saved",
+      entityType: "game",
+      entityId: gameId,
+      values: { url: nextUrl },
+    });
+  }
+}
+
 export async function deleteAdminGame(gameId: string): Promise<void> {
   const admin = await requireAdmin();
 

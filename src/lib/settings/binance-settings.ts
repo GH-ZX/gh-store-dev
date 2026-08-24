@@ -62,8 +62,10 @@ function readCurrency(value: string | undefined): string {
 export function readBinanceCredentials(providers: unknown): BinanceCredentials {
   const parsed = providersSchema.safeParse(providers ?? {});
   const settings = parsed.success ? parsed.data.binance : undefined;
-  const apiKey = settings?.api_key?.trim() || null;
-  const apiSecret = settings?.api_secret?.trim() || null;
+  // Saved keys win; the documented environment variables fill the gap when
+  // nothing is stored yet.
+  const apiKey = settings?.api_key?.trim() || process.env.BINANCE_PAY_API_KEY?.trim() || null;
+  const apiSecret = settings?.api_secret?.trim() || process.env.BINANCE_PAY_SECRET_KEY?.trim() || null;
 
   return {
     apiKey,

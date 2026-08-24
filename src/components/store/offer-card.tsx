@@ -95,7 +95,7 @@ export function OfferCard({
       >
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-[0.9375rem] font-semibold text-[var(--ink)]">
+            <span className="line-clamp-2 text-[0.9375rem] leading-5 font-semibold text-[var(--ink)] sm:leading-6">
               {offer.name}
             </span>
             {offer.isSale ? <Badge tone="sale">{labels.sale}</Badge> : null}
@@ -156,7 +156,9 @@ export function OfferCard({
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="min-w-0">
           {showGameName && offer.game ? (
-            <p className="truncate text-xs font-medium text-[var(--accent)]">{offer.game.name}</p>
+            <p className="line-clamp-2 text-xs leading-4 font-medium text-[var(--accent)]">
+              {offer.game.name}
+            </p>
           ) : null}
           <h3 className="mt-1 line-clamp-2 text-[0.9375rem] leading-6 font-semibold text-[var(--ink)]">
             {offer.name}

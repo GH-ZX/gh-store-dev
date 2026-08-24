@@ -77,7 +77,10 @@ function clampMarkup(value: number | undefined): number {
 export function readG2BulkCredentials(providers: unknown): G2BulkCredentials {
   const parsed = providerSettingsSchema.safeParse(providers ?? {});
   const settings = parsed.success ? parsed.data.g2bulk : undefined;
-  const apiKey = settings?.api_key?.trim() || null;
+  // Saved key wins; the documented environment variable fills the gap when
+  // nothing is stored yet (deployments configured by secret).
+  const apiKey =
+    settings?.api_key?.trim() || process.env.G2BULK_API_KEY?.trim() || null;
 
   return {
     apiKey,

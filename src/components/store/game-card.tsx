@@ -86,7 +86,12 @@ export function GameCard({
               {game.pointsName}
             </p>
           ) : null}
-          <h3 className="mt-1 truncate text-base font-semibold tracking-tight text-[var(--ink)]">
+          {/*
+            * Two lines, never one: a name cut to "PUBG Mobile…" reads as a
+            * different game on a phone. The tile keeps its height from the
+            * aspect ratio, so the second line costs nothing.
+            */}
+          <h3 className="mt-1 line-clamp-2 text-sm leading-5 font-semibold tracking-tight text-[var(--ink)] sm:text-base sm:leading-6">
             {game.name}
           </h3>
           {meta ? <p className="mt-1 truncate text-xs text-[var(--ink-muted)] tabular-nums">{meta}</p> : null}

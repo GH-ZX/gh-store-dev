@@ -6,7 +6,6 @@ import { HomeLayoutEditor } from "@/components/admin/home-layout-editor";
 import { CarouselForm } from "@/components/admin/carousel-form";
 import { PageSeoEditor } from "@/components/admin/page-seo-editor";
 import { SeoForm } from "@/components/admin/seo-form";
-import { ThemeForm } from "@/components/admin/theme-form";
 import { SocialLinksEditor } from "@/components/admin/social-links-editor";
 import { SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
@@ -84,10 +83,6 @@ export default async function WebsiteSettingsPage({
           messages={messages.carousel}
           errors={messages.errors}
         />
-      </AdminCard>
-
-      <AdminCard title={messages.theme.title} description={messages.theme.description}>
-        <ThemeForm theme={settings.theme} messages={messages.theme} errors={messages.errors} />
       </AdminCard>
 
       <AdminCard title={messages.seo.title} description={messages.seo.description}>

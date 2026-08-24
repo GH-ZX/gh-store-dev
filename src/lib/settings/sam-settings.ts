@@ -113,7 +113,9 @@ function normalizeCurrency(value: string | null | undefined): string {
 export function readSamCredentials(providers: unknown): SamCredentials {
   const parsed = providerSettingsSchema.safeParse(providers ?? {});
   const settings = parsed.success ? parsed.data.sam : undefined;
-  const apiKey = settings?.api_key?.trim() || null;
+  // The dashboard's saved key wins; the documented environment variable fills
+  // the gap when nothing is stored yet (deployments configured by secret).
+  const apiKey = settings?.api_key?.trim() || process.env.SAM_API_KEY?.trim() || null;
 
   return {
     apiKey,

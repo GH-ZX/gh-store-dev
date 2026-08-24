@@ -135,18 +135,6 @@ export function MaxStoreSettingsForm({
         ) : null}
       </form>
 
-      {/*
-        * Said plainly rather than discovered: the catalogue and fulfilment
-        * halves are not built, so an owner who saves a token here should not be
-        * waiting for products to appear.
-        */}
-      <p
-        role="note"
-        className="rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-xs leading-5 text-[var(--ink-muted)]"
-      >
-        {messages.pendingWork}
-      </p>
-
       {error ? (
         <p
           role="alert"

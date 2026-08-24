@@ -14,6 +14,13 @@ import type { PageSeo, SeoPagePath } from "@/lib/settings/page-seo";
 import {
   safeColour,
   type Backdrop,
+  type BackdropIntensity,
+  type CornerStyle,
+  type DarkShade,
+  type Density,
+  type HeadingFont,
+  type LightTint,
+  type MotionLevel,
   type ThemeMode,
   type ThemeSettings,
 } from "@/lib/settings/theme-settings";
@@ -406,6 +413,13 @@ export async function saveTheme(input: {
   accent2: string | null;
   defaultMode: ThemeMode;
   backdrop: Backdrop;
+  cornerStyle: CornerStyle;
+  darkShade: DarkShade;
+  lightTint: LightTint;
+  backdropIntensity: BackdropIntensity;
+  density: Density;
+  headingFont: HeadingFont;
+  motionLevel: MotionLevel;
 }): Promise<void> {
   await requireAdmin();
 
@@ -414,6 +428,13 @@ export async function saveTheme(input: {
     ...toJsonObject(row.theme),
     default_mode: input.defaultMode,
     backdrop: input.backdrop,
+    corner_style: input.cornerStyle,
+    dark_shade: input.darkShade,
+    light_tint: input.lightTint,
+    backdrop_intensity: input.backdropIntensity,
+    density: input.density,
+    heading_font: input.headingFont,
+    motion_level: input.motionLevel,
   };
   const accent = safeColour(input.accent);
   const accent2 = safeColour(input.accent2);
