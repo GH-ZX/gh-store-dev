@@ -153,6 +153,7 @@ export function GameEditForm({ locale, messages, errors, categories, game }: Gam
         <div className="grid gap-4 sm:grid-cols-2">
           <TextAreaField
             label={messages.descriptionAr}
+            hint={messages.descriptionHint}
             name="descriptionAr"
             defaultValue={game.descriptionAr ?? ""}
             maxLength={4000}
@@ -160,6 +161,7 @@ export function GameEditForm({ locale, messages, errors, categories, game }: Gam
           />
           <TextAreaField
             label={messages.descriptionEn}
+            hint={messages.descriptionHint}
             name="descriptionEn"
             defaultValue={game.descriptionEn ?? ""}
             maxLength={4000}

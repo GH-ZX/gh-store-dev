@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/shared/states";
+import { DescriptionText } from "@/components/store/description-text";
 import { OfferGrid } from "@/components/store/collections";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge, Eyebrow } from "@/components/ui/badge";
@@ -70,9 +71,7 @@ export default async function GameDetailPage({ params }: PageProps<"/[locale]/ga
               {game.name}
             </h1>
             {game.description ? (
-              <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--ink-soft)]">
-                {game.description}
-              </p>
+              <DescriptionText text={game.description} className="mt-5" />
             ) : null}
 
             <div className="mt-6 flex flex-wrap items-center gap-2">

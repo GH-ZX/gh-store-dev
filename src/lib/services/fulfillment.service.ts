@@ -207,6 +207,12 @@ type FulfillmentContext = {
    * package, which nothing can deliver automatically.
    */
   providerName: string | null;
+  /**
+   * `direct` goods need nothing from the buyer — stock delivered as codes,
+   * accounts or activation links. `account` goods land on an identifier the
+   * buyer supplied at checkout.
+   */
+  deliveryKind: "account" | "direct";
 };
 
 /**
@@ -249,6 +255,7 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
   let catalogueName: string | null = null;
   let externalProductId: string | null = null;
   let providerName: string | null = null;
+  let deliveryKind: "account" | "direct" = "account";
 
   if (item.offer_id) {
     /*
@@ -268,9 +275,11 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
 
     const { data: offer } = await supabase
       .from("offers")
-      .select("game_id")
+      .select("game_id, delivery_kind")
       .eq("id", item.offer_id)
       .maybeSingle();
+
+    deliveryKind = offer?.delivery_kind === "direct" ? "direct" : "account";
 
     if (offer?.game_id) {
       const { data: gameMapping } = await supabase
@@ -297,6 +306,7 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
     externalProductId,
     paymentMethod: data.payment_method,
     providerName,
+    deliveryKind,
     status: data.status,
   };
 }
@@ -900,7 +910,13 @@ async function fulfillBatStore(
     context.dynamicFields.activationIdentifier ??
     "";
 
-  if (!activationIdentifier) {
+  /*
+   * Only goods that land on an account need an identifier. `direct` products —
+   * BatStore's `stock` type, the majority of its live catalog — are pre-purchased
+   * and delivered as-is: a code, an account, or an activation link. Demanding an
+   * identifier from their buyers was a wall between them and the buy.
+   */
+  if (!activationIdentifier && context.deliveryKind !== "direct") {
     return { state: "skipped", reason: "The order carries no activation identifier." };
   }
 
@@ -911,7 +927,7 @@ async function fulfillBatStore(
     {
       product_id: context.externalProductId,
       quantity: context.quantity,
-      activation_identifier: activationIdentifier,
+      ...(activationIdentifier ? { activation_identifier: activationIdentifier } : {}),
     },
     BATSTORE_PROVIDER_NAME,
   );
@@ -935,7 +951,7 @@ async function fulfillBatStore(
       const placed = await client.createOrder({
         productId: context.externalProductId,
         quantity: context.quantity,
-        activationIdentifier,
+        activationIdentifier: activationIdentifier || undefined,
         idempotencyKey,
         customerReference: context.orderNumber,
       });
@@ -1198,6 +1214,15 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
         // MaxStore's own words map straight onto the policy's: `wait` is
         // pending, and pending never settles an order either way.
         providerState = result ? classifyMaxStoreOrder(result.status) : null;
+        if (providerState === "completed" && result?.delivery) {
+          const delivery = result.delivery;
+          const items = Array.isArray(delivery)
+            ? delivery.map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
+            : typeof delivery === "string"
+              ? [delivery]
+              : [];
+          deliveredPayload = { items };
+        }
       } else if (provider === BATSTORE_PROVIDER_NAME) {
         const result = await new BatStoreClient(credentials).getOrder(attempt.external_order_id);
         providerState = result ? classifyBatStoreOrder(result) : null;

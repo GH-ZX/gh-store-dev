@@ -88,6 +88,15 @@ function presentation({
   return { tone: "neutral", title: detail.pendingTitle, description: detail.pendingDescription };
 }
 
+function isUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function OrderStatusPanel({
   messages,
   status,
@@ -145,12 +154,24 @@ export function OrderStatusPanel({
                 key={code}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
               >
-                <code
-                  className="min-w-0 font-mono text-sm break-all text-[var(--ink)] select-all"
-                  dir="ltr"
-                >
-                  {code}
-                </code>
+                {isUrl(code) ? (
+                  <a
+                    href={code}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 truncate font-mono text-sm text-[var(--accent-foreground)] underline decoration-[var(--accent-foreground)]/30 underline-offset-2 hover:decoration-[var(--accent-foreground)]"
+                    dir="ltr"
+                  >
+                    {code}
+                  </a>
+                ) : (
+                  <code
+                    className="min-w-0 font-mono text-sm break-all text-[var(--ink)] select-all"
+                    dir="ltr"
+                  >
+                    {code}
+                  </code>
+                )}
                 <Button
                   type="button"
                   variant="secondary"

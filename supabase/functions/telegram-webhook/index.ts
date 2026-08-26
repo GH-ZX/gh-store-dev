@@ -1231,6 +1231,21 @@ async function handleBuyConfirm(
     return;
   }
 
+  // A direct offer delivers stock — a code, a link, a token — and needs nothing
+  // from the buyer.  The game-level fields below are for account-based offers
+  // where the customer must supply a player id or email; asking them for a
+  // direct offer would be a wall between the customer and the buy.
+  const { data: offerRow } = await supabase
+    .from("offers")
+    .select("delivery_kind")
+    .eq("id", state.o)
+    .maybeSingle();
+
+  if (offerRow?.delivery_kind === "direct") {
+    await placeBuyOrder(supabase, botToken, chatId, locale, userId, state, {}, messageId);
+    return;
+  }
+
   await writePref(supabase, chatId, {
     pending: encodeBuyState({ ...state, s: "fields", i: 0, f: fields, c: {} }),
   });

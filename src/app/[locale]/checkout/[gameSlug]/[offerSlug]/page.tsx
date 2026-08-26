@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { OrderSummary } from "@/components/checkout/order-summary";
+import { DescriptionText } from "@/components/store/description-text";
 import { ErrorState, NoticePanel } from "@/components/shared/states";
 import { ChevronIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
@@ -154,6 +155,15 @@ export default async function CheckoutPage({
               description={isGift ? messages.fields.giftNotice : messages.fields.lockedNotice}
             />
           </section>
+
+          {offer.description ? (
+            <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-5 sm:p-6">
+              <h2 className="text-base font-semibold text-[var(--ink)]">
+                {messages.instructionsHeading}
+              </h2>
+              <DescriptionText text={offer.description} className="mt-3" />
+            </section>
+          ) : null}
         </div>
 
         <OrderSummary

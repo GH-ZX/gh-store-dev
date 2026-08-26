@@ -10,6 +10,7 @@ import {
   readContentCategories,
   readContentProductIds,
   readProductParams,
+  readProductParamsMeta,
   readQuantityBounds,
   toMaxStoreGameCode,
   toMaxStoreGameSlug,
@@ -339,6 +340,10 @@ async function importCategoryOffers(
 
     seen.add(product.id);
 
+    const inputFieldDefsRaw = readProductParamsMeta(product.paramsMeta);
+    const inputFieldDefs = inputFieldDefsRaw as Json;
+    const deliveryKind = inputFieldDefsRaw.length > 0 ? "account" : "direct";
+
     const metadata: Json = {
       product_type: product.productType,
       quantity_min: bounds.min,
@@ -374,6 +379,8 @@ async function importCategoryOffers(
           // Availability is the provider's to decide; an operator's own
           // deactivation is not overridden into `true` by a sync.
           ...(product.available ? {} : { is_active: false }),
+          delivery_kind: deliveryKind,
+          input_fields: inputFieldDefs,
           updated_at: updatedAt,
         })
         .eq("id", existing.offerId);
@@ -407,6 +414,8 @@ async function importCategoryOffers(
         // Publishing is the operator's decision, and an unavailable product is
         // never published regardless of it.
         is_active: options.publish && product.available,
+        delivery_kind: deliveryKind,
+        input_fields: inputFieldDefs,
       })
       .select("id")
       .maybeSingle();

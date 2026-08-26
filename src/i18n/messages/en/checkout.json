@@ -4,6 +4,7 @@
   "description": "Review the package, enter your in-game account details, then pay from your wallet balance.",
   "giftDescription": "This is a gift order — nothing is debited from any wallet; it is recorded as a paid invoice with the store's other invoices.",
   "offerPromise": "Pay from your wallet balance and we deliver straight to your game account.",
+  "instructionsHeading": "How to use this product",
   "summary": {
     "title": "Order summary",
     "offerLabel": "Package",

@@ -112,6 +112,11 @@ export function OfferRowsForm({
                     {offerTypes[offer.offerType as keyof CatalogMessages["offerTypes"]] ??
                       offer.offerType}
                   </Badge>
+                  {offer.deliveryKind === "direct" ? (
+                    <Badge tone="success">{messages.deliveryKindDirect}</Badge>
+                  ) : offer.deliveryKind === "account" ? (
+                    <Badge tone="accent">{messages.deliveryKindAccount}</Badge>
+                  ) : null}
                   <span className={READ_ONLY_VALUE_CLASSES}>
                     {messages.cost}:{" "}
                     <span dir="ltr">
@@ -151,6 +156,7 @@ export function OfferRowsForm({
                   />
                   <TextAreaField
                     label={messages.descriptionAr}
+                    hint={messages.descriptionHint}
                     name={`offers.${index}.descriptionAr`}
                     defaultValue={offer.descriptionAr ?? ""}
                     maxLength={4000}
@@ -158,6 +164,7 @@ export function OfferRowsForm({
                   />
                   <TextAreaField
                     label={messages.descriptionEn}
+                    hint={messages.descriptionHint}
                     name={`offers.${index}.descriptionEn`}
                     defaultValue={offer.descriptionEn ?? ""}
                     maxLength={4000}

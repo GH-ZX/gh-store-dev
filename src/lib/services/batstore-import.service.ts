@@ -245,7 +245,13 @@ async function importOneProduct(
     }
   }
 
-  await upsertActivationField(supabase, gameId);
+  const isDirect = product.deliveryType === "stock";
+
+  // Only account-type products need the activation input field — stock products
+  // deliver a code or link directly and ask the buyer nothing.
+  if (!isDirect) {
+    await upsertActivationField(supabase, gameId);
+  }
 
   const price = toRetailPrice({
     supplierCostUsd: product.priceUsd,
@@ -292,6 +298,7 @@ async function importOneProduct(
         // No stock means nothing to deliver, so the offer leaves the storefront
         // until the provider restocks — the same rule the voucher import uses.
         ...(available ? {} : { is_active: false }),
+        delivery_kind: isDirect ? "direct" : "account",
         updated_at: nowIso(),
       })
       .eq("id", existing.offerId);
@@ -317,6 +324,8 @@ async function importOneProduct(
       price,
       offer_type: toOfferType(product),
       is_active: options.publish && available,
+      delivery_kind: isDirect ? "direct" : "account",
+      input_fields: isDirect ? [] : [],
     })
     .select("id")
     .maybeSingle();
@@ -411,6 +420,16 @@ export async function importBatStoreProducts(
         name: selection.productId,
         status: "failed",
         error: "The product is no longer listed by BatStore.",
+      });
+      continue;
+    }
+
+    if (product.isTest) {
+      outcomes.push({
+        productId: product.id,
+        name: product.name,
+        status: "failed",
+        error: "Test products cannot be sold.",
       });
       continue;
     }

@@ -326,6 +326,7 @@ export type AdminGameOffer = {
   /** Provider cost in USD, for the operator's margin check only. */
   supplierCostUsd: number | null;
   pricingMode: PricingMode;
+  deliveryKind: string | null;
 };
 
 export type AdminGameDetail = {
@@ -334,7 +335,7 @@ export type AdminGameDetail = {
 };
 
 const OFFER_COLUMNS =
-  "id, slug, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
+  "id, slug, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, delivery_kind, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
 
 export async function getAdminGame(gameId: string): Promise<AdminGameDetail | null> {
   await requireAdmin();
@@ -423,6 +424,7 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
         offerType: offer.offer_type,
         supplierCostUsd: mapping?.supplier_cost_usd ?? null,
         pricingMode: toPricingMode(mapping?.pricing_mode),
+        deliveryKind: offer.delivery_kind ?? null,
       };
     }),
   };

@@ -547,6 +547,8 @@ async function importVoucherOffers(
         // A card with no stock is imported dormant, never for sale.
         is_active: options.publish && sellable,
         sort_order: index,
+        delivery_kind: "direct",
+        input_fields: [],
       })
       .select("id")
       .single();

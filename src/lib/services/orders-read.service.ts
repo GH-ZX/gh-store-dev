@@ -181,7 +181,33 @@ function toDeliveredCodes(payload: unknown): string[] {
     return [];
   }
 
-  return items.flatMap((item) => (typeof item === "string" && item.trim() ? [item.trim()] : []));
+  return items.flatMap((item) => {
+    if (typeof item === "string" && item.trim()) {
+      return [item.trim()];
+    }
+
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      const record = item as Record<string, unknown>;
+      const candidate =
+        record.url ??
+        record.link ??
+        record.code ??
+        record.token ??
+        record.email ??
+        record.value ??
+        record.text;
+
+      if (typeof candidate === "string" && candidate.trim()) {
+        return [candidate.trim()];
+      }
+
+      const text = JSON.stringify(record);
+
+      return text.length > 2 ? [text] : [];
+    }
+
+    return [];
+  });
 }
 
 const ORDER_LIST_LIMIT = 50;

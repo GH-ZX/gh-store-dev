@@ -1,6 +1,7 @@
 import "server-only";
 
 import { requireAdmin } from "@/lib/auth/guards";
+import { log } from "@/lib/logging/logger";
 import { isSettledOrderStatus } from "@/lib/orders/order-status";
 import { recordAudit } from "@/lib/services/admin-audit.service";
 import { fulfillOrder } from "@/lib/services/fulfillment.service";
@@ -187,10 +188,18 @@ export async function refundOrderManually(orderId: string, note: string): Promis
  * notifies the customer; it does not touch the wallet, because the money was
  * already taken at checkout and this is not a second payment.
  *
+ * When a `deliveredPayload` is provided — one or more newline-separated codes
+ * or URLs the operator is handing over — it is written to the fulfilment row so
+ * the order page can display them the same way an automated delivery would.
+ *
  * A note is required: six months later, "why is this order completed with no
  * supplier attempt?" needs an answer in the record.
  */
-export async function markDelivered(orderId: string, note: string): Promise<void> {
+export async function markDelivered(
+  orderId: string,
+  note: string,
+  deliveredPayload?: string,
+): Promise<void> {
   const admin = await requireAdmin();
   const order = await loadOrder(orderId);
   const reason = note.trim();
@@ -223,6 +232,36 @@ export async function markDelivered(orderId: string, note: string): Promise<void
 
   if (error) {
     throw new OrderOpError("unknown", error.message);
+  }
+
+  const deliveryItems = deliveredPayload
+    ?.split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (deliveryItems && deliveryItems.length > 0) {
+    const { data: orderItem } = await service
+      .from("order_items")
+      .select("id")
+      .eq("order_id", orderId)
+      .limit(1)
+      .maybeSingle();
+
+    if (orderItem) {
+      const { error: attemptError } = await service.from("fulfillment_attempts").insert({
+        order_item_id: orderItem.id,
+        provider: "manual",
+        status: "completed",
+        delivered_payload: { items: deliveryItems },
+      });
+
+      if (attemptError) {
+        log.warn("admin-order-ops", "mark_delivered_attempt_write_failed", {
+          orderId,
+          error: attemptError.message,
+        });
+      }
+    }
   }
 
   await audit(admin.id, "order.mark_delivered", orderId, {

@@ -267,6 +267,7 @@ export class MaxStoreClient {
         quantityFixed: (product.product_type ?? "").toLowerCase() === "package",
         qtyValues: product.qty_values ?? null,
         params: product.params ?? null,
+        paramsMeta: product.params_meta ?? null,
         stockCount: readStockCount(product),
         imageUrl: readProductImage(product),
       };

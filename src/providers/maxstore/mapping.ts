@@ -318,3 +318,94 @@ export function readQuantityBounds(
 
   return { min: safeMin, max: safeMax };
 }
+
+/**
+ * The structured field definitions MaxStore carries on many of its products.
+ *
+ * `params` is a list of Arabic labels (e.g. `["معرّف اللاعب"]`); `params_meta`
+ * is the same information with a type, a key, and labels in both languages.  The
+ * store needs the latter to render the right input at checkout, but neither the
+ * key nor the type is documented, so this reads what the payload actually
+ * contains.
+ *
+ * The output shape is intentionally compatible with `offers.input_fields` in the
+ * database: each entry carries `field_key`, `field_type`, `label_ar`,
+ * `label_en`, `placeholder_ar`, `placeholder_en`, `is_required`, and `options`.
+ * This lets the caller write the result straight into the column without a
+ * second mapping step.
+ */
+export function readProductParamsMeta(
+  paramsMeta: unknown,
+): {
+  field_key: string;
+  field_type: string;
+  label_ar: string | null;
+  label_en: string | null;
+  placeholder_ar: string | null;
+  placeholder_en: string | null;
+  is_required: boolean;
+  options: unknown;
+}[] {
+  if (!Array.isArray(paramsMeta)) {
+    return [];
+  }
+
+  const KNOWN_TYPES = new Set(["text", "number", "email", "select", "password", "tel", "textarea"]);
+
+  return paramsMeta
+    .filter((entry): entry is Record<string, unknown> =>
+      entry !== null && typeof entry === "object" && !Array.isArray(entry),
+    )
+    .map((entry) => {
+      const rawKey =
+        typeof entry.key === "string"
+          ? entry.key
+          : typeof entry.name === "string"
+            ? entry.name
+            : typeof entry.field_key === "string"
+              ? entry.field_key
+              : "";
+
+      if (!rawKey) {
+        return null;
+      }
+
+      const fieldType =
+        typeof entry.type === "string" && KNOWN_TYPES.has(entry.type)
+          ? entry.type
+          : typeof entry.field_type === "string" && KNOWN_TYPES.has(entry.field_type)
+            ? entry.field_type
+            : "text";
+
+      const labelAr =
+        typeof entry.label_ar === "string"
+          ? entry.label_ar
+          : typeof entry.label === "string"
+            ? entry.label
+            : typeof entry.name === "string"
+              ? entry.name
+              : null;
+      const labelEn =
+        typeof entry.label_en === "string"
+          ? entry.label_en
+          : typeof entry.label === "string"
+            ? entry.label
+            : typeof entry.name === "string"
+              ? entry.name
+              : null;
+
+      return {
+        field_key: rawKey.trim(),
+        field_type: fieldType,
+        label_ar: labelAr?.trim() || null,
+        label_en: labelEn?.trim() || null,
+        placeholder_ar: typeof entry.placeholder_ar === "string" ? entry.placeholder_ar.trim() || null : null,
+        placeholder_en: typeof entry.placeholder_en === "string" ? entry.placeholder_en.trim() || null : null,
+        is_required: entry.required !== false,
+        options: Array.isArray(entry.options) ? entry.options : [],
+      };
+    })
+    .filter(
+      (entry): entry is NonNullable<typeof entry> => entry !== null && entry.field_key.length > 0,
+    );
+}

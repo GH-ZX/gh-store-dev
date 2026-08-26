@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OfferGrid } from "@/components/store/collections";
+import { DescriptionText } from "@/components/store/description-text";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge, Eyebrow } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -98,9 +99,7 @@ export default async function OfferDetailPage({
               {offer.name}
             </h1>
             {offer.description ? (
-              <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--ink-soft)]">
-                {offer.description}
-              </p>
+              <DescriptionText text={offer.description} className="mt-5" />
             ) : null}
 
             <dl className="mt-8 grid gap-3 sm:grid-cols-3">

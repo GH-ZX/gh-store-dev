@@ -5,6 +5,7 @@ import { z } from "zod";
 import { checkoutFieldName, type CheckoutActionState } from "@/app/[locale]/checkout/action-state";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@/lib/auth/guards";
+import { resolveQuantityMax } from "@/lib/catalog/checkout-fields";
 import { formText } from "@/lib/forms/form-data";
 import { getOfferBySlug, type StoreInputField } from "@/lib/services/catalog.service";
 import { placeOrder, type PlaceOrderResult } from "@/lib/services/order.service";
@@ -116,12 +117,19 @@ export async function placeOrderAction(
   }
 
   /*
-   * Top-ups are single-unit deliveries: the supplier's top-up order takes no
-   * quantity, so anything above one would charge a customer many times for a
-   * single delivery. The UI always submits 1; this re-reads the offer and clamps
-   * regardless, so a hand-edited form cannot overcharge on a top-up.
+   * Quantity follows the offer's delivery kind, not its label. A `direct`
+   * offer is stock — three units are three codes — and is bounded by the
+   * provider's own ceiling where the import recorded one. An `account` top-up
+   * stays single-unit: the supplier's order takes no quantity, so anything
+   * above one would charge a customer many times for a single delivery. The UI
+   * always submits 1; this re-reads the offer and clamps regardless, so a
+   * hand-edited form cannot overcharge.
    */
-  const quantity = detail.offer.offerType === "topup" ? 1 : parsed.data.quantity;
+  const quantityMax = resolveQuantityMax({
+    deliveryKind: detail.deliveryKind,
+    providerMax: detail.quantityMax,
+  });
+  const quantity = Math.min(Math.max(parsed.data.quantity, 1), quantityMax);
 
   /*
    * The field list comes from the offer, never from the submission. Values are

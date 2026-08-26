@@ -83,6 +83,15 @@ export default async function CatalogGamePage({
               <span dir="ltr">{messages.supplierLinkTitle}</span>
             </a>
           ) : null}
+          <Link
+            href={`/${locale}/games/${game.slug}`}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="inline-flex items-center gap-1 text-xs text-[var(--accent-strong)] underline-offset-4 transition-colors duration-[var(--duration)] hover:underline"
+          >
+            <LinkIcon className="size-3.5" />
+            {messages.viewOnStore}
+          </Link>
         </div>
       </div>
 

@@ -62,6 +62,14 @@ export const productSchema = z.object({
   product_type: z.string().optional(),
   qty_values: z.unknown().optional(),
   params: z.unknown().optional(),
+  /**
+   * MaxStore's own list of field definitions per product — a richer version of
+   * `params` that carries a type (`number`/`text`/`select`/etc.), labels, and
+   * option lists.  Not in the published documentation, but present on the
+   * majority of products and the real source of truth for what checkout must ask
+   * the buyer.
+   */
+  params_meta: z.unknown().optional(),
   // Not in the published documentation, but the same free renaming as above:
   // carried optionally so an artwork-bearing payload survives validation.
   image_url: z.string().optional(),
@@ -158,6 +166,12 @@ export type MaxStoreProduct = {
   /** Carried through unparsed: neither shape is documented beyond an example. */
   qtyValues: unknown;
   params: unknown;
+  /**
+   * Per-product field definitions from MaxStore.  A `null` value means the
+   * payload did not include this undocumented key; an empty array means the
+   * product genuinely needs nothing from the buyer.
+   */
+  paramsMeta: unknown;
   /** Null means the provider exposes availability but no numeric inventory. */
   stockCount: number | null;
   /** Artwork when MaxStore sends one; the documentation does not promise it. */

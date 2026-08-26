@@ -1,4 +1,8 @@
 import type { Locale } from "@/i18n/config";
+import {
+  normalizeOfferInputFields,
+  resolveCheckoutFieldKeys,
+} from "@/lib/catalog/checkout-fields";
 import { GAME_SELECT, toStoreGame, type StoreGame } from "@/lib/catalog/game-mapper";
 import {
   OFFER_SELECT,
@@ -302,6 +306,13 @@ export type StoreOfferDetail = {
   game: StoreGame;
   inputFields: StoreInputField[];
   relatedOffers: StoreOffer[];
+  /**
+   * `direct` offers ask the buyer nothing — pay and receive. `account` offers
+   * collect the fields below before payment.
+   */
+  deliveryKind: "account" | "direct";
+  /** The provider's own quantity ceiling, when its import recorded one. */
+  quantityMax: number | null;
 };
 
 type RawInputFieldOption = { value?: unknown; label_ar?: unknown; label_en?: unknown };
@@ -330,8 +341,13 @@ function toInputFieldOptions(options: unknown, locale: Locale): { value: string;
 }
 
 /**
- * One offer with everything its page needs: the parent game, the account fields
- * a customer must provide, and the sibling offers for the same game.
+ * One offer with everything its page needs: the parent game, the buyer-input
+ * fields this offer actually asks for, and the sibling offers for the same game.
+ *
+ * The fields are resolved per offer, not per container: a `direct` offer asks
+ * nothing even if its game carries field rows, and an offer with its own
+ * `input_fields` (written by the MaxStore import from the provider's
+ * `params_meta`) uses those instead of its neighbours'.
  */
 export async function getOfferBySlug(
   locale: Locale,
@@ -351,31 +367,81 @@ export async function getOfferBySlug(
   }
 
   const supabase = createSupabasePublicClient();
-  const { data: fields, error } = await supabase
-    .from("game_input_fields")
-    .select(
-      "id, field_key, field_type, label_ar, label_en, placeholder_ar, placeholder_en, options, is_required",
-    )
-    .eq("game_id", detail.game.id)
-    .order("sort_order", { ascending: true });
+  const [fieldsResult, offerRowResult, mappingResult] = await Promise.all([
+    supabase
+      .from("game_input_fields")
+      .select(
+        "id, field_key, field_type, label_ar, label_en, placeholder_ar, placeholder_en, options, is_required",
+      )
+      .eq("game_id", detail.game.id)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("offers")
+      .select("delivery_kind, input_fields")
+      .eq("id", offer.id)
+      .maybeSingle(),
+    supabase
+      .from("provider_offer_mappings")
+      .select("metadata")
+      .eq("offer_id", offer.id)
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-  if (error) {
+  if (fieldsResult.error || offerRowResult.error) {
     throw new CatalogReadError();
   }
+
+  const deliveryKind = offerRowResult.data?.delivery_kind === "direct" ? "direct" : "account";
+  const offerFieldDefs = normalizeOfferInputFields(offerRowResult.data?.input_fields);
+  const resolution = resolveCheckoutFieldKeys(
+    { deliveryKind, offerFields: offerFieldDefs },
+    { gameFieldKeys: fieldsResult.data.map((field) => field.field_key) },
+  );
+
+  const mappedGameFields: StoreInputField[] = fieldsResult.data.map((field) => ({
+    id: field.id,
+    fieldKey: field.field_key,
+    fieldType: field.field_type as StoreInputFieldType,
+    label: locale === "ar" ? field.label_ar : field.label_en,
+    placeholder: (locale === "ar" ? field.placeholder_ar : field.placeholder_en) ?? null,
+    isRequired: field.is_required,
+    options: toInputFieldOptions(field.options, locale),
+  }));
+
+  const mappedOfferFields: StoreInputField[] = offerFieldDefs.map((field, index) => ({
+    id: `offer-${index}`,
+    fieldKey: field.field_key,
+    fieldType: field.field_type as StoreInputFieldType,
+    label:
+      locale === "ar"
+        ? field.label_ar ?? field.label_en ?? field.field_key
+        : field.label_en ?? field.label_ar ?? field.field_key,
+    placeholder: (locale === "ar" ? field.placeholder_ar : field.placeholder_en) ?? null,
+    isRequired: field.is_required !== false,
+    options: toInputFieldOptions(field.options, locale),
+  }));
+
+  const inputFields =
+    resolution.kind === "none" ? [] : resolution.kind === "offer" ? mappedOfferFields : mappedGameFields;
+
+  const metadata = mappingResult.data?.metadata;
+  const rawQuantityMax =
+    metadata && typeof metadata === "object" && !Array.isArray(metadata)
+      ? (metadata as { quantity_max?: unknown }).quantity_max
+      : null;
+  const quantityMax =
+    typeof rawQuantityMax === "number" && Number.isFinite(rawQuantityMax)
+      ? Math.floor(rawQuantityMax)
+      : null;
 
   return {
     offer,
     game: detail.game,
-    inputFields: fields.map((field) => ({
-      id: field.id,
-      fieldKey: field.field_key,
-      fieldType: field.field_type as StoreInputFieldType,
-      label: locale === "ar" ? field.label_ar : field.label_en,
-      placeholder: (locale === "ar" ? field.placeholder_ar : field.placeholder_en) ?? null,
-      isRequired: field.is_required,
-      options: toInputFieldOptions(field.options, locale),
-    })),
+    inputFields,
     relatedOffers: detail.offers.filter((candidate) => candidate.id !== offer.id),
+    deliveryKind,
+    quantityMax,
   };
 }
 

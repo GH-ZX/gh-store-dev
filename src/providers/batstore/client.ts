@@ -253,7 +253,8 @@ export class BatStoreClient {
   async createOrder(input: {
     productId: string;
     quantity: number;
-    activationIdentifier: string;
+    /** Required for `supplier_api`/`activation` goods; stock goods need none. */
+    activationIdentifier?: string;
     idempotencyKey: string;
     customerReference?: string;
   }): Promise<BatStoreOrder> {
@@ -262,7 +263,11 @@ export class BatStoreClient {
       body: {
         product_id: input.productId,
         quantity: input.quantity,
-        activation_identifier: input.activationIdentifier,
+        // Omitted entirely for direct goods — sending an empty identifier is
+        // not the same as sending none.
+        ...(input.activationIdentifier
+          ? { activation_identifier: input.activationIdentifier }
+          : {}),
         idempotency_key: input.idempotencyKey,
         ...(input.customerReference ? { customer_reference: input.customerReference } : {}),
       },
