@@ -1,18 +1,22 @@
 import "server-only";
 
-import { getG2BulkCredentials } from "@/lib/services/admin-settings.service";
-import { G2BulkClient } from "@/providers/g2bulk/client";
+import { cache } from "react";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Supplier wallet balance for the admin chrome.
  *
- * Cached in memory for a minute. The header renders on every admin page view,
- * and the provider rate-limits per key — asking it for a balance on each render
- * would be both slow and rude.
+ * Read from the local `provider_wallet_balances` cache, never from the
+ * supplier. The header renders on every admin page view, including the
+ * storefront, and G2Bulk answers in one to two seconds from a Worker — so
+ * asking it here put a slow third-party API on the critical path of every
+ * single page an owner opened. The number a decoration shows is not worth that.
  *
- * Any failure returns the last good snapshot if one exists, otherwise null. A
- * flaky provider must never replace a real balance with a misleading zero, and
- * must never break the page it is decorating.
+ * The cache row is written whenever an admin syncs the wallet cards on the
+ * overview. A missing row simply means "not synced yet", and the chrome renders
+ * without a balance rather than blocking on one.
+ *
+ * Memoized per request so the header and footer share one read.
  */
 export type G2BulkWalletSnapshot = {
   balance: number;
@@ -20,42 +24,35 @@ export type G2BulkWalletSnapshot = {
   fetchedAt: number;
 };
 
-const CACHE_TTL_MS = 60_000;
+type CachedBalance = { currency: string; amount: number };
 
-let cached: G2BulkWalletSnapshot | null = null;
-let inFlight: Promise<G2BulkWalletSnapshot | null> | null = null;
-
-async function fetchSnapshot(): Promise<G2BulkWalletSnapshot | null> {
+export const getG2BulkWalletSnapshot = cache(async (): Promise<G2BulkWalletSnapshot | null> => {
   try {
-    const { apiKey, enabled } = await getG2BulkCredentials();
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from("provider_wallet_balances")
+      .select("label, balances, status, synced_at")
+      .eq("wallet_key", "g2bulk")
+      .maybeSingle();
 
-    if (!apiKey || !enabled) {
+    if (!data || data.status !== "ok") {
       return null;
     }
 
-    const account = await new G2BulkClient({ apiKey }).getAccount();
+    const balances = Array.isArray(data.balances) ? (data.balances as CachedBalance[]) : [];
+    const usd = balances.find((entry) => entry?.currency?.toUpperCase() === "USD") ?? balances[0];
 
-    cached = {
-      balance: account.balance,
-      username: account.username ?? account.first_name ?? String(account.user_id),
-      fetchedAt: Date.now(),
+    if (!usd || typeof usd.amount !== "number") {
+      return null;
+    }
+
+    return {
+      balance: usd.amount,
+      username: data.label ?? "G2Bulk",
+      fetchedAt: data.synced_at ? new Date(data.synced_at).getTime() : Date.now(),
     };
-
-    return cached;
   } catch {
-    return cached;
+    // A decoration must never be able to take down the page it decorates.
+    return null;
   }
-}
-
-export async function getG2BulkWalletSnapshot(): Promise<G2BulkWalletSnapshot | null> {
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached;
-  }
-
-  // Collapse concurrent renders onto one provider call.
-  inFlight ??= fetchSnapshot().finally(() => {
-    inFlight = null;
-  });
-
-  return inFlight;
-}
+});

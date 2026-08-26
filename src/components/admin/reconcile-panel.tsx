@@ -5,7 +5,8 @@ import { AdminCard, FormResult } from "@/components/admin/admin-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/config";
-import { formatMessage, type AdminMessages } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
+import type { AdminMessages } from "@/i18n/messages";
 import type { LastReconcileRun } from "@/lib/services/reconciliation.service";
 import {
   INITIAL_RECONCILE_STATE,

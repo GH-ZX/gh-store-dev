@@ -1,5 +1,6 @@
 import "server-only";
 
+import { updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth/guards";
 import { normalizeHomeLayout, type HomeSection } from "@/lib/home/layout";
 import {
@@ -24,6 +25,7 @@ import {
   type ThemeMode,
   type ThemeSettings,
 } from "@/lib/settings/theme-settings";
+import { STORE_SETTINGS_TAG } from "@/lib/services/settings.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
@@ -143,7 +145,20 @@ async function readPresentationRow(): Promise<PresentationRow> {
   };
 }
 
-/** Write one presentation column, leaving every other column untouched. */
+/**
+ * Write one presentation column, leaving every other column untouched.
+ *
+ * This is the single choke point for every settings write, which makes it the
+ * right place to drop the storefront's cached copy: the public settings RPC is
+ * cached across requests, so without this an owner would save a colour and keep
+ * being served the old one until the cache aged out.
+ *
+ * `updateTag` rather than `revalidateTag` because every caller is a Server
+ * Action and the owner is about to be shown the page they just edited.
+ * `revalidateTag` schedules an expiry, which can still serve the stale copy to
+ * the very response that follows the save; `updateTag` is the read-your-own-
+ * writes form, so the redirect after saving a colour shows that colour.
+ */
 async function updateColumn(
   update: Partial<
     Pick<
@@ -163,6 +178,8 @@ async function updateColumn(
   if (error) {
     throw new Error(`Saving website settings failed: ${error.message}`);
   }
+
+  updateTag(STORE_SETTINGS_TAG);
 }
 
 export async function getWebsiteSettings(): Promise<WebsiteSettings> {

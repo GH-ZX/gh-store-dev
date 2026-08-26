@@ -11,11 +11,11 @@ import { syncWalletAction } from "@/app/[locale]/dashboard/wallet-actions";
 /**
  * Supplier wallet cards with one global sync.
  *
- * A single press re-asks every enabled supplier at once — each card updates
- * the moment its own answer lands, so fast APIs never wait for slow ones —
- * and the button itself carries the waiting: its icon spins until the last
- * response arrives. Balances shown between syncs come from the database cache,
- * which is what keeps this section instant on load.
+ * Balances shown on load come from the database cache, which is what keeps this
+ * section instant. A refresh walks the suppliers one at a time and updates each
+ * card as its own answer lands: these are slow third-party APIs on the far side
+ * of a Worker, and asking all of them at once meant every request sat in the
+ * same fetch queue while the page held its breath.
  */
 
 export type WalletCardView = {
@@ -86,8 +86,24 @@ function BrandMark({ card }: { card: WalletCardView }) {
   );
 }
 
-/** A cached balance older than this is auto-refreshed on mount. */
+/**
+ * A cached balance older than this is auto-refreshed on mount.
+ *
+ * Only balances that previously succeeded qualify. A failed card is left for an
+ * explicit press — auto-retrying it looped forever, because a failure writes
+ * `status: "error"`, an errored card always counts as stale, and the retry
+ * failed the same way on the next load.
+ */
 const STALE_AFTER_MS = 5 * 60_000;
+
+/**
+ * Marks the automatic pass as spent for the tab, not just for the mount.
+ *
+ * `template.tsx` remounts this subtree on every navigation, so a `useRef` guard
+ * reset each time an admin moved between dashboard pages and the automatic sync
+ * fired again and again.
+ */
+const AUTO_SYNC_FLAG = "gh-store:wallet-auto-sync";
 
 export function WalletCards({
   cards,
@@ -117,32 +133,34 @@ export function WalletCards({
     setSyncing(true);
 
     try {
-      const results = await Promise.allSettled(
-        subset.map((card) => syncWalletAction(card.key)),
-      );
+      /*
+       * Sequential on purpose. Each of these is a separate third-party API,
+       * several of them slow, and a Worker gives every outbound request the same
+       * limited concurrency: firing them together did not make the answers
+       * arrive sooner, it just made all of them late at once and risked the
+       * request's wall-clock budget. One at a time also lets each card fill in
+       * as soon as its own supplier replies.
+       */
+      for (const card of subset) {
+        let update: {
+          balances: { currency: string; amount: number }[];
+          syncedAt: string;
+          failed?: boolean;
+        };
 
-      setOverrides((current) => {
-        const next = { ...current };
+        try {
+          const result = await syncWalletAction(card.key);
 
-        subset.forEach((card, index) => {
-          const result = results[index];
+          update = result.ok
+            ? { balances: result.balances, syncedAt: result.syncedAt }
+            : { balances: [], syncedAt: new Date().toISOString(), failed: true };
+        } catch {
+          // A dead supplier must not strand the cards queued behind it.
+          update = { balances: [], syncedAt: new Date().toISOString(), failed: true };
+        }
 
-          if (result?.status === "fulfilled" && result.value.ok) {
-            next[card.key] = {
-              balances: result.value.balances,
-              syncedAt: result.value.syncedAt,
-            };
-          } else if (result?.status === "fulfilled") {
-            next[card.key] = {
-              balances: [],
-              syncedAt: new Date().toISOString(),
-              failed: true,
-            };
-          }
-        });
-
-        return next;
-      });
+        setOverrides((current) => ({ ...current, [card.key]: update }));
+      }
     } finally {
       startTransition(() => setSyncing(false));
     }
@@ -151,9 +169,11 @@ export function WalletCards({
   /*
    * Automatic first sync.
    *
-   * An admin who just signed in should see live numbers without having to ask:
-   * anything missing or older than five minutes refreshes itself once on
-   * arrival. Fresh cards are left alone — the cache already answered.
+   * An admin who just signed in should see live numbers without having to ask,
+   * so a balance that went stale refreshes itself once per tab. Cards that are
+   * fresh, that never synced, or that failed are left alone: the first needs
+   * nothing, and the other two are exactly the cases that used to turn this
+   * effect into an unbounded retry loop on every dashboard visit.
    */
   useEffect(() => {
     if (autoRan.current || cards.length === 0) {
@@ -161,26 +181,29 @@ export function WalletCards({
     }
     autoRan.current = true;
 
-    const stale = cards.filter((card) => {
-      if (overrides[card.key]) {
-        return false;
-      }
+    if (sessionStorage.getItem(AUTO_SYNC_FLAG)) {
+      return;
+    }
 
-      if (!card.syncedAt || card.status !== "ok") {
-        return true;
+    const stale = cards.filter((card) => {
+      if (overrides[card.key] || card.status !== "ok" || !card.syncedAt) {
+        return false;
       }
 
       return Date.now() - new Date(card.syncedAt).getTime() > STALE_AFTER_MS;
     });
 
-    if (stale.length > 0) {
-      // Deferred one tick so the mount paints from cache first; the refresh
-      // then lands as its own update rather than cascading into the initial
-      // render.
-      const timer = setTimeout(() => void syncSubset(stale), 0);
-
-      return () => clearTimeout(timer);
+    if (stale.length === 0) {
+      return;
     }
+
+    sessionStorage.setItem(AUTO_SYNC_FLAG, "1");
+
+    // Deferred one tick so the mount paints from cache first; the refresh then
+    // lands as its own update rather than cascading into the initial render.
+    const timer = setTimeout(() => void syncSubset(stale), 0);
+
+    return () => clearTimeout(timer);
     // Runs deliberately once per mount; the closure's cards are the server truth.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

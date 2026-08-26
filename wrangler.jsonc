@@ -9,6 +9,40 @@
 		"nodejs_compat",
 		"global_fetch_strictly_public"
 	],
+	/*
+	 * Run the isolate next to the data instead of next to the visitor.
+	 *
+	 * Supabase lives in a single region, ap-southeast-1, and a render is not one
+	 * query but several: the store settings, the catalogue, the session. Each
+	 * one is ~500ms of ocean and under a millisecond of database. Served from a
+	 * colo near the reader, the page pays that crossing once per query; served
+	 * from near the database, the reader pays one crossing for the whole
+	 * response and the queries become local. Cached responses are unaffected —
+	 * those are answered at the edge before placement matters.
+	 */
+	"placement": {
+		"mode": "smart"
+	},
+	/*
+	 * Deployed settings had observability off while this file said nothing about
+	 * it, which the dashboard reports as configuration drift and which left the
+	 * worker's own structured logs unqueryable. `persist` keeps them in
+	 * Cloudflare's log store rather than only on a live tail, so a failure can be
+	 * looked into after the fact instead of only while someone is watching.
+	 * `traces` is omitted rather than written as `false`: absent and disabled
+	 * mean the same thing here, and an explicit `false` only reads as a decision
+	 * that was made.
+	 */
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"persist": true,
+			"invocation_logs": true
+		}
+	},
 	"vars": {
 		"NEXT_PUBLIC_SUPABASE_URL": "https://njlzgfddfnnqujaodbta.supabase.co",
 		"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_gtOxP1au24qFXwzVppy0vw_oFWaSIH2",
@@ -29,6 +63,35 @@
 			"service": "gh-store"
 		}
 	],
+	/*
+	 * Backing store for the OpenNext incremental cache.
+	 *
+	 * Commented out, and paired with `incrementalCache` being left off in
+	 * open-next.config.ts, because the bucket does not exist yet and a binding
+	 * to a missing bucket fails the deploy outright rather than degrading. The
+	 * two must be enabled together, in one commit, after running:
+	 *
+	 *   wrangler r2 bucket create gh-store-inc-cache
+	 *
+	 * The binding name is fixed by the adapter, not chosen here: `BINDING_NAME`
+	 * in
+	 * node_modules/@opennextjs/cloudflare/dist/api/overrides/incremental-cache/r2-incremental-cache.js
+	 * is read verbatim off `env`, so renaming it silently disables the cache.
+	 *
+	 * To also make `revalidatePath` evict entries here, add a D1 tag cache:
+	 *   wrangler d1 create gh-store-tag-cache
+	 * then paste the returned id into a `d1_databases` entry bound as
+	 * `NEXT_TAG_CACHE_D1` and set `tagCache: d1NextTagCache` in
+	 * open-next.config.ts. `opennextjs-cloudflare deploy` creates the
+	 * `revalidations` table itself. Left out for the same reason: a database id
+	 * cannot be written down before the database exists.
+	 */
+	// "r2_buckets": [
+	// 	{
+	// 		"binding": "NEXT_INC_CACHE_R2_BUCKET",
+	// 		"bucket_name": "gh-store-inc-cache"
+	// 	}
+	// ],
 	"images": {
 		// Enable image optimization
 		// see https://opennext.js.org/cloudflare/howtos/image

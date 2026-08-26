@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { StoreImage } from "@/components/store/store-image";
 import type { Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
-import { formatMessage } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
 import { cn } from "@/lib/cn";
 import type { PickCandidate } from "@/lib/services/admin-website.service";
 

@@ -12,7 +12,7 @@ import type { Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
 import type { StoreGame } from "@/lib/catalog/game-mapper";
 import { cn } from "@/lib/cn";
-import { formatMessage } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
 
 /**
  * Featured games carousel, on Embla.

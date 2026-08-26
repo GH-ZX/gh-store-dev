@@ -39,7 +39,13 @@ export default async function LoginPage({ params, searchParams }: PageProps<"/[l
         </p>
 
         <div className="mt-8 rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6 sm:p-8">
-          <AuthForm locale={locale} messages={messages.auth} mode={mode} redirectTo={redirectTo} />
+          <AuthForm
+            locale={locale}
+            messages={messages.auth}
+            mode={mode}
+            redirectTo={redirectTo}
+            forgotPasswordLabel={getMessages(locale, "account").recovery.forgotLink}
+          />
         </div>
       </div>
     </Section>

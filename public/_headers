@@ -9,3 +9,20 @@
 
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
+
+# Brand artwork, served on every page in the header and again in the footer.
+#
+# Falling through to the default meant a conditional request per navigation for
+# a logo that changes maybe once a year — a round trip to be told nothing had
+# happened, on the critical path of the chrome. Not `immutable`, which is only
+# honest for the content-hashed filenames under /_next/static: these names are
+# stable across deploys, so an owner replacing the artwork would otherwise have
+# to rename the file to be seen at all. A day of freshness followed by a month
+# of stale-while-revalidate removes the blocking revalidation without removing
+# the ability to change the picture — after the first day the cached copy is
+# painted immediately and refreshed in the background.
+/gh-store-logo.png
+  Cache-Control: public,max-age=86400,stale-while-revalidate=2592000
+
+/shamcash-logo.svg
+  Cache-Control: public,max-age=86400,stale-while-revalidate=2592000

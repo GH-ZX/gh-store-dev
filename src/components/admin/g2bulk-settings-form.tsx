@@ -16,7 +16,7 @@ import {
   saveG2BulkSettingsAction,
   verifyG2BulkKeyAction,
 } from "@/app/[locale]/dashboard/providers/actions";
-import { formatMessage } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
 import type { G2BulkCallback } from "@/lib/services/admin-settings.service";
 import type { G2BulkStatus } from "@/lib/settings/provider-settings";
 

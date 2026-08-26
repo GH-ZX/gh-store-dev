@@ -5,7 +5,8 @@ import { FormResult, SelectField, TextField } from "@/components/admin/admin-for
 import { Button } from "@/components/ui/button";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import { formatMessage, type RechargeMessages } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
+import type { RechargeMessages } from "@/i18n/messages";
 import {
   INITIAL_SAM_TOPUP_STATE,
   type SamTopUpState,

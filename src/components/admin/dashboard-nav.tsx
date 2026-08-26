@@ -86,6 +86,18 @@ export function DashboardNav({
               <Link
                 key={item.key}
                 href={item.href}
+                /*
+                 * All thirteen tabs are in the viewport at once — the bar
+                 * scrolls horizontally but the links are mounted — so the
+                 * default prefetch fired thirteen RSC requests the moment any
+                 * dashboard page loaded. Every admin page is dynamic and does
+                 * several ~500ms round-trips to a Singapore database, so the
+                 * bar was rendering the entire dashboard on every visit to any
+                 * part of it, and the page the admin actually asked for queued
+                 * behind that. An admin clicks one tab; the other twelve were
+                 * pure waste.
+                 */
+                prefetch={false}
                 aria-current={current ? "page" : undefined}
                 className={cn(
                   "inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-control)] px-3 py-2 text-sm transition-colors duration-[var(--duration)]",

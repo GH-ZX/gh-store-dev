@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StarIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import { formatMessage, type CheckoutMessages } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
+import type { CheckoutMessages } from "@/i18n/messages";
 import {
   INITIAL_REVIEW_STATE,
   type ReviewActionState,

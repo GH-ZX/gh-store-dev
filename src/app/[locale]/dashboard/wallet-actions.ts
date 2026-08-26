@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/guards";
 import { logFailure } from "@/lib/logging/logger";
 import { syncWalletCard } from "@/lib/services/admin-overview.service";
@@ -34,10 +33,18 @@ export async function syncWalletAction(key: string): Promise<SyncWalletResult> {
       return { ok: false, errorKind: result.errorKind };
     }
 
-    // The cached rows changed server-side too; both locales' overviews are stale.
-    revalidatePath("/ar/dashboard");
-    revalidatePath("/en/dashboard");
-
+    /*
+     * Deliberately no `revalidatePath` here.
+     *
+     * The fresh balance is returned to the caller, which swaps it into the card
+     * directly — the screen is already correct without a re-render. Revalidating
+     * instead asked the Worker to re-render the overview, the single heaviest
+     * page in the app, once per locale per wallet. With several wallets
+     * refreshing at once that turned one page view into a dozen self-inflicted
+     * renders competing with real traffic on the same Worker, which is what
+     * used to take the whole site down. The cache table is written server-side
+     * either way, so the next natural navigation reads the new value.
+     */
     return {
       ok: true,
       balances: result.card.balances,

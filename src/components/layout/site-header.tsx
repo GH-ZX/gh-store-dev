@@ -125,8 +125,15 @@ export function SiteHeader({
           className="gh-sheen flex min-h-16 items-center gap-3 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[color-mix(in_srgb,var(--canvas-raised)_82%,transparent)] px-3 shadow-[var(--elevation-2)] backdrop-blur-2xl sm:gap-4 sm:px-4"
         >
           <Link href={`/${locale}`} className="flex shrink-0 items-center gap-2.5" aria-label={brandName}>
+            {/*
+             * The 128px mark, not the 1254px `gh-store-logo.png` that the
+             * favicon and the Apple touch icon still point at. This renders at
+             * 36px in both the header and the footer, so shipping the full
+             * artwork meant 229KB on the critical path — with `priority`, ahead
+             * of everything else — to paint a 36px square.
+             */}
             <Image
-              src="/gh-store-logo.png"
+              src="/gh-store-logo-mark.png"
               alt=""
               width={36}
               height={36}

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import { getMessages, type AdminMessages } from "@/i18n/messages";
+import type { AdminMessages } from "@/i18n/messages";
 import { INITIAL_AUTH_STATE, type AuthActionState } from "@/lib/auth/action-state";
 import { signInAction, signUpAction } from "@/lib/auth/actions";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
@@ -24,6 +24,15 @@ export type AuthFormProps = {
   messages: AdminMessages["auth"];
   mode: "sign-in" | "sign-up";
   redirectTo?: string;
+  /**
+   * Recovery copy lives in the `account` namespace rather than `auth`, so it is
+   * handed in separately instead of being looked up here. Reaching for the
+   * message barrel from a client component pinned every locale dictionary into
+   * the browser bundle — roughly 239KB of JSON, on the login page of all
+   * places — because a runtime `getMessages` reference keeps the whole
+   * `MESSAGES` table alive through tree shaking.
+   */
+  forgotPasswordLabel: string;
 };
 
 type ErrorKey = keyof AdminMessages["auth"]["errors"];
@@ -45,7 +54,7 @@ function resolveNotice(messages: AdminMessages["auth"], key: string | null): str
   return messages.notices[key as NoticeKey] ?? null;
 }
 
-export function AuthForm({ locale, messages, mode, redirectTo }: AuthFormProps) {
+export function AuthForm({ locale, messages, mode, redirectTo, forgotPasswordLabel }: AuthFormProps) {
   const isSignUp = mode === "sign-up";
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
     isSignUp ? signUpAction : signInAction,
@@ -135,13 +144,13 @@ export function AuthForm({ locale, messages, mode, redirectTo }: AuthFormProps) 
         {isSignUp ? messages.toggleToSignIn : messages.toggleToSignUp}
       </Link>
 
-      {/* Recovery copy lives in the account namespace, read here so the login page keeps its single `auth` bundle. */}
+      {/* Recovery copy lives in the account namespace, so the login page hands it in. */}
       {isSignUp ? null : (
         <Link
           href={`/${locale}/forgot-password`}
           className="text-sm text-[var(--ink-muted)] underline-offset-4 transition-colors duration-[var(--duration)] hover:text-[var(--ink)] hover:underline"
         >
-          {getMessages(locale, "account").recovery.forgotLink}
+          {forgotPasswordLabel}
         </Link>
       )}
     </form>

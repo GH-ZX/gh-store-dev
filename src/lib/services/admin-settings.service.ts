@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { requireAdmin } from "@/lib/auth/guards";
 import { resetLogDestination } from "@/lib/logging/logger";
 import { PAGE_SIZE, pageRange } from "@/lib/paging";
@@ -83,7 +85,14 @@ import type { Json } from "@/types/database";
 
 const SETTINGS_ID = "global";
 
-async function readProviders(): Promise<Json> {
+/**
+ * The providers blob, straight from the row.
+ *
+ * Writers use this one directly: a save merges its update onto whatever it
+ * reads, and merging onto a remembered copy is how one save quietly undoes
+ * another.
+ */
+async function readProvidersFresh(): Promise<Json> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("store_settings")
@@ -97,6 +106,16 @@ async function readProviders(): Promise<Json> {
 
   return data?.providers ?? {};
 }
+
+/**
+ * The same blob, read once per request.
+ *
+ * Every getter below wants that one `store_settings` row, and a dashboard
+ * render asks four of them at once while building the supplier wallet cards —
+ * four identical queries to a database half a second away, for a row that
+ * cannot change between them. React's `cache()` collapses them into one.
+ */
+const readProviders = cache(readProvidersFresh);
 
 export async function getG2BulkStatus(): Promise<G2BulkStatus> {
   await requireAdmin();
@@ -166,7 +185,7 @@ export async function saveG2BulkSettings(update: {
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
-  const providers = await readProviders();
+  const providers = await readProvidersFresh();
   const next = mergeG2BulkSettings(providers, update, new Date().toISOString());
 
   const { data, error } = await supabase
@@ -200,7 +219,7 @@ export async function saveSamSettings(update: SamSettingsUpdate): Promise<SamSta
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
-  const providers = await readProviders();
+  const providers = await readProvidersFresh();
   const next = mergeSamSettings(providers, update, new Date().toISOString());
 
   const { data, error } = await supabase
@@ -234,7 +253,7 @@ export async function saveAxiomSettings(update: AxiomSettingsUpdate): Promise<Ax
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
-  const next = mergeAxiomSettings(await readProviders(), update, new Date().toISOString());
+  const next = mergeAxiomSettings(await readProvidersFresh(), update, new Date().toISOString());
 
   const { data, error } = await supabase
     .from("store_settings")
@@ -351,7 +370,7 @@ export async function saveIgdbSettings(update: {
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
-  const providers = await readProviders();
+  const providers = await readProvidersFresh();
   const next = mergeIgdbSettings(providers, update, new Date().toISOString());
 
   const { data, error } = await supabase
@@ -376,7 +395,7 @@ export async function saveMaxStoreSettings(update: {
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
-  const providers = await readProviders();
+  const providers = await readProvidersFresh();
   const next = mergeMaxStoreSettings(providers, update, new Date().toISOString());
 
   const { data, error } = await supabase
@@ -414,7 +433,7 @@ export async function saveBatStoreSettings(update: {
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
-  const providers = await readProviders();
+  const providers = await readProvidersFresh();
   const next = mergeBatStoreSettings(providers, update, new Date().toISOString());
 
   const { data, error } = await supabase
@@ -453,7 +472,7 @@ export async function saveBinanceSettings(update: {
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
-  const providers = await readProviders();
+  const providers = await readProvidersFresh();
   const next = mergeBinanceSettings(providers, update, new Date().toISOString());
 
   const { data, error } = await supabase

@@ -26,7 +26,6 @@ type StockManagerProps = {
 };
 
 export function StockManager({
-  locale,
   messages,
   gameId,
   offerId,

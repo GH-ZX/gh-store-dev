@@ -2,6 +2,7 @@ import { networkInterfaces } from "node:os";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { NextConfig } from "next";
+import { DEFAULT_LOCALE } from "./src/lib/config/app";
 import { SECURITY_HEADERS } from "./src/lib/security/response-headers";
 
 /**
@@ -105,16 +106,23 @@ const nextConfig: NextConfig = {
    * pasted, so the singular resolves instead of answering 404 — and it resolves
    * permanently, so a search engine that meets one stops asking.
    *
-   * The locale prefix is left to the middleware, which sends an unprefixed path
-   * to Arabic: adding it here would mean writing the default locale into a
-   * redirect that has no idea what the visitor reads.
+   * The unprefixed forms name the default locale here rather than handing the
+   * job to the middleware. Deferring it read better and cost a whole extra
+   * round trip: `/game/x` answered 301 to `/games/x`, which answered 307 to
+   * `/ar/games/x`, which finally rendered — three requests, and the two
+   * redirects were ~1.3s of latency between them for zero bytes of content.
+   * Nothing was gained for it, because the middleware's locale choice is not a
+   * negotiation: an unprefixed path goes to `DEFAULT_LOCALE` unconditionally
+   * (src/middleware.ts), so writing `ar` here reaches the identical
+   * destination in one hop. It is the same constant, read at the same time —
+   * if the default ever moves, both places move together.
    */
   async redirects() {
     return [
-      { source: "/game/:slug", destination: "/games/:slug", permanent: true },
+      { source: "/game/:slug", destination: `/${DEFAULT_LOCALE}/games/:slug`, permanent: true },
       {
         source: "/game/:slug/:offerSlug",
-        destination: "/games/:slug/:offerSlug",
+        destination: `/${DEFAULT_LOCALE}/games/:slug/:offerSlug`,
         permanent: true,
       },
       {

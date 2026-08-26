@@ -8,6 +8,7 @@ import { notify } from "@/lib/services/notification.service";
 import { safeFilterTerm } from "@/lib/supabase/filters";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import type { HeaderWalletCustomer } from "@/lib/wallet-panel";
 import type { WalletTransaction, WalletTransactionType } from "@/lib/services/wallet.service";
 
 /**
@@ -98,6 +99,53 @@ export async function listAdminCustomers(options: { query?: string } = {}): Prom
       createdAt: row.created_at,
       balance: wallet?.balance ?? 0,
       currency: wallet?.currency ?? "USD",
+    };
+  });
+}
+
+type WalletProfileEmbed = { id: string; email: string | null; full_name: string | null; username: string | null };
+
+/**
+ * The biggest wallets, for the header's admin panel.
+ *
+ * Deliberately not {@link listAdminCustomers}. That read serves the customers
+ * page — two hundred profiles with their roles, activity and signup dates —
+ * and the header used to make it on *every* page of the site, storefront
+ * included, then serialise all of it into the RSC payload and again into a
+ * client island. The panel paints a name and an amount, so this asks for a
+ * name and an amount.
+ *
+ * Driven from `wallets` rather than `profiles` because the question is "where
+ * does the money sit": that lets the database do the ordering and the cutting,
+ * instead of shipping every customer so the browser can sort them. A wallet
+ * exists for every customer and for no administrator, so the row set is the
+ * same one the old query reached through an embed.
+ */
+export async function listTopWallets(limit = 25): Promise<HeaderWalletCustomer[]> {
+  await requireAdmin();
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("wallets")
+    .select("balance, currency, profiles!inner (id, email, full_name, username)")
+    .order("balance", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`Reading wallets failed: ${error.message}`);
+  }
+
+  return data.map((row) => {
+    // `wallets.user_id` is a to-one key, so the embed is one profile, not a list.
+    const profile = row.profiles as WalletProfileEmbed;
+
+    return {
+      id: profile.id,
+      email: profile.email,
+      fullName: profile.full_name,
+      username: profile.username,
+      balance: row.balance ?? 0,
+      currency: row.currency || "USD",
     };
   });
 }

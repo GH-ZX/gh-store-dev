@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckIcon, ShieldIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import { formatMessage, type AdminMessages } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
+import type { AdminMessages } from "@/i18n/messages";
 import {
   INITIAL_PROVIDER_STATE,
   type ProviderActionState,

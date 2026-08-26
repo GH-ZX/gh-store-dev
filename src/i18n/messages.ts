@@ -77,28 +77,10 @@ export function getCommonMessages(locale: Locale): CommonMessages {
   return getMessages(locale, "common");
 }
 
-/**
- * Fill `{placeholder}` slots in a message.
- *
- * Numbers are formatted for the locale, so a count renders with the digits that
- * locale expects rather than being stringified raw.
+/*
+ * Re-exported for server callers that want messages and interpolation from one
+ * import. The implementation lives in `@/i18n/format`, which carries no JSON,
+ * so a client component can reach for it without pulling every dictionary into
+ * the browser bundle.
  */
-export function formatMessage(
-  template: string,
-  values: Record<string, string | number>,
-  locale?: Locale,
-): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) => {
-    const value = values[key];
-
-    if (value === undefined) {
-      return match;
-    }
-
-    if (typeof value === "number") {
-      return locale ? new Intl.NumberFormat(locale).format(value) : String(value);
-    }
-
-    return value;
-  });
-}
+export { formatMessage } from "@/i18n/format";

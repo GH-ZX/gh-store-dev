@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertIcon, CheckIcon, WalletIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import { formatMessage, type RechargeMessages } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
+import type { RechargeMessages } from "@/i18n/messages";
 import { formatPrice } from "@/lib/format/money";
 import {
   INITIAL_SAM_TOPUP_STATE,

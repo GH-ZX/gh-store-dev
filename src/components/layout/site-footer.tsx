@@ -67,7 +67,7 @@ export function SiteFooter({ locale, messages, socialLinks, year, brandName }: S
           <div className="max-w-sm">
             <Link href={`/${locale}`} className="flex items-center gap-2.5" aria-label={brandName}>
               <Image
-                src="/gh-store-logo.png"
+                src="/gh-store-logo-mark.png"
                 alt=""
                 width={36}
                 height={36}
@@ -89,6 +89,18 @@ export function SiteFooter({ locale, messages, socialLinks, year, brandName }: S
                   <li key={link.href}>
                     <Link
                       href={link.href}
+                      /*
+                       * Every one of these thirteen links sits in the viewport
+                       * on a short page, and the default prefetch turned that
+                       * into thirteen concurrent RSC requests on load — each a
+                       * full uncached dynamic render behind a Singapore
+                       * database. Footer links are a directory people consult
+                       * deliberately, not a path they are about to take, so the
+                       * speculative fetch bought nothing and cost the page it
+                       * was on. The primary navigation in the header keeps its
+                       * prefetch.
+                       */
+                      prefetch={false}
                       className="text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
                     >
                       {link.label}

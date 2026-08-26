@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import { formatMessage, type AdminMessages } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
+import type { AdminMessages } from "@/i18n/messages";
 import { TELEGRAM_ALERT_TYPES, type TelegramStatus } from "@/lib/settings/telegram-settings";
 import {
   INITIAL_TELEGRAM_STATE,

@@ -463,7 +463,6 @@ import {
   addStockItem,
   bulkAddStockItems,
   deleteStockItem,
-  listStockItems,
 } from "@/lib/services/stock.service";
 
 type StockActionResult =

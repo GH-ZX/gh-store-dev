@@ -1,7 +1,14 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- `.open-next/worker.js` only exists after an OpenNext build
 // @ts-ignore
 import { default as handler } from "./.open-next/worker.js";
-import { runTelegramScheduled, type BotEnv } from "./worker/telegram-bot";
+/*
+ * Type-only, so the 480-line Telegram module is not in the module graph the
+ * isolate parses on a cold start. It is reachable from `scheduled` alone —
+ * every one of the storefront's requests was paying to compile a bot that runs
+ * four times an hour. The implementation is pulled in with a dynamic `import()`
+ * at the point of use instead.
+ */
+import type { BotEnv } from "./worker/telegram-bot";
 
 type ReconcileEnv = BotEnv;
 
@@ -39,8 +46,61 @@ function reconciliationUrl(appUrl: string): string | null {
   }
 }
 
+/**
+ * A Supabase session cookie, by name.
+ *
+ * The same shape the middleware tests against, deliberately: both layers are
+ * answering "is this visitor signed in?" and they must never disagree. The
+ * name is `sb-<project-ref>-auth-token`, with `.0`/`.1` appended when the JWT
+ * is large enough that GoTrue splits it across chunks, so the match is a
+ * prefix rather than an exact name. `-code-verifier` is caught by the same
+ * prefix, which is the answer we want anyway: a visitor mid-OAuth is about to
+ * have a session and should not be handed a shared document.
+ */
+const SUPABASE_AUTH_COOKIE = /^sb-.*-auth-token/;
+
+/**
+ * Whether the request carries a signed-in Supabase session.
+ *
+ * Cookie names are parsed out rather than the whole header being searched, so
+ * a value that happens to contain the token name cannot make an anonymous
+ * visitor look signed in.
+ */
+function hasSupabaseSession(request: Request): boolean {
+  const header = request.headers.get("cookie");
+
+  if (!header) {
+    return false;
+  }
+
+  for (const pair of header.split(";")) {
+    const separator = pair.indexOf("=");
+    const name = (separator === -1 ? pair : pair.slice(0, separator)).trim();
+
+    if (SUPABASE_AUTH_COOKIE.test(name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function isPublicHtmlRequest(request: Request): boolean {
-  if (request.method !== "GET" || request.headers.get("cookie")) {
+  /*
+   * Any cookie at all used to disqualify a request, which was far too blunt:
+   * an analytics or consent cookie is not a session, yet its presence sent the
+   * visitor down a full ~3.5s uncached render on every single navigation. What
+   * actually makes a document user-specific is a signed-in session, so that is
+   * what is tested. The response is still checked for `set-cookie` before it
+   * is stored, which catches anything that turns out to be personalised after
+   * all.
+   *
+   * Nothing else the server renders varies by cookie: the locale is a path
+   * segment, and the light/dark choice is applied in the browser from
+   * `localStorage` by the pre-paint script, so every anonymous visitor to a
+   * given URL receives byte-identical HTML.
+   */
+  if (request.method !== "GET" || hasSupabaseSession(request)) {
     return false;
   }
 
@@ -171,8 +231,12 @@ const worker = {
     }
 
     // `runTelegramScheduled` resolves the URL itself (falling back to the
-    // public var), so only the service key needs checking here.
+    // public var), so only the service key needs checking here. The module is
+    // fetched here rather than at the top of the file so that the cost of
+    // compiling it lands on the four cron ticks an hour that need it, and not
+    // on every cold storefront request.
     if (withinBudget() && env.SUPABASE_SERVICE_ROLE_KEY) {
+      const { runTelegramScheduled } = await import("./worker/telegram-bot");
       jobs.push(runTelegramScheduled(env));
     }
 

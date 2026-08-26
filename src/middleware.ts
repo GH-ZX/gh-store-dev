@@ -37,6 +37,23 @@ export async function middleware(request: NextRequest) {
   // of which layer produces the final response for this request.
   applySecurityHeaders(response.headers);
 
+  /*
+   * Anonymous requests skip Supabase entirely.
+   *
+   * The only reason to build a client here is to refresh a session cookie, and
+   * a visitor with no session has nothing to refresh. Constructing one anyway
+   * cost every anonymous request a GoTrue client and, on a cold isolate, a JWKS
+   * fetch to a database ~500ms away — paid on the storefront, where most
+   * traffic is signed out and none of it benefits.
+   */
+  const hasSession = request.cookies
+    .getAll()
+    .some((cookie) => /^sb-.*-auth-token/.test(cookie.name));
+
+  if (!hasSession) {
+    return response;
+  }
+
   const { url, publishableKey } = getSupabaseEnv();
   const supabase = createServerClient(url, publishableKey, {
     cookies: {
@@ -55,6 +72,7 @@ export async function middleware(request: NextRequest) {
   });
 
   await supabase.auth.getClaims();
+
   return response;
 }
 
