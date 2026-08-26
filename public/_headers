@@ -21,6 +21,13 @@
 # of stale-while-revalidate removes the blocking revalidation without removing
 # the ability to change the picture — after the first day the cached copy is
 # painted immediately and refreshed in the background.
+#
+# The mark is the 128px file the header and footer actually draw; the full-size
+# PNG stays for the favicon and Apple touch icon, which the root layout declares
+# in its metadata and the browser fetches by name.
+/gh-store-logo-mark.png
+  Cache-Control: public,max-age=86400,stale-while-revalidate=2592000
+
 /gh-store-logo.png
   Cache-Control: public,max-age=86400,stale-while-revalidate=2592000
 
