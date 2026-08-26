@@ -55,6 +55,46 @@ const cachedPublicStoreSettings = unstable_cache(fetchPublicStoreSettings, ["pub
 });
 
 /*
+ * A short-lived copy in the isolate's own memory, in front of everything else.
+ *
+ * `unstable_cache` only persists if OpenNext has an incremental cache to write
+ * through to, and until the R2 bucket exists it has none — measured: six
+ * renders still produced six `get_public_store_settings` calls. This layer
+ * needs no binding at all. A Worker isolate serves many requests before it is
+ * recycled, so remembering the row for a few seconds removes almost all of
+ * them at any real request rate.
+ *
+ * Only the resolved value is stored, never the in-flight promise. Caching a
+ * pending promise at module scope is what made the supplier-wallet read throw
+ * "Cannot perform I/O on behalf of a different request" on Workers: a second
+ * request would await an I/O context belonging to the first. A plain value has
+ * no such attachment.
+ *
+ * The window is deliberately small. Isolate memory cannot be reached by
+ * `updateTag`, so this is the one part of the chain an owner's save cannot
+ * invalidate — a few seconds is short enough to feel immediate and long enough
+ * to absorb a burst.
+ */
+const ISOLATE_TTL_MS = 15_000;
+
+type IsolateEntry<T> = { value: T; at: number };
+
+function isolateCached<T>(read: () => Promise<T>): () => Promise<T> {
+  let entry: IsolateEntry<T> | null = null;
+
+  return async () => {
+    if (entry && Date.now() - entry.at < ISOLATE_TTL_MS) {
+      return entry.value;
+    }
+
+    const value = await read();
+    entry = { value, at: Date.now() };
+
+    return value;
+  };
+}
+
+/*
  * The cache is an optimisation, never a dependency.
  *
  * `unstable_cache` throws outright if it cannot find an incremental cache to
@@ -71,8 +111,19 @@ async function readThrough<T>(cached: () => Promise<T>, direct: () => Promise<T>
   }
 }
 
+/*
+ * Isolate memory, then the incremental cache, then the database. The isolate
+ * layer wraps the whole read-through so a hit costs no I/O at all, and a miss
+ * still gets `unstable_cache`'s cross-isolate copy once a backing store exists.
+ */
+const readHomeLayout = isolateCached(() => readThrough(cachedHomeLayout, fetchHomeLayout));
+
+const readPublicStoreSettings = isolateCached(() =>
+  readThrough(cachedPublicStoreSettings, fetchPublicStoreSettings),
+);
+
 export async function getHomeLayout(): Promise<HomeSection[]> {
-  return normalizeHomeLayout(await readThrough(cachedHomeLayout, fetchHomeLayout));
+  return normalizeHomeLayout(await readHomeLayout());
 }
 
 /**
@@ -84,7 +135,7 @@ export async function getHomeLayout(): Promise<HomeSection[]> {
  * having to know the others exist.
  */
 export const getPublicStoreSettings = cache(async (): Promise<PublicStoreSettings> => {
-  const data = await readThrough(cachedPublicStoreSettings, fetchPublicStoreSettings);
+  const data = await readPublicStoreSettings();
 
   return data === null ? EMPTY_PUBLIC_SETTINGS : normalizePublicSettings(data);
 });
