@@ -30,7 +30,7 @@ export type BotEnv = {
 };
 
 const TG_API = "https://api.telegram.org";
-const BATCH = 10;
+const BATCH = 5;
 
 type TelegramSettings = {
   bot_token?: string | null;

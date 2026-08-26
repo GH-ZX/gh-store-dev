@@ -45,7 +45,8 @@
     },
     "nav": {
       "overview": "Home",
-      "games": "Games",
+      "catalog": "Catalog",
+      "sync": "Sync",
       "offers": "Packages",
       "orders": "Orders",
       "recharges": "Recharges",
@@ -499,27 +500,29 @@
   "import": {
 
     "eyebrow": "Import",
-    "title": "Import G2Bulk games",
-    "description": "Choose the games to add. Importing again refreshes prices instead of duplicating games.",
-    "loadFailed": "We could not fetch the provider's game list.",
-    "searchLabel": "Search provider games",
-    "searchPlaceholder": "Type a game name…",
+    "title": "Import from G2Bulk",
+    "description": "Choose the products to add. Importing again refreshes prices instead of duplicating.",
+    "loadFailed": "We could not fetch the provider's product list.",
+    "searchLabel": "Search provider products",
+    "searchPlaceholder": "Product name…",
     "selectAll": "Select all",
     "clearSelection": "Clear selection",
-    "selectedCount": "{count} games selected",
-    "availableCount": "{count} games available from the provider",
+    "selectedCount": "{count} selected",
+    "availableCount": "{count} available from the provider",
     "alreadyImported": "Imported",
-    "publishLabel": "Publish imported games in the store immediately",
+    "publishLabel": "Publish imported products in the store immediately",
     "publishHelp": "Turn this off if you want to review names and prices before customers see them.",
     "submitAction": "Import selected",
-    "emptyTitle": "The provider returned no games",
-    "emptyDescription": "No games came back. Check your account with the provider.",
-    "noSelectionError": "Select at least one game.",
+    "syncing": "Syncing products…",
+    "emptyTitle": "The provider returned no products",
+    "emptyDescription": "No products came back. Check your account with the provider.",
+    "noSelectionError": "Select at least one product.",
     "resultTitle": "Import result",
-    "resultSummary": "{created} games added, {updated} updated, {failed} failed.",
+    "resultSummary": "{created} added, {updated} updated, {failed} failed.",
     "resultOffers": "Packages: {created} created and {updated} updated.",
     "backToProviders": "Back to providers",
-    "viewStore": "View games in the store",
+    "backToSync": "Back to sync",
+    "viewStore": "View in the store",
     "removeAction": "Remove from the store",
     "removeConfirm": "Remove this from the store? Its packages go with it, and orders that bought it keep their records. It can be imported again.",
     "removing": "Removing…",
@@ -527,20 +530,52 @@
     "removeMissing": "That is no longer in the store — the list was out of date.",
     "removeFailed": "Removing it failed. Nothing was changed — please try again."
   },
+  "sync": {
+    "eyebrow": "Sync products",
+    "title": "Sync products from providers",
+    "description": "Pull the latest catalog from each connected provider. Importing again refreshes prices and stock instead of duplicating.",
+    "loading": "Loading provider catalog…",
+    "syncing": "Syncing…",
+    "configured": "Configured",
+    "notConfigured": "Not configured",
+    "configureHint": "Add the API key on the Providers page first.",
+    "noProducts": "No products available",
+    "importedCount": "{count} imported",
+    "availableCount": "{count} available",
+    "goToImport": "Open import picker",
+    "providers": {
+      "g2bulk": {
+        "title": "G2Bulk — Games",
+        "description": "Digital game top-ups, gift cards, and redeem codes."
+      },
+      "g2bulkVouchers": {
+        "title": "G2Bulk — Voucher categories",
+        "description": "Grouped voucher codes by category."
+      },
+      "maxstore": {
+        "title": "MaxStore",
+        "description": "Game currencies, in-game items, and subscriptions."
+      },
+      "batstore": {
+        "title": "BatStore",
+        "description": "Accounts, activations, and direct-delivery products."
+      }
+    }
+  },
   "catalog": {
     "eyebrow": "Catalog",
-    "title": "Games and packages",
+    "title": "Products and packages",
     "description": "Edit names, artwork, prices, and publication for what you imported or added.",
-    "searchLabel": "Search games",
-    "searchPlaceholder": "Game name or slug…",
-    "countLabel": "{count} games",
+    "searchLabel": "Search products",
+    "searchPlaceholder": "Product name or slug…",
+    "countLabel": "{count} products",
     "categoryFilterLabel": "MaxStore category",
     "allCategories": "All categories",
     "publishedFilter": "Published only",
     "allFilter": "All",
-    "emptyTitle": "No games yet",
-    "emptyDescription": "Import games from the G2Bulk provider and they appear here.",
-    "goToImport": "Import games",
+    "emptyTitle": "No products yet",
+    "emptyDescription": "Import products from a provider and they appear here.",
+    "goToImport": "Import products",
     "published": "Published",
     "unpublished": "Unpublished",
     "featured": "Featured",
@@ -675,6 +710,25 @@
       "removeConfirmAction": "Yes, remove it",
       "cancelAction": "Cancel",
       "removed": "Package removed."
+    },
+    "stock": {
+      "sectionTitle": "Inventory",
+      "sectionDescription": "Manage stock for stored products. Add codes, URLs, or account credentials that are delivered to customers on purchase.",
+      "title": "Stock — {name}",
+      "description": "Add items one at a time or paste multiple lines for bulk import. Each item is delivered once to one customer.",
+      "availableCount": "{count} items available",
+      "singleLabel": "Stock item (code, URL, or credential)",
+      "singlePlaceholder": "e.g. ABCD-1234-EFGH-5678",
+      "addSingle": "Add",
+      "bulkLabel": "Bulk paste (one item per line)",
+      "bulkPlaceholder": "CODE-1\nCODE-2\nCODE-3",
+      "addBulk": "Add all",
+      "stockList": "Available items",
+      "deleteItem": "Remove",
+      "added": "Stock item added.",
+      "bulkAdded": "{count} stock items added.",
+      "deleted": "Stock item removed.",
+      "error": "Something went wrong. Try again."
     }
   },
   "website": {
@@ -952,6 +1006,7 @@
     "filterLabel": "Status",
     "filterAll": "All",
     "filterAttention": "Needs attention",
+    "filterManual": "Manual recharge",
     "countLabel": "{count} orders",
     "emptyTitle": "No orders yet",
     "emptyDescription": "Orders appear here as soon as a customer completes a purchase.",
@@ -1314,6 +1369,7 @@
     "errorNotFound": "That item no longer exists. Reload the page.",
     "errorInvalid": "Check the fields and try again.",
     "errorUnknown": "Saving failed. Try again.",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "addProduct": "Add product"
   }
 }

@@ -45,6 +45,8 @@ export const ATTENTION_STATUSES: AdminOrderStatus[] = ["failed", "fulfilling", "
 
 export const ATTENTION_FILTER = "attention";
 
+export const MANUAL_FILTER = "manual";
+
 export type AdminOrderRow = {
   id: string;
   orderNumber: string;
@@ -164,6 +166,32 @@ export async function getOrders(filter: OrderListFilter = {}): Promise<AdminOrde
 
   if (filter.status === ATTENTION_FILTER) {
     query = query.in("status", ATTENTION_STATUSES);
+  } else if (filter.status === MANUAL_FILTER) {
+    // Manual orders: orders with an offer whose delivery_kind is 'manual'
+    // and the order is not yet settled.
+    const { data: manualOfferRows } = await supabase
+      .from("offers")
+      .select("id")
+      .eq("delivery_kind", "manual");
+
+    const offerIds = (manualOfferRows ?? []).map((o) => o.id);
+
+    if (offerIds.length > 0) {
+      const { data: orderItemRows } = await supabase
+        .from("order_items")
+        .select("order_id")
+        .in("offer_id", offerIds);
+
+      const manualOrderIds = [...new Set((orderItemRows ?? []).map((r) => r.order_id))];
+
+      if (manualOrderIds.length > 0) {
+        query = query.in("id", manualOrderIds).not("status", "in", "(completed,refunded,cancelled)");
+      } else {
+        query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+    } else {
+      query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+    }
   } else if (filter.status && (ADMIN_ORDER_STATUSES as readonly string[]).includes(filter.status)) {
     query = query.eq("status", filter.status);
   }

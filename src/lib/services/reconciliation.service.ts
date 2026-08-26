@@ -21,7 +21,7 @@ import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/s
  */
 
 /** Kept small: a Worker has a wall-clock budget, and unfinished orders carry to the next run. */
-const DEFAULT_BATCH = 25;
+const DEFAULT_BATCH = 10;
 
 /**
  * Statuses that mean the customer has paid and the goods are not out yet.
@@ -53,7 +53,7 @@ async function expireStaleSamInvoices(): Promise<number> {
     .select("sam_invoice_id")
     .eq("status", "pending")
     .or(`expires_at.lt.${now},and(expires_at.is.null,created_at.lt.${neverExpiresCutoff})`)
-    .limit(50);
+    .limit(20);
 
   if (error) {
     log.warn("payments", "sam_expiry_lookup_failed", { error: error.message });
@@ -102,7 +102,7 @@ async function expireStaleBinanceInvoices(): Promise<number> {
     .select("merchant_trade_no")
     .eq("status", "pending")
     .or(`expires_at.lt.${now},and(expires_at.is.null,created_at.lt.${neverExpiresCutoff})`)
-    .limit(50);
+    .limit(20);
 
   if (error) {
     log.warn("payments", "binance_expiry_lookup_failed", { error: error.message });
@@ -157,7 +157,7 @@ async function settlePendingBinanceInvoices(): Promise<{ checked: number; credit
     // opened in a browser somewhere, and asking twice changes nothing.
     .lt("created_at", cutoff)
     .order("created_at", { ascending: true })
-    .limit(10);
+    .limit(5);
 
   if (error) {
     log.warn("payments", "binance_settle_lookup_failed", { error: error.message });
@@ -209,8 +209,8 @@ async function expireStaleRechargeRequests(): Promise<number> {
 
   const deadInvoiceStatuses = ["failed", "expired", "cancelled"];
   const [samDead, binanceDead] = await Promise.all([
-    supabase.from("sam_invoices").select("recharge_request_id").in("status", deadInvoiceStatuses),
-    supabase.from("binance_invoices").select("recharge_request_id").in("status", deadInvoiceStatuses),
+    supabase.from("sam_invoices").select("recharge_request_id").in("status", deadInvoiceStatuses).limit(50),
+    supabase.from("binance_invoices").select("recharge_request_id").in("status", deadInvoiceStatuses).limit(50),
   ]);
 
   const requestIdSet = new Set<string>();
@@ -226,7 +226,8 @@ async function expireStaleRechargeRequests(): Promise<number> {
     .from("recharge_requests")
     .select("id")
     .in("status", ["pending", "payment_sent"])
-    .lt("created_at", ageCutoff);
+    .lt("created_at", ageCutoff)
+    .limit(50);
 
   for (const row of aged ?? []) {
     requestIdSet.add(row.id);
@@ -365,10 +366,14 @@ export async function reconcileStuckOrders(limit = DEFAULT_BATCH): Promise<Recon
     return run;
   }
 
-  run.samExpired = await expireStaleSamInvoices();
-  run.binanceExpired = await expireStaleBinanceInvoices();
-
-  const binance = await settlePendingBinanceInvoices();
+  // Run independent lookups in parallel to stay within the Worker CPU budget.
+  const [samExpired, binanceExpired, binance] = await Promise.all([
+    expireStaleSamInvoices(),
+    expireStaleBinanceInvoices(),
+    settlePendingBinanceInvoices(),
+  ]);
+  run.samExpired = samExpired;
+  run.binanceExpired = binanceExpired;
   run.binanceChecked = binance.checked;
   run.binanceCredited = binance.credited;
 

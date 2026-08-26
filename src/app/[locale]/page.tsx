@@ -145,5 +145,5 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
 
   // The provider wraps the server-rendered page as children, which is what lets
   // a pencil deep inside a server component read a piece of client state.
-  return <LiveEditMode messages={liveEdit}>{page}</LiveEditMode>;
+  return <LiveEditMode messages={liveEdit} locale={locale}>{page}</LiveEditMode>;
 }

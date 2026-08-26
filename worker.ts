@@ -129,6 +129,11 @@ const worker = {
       ? reconciliationUrl(env.NEXT_PUBLIC_APP_URL.trim())
       : null;
 
+    // Hard deadline: the Worker gets ~30 s CPU on the paid plan. Leave a safety
+    // margin so the isolate is not killed mid-write.
+    const deadline = Date.now() + 25_000;
+    const withinBudget = () => Date.now() < deadline;
+
     // Independent jobs: reconciliation for orders, Telegram for owner alerts.
     const jobs: Promise<void>[] = [];
 
@@ -167,7 +172,7 @@ const worker = {
 
     // `runTelegramScheduled` resolves the URL itself (falling back to the
     // public var), so only the service key needs checking here.
-    if (env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (withinBudget() && env.SUPABASE_SERVICE_ROLE_KEY) {
       jobs.push(runTelegramScheduled(env));
     }
 

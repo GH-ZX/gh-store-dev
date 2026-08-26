@@ -15,7 +15,7 @@ describe("dashboard navigation groups", () => {
     expect(byGroup.overview).toEqual(["overview"]);
     expect(byGroup.sales).toEqual(["orders", "payments", "recharges"]);
     expect(byGroup.people).toEqual(["customers", "support"]);
-    expect(byGroup.storefront).toEqual(["games", "website", "appearance", "reviews"]);
+    expect(byGroup.storefront).toEqual(["catalog", "sync", "website", "appearance", "reviews"]);
     expect(byGroup.system).toEqual(["providers", "operations"]);
   });
 });

@@ -7,6 +7,7 @@ import { BatStoreClient } from "@/providers/batstore/client";
 import { BatStoreError } from "@/providers/batstore/errors";
 import { G2BulkClient } from "@/providers/g2bulk/client";
 import { G2BulkError } from "@/providers/g2bulk/errors";
+import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 import { MaxStoreClient } from "@/providers/maxstore/client";
 import { MaxStoreError } from "@/providers/maxstore/errors";
 import { requireAdmin } from "@/lib/auth/guards";
@@ -31,9 +32,9 @@ import { importG2BulkGames } from "@/lib/services/g2bulk-import.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   INITIAL_PROVIDER_STATE,
-  type ImportActionState,
   type ProviderActionState,
 } from "@/app/[locale]/dashboard/providers/action-state";
+import type { UniversalImportActionState } from "@/app/[locale]/dashboard/providers/import/action-state";
 
 /**
  * Provider administration actions.
@@ -167,13 +168,18 @@ const importSchema = z.object({
 });
 
 export async function importG2BulkGamesAction(
-  _state: ImportActionState,
+  _state: UniversalImportActionState,
   formData: FormData,
-): Promise<ImportActionState> {
+): Promise<UniversalImportActionState> {
   const admin = await requireAdmin();
 
+  // Accept both "codes" (legacy) and "productIds" (universal form)
+  const codes = formTextList(formData, "productIds").length > 0
+    ? formTextList(formData, "productIds")
+    : formTextList(formData, "codes");
+
   const parsed = importSchema.safeParse({
-    codes: formTextList(formData, "codes"),
+    codes,
     publish: formFlag(formData, "publish"),
     locale: formText(formData, "locale"),
   });
@@ -192,7 +198,7 @@ export async function importG2BulkGamesAction(
   const supabase = await createSupabaseServerClient();
 
   try {
-    const summary = await importG2BulkGames(
+    const raw = await importG2BulkGames(
       supabase,
       apiKey,
       parsed.data.codes,
@@ -200,10 +206,38 @@ export async function importG2BulkGamesAction(
       admin.id,
     );
 
-    // Imported games change the storefront, so its cached pages are stale.
+    // Assign per-product categories from the form (category-{code} fields).
+    for (const code of parsed.data.codes) {
+      const categoryId = formText(formData, `category-${code}`);
+      if (!categoryId) continue;
+
+      const { data: mapping } = await supabase
+        .from("provider_game_mappings")
+        .select("game_id")
+        .eq("provider_name", G2BULK_PROVIDER_NAME)
+        .eq("external_game_code", code)
+        .maybeSingle();
+
+      if (mapping?.game_id) {
+        await supabase.from("games").update({ category_id: categoryId }).eq("id", mapping.game_id);
+      }
+    }
+
     revalidatePath("/", "layout");
 
-    return { error: null, summary };
+    return {
+      error: null,
+      summary: {
+        created: raw.created,
+        updated: raw.updated,
+        failed: raw.failed,
+        itemsCreated: raw.offersCreated,
+        itemsUpdated: raw.offersUpdated,
+        errors: raw.outcomes
+          .filter((o) => o.error)
+          .map((o) => ({ name: o.name, error: o.error! })),
+      },
+    };
   } catch (error) {
     return { error: errorKey(error), summary: null };
   } finally {

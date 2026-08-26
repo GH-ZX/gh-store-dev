@@ -45,7 +45,8 @@
     },
     "nav": {
       "overview": "الرئيسية",
-      "games": "الألعاب",
+      "catalog": "الكتالوج",
+      "sync": "المزامنة",
       "offers": "الباقات",
       "orders": "الطلبات",
       "recharges": "طلبات الشحن",
@@ -499,27 +500,29 @@
   "import": {
 
     "eyebrow": "استيراد",
-    "title": "استيراد ألعاب G2Bulk",
-    "description": "اختر الألعاب التي تريد إضافتها. الاستيراد المتكرر يحدّث الأسعار ولا يكرّر الألعاب.",
-    "loadFailed": "تعذر جلب قائمة الألعاب من المورد.",
-    "searchLabel": "ابحث في ألعاب المورد",
-    "searchPlaceholder": "اكتب اسم اللعبة…",
+    "title": "استيراد من G2Bulk",
+    "description": "اختر المنتجات التي تريد إضافتها. الاستيراد المتكرر يحدّث الأسعار ولا يكرّر.",
+    "loadFailed": "تعذر جلب قائمة المنتجات من المورد.",
+    "searchLabel": "ابحث في منتجات المورد",
+    "searchPlaceholder": "اسم المنتج…",
     "selectAll": "تحديد الكل",
     "clearSelection": "إلغاء التحديد",
-    "selectedCount": "{count} لعبة محددة",
-    "availableCount": "{count} لعبة متاحة عند المورد",
+    "selectedCount": "{count} محددة",
+    "availableCount": "{count} متاحة عند المورد",
     "alreadyImported": "مستوردة",
-    "publishLabel": "نشر الألعاب المستوردة فورًا في المتجر",
+    "publishLabel": "نشر المنتجات المستوردة فورًا في المتجر",
     "publishHelp": "أوقف هذا الخيار إذا أردت مراجعة الأسماء والأسعار قبل الظهور للزبائن.",
     "submitAction": "استيراد المحدد",
-    "emptyTitle": "لا توجد ألعاب لدى المورد",
-    "emptyDescription": "لم يُعد المورد أي لعبة. تحقق من حسابك عنده.",
-    "noSelectionError": "اختر لعبة واحدة على الأقل.",
+    "syncing": "جارٍ مزامنة المنتجات…",
+    "emptyTitle": "لا توجد منتجات لدى المورد",
+    "emptyDescription": "لم يُعد المورد أي منتج. تحقق من حسابك عنده.",
+    "noSelectionError": "اختر منتجًا واحدًا على الأقل.",
     "resultTitle": "نتيجة الاستيراد",
-    "resultSummary": "أُضيفت {created} لعبة، وحُدّثت {updated}، وفشلت {failed}.",
+    "resultSummary": "أُضيف {created}، وحُدّث {updated}، وفشل {failed}.",
     "resultOffers": "الباقات: {created} جديدة و{updated} محدّثة.",
     "backToProviders": "عودة إلى الموردين",
-    "viewStore": "عرض الألعاب في المتجر",
+    "backToSync": "عودة إلى المزامنة",
+    "viewStore": "عرض في المتجر",
     "removeAction": "إزالة من المتجر",
     "removeConfirm": "إزالة هذا من المتجر؟ ستُحذف باقاته معه، وتحتفظ الطلبات التي اشترته بسجلّها. يمكن استيراده مرة أخرى.",
     "removing": "جارٍ الإزالة…",
@@ -527,20 +530,52 @@
     "removeMissing": "لم يعد هذا في المتجر — كانت القائمة قديمة.",
     "removeFailed": "تعذّرت الإزالة. لم يتغيّر شيء — يرجى المحاولة مرة أخرى."
   },
+  "sync": {
+    "eyebrow": "مزامنة المنتجات",
+    "title": "مزامنة المنتجات من الموردين",
+    "description": "اسحب أحدث كتالوج من كل مورد متصل. إعادة الاستيراد تحدّث الأسعار والمخزون بدلًا من التكرار.",
+    "loading": "جارٍ تحميل كتالوج المورد…",
+    "syncing": "جارٍ المزامنة…",
+    "configured": "متصل",
+    "notConfigured": "غير متصل",
+    "configureHint": "أضف مفتاح API في صفحة الموردين أولًا.",
+    "noProducts": "لا توجد منتجات متاحة",
+    "importedCount": "{count} مستوردة",
+    "availableCount": "{count} متاحة",
+    "goToImport": "فتح نافذة الاستيراد",
+    "providers": {
+      "g2bulk": {
+        "title": "G2Bulk — ألعاب",
+        "description": "شحن ألعابdigitale وبطاقات هدايا وأكواد تفعيل."
+      },
+      "g2bulkVouchers": {
+        "title": "G2Bulk — فئات الكروت",
+        "description": "كروت مُجمّعة حسب الفئة."
+      },
+      "maxstore": {
+        "title": "MaxStore",
+        "description": "عملات ألعاب، عناصر داخل الألعاب، واشتراكات."
+      },
+      "batstore": {
+        "title": "BatStore",
+        "description": "حسابات، تفعيلات، ومنتجات تسليم مباشر."
+      }
+    }
+  },
   "catalog": {
     "eyebrow": "الكتالوج",
-    "title": "الألعاب والباقات",
+    "title": "المنتجات والباقات",
     "description": "عدّل الأسماء والصور والأسعار وحالة النشر لما استوردته أو أضفته.",
-    "searchLabel": "ابحث في الألعاب",
-    "searchPlaceholder": "اسم اللعبة أو المعرّف…",
-    "countLabel": "{count} لعبة",
+    "searchLabel": "ابحث في المنتجات",
+    "searchPlaceholder": "اسم المنتج أو المعرّف…",
+    "countLabel": "{count} منتج",
     "categoryFilterLabel": "فئة ماكس ستور",
     "allCategories": "كل الفئات",
     "publishedFilter": "المنشورة فقط",
     "allFilter": "الكل",
-    "emptyTitle": "لا توجد ألعاب بعد",
-    "emptyDescription": "استورد ألعابًا من مورد G2Bulk لتظهر هنا.",
-    "goToImport": "استيراد الألعاب",
+    "emptyTitle": "لا توجد منتجات بعد",
+    "emptyDescription": "استورد منتجات من مورد ما لتظهر هنا.",
+    "goToImport": "استيراد منتجات",
     "published": "منشورة",
     "unpublished": "غير منشورة",
     "featured": "مميزة",
@@ -675,6 +710,25 @@
       "removeConfirmAction": "نعم، أزلها",
       "cancelAction": "إلغاء",
       "removed": "أُزيلت الباقة."
+    },
+    "stock": {
+      "sectionTitle": "المخزون",
+      "sectionDescription": "إدارة المخزون للمنتجات المخزنة. أضف أكواد أو روابط أو بيانات حسابات تُسلّم للعملاء عند الشراء.",
+      "title": "المخزون — {name}",
+      "description": "أضف عناصر واحدًا تلو الآخر أو الصق أسطر متعددة للاستيراد الجماعي. كل عنصر يُسلّم مرة واحدة لعميل واحد.",
+      "availableCount": "{count} عناصر متاحة",
+      "singleLabel": "عنصر المخزون (كود أو رابط أو بيانات اعتماد)",
+      "singlePlaceholder": "مثال: ABCD-1234-EFGH-5678",
+      "addSingle": "إضافة",
+      "bulkLabel": "لصق جماعي (عنصر واحد في كل سطر)",
+      "bulkPlaceholder": "CODE-1\nCODE-2\nCODE-3",
+      "addBulk": "إضافة الكل",
+      "stockList": "العناصر المتاحة",
+      "deleteItem": "إزالة",
+      "added": "أُضيف عنصر المخزون.",
+      "bulkAdded": "أُضيفت {count} عناصر مخزون.",
+      "deleted": "أُزيل عنصر المخزون.",
+      "error": "حدث خطأ. حاول مرة أخرى."
     }
   },
   "website": {
@@ -952,6 +1006,7 @@
     "filterLabel": "الحالة",
     "filterAll": "الكل",
     "filterAttention": "بحاجة إلى متابعة",
+    "filterManual": "شحن يدوي",
     "countLabel": "{count} طلب",
     "emptyTitle": "لا توجد طلبات",
     "emptyDescription": "تظهر الطلبات هنا فور إتمام أول عملية شراء.",
@@ -1314,6 +1369,7 @@
     "errorNotFound": "لم يعد هذا العنصر موجودًا. أعد تحميل الصفحة.",
     "errorInvalid": "راجع الحقول ثم أعد المحاولة.",
     "errorUnknown": "تعذّر الحفظ. أعد المحاولة.",
-    "loading": "جارٍ التحميل…"
+    "loading": "جارٍ التحميل…",
+    "addProduct": "إضافة منتج"
   }
 }

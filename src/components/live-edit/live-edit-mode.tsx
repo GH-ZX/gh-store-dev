@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { PlusIcon } from "@/components/ui/icons";
 import type { AdminMessages } from "@/i18n/messages";
+import type { Locale } from "@/i18n/config";
 
 /**
  * Whether the owner is editing the page they are looking at.
@@ -24,10 +27,11 @@ export function useLiveEdit(): boolean {
 
 export type LiveEditModeProps = {
   messages: AdminMessages["liveEdit"];
+  locale: Locale;
   children: ReactNode;
 };
 
-export function LiveEditMode({ messages, children }: LiveEditModeProps) {
+export function LiveEditMode({ messages, locale, children }: LiveEditModeProps) {
   const [editing, setEditing] = useState(false);
 
   return (
@@ -42,6 +46,16 @@ export function LiveEditMode({ messages, children }: LiveEditModeProps) {
         */}
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 sm:bottom-6">
         <div className="pointer-events-auto flex items-center gap-3 rounded-[var(--radius-pill)] border border-[var(--line-strong)] bg-[color-mix(in_srgb,var(--shell)_92%,transparent)] py-2 ps-4 pe-2 shadow-[var(--elevation-3)] backdrop-blur-xl">
+          {editing ? (
+            <Link
+              href={`/${locale}/dashboard/catalog`}
+              className="pointer-events-auto grid size-9 shrink-0 place-items-center rounded-full border border-[var(--accent)] bg-[color-mix(in_srgb,var(--shell)_88%,transparent)] text-[var(--accent)] backdrop-blur-md transition-colors duration-[var(--duration)] hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+              aria-label={messages.addProduct}
+              title={messages.addProduct}
+            >
+              <PlusIcon className="size-4" />
+            </Link>
+          ) : null}
           <p className="hidden text-xs text-[var(--ink-faint)] sm:block">{messages.toggleHint}</p>
           <Button
             type="button"

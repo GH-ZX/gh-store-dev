@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@/lib/auth/guards";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
   createAdminGame,
@@ -451,5 +452,83 @@ export async function searchIgdbArtworkAction(
     // The provider panels name the exact failure; the picker only needs to say
     // that looking failed and why the owner might care (credentials first).
     return { ...INITIAL_IGDB_SEARCH_STATE, query, error: "search_failed" };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Stock management for stored products                              */
+/* ------------------------------------------------------------------ */
+
+import {
+  addStockItem,
+  bulkAddStockItems,
+  deleteStockItem,
+  listStockItems,
+} from "@/lib/services/stock.service";
+
+type StockActionResult =
+  | { error: string }
+  | { item: { id: string; content: string; createdAt: string } }
+  | { count: number }
+  | { success: boolean };
+
+export async function addStockItemAction(
+  gameId: string,
+  offerId: string,
+  content: string,
+): Promise<StockActionResult> {
+  await requireAdmin();
+
+  try {
+    const item = await addStockItem(
+      createSupabaseServiceClient(),
+      offerId,
+      content,
+    );
+    revalidatePath(`/${gameId}`, "page");
+    return {
+      item: { id: item.id, content: item.content, createdAt: item.createdAt },
+    };
+  } catch {
+    return { error: "Failed to add stock item" };
+  }
+}
+
+export async function bulkAddStockItemsAction(
+  gameId: string,
+  offerId: string,
+  contents: string[],
+): Promise<StockActionResult> {
+  await requireAdmin();
+
+  try {
+    const count = await bulkAddStockItems(
+      createSupabaseServiceClient(),
+      offerId,
+      contents,
+    );
+    revalidatePath(`/${gameId}`, "page");
+    return { count };
+  } catch {
+    return { error: "Failed to bulk add stock items" };
+  }
+}
+
+export async function deleteStockItemAction(
+  gameId: string,
+  offerId: string,
+  stockItemId: string,
+): Promise<StockActionResult> {
+  await requireAdmin();
+
+  try {
+    const success = await deleteStockItem(
+      createSupabaseServiceClient(),
+      stockItemId,
+    );
+    revalidatePath(`/${gameId}`, "page");
+    return { success };
+  } catch {
+    return { error: "Failed to delete stock item" };
   }
 }

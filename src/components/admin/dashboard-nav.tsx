@@ -16,6 +16,7 @@ import {
   SparkIcon,
   StarIcon,
   SupportIcon,
+  SyncIcon,
   UserIcon,
   WalletIcon,
 } from "@/components/ui/icons";
@@ -29,7 +30,8 @@ type IconType = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
 const PAGE_ICONS: Record<string, IconType> = {
   overview: GridIcon,
-  games: GamepadIcon,
+  catalog: GamepadIcon,
+  sync: SyncIcon,
   website: GlobeIcon,
   appearance: SparkIcon,
   reviews: StarIcon,

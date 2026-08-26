@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { G2BulkImportForm, type ImportableGame } from "@/components/admin/g2bulk-import-form";
+import { UniversalImportForm } from "@/components/admin/universal-import-form";
 import { EmptyState, ErrorState } from "@/components/shared/states";
 import { ChevronIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
@@ -8,22 +8,19 @@ import { getMessages } from "@/i18n/messages";
 import { requireAdmin } from "@/lib/auth/guards";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getG2BulkCredentials } from "@/lib/services/admin-settings.service";
+import { listAdminCategories } from "@/lib/services/admin-catalog.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { G2BulkClient } from "@/providers/g2bulk/client";
 import { G2BulkError } from "@/providers/g2bulk/errors";
-import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
+import { G2BULK_PROVIDER_NAME, resolveProviderImageUrl } from "@/providers/g2bulk/mapping";
+import type { ImportLane } from "@/lib/import/types";
+import { INITIAL_UNIVERSAL_IMPORT_STATE } from "@/app/[locale]/dashboard/providers/import/action-state";
+import { importG2BulkGamesAction } from "@/app/[locale]/dashboard/providers/actions";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
-/**
- * Provider game list, annotated with what the store already carries.
- *
- * Fetched on the server so the API key never leaves it. A provider failure is
- * rendered as an error panel rather than thrown: the admin needs to read which
- * failure it was, especially a rejected key.
- */
 async function loadGames(): Promise<
-  { ok: true; games: ImportableGame[] } | { ok: false; errorKind: string }
+  { ok: true; lanes: ImportLane[]; categories: NonNullable<Awaited<ReturnType<typeof listAdminCategories>>> } | { ok: false; errorKind: string }
 > {
   const { apiKey } = await getG2BulkCredentials();
 
@@ -34,25 +31,41 @@ async function loadGames(): Promise<
   const supabase = await createSupabaseServerClient();
 
   try {
-    const [providerGames, mappings] = await Promise.all([
+    const [providerGames, mappings, categories] = await Promise.all([
       new G2BulkClient({ apiKey }).listGames(),
       supabase
         .from("provider_game_mappings")
         .select("external_game_code")
         .eq("provider_name", G2BULK_PROVIDER_NAME),
+      listAdminCategories(),
     ]);
 
     const imported = new Set((mappings.data ?? []).map((row) => row.external_game_code));
 
+    const items = providerGames
+      .map((game) => ({
+        id: game.code,
+        name: game.name,
+        imageUrl: resolveProviderImageUrl(game.image_url),
+        available: true,
+        alreadyImported: imported.has(game.code),
+        providerCode: game.code,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
     return {
       ok: true,
-      games: providerGames
-        .map((game) => ({
-          code: game.code,
-          name: game.name,
-          alreadyImported: imported.has(game.code),
-        }))
-        .sort((first, second) => first.name.localeCompare(second.name)),
+      categories,
+      lanes: [
+        {
+          id: "all",
+          name: "All games",
+          hasStock: true,
+          alreadyImported: false,
+          providerCode: "g2bulk",
+          items,
+        },
+      ],
     };
   } catch (error) {
     return { ok: false, errorKind: error instanceof G2BulkError ? error.kind : "unknown" };
@@ -100,17 +113,22 @@ export default async function G2BulkImportPage({
             label: messages.import.backToProviders,
           }}
         />
-      ) : result.games.length === 0 ? (
+      ) : result.lanes.length === 0 ? (
         <EmptyState
           title={messages.import.emptyTitle}
           description={messages.import.emptyDescription}
         />
       ) : (
-        <G2BulkImportForm
+        <UniversalImportForm
           locale={locale}
           messages={messages.import}
           providerErrors={providerErrors}
-          games={result.games}
+          lanes={result.lanes}
+          categories={result.categories}
+          formAction={importG2BulkGamesAction}
+          initialState={INITIAL_UNIVERSAL_IMPORT_STATE}
+          backHref={`/${locale}/dashboard/providers`}
+          viewStoreHref={`/${locale}/games`}
         />
       )}
     </div>

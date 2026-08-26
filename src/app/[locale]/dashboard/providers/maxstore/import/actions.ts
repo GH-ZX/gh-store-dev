@@ -9,17 +9,9 @@ import { getMaxStoreCredentials } from "@/lib/services/admin-settings.service";
 import { importMaxStoreCategories } from "@/lib/services/maxstore-import.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { MaxStoreError } from "@/providers/maxstore/errors";
-import type { MaxStoreImportActionState } from "@/app/[locale]/dashboard/providers/maxstore/import/action-state";
+import { MAXSTORE_PROVIDER_NAME } from "@/providers/maxstore/mapping";
+import type { UniversalImportActionState } from "@/app/[locale]/dashboard/providers/import/action-state";
 
-/**
- * MaxStore catalogue import.
- *
- * Its own module beside the screen it serves, matching the voucher lane. The
- * markup comes from the saved MaxStore settings rather than the form: pricing is
- * a decision made once on the provider panel, and an import that could quietly
- * carry a different one would make two places disagree about what the store
- * charges.
- */
 const importSchema = z.object({
   categoryIds: z.array(z.string().trim().min(1).max(120)).max(200),
   productIds: z.array(z.string().trim().min(1).max(120)).min(1).max(2000),
@@ -32,9 +24,9 @@ function resolveLocale(value: string | undefined): Locale {
 }
 
 export async function importMaxStoreAction(
-  _state: MaxStoreImportActionState,
+  _state: UniversalImportActionState,
   formData: FormData,
-): Promise<MaxStoreImportActionState> {
+): Promise<UniversalImportActionState> {
   const admin = await requireAdmin();
 
   const parsed = importSchema.safeParse({
@@ -58,7 +50,7 @@ export async function importMaxStoreAction(
   const supabase = await createSupabaseServerClient();
 
   try {
-    const summary = await importMaxStoreCategories(
+    const raw = await importMaxStoreCategories(
       supabase,
       apiToken,
       parsed.data.categoryIds,
@@ -67,10 +59,46 @@ export async function importMaxStoreAction(
       parsed.data.productIds,
     );
 
-    // Imported products change the storefront, so its cached pages are stale.
+    // Assign per-product categories from the form (category-{productId} fields).
+    for (const productId of parsed.data.productIds) {
+      const formCategoryId = formText(formData, `category-${productId}`);
+      if (!formCategoryId) continue;
+
+      const { data: mapping } = await supabase
+        .from("provider_offer_mappings")
+        .select("offer_id")
+        .eq("provider_name", MAXSTORE_PROVIDER_NAME)
+        .eq("external_product_id", productId)
+        .maybeSingle();
+
+      if (mapping?.offer_id) {
+        const { data: offer } = await supabase
+          .from("offers")
+          .select("game_id")
+          .eq("id", mapping.offer_id)
+          .maybeSingle();
+
+        if (offer?.game_id) {
+          await supabase.from("games").update({ category_id: formCategoryId }).eq("id", offer.game_id);
+        }
+      }
+    }
+
     revalidatePath("/", "layout");
 
-    return { error: null, summary };
+    return {
+      error: null,
+      summary: {
+        created: raw.created,
+        updated: raw.updated,
+        failed: raw.failed,
+        itemsCreated: raw.offersCreated,
+        itemsUpdated: raw.offersUpdated,
+        errors: raw.outcomes
+          .filter((o) => o.error)
+          .map((o) => ({ name: o.name, error: o.error! })),
+      },
+    };
   } catch (error) {
     return {
       error: error instanceof MaxStoreError ? error.kind : "unknown",

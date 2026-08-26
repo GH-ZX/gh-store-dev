@@ -6,12 +6,15 @@ import { GameEditForm } from "@/components/admin/game-edit-form";
 import { OfferManageForm } from "@/components/admin/offer-manage-form";
 import { OfferRowsForm } from "@/components/admin/offer-rows-form";
 import { ProviderLinkForm } from "@/components/admin/provider-link-form";
+import { StockManager } from "@/components/admin/stock-manager";
 import { Badge } from "@/components/ui/badge";
 import { ChevronIcon, LinkIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getAdminGame, listAdminCategories } from "@/lib/services/admin-catalog.service";
+import { getStockSummaries, listStockItems } from "@/lib/services/stock.service";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -36,6 +39,29 @@ export default async function CatalogGamePage({
   }
 
   const { game, offers } = detail;
+
+  // Load stock for stored offers
+  const supabase = createSupabaseServiceClient();
+  const storedOffers = offers.filter((o) => o.deliveryKind === "stored");
+  const stockSummaries = storedOffers.length > 0
+    ? await getStockSummaries(
+        supabase,
+        storedOffers.map((o) => o.id),
+      )
+    : new Map();
+
+  const stockItemLists = new Map<string, { id: string; content: string; createdAt: string }[]>();
+  for (const offer of storedOffers) {
+    const items = await listStockItems(supabase, offer.id);
+    stockItemLists.set(
+      offer.id,
+      items.map((i) => ({
+        id: i.id,
+        content: i.content,
+        createdAt: i.createdAt,
+      })),
+    );
+  }
 
   return (
     <div className="grid gap-8">
@@ -144,6 +170,25 @@ export default async function CatalogGamePage({
           offerTypeLabels={getMessages(locale, "catalog").offerTypes}
         />
       </AdminCard>
+
+      {storedOffers.length > 0 && (
+        <div className="grid gap-6">
+          <SectionHeader as="h2" title={messages.stock.sectionTitle} subtitle={messages.stock.sectionDescription} />
+          {storedOffers.map((offer) => (
+            <StockManager
+              key={offer.id}
+              locale={locale}
+              messages={messages.stock}
+              gameId={game.id}
+              offerId={offer.id}
+              offerName={offer.nameEn}
+              deliveryKind={offer.deliveryKind}
+              stockItems={stockItemLists.get(offer.id) ?? []}
+              availableCount={stockSummaries.get(offer.id)?.available ?? 0}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

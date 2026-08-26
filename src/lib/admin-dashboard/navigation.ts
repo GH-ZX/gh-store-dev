@@ -37,7 +37,8 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   {
     key: "storefront",
     items: [
-      { key: "games", href: "/catalog" },
+      { key: "catalog", href: "/catalog" },
+      { key: "sync", href: "/sync" },
       { key: "website", href: "/website" },
       { key: "appearance", href: "/appearance" },
       { key: "reviews", href: "/reviews" },

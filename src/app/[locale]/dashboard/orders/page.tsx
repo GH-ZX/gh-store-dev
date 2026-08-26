@@ -11,6 +11,7 @@ import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import {
   ADMIN_ORDER_STATUSES,
   ATTENTION_FILTER,
+  MANUAL_FILTER,
   getOrders,
 } from "@/lib/services/admin-orders.service";
 import { getLastReconcileRun } from "@/lib/services/reconciliation.service";
@@ -67,6 +68,7 @@ export default async function OrdersPage({
           >
             <option value="">{messages.filterAll}</option>
             <option value={ATTENTION_FILTER}>{messages.filterAttention}</option>
+            <option value={MANUAL_FILTER}>{messages.filterManual}</option>
             {ADMIN_ORDER_STATUSES.map((value) => (
               <option key={value} value={value}>
                 {checkout.statuses[value]}

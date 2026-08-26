@@ -27,6 +27,7 @@ import { classifyOrderStatus as classifyBatStoreOrder } from "@/providers/batsto
 import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 import { readRefundOnFulfillmentFailure } from "@/lib/settings/fulfillment-settings";
+import { claimStockItem } from "@/lib/services/stock.service";
 import type { Json } from "@/types/database";
 import { log, logFailure } from "@/lib/logging/logger";
 
@@ -212,7 +213,7 @@ type FulfillmentContext = {
    * accounts or activation links. `account` goods land on an identifier the
    * buyer supplied at checkout.
    */
-  deliveryKind: "account" | "direct";
+  deliveryKind: "account" | "direct" | "manual" | "stored";
 };
 
 /**
@@ -255,7 +256,7 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
   let catalogueName: string | null = null;
   let externalProductId: string | null = null;
   let providerName: string | null = null;
-  let deliveryKind: "account" | "direct" = "account";
+  let deliveryKind: "account" | "direct" | "manual" | "stored" = "account";
 
   if (item.offer_id) {
     /*
@@ -279,7 +280,12 @@ async function loadContext(orderId: string): Promise<FulfillmentContext | null> 
       .eq("id", item.offer_id)
       .maybeSingle();
 
-    deliveryKind = offer?.delivery_kind === "direct" ? "direct" : "account";
+    deliveryKind =
+      offer?.delivery_kind === "direct" ||
+      offer?.delivery_kind === "manual" ||
+      offer?.delivery_kind === "stored"
+        ? offer.delivery_kind
+        : "account";
 
     if (offer?.game_id) {
       const { data: gameMapping } = await supabase
@@ -764,6 +770,63 @@ async function fulfillVoucher(
 
 
 /**
+ * Fulfill a stored-product order by claiming one item from inventory.
+ *
+ * The claim is atomic (via the claim_stock_item RPC with SKIP LOCKED) so two
+ * concurrent orders cannot receive the same item.
+ */
+async function fulfillStored(
+  context: FulfillmentContext,
+): Promise<FulfillmentOutcome> {
+  const supabase = createSupabaseServiceClient();
+  const attempt = await openAttempt(
+    context,
+    { product_id: context.externalProductId, qty: context.quantity },
+    "stored",
+  );
+
+  if (!attempt) {
+    return { state: "skipped", reason: "Could not open a fulfilment attempt." };
+  }
+
+  if (attempt.status === "completed") {
+    return { state: "completed", deliveredItems: [] };
+  }
+
+  if (attempt.status === "refunded") {
+    return { state: "failed", reason: "Previously refunded.", refunded: true };
+  }
+
+  if (!context.offerId) {
+    return { state: "failed", reason: "No offer ID for stock lookup.", refunded: false };
+  }
+
+  const deliveredItems: string[] = [];
+
+  try {
+    for (let i = 0; i < context.quantity; i++) {
+      const content = await claimStockItem(supabase, context.offerId, context.orderId);
+      deliveredItems.push(content);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { state: "failed", reason: `Stock claim failed: ${message}`, refunded: false };
+  }
+
+  // Store delivered content on the attempt for the customer to read.
+  await supabase
+    .from("fulfillment_attempts")
+    .update({
+      status: "completed",
+      delivered_payload: { codes: deliveredItems } satisfies Record<string, unknown>,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", attempt.id);
+
+  return { state: "completed", deliveredItems };
+}
+
+/**
  * Buy through MaxStore.
  *
  * The supplier holds the idempotency rather than the store: `order_uuid` is the
@@ -1068,6 +1131,18 @@ export async function fulfillOrder(orderId: string): Promise<FulfillmentOutcome>
 
   if (!context) {
     return { state: "skipped", reason: "Order not found." };
+  }
+
+  // Manual: admin handles externally — skip automated fulfillment.
+  if (context.deliveryKind === "manual") {
+    return { state: "skipped", reason: "Manual order — awaiting admin completion." };
+  }
+
+  // Stored: claim one item from stock inventory.
+  if (context.deliveryKind === "stored") {
+    const outcome = await fulfillStored(context);
+    await announceOutcome(context, outcome);
+    return outcome;
   }
 
   if (context.providerName === MAXSTORE_PROVIDER_NAME) {

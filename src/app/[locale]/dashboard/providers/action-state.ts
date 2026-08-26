@@ -1,5 +1,3 @@
-import type { ImportSummary } from "@/providers/g2bulk/import-types";
-
 /**
  * Provider form state.
  *
@@ -20,10 +18,3 @@ export const INITIAL_PROVIDER_STATE: ProviderActionState = {
   notice: null,
   account: null,
 };
-
-export type ImportActionState = {
-  error: string | null;
-  summary: ImportSummary | null;
-};
-
-export const INITIAL_IMPORT_STATE: ImportActionState = { error: null, summary: null };

@@ -9,18 +9,8 @@ import { getBatStoreCredentials } from "@/lib/services/admin-settings.service";
 import { importBatStoreProducts } from "@/lib/services/batstore-import.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BatStoreError } from "@/providers/batstore/errors";
-import type { BatStoreImportActionState } from "@/app/[locale]/dashboard/providers/batstore/import/action-state";
+import type { UniversalImportActionState } from "@/app/[locale]/dashboard/providers/import/action-state";
 
-/**
- * BatStore catalogue import.
- *
- * Its own module beside the screen it serves, matching the other supplier
- * lanes. Each selected product becomes its own container with one offer, and the
- * store category it lands in is chosen per row on the picker. The markup comes
- * from the saved BatStore settings rather than the form: pricing is a decision
- * made once on the provider panel, and an import that could quietly carry a
- * different one would make two places disagree about what the store charges.
- */
 const importSchema = z.object({
   productIds: z.array(z.string().trim().min(1).max(120)).min(1).max(500),
   publish: z.boolean(),
@@ -32,9 +22,9 @@ function resolveLocale(value: string | undefined): Locale {
 }
 
 export async function importBatStoreAction(
-  _state: BatStoreImportActionState,
+  _state: UniversalImportActionState,
   formData: FormData,
-): Promise<BatStoreImportActionState> {
+): Promise<UniversalImportActionState> {
   const admin = await requireAdmin();
 
   const parsed = importSchema.safeParse({
@@ -66,7 +56,7 @@ export async function importBatStoreAction(
   });
 
   try {
-    const summary = await importBatStoreProducts(
+    const raw = await importBatStoreProducts(
       supabase,
       apiToken,
       selections,
@@ -74,10 +64,21 @@ export async function importBatStoreAction(
       admin.id,
     );
 
-    // Imported products change the storefront, so its cached pages are stale.
     revalidatePath("/", "layout");
 
-    return { error: null, summary };
+    return {
+      error: null,
+      summary: {
+        created: raw.created,
+        updated: raw.updated,
+        failed: raw.failed,
+        itemsCreated: 0,
+        itemsUpdated: 0,
+        errors: raw.outcomes
+          .filter((o) => o.error)
+          .map((o) => ({ name: o.name, error: o.error! })),
+      },
+    };
   } catch (error) {
     return {
       error: error instanceof BatStoreError ? error.kind : "unknown",
