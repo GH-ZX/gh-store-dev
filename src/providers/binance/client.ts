@@ -70,6 +70,14 @@ export type BinanceOrderState = {
   status: string;
   /** Binance's own trade number, when it has one. */
   transactionId: string | null;
+  /**
+   * What Binance says was paid, in the order's billing currency.
+   *
+   * This is the only figure a settlement may be credited against. The store's
+   * own `charge_amount` is what was billed, and passing it back as "paid" would
+   * make the short-payment check compare a value with itself.
+   */
+  amount: number | null;
 };
 
 export class BinanceClient {
@@ -209,6 +217,13 @@ export class BinanceClient {
     return {
       status: typeof data.status === "string" ? data.status : "UNKNOWN",
       transactionId: typeof data.transactionId === "string" ? data.transactionId : null,
+      // Binance serialises amounts as strings.
+      amount:
+        typeof data.amount === "number"
+          ? data.amount
+          : typeof data.amount === "string" && data.amount.trim() !== "" && Number.isFinite(Number(data.amount))
+            ? Number(data.amount)
+            : null,
     };
   }
 }

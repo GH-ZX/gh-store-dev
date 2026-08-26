@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/config";
 import type { RechargeMessages } from "@/i18n/messages";
@@ -13,15 +14,14 @@ import { startBinanceTopUpAction } from "@/app/[locale]/recharge/actions";
 /**
  * Pay with crypto.
  *
- * The invoice is opened on the server and the customer is then sent to Binance's
- * own checkout. The hand-off happens here rather than as a server redirect so a
- * failure to create the invoice is still readable on the store's own page —
- * a redirect that never happens is indistinguishable from a slow one.
+ * The invoice is opened on the server and the customer is sent to this store's
+ * own payment screen for it — which links on to Binance and watches the outcome
+ * — rather than straight into Binance's checkout. A customer dropped directly at
+ * a third-party page had nowhere to come back to but their wallet, where a
+ * payment still being confirmed looks identical to one that failed.
  *
  * `window.location.assign` rather than a link, because the destination is not
- * known until the action answers. Under a blocked navigation the URL is still
- * rendered as a link below, so the customer is never stranded holding an invoice
- * they cannot reach.
+ * known until the action answers.
  */
 export type BinanceTopUpFormProps = {
   locale: Locale;
@@ -42,12 +42,13 @@ export function BinanceTopUpForm({
     startBinanceTopUpAction,
     INITIAL_BINANCE_STATE,
   );
+  const router = useRouter();
 
   useEffect(() => {
-    if (state.checkoutUrl) {
-      window.location.assign(state.checkoutUrl);
+    if (state.invoiceId) {
+      router.push(`/${locale}/recharge/pay/${encodeURIComponent(state.invoiceId)}`);
     }
-  }, [state.checkoutUrl]);
+  }, [state.invoiceId, locale, router]);
 
   const error = state.error
     ? (messages.binance.errors[state.error as keyof typeof messages.binance.errors] ??
@@ -91,6 +92,8 @@ export function BinanceTopUpForm({
           {messages.binance.redirecting}{" "}
           <a
             href={state.checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="font-semibold text-[var(--accent)] underline underline-offset-4"
           >
             {messages.binance.openCheckout}

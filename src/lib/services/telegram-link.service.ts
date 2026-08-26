@@ -41,11 +41,20 @@ export async function getMyTelegramLink(): Promise<TelegramLinkStatus> {
 }
 
 /**
+ * How long a link code lives.
+ *
+ * Five minutes, not ten: the code is shown to whoever is signed in and typed
+ * straight into a chat beside them, so anything past a few minutes only
+ * widens the window a leaked screenshot is dangerous in.
+ */
+const CODE_TTL_MS = 5 * 60 * 1000;
+
+/**
  * Mint a fresh link code for the signed-in account.
  *
- * Codes are short-lived (10 minutes) and one-use. Re-running the action retires
- * the previous pending code for this account by marking it used, so an old code
- * someone copied from a shared screen cannot be raced against a new one.
+ * Codes are short-lived ({@link CODE_TTL_MS}) and one-use. Re-running the action
+ * retires the previous pending code for this account by marking it used, so an
+ * old code someone copied from a shared screen cannot be raced against a new one.
  */
 export async function mintTelegramLinkCode(): Promise<{ code: string; expiresAt: string }> {
   const user = await requireAuth();
@@ -59,7 +68,7 @@ export async function mintTelegramLinkCode(): Promise<{ code: string; expiresAt:
     .is("used_at", null);
 
   const code = generateLinkCode();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + CODE_TTL_MS);
 
   const { error } = await supabase.from("telegram_link_codes").insert({
     user_id: user.id,
@@ -94,7 +103,7 @@ export async function mintTelegramConnectCode(): Promise<{ code: string; expires
     .is("used_at", null);
 
   const code = generateConnectCode();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + CODE_TTL_MS);
 
   const { error } = await supabase.from("telegram_link_codes").insert({
     user_id: user.id,
@@ -123,13 +132,37 @@ export async function unlinkMyTelegram(): Promise<void> {
   }
 }
 
+/**
+ * A uniform draw from `[0, bound)` using the platform CSPRNG.
+ *
+ * The pseudorandom generator this replaced was predictable enough that a
+ * six-character code was worth guessing, so the source matters as much as the
+ * length. Rejection sampling removes the modulo bias a bare remainder would
+ * introduce — with a biased draw the first characters of the alphabet come up
+ * measurably more often, exactly the lean an exhaustive guesser feeds on.
+ */
+function randomIndex(bound: number): number {
+  const range = 0x1_0000_0000;
+  const limit = range - (range % bound);
+  const buffer = new Uint32Array(1);
+
+  let value = 0;
+
+  do {
+    crypto.getRandomValues(buffer);
+    value = buffer[0];
+  } while (value >= limit);
+
+  return value % bound;
+}
+
 /** A code like `GS-1F4K2X`: unambiguous letters and digits, no 0/O/1/I. */
 function generateLinkCode(): string {
   const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   const chars: string[] = [];
 
   for (let index = 0; index < 6; index += 1) {
-    chars.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
+    chars.push(alphabet[randomIndex(alphabet.length)]);
   }
 
   return `GS-${chars.join("")}`;
@@ -137,5 +170,5 @@ function generateLinkCode(): string {
 
 /** A 6-digit code like `483920`, zero-padded, for the connect page. */
 function generateConnectCode(): string {
-  return String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
+  return String(randomIndex(1_000_000)).padStart(6, "0");
 }

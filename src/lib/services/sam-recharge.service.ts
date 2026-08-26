@@ -1,7 +1,7 @@
 import "server-only";
 
 import { requireAuth } from "@/lib/auth/guards";
-import { logOutcome } from "@/lib/logging/logger";
+import { log, logOutcome } from "@/lib/logging/logger";
 import { notify } from "@/lib/services/notification.service";
 import {
   readSamCredentials,
@@ -80,6 +80,35 @@ export type SettleResult =
   | { ok: true; status: "awaiting_review" }
   | { ok: true; status: "pending" }
   | { ok: false; reason: "expired" | "not_found" | "not_paid" | "short_payment" | "provider_unavailable" | "unknown"; message?: string | null };
+
+/** What Sam reported about one invoice, in whatever figures it chose to give. */
+export type SamReportedAmounts = {
+  /** What Sam says actually arrived. Often absent. */
+  paidAmount: number | null;
+  /** What Sam invoiced. Present when Sam answered at all. */
+  amount: number | null;
+};
+
+/**
+ * The figure a settlement may be credited on, or `null` when there isn't one.
+ *
+ * Only provider-reported numbers count here. An explicit paid figure is best
+ * evidence; Sam's own invoiced amount is second-best — what the transfer was
+ * quoted as. When Sam supplies neither, the answer is a person, never our own
+ * expectation of the invoice: crediting the stored figure because the store
+ * believes it is how an underpayment becomes a full wallet.
+ */
+export function resolveSamPaidAmount(reported: SamReportedAmounts): number | null {
+  const candidates = [reported.paidAmount, reported.amount];
+
+  for (const candidate of candidates) {
+    if (candidate !== null && Number.isFinite(candidate) && candidate > 0) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
 
 /** Presentation-safe options, via the RPC that cannot see the API key. */
 export async function getSamPaymentOptions(): Promise<SamPaymentOptions> {
@@ -335,6 +364,17 @@ async function attemptSamTopUp(input: { amount: number; method: SamMethod }): Pr
       .single();
 
     if (insertError || !row) {
+      /*
+       * The invoice exists at Sam but this store has no record of it, so no poll
+       * or callback will ever match one to the other. Nothing can settle it
+       * automatically — say so loudly rather than returning a silent unknown.
+       */
+      log.warn("recharge", "sam_invoice_record_lost", {
+        samInvoiceId: invoice.invoiceId,
+        requestId: request.request_id,
+        error: insertError?.message ?? "insert returned no row",
+      });
+
       return { ok: false, reason: "unknown" };
     }
 
@@ -567,6 +607,39 @@ export async function failSamInvoice(
 }
 
 /**
+ * Park a payment the store cannot size on its own.
+ *
+ * Sam said paid but reported no figure at all — neither what arrived nor what
+ * was invoiced. Crediting is off the table, and so is closing the invoice: the
+ * money may genuinely be there. `mark_sam_invoice_paid` records the payment as
+ * evidence, moves the request into the owner's review queue, and answers
+ * `awaiting_review` to whoever asked.
+ */
+async function holdSamInvoiceForReview(samInvoiceId: string, payload?: Json): Promise<SettleResult> {
+  if (!hasServiceRoleKey()) {
+    return { ok: false, reason: "unknown" };
+  }
+
+  const service = createSupabaseServiceClient();
+  const { error } = await service.rpc("mark_sam_invoice_paid", {
+    p_sam_invoice_id: samInvoiceId,
+    p_payload: payload ?? undefined,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      reason: error.message.includes("not found") ? "not_found" : "unknown",
+      message: error.message,
+    };
+  }
+
+  log.info("recharge", "sam_payment_held_for_review", { samInvoiceId });
+
+  return { ok: true, status: "awaiting_review" };
+}
+
+/**
  * Ask Sam about an invoice and apply whatever it says.
  *
  * This is the path the payment screen polls. Fetching the invoice is also what
@@ -613,9 +686,23 @@ export async function syncSamInvoice(samInvoiceId: string): Promise<SettleResult
     const invoice = await client.getInvoice(samInvoiceId);
 
     if (invoice.status === "paid") {
+      const paidAmount = resolveSamPaidAmount({
+        paidAmount: invoice.paidAmount,
+        amount: invoice.amount,
+      });
+
+      if (paidAmount === null) {
+        /*
+         * Sam confirmed the transfer and named no figure. The stored amount is
+         * our expectation, not evidence, so nothing is credited from it — the
+         * payment waits for a person instead.
+         */
+        return await holdSamInvoiceForReview(samInvoiceId, { source: "poll", status: invoice.status } as Json);
+      }
+
       return await settleSamInvoice({
         samInvoiceId,
-        paidAmount: invoice.paidAmount ?? invoice.amount,
+        paidAmount,
         chargeCurrency: invoice.currency,
         payload: { source: "poll", status: invoice.status, paidAt: invoice.paidAt } as Json,
       });
@@ -687,21 +774,29 @@ export async function verifySamPayment(input: {
     }
 
     /*
-     * Sam's verify response often carries no amount. Rather than fall back to the
-     * invoiced figure — which would mean crediting on the strength of our own
-     * expectation — read the invoice back and use what Sam reports. The database
-     * refuses to credit without an amount at all.
+     * Sam's verify response often carries no amount. Read the invoice back so a
+     * settlement can still ride on what Sam itself reports — an explicit paid
+     * figure first, Sam's invoiced figure second. When neither exists there is
+     * nothing to credit against: the payment is held for review rather than
+     * settled on the strength of this store's own paperwork.
      */
-    let paidAmount = result.paidAmount;
+    const invoice = await client.getInvoice(input.samInvoiceId);
+    const paidAmount = resolveSamPaidAmount({
+      paidAmount: result.paidAmount ?? invoice.paidAmount,
+      amount: invoice.amount,
+    });
 
     if (paidAmount === null) {
-      const invoice = await client.getInvoice(input.samInvoiceId);
-      paidAmount = invoice.paidAmount ?? invoice.amount;
+      return await holdSamInvoiceForReview(
+        input.samInvoiceId,
+        { source: "verify", message: result.message } as Json,
+      );
     }
 
     return await settleSamInvoice({
       samInvoiceId: input.samInvoiceId,
       paidAmount,
+      chargeCurrency: invoice.currency,
       transactionRef: input.transactionRef.trim(),
       payload: { source: "verify", message: result.message } as Json,
     });

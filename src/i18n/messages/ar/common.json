@@ -85,6 +85,9 @@
     "adminBadge": "مدير",
     "dashboard": "لوحة الإدارة",
     "walletLabel": "الرصيد",
+    "wallets": "المحافظ",
+    "openWallet": "فتح المحفظة",
+    "openCustomers": "كل محافظ العملاء",
     "accountMenuLabel": "قائمة الحساب",
     "signOut": "تسجيل الخروج"
   }

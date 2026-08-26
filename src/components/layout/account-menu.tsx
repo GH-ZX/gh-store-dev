@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DropdownAutoClose } from "@/components/layout/dropdown-auto-close";
+import { WalletPanel } from "@/components/layout/wallet-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { BellIcon, UserIcon, WalletIcon } from "@/components/ui/icons";
@@ -9,6 +10,7 @@ import { signOutAction } from "@/lib/auth/actions";
 import { formatPrice } from "@/lib/format/money";
 import type { SessionSummary } from "@/lib/services/session.service";
 import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
+import type { HeaderWalletPanel } from "@/lib/wallet-panel";
 
 /**
  * Header account area.
@@ -28,6 +30,11 @@ export type AccountMenuProps = {
   messages: CommonMessages;
   session: SessionSummary | null;
   wallet: G2BulkWalletSnapshot | null;
+  /**
+   * Wallet balances for the panel below the profile entry — the customer's own
+   * balance, or every customer wallet for an administrator. Null when signed out.
+   */
+  walletPanel: HeaderWalletPanel | null;
   /** Unread notifications; the bell is hidden entirely at zero. */
   unreadCount: number;
   notificationsLabel: string;
@@ -38,6 +45,7 @@ export function AccountMenu({
   messages,
   session,
   wallet,
+  walletPanel,
   unreadCount,
   notificationsLabel,
 }: AccountMenuProps) {
@@ -116,14 +124,25 @@ export function AccountMenu({
             >
               {messages.account.account}
             </Link>
-            {!session.isAdmin ? (
-              <Link
-                href={`/${locale}/wallet`}
-                className="rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"
-              >
-                {messages.account.walletLabel}
-              </Link>
+
+            {/*
+             * Wallets open in place rather than navigating: the balances are
+             * the thing people check, so they render right here under the
+             * profile entry. The destination link lives inside the disclosure.
+             */}
+            {walletPanel ? (
+              <WalletPanel
+                locale={locale}
+                panel={walletPanel}
+                labels={{
+                  title: messages.account.wallets,
+                  balance: messages.account.walletLabel,
+                  openWallet: messages.account.openWallet,
+                  openCustomers: messages.account.openCustomers,
+                }}
+              />
             ) : null}
+
             <Link
               href={`/${locale}/notifications`}
               className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 py-2.5 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:bg-[var(--shell)] hover:text-[var(--ink)]"

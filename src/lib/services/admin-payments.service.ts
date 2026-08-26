@@ -13,16 +13,21 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  *
  * Stage 10's exit criterion is that every payment state maps to one auditable
  * wallet result. Showing that needs both halves in one row, so this reads the
- * request, the Sam invoice that paid it, and the wallet transaction it created,
- * and lets {@link reconcilePayment} say whether they agree.
+ * request, the Sam or Binance invoice that paid it, and the wallet transaction
+ * it created, and lets {@link reconcilePayment} say whether they agree.
  *
- * The join is a key, not a guess. Every top-up — manual or Sam — is credited
- * through `credit_recharge_request`, which writes one `wallet_transactions` row
- * with `reference_type = 'recharge'` and `reference_id` set to the request. The
- * reference store had to match on amount and a time window because its manual
- * credits recorded no link at all; that heuristic can attribute the wrong
- * transaction when one customer has two same-sized top-ups close together, and
- * is not worth porting.
+ * Binance is embedded beside Sam because a settlement channel this screen
+ * cannot see is a channel that can fail forever without anyone noticing — which
+ * was exactly true of it until now: its webhook was the only thing asking
+ * Binance about a payment.
+ *
+ * The join is a key, not a guess. Every top-up — manual, Sam, or Binance — is
+ * credited through `credit_recharge_request`, which writes one
+ * `wallet_transactions` row with `reference_type = 'recharge'` and `reference_id`
+ * set to the request. The reference store had to match on amount and a time
+ * window because its manual credits recorded no link at all; that heuristic can
+ * attribute the wrong transaction when one customer has two same-sized top-ups
+ * close together, and is not worth porting.
  */
 
 export type PaymentRow = {
@@ -92,7 +97,8 @@ export async function getPayments(options: { attentionOnly?: boolean; limit?: nu
       `id, reference, status, requested_amount, wallet_credit_amount, requested_currency,
        payment_method, created_at, reviewed_at, user_id,
        profiles!recharge_requests_user_id_fkey (id, email, full_name, username),
-       sam_invoices (status, amount, charge_amount, credited_at)`,
+       sam_invoices (status, amount, charge_amount, credited_at),
+       binance_invoices (status, amount, charge_amount, credited_at)`,
     )
     .order("created_at", { ascending: false })
     .limit(options.limit ?? 200);
@@ -129,9 +135,17 @@ export async function getPayments(options: { attentionOnly?: boolean; limit?: nu
   }
 
   const rows: PaymentRow[] = requests.map((row) => {
-    const invoice = first(row.sam_invoices) as
+    /*
+     * A request is paid by at most one invoice; whichever provider's row exists
+     * is the one that speaks. Manual transfers have neither and stand alone.
+     */
+    const samInvoice = first(row.sam_invoices) as
       | { status: string; amount: number; charge_amount: number | null; credited_at: string | null }
       | null;
+    const binanceInvoice = first(row.binance_invoices) as
+      | { status: string; amount: number; charge_amount: number | null; credited_at: string | null }
+      | null;
+    const invoice = samInvoice ?? binanceInvoice;
     const transaction = credits.get(row.id) ?? null;
 
     const state = reconcilePayment({

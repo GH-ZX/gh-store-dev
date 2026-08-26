@@ -85,6 +85,9 @@
     "adminBadge": "Admin",
     "dashboard": "Dashboard",
     "walletLabel": "Balance",
+    "wallets": "Wallets",
+    "openWallet": "Open wallet",
+    "openCustomers": "All customer wallets",
     "accountMenuLabel": "Account menu",
     "signOut": "Sign out"
   }

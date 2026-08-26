@@ -2,6 +2,7 @@ import "server-only";
 
 import { log } from "@/lib/logging/logger";
 import { GRACE_MINUTES } from "@/lib/orders/reconciliation-policy";
+import { syncBinanceInvoice } from "@/lib/services/binance-recharge.service";
 import { reconcileOrder, type ReconcileOutcome } from "@/lib/services/fulfillment.service";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
@@ -83,6 +84,186 @@ async function expireStaleSamInvoices(): Promise<number> {
   return expired;
 }
 
+/**
+ * Binance invoices whose deadline passed with no money arriving.
+ *
+ * Same bookkeeping as the Sam expiry above, for the same reason: a customer who
+ * closes the checkout and never pays leaves a pending row behind, and a row
+ * that never closes keeps its recharge request open against the customer's
+ * five-request quota.
+ */
+async function expireStaleBinanceInvoices(): Promise<number> {
+  const supabase = createSupabaseServiceClient();
+  const now = new Date().toISOString();
+  const neverExpiresCutoff = new Date(Date.now() - 60 * 60_000).toISOString();
+
+  const { data, error } = await supabase
+    .from("binance_invoices")
+    .select("merchant_trade_no")
+    .eq("status", "pending")
+    .or(`expires_at.lt.${now},and(expires_at.is.null,created_at.lt.${neverExpiresCutoff})`)
+    .limit(50);
+
+  if (error) {
+    log.warn("payments", "binance_expiry_lookup_failed", { error: error.message });
+
+    return 0;
+  }
+
+  let expired = 0;
+
+  for (const invoice of data ?? []) {
+    const { error: failError } = await supabase.rpc("fail_binance_invoice", {
+      p_merchant_trade_no: invoice.merchant_trade_no,
+      p_status: "expired",
+      p_payload: { source: "sweep" },
+    });
+
+    if (failError) {
+      // One refusal must not block the rest; the next sweep picks it up again.
+      log.warn("payments", "binance_expiry_failed", {
+        error: failError.message,
+      });
+      continue;
+    }
+
+    expired += 1;
+  }
+
+  return expired;
+}
+
+/**
+ * Ask Binance about pending invoices whose notification may never arrive.
+ *
+ * This is the backstop that makes a lost webhook cost minutes instead of money:
+ * settlement depends on somebody asking Binance, and until this ran the webhook
+ * was the only thing that ever did. The sweep only queries — crediting still
+ * requires Binance itself to say paid — so a runaway schedule can do no more
+ * than repeat a question.
+ *
+ * Oldest first, small batch: each call is a provider request, and anything not
+ * reached carries to the next run.
+ */
+async function settlePendingBinanceInvoices(): Promise<{ checked: number; credited: number }> {
+  const supabase = createSupabaseServiceClient();
+  const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("binance_invoices")
+    .select("merchant_trade_no")
+    .eq("status", "pending")
+    // A minute old at least: an invoice from this very second is still being
+    // opened in a browser somewhere, and asking twice changes nothing.
+    .lt("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(10);
+
+  if (error) {
+    log.warn("payments", "binance_settle_lookup_failed", { error: error.message });
+
+    return { checked: 0, credited: 0 };
+  }
+
+  let checked = 0;
+  let credited = 0;
+
+  for (const invoice of data ?? []) {
+    try {
+      const result = await syncBinanceInvoice(invoice.merchant_trade_no);
+
+      checked += 1;
+
+      if (result.ok && result.credited) {
+        credited += 1;
+      }
+    } catch (caught) {
+      // One failure must not end the batch; the next sweep asks again.
+      log.warn("payments", "binance_sweep_invoice_failed", {
+        merchantTradeNo: invoice.merchant_trade_no,
+        error: caught instanceof Error ? caught.message : String(caught),
+      });
+    }
+  }
+
+  return { checked, credited };
+}
+
+/**
+ * Close top-up requests nothing will ever credit.
+ *
+ * Two ways a request dies unattended: its provider invoice closed without the
+ * money arriving (the customer abandoned the checkout), or it simply sat too
+ * long — thirty days — waiting for an owner review that never came. Either way
+ * the open row is doing harm: it counts against the customer's five open
+ * requests, permanently wedging them out of topping up, and it sits in the
+ * owner's queue as if it were live.
+ *
+ * Runs after both expiries above, so requests freed by a just-expired invoice
+ * are released the same run. A payment that lands after its request expired is
+ * refused by the credit RPC and surfaces on the payments screen — visible, not
+ * silent.
+ */
+async function expireStaleRechargeRequests(): Promise<number> {
+  const supabase = createSupabaseServiceClient();
+
+  const deadInvoiceStatuses = ["failed", "expired", "cancelled"];
+  const [samDead, binanceDead] = await Promise.all([
+    supabase.from("sam_invoices").select("recharge_request_id").in("status", deadInvoiceStatuses),
+    supabase.from("binance_invoices").select("recharge_request_id").in("status", deadInvoiceStatuses),
+  ]);
+
+  const requestIdSet = new Set<string>();
+
+  for (const row of [...(samDead.data ?? []), ...(binanceDead.data ?? [])]) {
+    if (row.recharge_request_id) {
+      requestIdSet.add(row.recharge_request_id);
+    }
+  }
+
+  const ageCutoff = new Date(Date.now() - 30 * 24 * 60 * 60_000).toISOString();
+  const { data: aged } = await supabase
+    .from("recharge_requests")
+    .select("id")
+    .in("status", ["pending", "payment_sent"])
+    .lt("created_at", ageCutoff);
+
+  for (const row of aged ?? []) {
+    requestIdSet.add(row.id);
+  }
+
+  if (requestIdSet.size === 0) {
+    return 0;
+  }
+
+  const ids = [...requestIdSet];
+
+  let expired = 0;
+
+  /*
+   * In chunks so one huge backlog cannot build a statement Postgres chokes on.
+   */
+  const CHUNK = 100;
+
+  for (let index = 0; index < ids.length; index += CHUNK) {
+    const { data, error } = await supabase
+      .from("recharge_requests")
+      .update({ status: "expired" })
+      .in("id", ids.slice(index, index + CHUNK))
+      .in("status", ["pending", "payment_sent"])
+      .select("id");
+
+    if (error) {
+      log.warn("payments", "recharge_request_expiry_failed", { error: error.message });
+      continue;
+    }
+
+    expired += data?.length ?? 0;
+  }
+
+  return expired;
+}
+
 export type ReconcileRun = {
   checked: number;
   completed: number;
@@ -92,6 +273,13 @@ export type ReconcileRun = {
   skipped: number;
   /** Sam invoices this run closed as expired because their deadline passed. */
   samExpired: number;
+  /** Binance invoices this run closed as expired because their deadline passed. */
+  binanceExpired: number;
+  /** Binance invoices this run asked Binance about, and how many credited. */
+  binanceChecked: number;
+  binanceCredited: number;
+  /** Top-up requests this run closed as expired with no money behind them. */
+  requestsExpired: number;
   results: { orderId: string; orderNumber: string; action: string; reason?: string }[];
 };
 
@@ -128,6 +316,17 @@ async function findStuckOrders(limit: number): Promise<{ id: string; order_numbe
 async function recordRun(run: ReconcileRun, startedAt: string): Promise<void> {
   const supabase = createSupabaseServiceClient();
 
+  const details = {
+    results: run.results,
+    payments: {
+      samExpired: run.samExpired,
+      binanceChecked: run.binanceChecked,
+      binanceCredited: run.binanceCredited,
+      binanceExpired: run.binanceExpired,
+      requestsExpired: run.requestsExpired,
+    },
+  };
+
   await supabase.from("provider_sync_logs").insert({
     provider_name: G2BULK_PROVIDER_NAME,
     // `reconciliation` was declared in the original schema and never used.
@@ -141,7 +340,7 @@ async function recordRun(run: ReconcileRun, startedAt: string): Promise<void> {
     started_at: startedAt,
     finished_at: new Date().toISOString(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsonb column
-    details: { results: run.results } as any,
+    details: details as any,
   });
 }
 
@@ -155,6 +354,10 @@ export async function reconcileStuckOrders(limit = DEFAULT_BATCH): Promise<Recon
     waiting: 0,
     skipped: 0,
     samExpired: 0,
+    binanceExpired: 0,
+    binanceChecked: 0,
+    binanceCredited: 0,
+    requestsExpired: 0,
     results: [],
   };
 
@@ -163,6 +366,14 @@ export async function reconcileStuckOrders(limit = DEFAULT_BATCH): Promise<Recon
   }
 
   run.samExpired = await expireStaleSamInvoices();
+  run.binanceExpired = await expireStaleBinanceInvoices();
+
+  const binance = await settlePendingBinanceInvoices();
+  run.binanceChecked = binance.checked;
+  run.binanceCredited = binance.credited;
+
+  // Last, so a request freed by an invoice expired above is released this run.
+  run.requestsExpired = await expireStaleRechargeRequests();
 
   const orders = await findStuckOrders(limit);
 
@@ -206,7 +417,13 @@ export async function reconcileStuckOrders(limit = DEFAULT_BATCH): Promise<Recon
     }
   }
 
-  if (run.checked > 0 || run.samExpired > 0) {
+  if (
+    run.checked > 0 ||
+    run.samExpired > 0 ||
+    run.binanceExpired > 0 ||
+    run.binanceChecked > 0 ||
+    run.requestsExpired > 0
+  ) {
     await recordRun(run, startedAt);
     log.info("fulfilment", "reconciliation_run", {
       checked: run.checked,
@@ -215,6 +432,10 @@ export async function reconcileStuckOrders(limit = DEFAULT_BATCH): Promise<Recon
       escalated: run.escalated,
       waiting: run.waiting,
       samExpired: run.samExpired,
+      binanceChecked: run.binanceChecked,
+      binanceCredited: run.binanceCredited,
+      binanceExpired: run.binanceExpired,
+      requestsExpired: run.requestsExpired,
     });
   }
 

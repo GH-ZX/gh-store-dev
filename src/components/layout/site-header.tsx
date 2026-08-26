@@ -7,6 +7,7 @@ import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavLink } from "@/components/layout/nav-link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { WalletPanel } from "@/components/layout/wallet-panel";
 import { SearchField } from "@/components/search/search-field";
 import { Button } from "@/components/ui/button";
 import { SearchIcon } from "@/components/ui/icons";
@@ -15,6 +16,7 @@ import type { CommonMessages, SearchMessages } from "@/i18n/messages";
 import { signOutAction } from "@/lib/auth/actions";
 import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
 import type { SessionSummary } from "@/lib/services/session.service";
+import type { HeaderWalletPanel } from "@/lib/wallet-panel";
 
 /**
  * Storefront header.
@@ -30,6 +32,11 @@ export type SiteHeaderProps = {
   session: SessionSummary | null;
   /** Supplier balance, shown to administrators only. */
   wallet: G2BulkWalletSnapshot | null;
+  /**
+   * Wallet balances for the account menus — own balance for a customer, every
+   * customer wallet for an administrator. Null when signed out.
+   */
+  walletPanel: HeaderWalletPanel | null;
   /** Unread notifications for the signed-in reader; 0 for a visitor. */
   unreadCount: number;
   notificationsLabel: string;
@@ -43,6 +50,7 @@ export function SiteHeader({
   searchMessages,
   session,
   wallet,
+  walletPanel,
   unreadCount,
   notificationsLabel,
   brandName,
@@ -70,16 +78,31 @@ export function SiteHeader({
    * Neither the profile nor notifications is here: the identity block at the top
    * of the drawer already is the profile link, and notifications sit beside it
    * as a bell. Repeating either as a row would be the same destination twice.
+   * The wallet is not a row either anymore — its balances render directly
+   * below the identity block through `account.walletPanel`.
    */
   const accountLinks = session
     ? [
-        { href: `/${locale}/wallet`, label: messages.account.walletLabel },
         { href: `/${locale}/support`, label: messages.links.support },
         ...(session.isAdmin
           ? [{ href: `/${locale}/dashboard`, label: messages.account.dashboard }]
           : []),
       ]
     : [];
+
+  const walletPanelNode =
+    session && walletPanel ? (
+      <WalletPanel
+        locale={locale}
+        panel={walletPanel}
+        labels={{
+          title: messages.account.wallets,
+          balance: messages.account.walletLabel,
+          openWallet: messages.account.openWallet,
+          openCustomers: messages.account.openCustomers,
+        }}
+      />
+    ) : null;
 
   return (
     // Marked so the print stylesheet can take the chrome off an invoice.
@@ -164,6 +187,7 @@ export function SiteHeader({
                 messages={messages}
                 session={session}
                 wallet={wallet}
+                walletPanel={walletPanel}
                 unreadCount={unreadCount}
                 notificationsLabel={notificationsLabel}
               />
@@ -190,6 +214,7 @@ export function SiteHeader({
                   label: notificationsLabel,
                   count: unreadCount,
                 },
+                walletPanel: walletPanelNode,
                 links: accountLinks,
                 signIn: { href: `/${locale}/login`, label: messages.account.signIn },
               }}

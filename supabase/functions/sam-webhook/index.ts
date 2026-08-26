@@ -214,7 +214,13 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const args = {
     p_sam_invoice_id: invoice.sam_invoice_id,
     p_paid_amount: paidAmount,
-    p_charge_currency: reportedCurrency ?? billedCurrency,
+    /*
+     * Only what Sam actually reported. Falling back to the billed currency here
+     * would make the database's currency check compare a value with itself —
+     * money that arrived in some other currency would pass on the strength of
+     * our own paperwork. A null tells the RPC the webhook said nothing.
+     */
+    p_charge_currency: reportedCurrency,
     p_transaction_ref: text(body.transactionRef),
     p_payload: {
       source: "webhook",

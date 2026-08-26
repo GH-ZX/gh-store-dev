@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { formText } from "@/lib/forms/form-data";
-import { startBinanceTopUp } from "@/lib/services/binance-recharge.service";
+import {
+  syncMyBinanceInvoice,
+  startBinanceTopUp,
+} from "@/lib/services/binance-recharge.service";
 import { markRechargePaid, submitRechargeRequest } from "@/lib/services/recharge.service";
 import type {
   BinanceTopUpState,
@@ -108,18 +111,66 @@ export async function startBinanceTopUpAction(
   });
 
   if (!parsed.success) {
-    return { error: "invalid_input", checkoutUrl: null };
+    return { error: "invalid_input", checkoutUrl: null, invoiceId: null };
   }
 
   const locale = resolveLocale(parsed.data.locale);
-  const result = await startBinanceTopUp({ amount: parsed.data.amount });
+  const result = await startBinanceTopUp({ amount: parsed.data.amount, locale });
 
   if (!result.ok) {
-    return { error: result.reason, checkoutUrl: null };
+    return { error: result.reason, checkoutUrl: null, invoiceId: null };
   }
 
   // The request exists now, so the customer's own recharge history is stale.
   revalidatePath(`/${locale}/recharge`);
 
-  return { error: null, checkoutUrl: result.checkoutUrl };
+  return { error: null, checkoutUrl: result.checkoutUrl, invoiceId: result.invoiceId };
+}
+
+const checkBinanceSchema = z.object({
+  invoiceId: z.string().trim().min(1).max(120),
+  locale: z.string().optional(),
+});
+
+/**
+ * Ask Binance how this customer's invoice turned out.
+ *
+ * The payment screen's poll and its button share this one path. Ownership is
+ * established inside the service before anything is asked of Binance, so an
+ * invoice id from somewhere else reads back as not found rather than settling
+ * somebody else's payment in front of them.
+ */
+export async function checkBinanceInvoiceAction(
+  _state: BinanceTopUpState,
+  formData: FormData,
+): Promise<BinanceTopUpState> {
+  const parsed = checkBinanceSchema.safeParse({
+    invoiceId: formText(formData, "invoiceId"),
+    locale: formText(formData, "locale"),
+  });
+
+  if (!parsed.success) {
+    return { error: "invalid_input", checkoutUrl: null, invoiceId: null };
+  }
+
+  const locale = resolveLocale(parsed.data.locale);
+  const result = await syncMyBinanceInvoice(parsed.data.invoiceId);
+
+  if (!result.ok) {
+    return {
+      error: result.reason === "not_found" ? "not_found" : "unknown",
+      checkoutUrl: null,
+      invoiceId: null,
+    };
+  }
+
+  if (result.credited) {
+    // The balance appears in the header and on the wallet page.
+    revalidatePath("/", "layout");
+    revalidatePath(`/${locale}/wallet`);
+  }
+
+  revalidatePath(`/${locale}/recharge/pay/${encodeURIComponent(parsed.data.invoiceId)}`);
+
+  return { error: null, checkoutUrl: null, invoiceId: null, status: result.status };
 }

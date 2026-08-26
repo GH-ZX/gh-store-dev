@@ -55,6 +55,13 @@ function text(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
+/** Binance serialises amounts as strings; a number is accepted either way. */
+function toNumber(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(text(value) ?? "");
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 /** The same payload construction the outbound side uses, rebuilt over what arrived. */
 function buildPayload(timestamp: string, nonce: string, body: string): string {
   return `${timestamp}\n${nonce}\n${body}\n`;
@@ -360,10 +367,22 @@ Deno.serve(async (request: Request): Promise<Response> => {
     return acknowledge();
   }
 
+  /*
+   * Credit on what Binance says was paid, in its own answer above — never on
+   * what this store billed. Passing `charge_amount` back as "paid" would turn
+   * the database's short-payment check into a comparison of a value with
+   * itself. An amount Binance did not report leaves the invoice pending; the
+   * store's sweep keeps asking until there is a figure to settle against.
+   */
+  const paidAmount = toNumber(order?.amount);
+
+  if (paidAmount === null) {
+    return acknowledge();
+  }
+
   const { error } = await supabase.rpc("credit_binance_invoice", {
     p_merchant_trade_no: merchantTradeNo,
-    // What the invoice billed, now confirmed paid by Binance itself.
-    p_paid_amount: invoice.charge_amount,
+    p_paid_amount: paidAmount,
     p_transaction_id: text(order?.transactionId) ?? undefined,
     p_payload: { source: "webhook", status },
   });

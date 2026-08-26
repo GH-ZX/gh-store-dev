@@ -25,10 +25,23 @@ export const INITIAL_RECHARGE_STATE: RechargeActionState = {
  * `checkoutUrl` rather than a redirect: the destination is a third-party page,
  * and the client follows it once the invoice exists so a failure to create one
  * is still readable on the store's own screen.
+ *
+ * `invoiceId` sends the customer to this store's own payment screen for that
+ * invoice, which links on to Binance and watches the outcome — the same shape
+ * the Sam flow uses. A customer sent straight to Binance had nowhere to come
+ * back to but their wallet, where a payment still in flight looks identical to
+ * one that failed.
  */
 export type BinanceTopUpState = {
   error: string | null;
   checkoutUrl: string | null;
+  invoiceId: string | null;
+  /** Binance's own status for the invoice, set by the poll action. */
+  status?: string | null;
 };
 
-export const INITIAL_BINANCE_STATE: BinanceTopUpState = { error: null, checkoutUrl: null };
+export const INITIAL_BINANCE_STATE: BinanceTopUpState = {
+  error: null,
+  checkoutUrl: null,
+  invoiceId: null,
+};

@@ -65,6 +65,7 @@ type Texts = {
   codeInvalid: string;
   codeUsed: string;
   codeExpired: string;
+  codeRateLimited: string;
   needLink: string;
   notFound: string;
   orderStatus: string;
@@ -143,6 +144,7 @@ const TEXTS: Record<Locale, Texts> = {
     codeInvalid: "هذا الرمز غير صحيح. تحقق منه ثم أرسله مجددًا.",
     codeUsed: "هذا الرمز مستخدم بالفعل. اطلب رمزًا جديدًا من صفحة حسابك.",
     codeExpired: "انتهت صلاحية هذا الرمز. اطلب رمزًا جديدًا من صفحة حسابك.",
+    codeRateLimited: "محاولات كثيرة جدًا. انتظر بضع دقائق ثم اطلب رمزًا جديدًا من صفحة حسابك.",
     needLink: "هذه الميزة تحتاج ربط حسابك أولًا. اضغط «ربط الحساب».",
     notFound: "لا شيء هنا بعد.",
     orderStatus: "الحالة",
@@ -219,6 +221,7 @@ const TEXTS: Record<Locale, Texts> = {
     codeInvalid: "That code does not look right. Check it and send it again.",
     codeUsed: "That code has already been used. Request a fresh one from your account page.",
     codeExpired: "That code has expired. Request a fresh one from your account page.",
+    codeRateLimited: "Too many attempts. Wait a few minutes, then request a fresh code from your account page.",
     needLink: "This needs a linked account first. Tap Sign in to connect.",
     notFound: "Nothing here yet.",
     orderStatus: "Status",
@@ -1442,8 +1445,15 @@ async function showSearchResults(
 /**
  * Try to consume a link code and bind the chat to its account.
  *
- * Returns `null` when the code is unknown/used/expired — the caller decides what
- * to tell the user based on {@link ConsumeResult}.
+ * All of it happens inside `consume_telegram_link_code`: the code row is locked,
+ * one-use is enforced atomically, and wrong guesses are budgeted per chat in the
+ * database. The bot used to do this with its own read-then-write, which had no
+ * limit on guesses and let two messages race one code — a guessed code was
+ * account takeover at ten-to-the-sixth odds.
+ *
+ * Returns `null`-shaped failure reasons for the caller to message:
+ * `invalid`, `used`, `expired`, or `rate_limited` when this chat has spent its
+ * guessing budget and must wait out the window.
  */
 async function consumeLinkCode(
   supabase: ReturnType<typeof createClient>,
@@ -1452,48 +1462,32 @@ async function consumeLinkCode(
   username: string | null,
   firstName: string | null,
   languageCode: string | null,
-): Promise<{ ok: true; userId: string } | { ok: false; reason: "invalid" | "used" | "expired" }> {
-  const { data: row } = await supabase
-    .from("telegram_link_codes")
-    .select("id, user_id, used_at, expires_at")
-    .eq("code", code)
-    .maybeSingle();
+): Promise<
+  { ok: true; userId: string } | { ok: false; reason: "invalid" | "used" | "expired" | "rate_limited" }
+> {
+  const { data, error } = await supabase.rpc("consume_telegram_link_code", {
+    p_chat_id: chatId,
+    p_code: code,
+    p_username: username,
+    p_first_name: firstName,
+    p_language_code: languageCode,
+  });
 
-  if (!row) {
+  if (error || !data || typeof data !== "object") {
     return { ok: false, reason: "invalid" };
   }
 
-  if (row.used_at) {
-    return { ok: false, reason: "used" };
+  const result = data as { ok?: boolean; user_id?: string; reason?: string };
+
+  if (result.ok === true && typeof result.user_id === "string") {
+    return { ok: true, userId: result.user_id };
   }
 
-  if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) {
-    return { ok: false, reason: "expired" };
+  if (result.reason === "used" || result.reason === "expired" || result.reason === "rate_limited") {
+    return { ok: false, reason: result.reason };
   }
 
-  // One account has one chat. If the account is already linked to a different
-  // chat, drop that link first — the `user_id` unique index would otherwise
-  // reject the upsert and the customer would see a useless "invalid code".
-  await supabase.from("telegram_chat_links").delete().eq("user_id", row.user_id).neq("chat_id", chatId);
-
-  const { error: linkError } = await supabase.from("telegram_chat_links").upsert(
-    {
-      chat_id: chatId,
-      user_id: row.user_id,
-      username: username ?? null,
-      first_name: firstName ?? null,
-      language_code: languageCode,
-    },
-    { onConflict: "chat_id" },
-  );
-
-  if (linkError) {
-    return { ok: false, reason: "invalid" };
-  }
-
-  await supabase.from("telegram_link_codes").update({ used_at: new Date().toISOString(), chat_id: chatId }).eq("id", row.id);
-
-  return { ok: true, userId: row.user_id };
+  return { ok: false, reason: "invalid" };
 }
 
 Deno.serve(async (request: Request): Promise<Response> => {
@@ -1735,7 +1729,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
         if (result.ok) {
           await sendText(botToken, chatId, t(locale, "codeAccepted"), menuKeyboard(locale, true));
         } else {
-          await sendText(botToken, chatId, t(locale, `code_${result.reason}`));
+          // The texts are keyed camelCase; a template built `code_invalid`,
+          // which is in none of them, so every refusal sent `undefined`.
+          const key =
+            result.reason === "used"
+              ? "codeUsed"
+              : result.reason === "expired"
+                ? "codeExpired"
+                : result.reason === "rate_limited"
+                  ? "codeRateLimited"
+                  : "codeInvalid";
+          await sendText(botToken, chatId, t(locale, key));
         }
         return;
       }

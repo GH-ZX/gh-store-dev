@@ -1,7 +1,8 @@
 import "server-only";
 
 import { requireAuth } from "@/lib/auth/guards";
-import { logOutcome } from "@/lib/logging/logger";
+import { log, logOutcome } from "@/lib/logging/logger";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/config";
 import { readBinanceCredentials } from "@/lib/settings/binance-settings";
 import { functionUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -81,7 +82,10 @@ export async function getBinancePaymentOptions(): Promise<{ enabled: boolean; cu
   return { enabled: credentials.enabled, currency: credentials.currency };
 }
 
-export async function startBinanceTopUp(input: { amount: number }): Promise<StartBinanceResult> {
+export async function startBinanceTopUp(input: {
+  amount: number;
+  locale?: Locale;
+}): Promise<StartBinanceResult> {
   const result = await attemptBinanceTopUp(input);
 
   logOutcome("recharge", "binance_topup_started", result, { amount: input.amount });
@@ -89,7 +93,7 @@ export async function startBinanceTopUp(input: { amount: number }): Promise<Star
   return result;
 }
 
-async function attemptBinanceTopUp(input: { amount: number }): Promise<StartBinanceResult> {
+async function attemptBinanceTopUp(input: { amount: number; locale?: Locale }): Promise<StartBinanceResult> {
   const user = await requireAuth();
   const credentials = await readCredentials();
 
@@ -131,6 +135,10 @@ async function attemptBinanceTopUp(input: { amount: number }): Promise<StartBina
 
   const siteUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? "";
   const client = new BinanceClient({ apiKey: credentials.apiKey, secret: credentials.apiSecret });
+  // Deterministic: the same trade number the invoice row will carry, known
+  // before the row exists, which is what lets the return address point at this
+  // store's own payment screen rather than a page that never changes again.
+  const merchantTradeNo = toMerchantTradeNo(request.request_id);
 
   try {
     const order = await client.createOrder({
@@ -140,7 +148,7 @@ async function attemptBinanceTopUp(input: { amount: number }): Promise<StartBina
       amount: input.amount,
       currency: credentials.currency,
       description: `Wallet top-up ${request.reference}`,
-      returnUrl: `${siteUrl}/wallet`,
+      returnUrl: `${siteUrl}/${input.locale ?? DEFAULT_LOCALE}/recharge/pay/${encodeURIComponent(merchantTradeNo)}`,
       cancelUrl: `${siteUrl}/recharge`,
       webhookUrl: webhookUrl(),
     });
@@ -156,7 +164,7 @@ async function attemptBinanceTopUp(input: { amount: number }): Promise<StartBina
       .insert({
         user_id: user.id,
         recharge_request_id: request.request_id,
-        merchant_trade_no: toMerchantTradeNo(request.request_id),
+        merchant_trade_no: merchantTradeNo,
         prepay_id: order.prepayId,
         amount: input.amount,
         currency: "USD",
@@ -170,9 +178,19 @@ async function attemptBinanceTopUp(input: { amount: number }): Promise<StartBina
       .maybeSingle();
 
     if (invoiceError || !invoice) {
-      // The order exists at Binance but the store has no record of it. Better to
-      // refuse the customer now than to send them to a checkout nothing will
-      // ever credit.
+      /*
+       * The order exists at Binance but the store has no record of it, so no
+       * poll or callback will ever match one to the other. Say so loudly rather
+       * than returning a silent unknown.
+       */
+      log.warn("recharge", "binance_invoice_record_lost", {
+        merchantTradeNo,
+        requestId: request.request_id,
+        error: invoiceError?.message ?? "insert returned no row",
+      });
+
+      // Better to refuse the customer now than to send them to a checkout
+      // nothing will ever credit.
       return { ok: false, reason: "unknown" };
     }
 
@@ -186,17 +204,89 @@ async function attemptBinanceTopUp(input: { amount: number }): Promise<StartBina
   }
 }
 
+/** The customer's own view of one Binance invoice, for the payment screen. */
+export type BinanceInvoiceView = {
+  id: string;
+  merchantTradeNo: string;
+  status: string;
+  /** What the wallet receives on success, in store currency. */
+  amount: number;
+  currency: string;
+  /** What the customer was billed, in crypto. */
+  chargeAmount: number | null;
+  chargeCurrency: string | null;
+  checkoutUrl: string | null;
+  expiresAt: string | null;
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Read one of this customer's invoices, by row id or by trade number.
+ *
+ * Both are scoped to the signed-in account through RLS *and* an explicit filter,
+ * same as every other user-scoped read here — an invoice id guessed from
+ * elsewhere is a 404, not a window into another account's payment.
+ */
+export async function getMyBinanceInvoice(key: string): Promise<BinanceInvoiceView | null> {
+  const user = await requireAuth();
+  const supabase = await createSupabaseServerClient();
+
+  const query = supabase
+    .from("binance_invoices")
+    .select(
+      "id, merchant_trade_no, status, amount, currency, charge_amount, charge_currency, checkout_url, expires_at",
+    )
+    .eq(UUID_PATTERN.test(key) ? "id" : "merchant_trade_no", key)
+    .eq("user_id", user.id);
+
+  const { data } = await query.maybeSingle();
+
+  if (!data) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    merchantTradeNo: data.merchant_trade_no,
+    status: data.status,
+    amount: data.amount,
+    currency: data.currency,
+    chargeAmount: data.charge_amount,
+    chargeCurrency: data.charge_currency,
+    checkoutUrl: data.checkout_url,
+    expiresAt: data.expires_at,
+  };
+}
+
 export type BinanceSyncResult =
   | { ok: true; status: string; credited: boolean }
   | { ok: false; reason: "not_found" | "not_configured" | "provider" | "unknown" };
 
 /**
+ * Ask Binance how one of this customer's invoices turned out, and settle it.
+ *
+ * The payment screen polls this while the customer is at Binance's checkout.
+ * Ownership is established before anything is asked of anyone.
+ */
+export async function syncMyBinanceInvoice(invoiceKey: string): Promise<BinanceSyncResult> {
+  const invoice = await getMyBinanceInvoice(invoiceKey);
+
+  if (!invoice) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  return syncBinanceInvoice(invoice.merchantTradeNo);
+}
+
+/**
  * Ask Binance how an invoice turned out, and settle it.
  *
  * The single place that decides a Binance payment. The callback calls into the
- * same question rather than answering it, and the payment screen can poll this
- * while a customer waits — so a notification that never arrives costs a refresh
- * rather than a lost top-up.
+ * same question rather than answering it, the payment screen polls it while a
+ * customer waits, and the reconciliation sweep asks it for every invoice whose
+ * notification never arrived — so a lost webhook costs five minutes, not the
+ * customer's money.
  */
 export async function syncBinanceInvoice(merchantTradeNo: string): Promise<BinanceSyncResult> {
   const credentials = await readCredentials();
@@ -222,7 +312,7 @@ export async function syncBinanceInvoice(merchantTradeNo: string): Promise<Binan
   }
 
   const client = new BinanceClient({ apiKey: credentials.apiKey, secret: credentials.apiSecret });
-  let state: { status: string; transactionId: string | null };
+  let state: Awaited<ReturnType<BinanceClient["queryOrder"]>>;
 
   try {
     state = await client.queryOrder(invoice.recharge_request_id);
@@ -251,10 +341,25 @@ export async function syncBinanceInvoice(merchantTradeNo: string): Promise<Binan
     return { ok: true, status: state.status, credited: false };
   }
 
+  /*
+   * Credit on what Binance says was paid, never on what this store billed.
+   * Passing the billed figure back as "paid" would turn the database's
+   * short-payment check into a comparison of a value with itself. A PAID order
+   * with no reported figure waits — visibly pending, retried by the sweep —
+   * until Binance answers the question properly.
+   */
+  if (state.amount === null || !Number.isFinite(state.amount) || state.amount <= 0) {
+    log.warn("payments", "binance_paid_without_amount", {
+      merchantTradeNo,
+      status: state.status,
+    });
+
+    return { ok: true, status: state.status, credited: false };
+  }
+
   const { error } = await service.rpc("credit_binance_invoice", {
     p_merchant_trade_no: merchantTradeNo,
-    // What we billed, confirmed paid by Binance itself.
-    p_paid_amount: invoice.charge_amount,
+    p_paid_amount: state.amount,
     p_transaction_id: state.transactionId ?? undefined,
     p_payload: { status: state.status },
   });

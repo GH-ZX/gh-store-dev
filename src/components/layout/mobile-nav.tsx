@@ -68,6 +68,11 @@ export type MobileNavProps = {
     href: string;
     /** Shown as a bell beside the name rather than as a row of its own. */
     notifications: { href: string; label: string; count: number };
+    /**
+     * Wallet balances, rendered directly below the identity block. A server-
+     * assembled node: any link pressed inside it closes this drawer.
+     */
+    walletPanel?: ReactNode;
     links: MobileNavLink[];
     signIn: { href: string; label: string };
   };
@@ -374,6 +379,27 @@ export function MobileNav({
                 ) : null}
 
                 <nav className="flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
+                  {account?.walletPanel ? (
+                    /*
+                     * Wallets sit directly under the profile block, before the
+                     * primary destinations: balances are checked more often
+                     * than the catalog is browsed. The capture-phase handler
+                     * closes the drawer when a link inside is used — the node
+                     * arrives from the server, so its own links cannot call
+                     * `close` themselves.
+                     */
+                    <div
+                      className="mb-2 grid gap-0.5 border-b border-[var(--line)] pb-2"
+                      onClickCapture={(event) => {
+                        if ((event.target as HTMLElement).closest("a")) {
+                          close();
+                        }
+                      }}
+                    >
+                      {account.walletPanel}
+                    </div>
+                  ) : null}
+
                   <div className="grid gap-0.5">{items.map((item) => renderLink(item))}</div>
 
                   {account && account.name !== null && account.links.length > 0 ? (
