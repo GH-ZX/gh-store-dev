@@ -64,32 +64,34 @@
 		}
 	],
 	/*
-	 * Backing store for the OpenNext incremental cache, wired up in
-	 * open-next.config.ts. Every route here renders dynamically, so what this
-	 * actually backs is the data cache: `unstable_cache` will not persist
-	 * anything without a store behind it.
+	 * Backing store for the OpenNext incremental cache.
+	 *
+	 * Commented out, and paired with `incrementalCache` being left off in
+	 * open-next.config.ts, because the bucket does not exist yet and a binding
+	 * to a missing bucket fails the deploy outright rather than degrading. The
+	 * two must be enabled together, in one commit, after running:
+	 *
+	 *   wrangler r2 bucket create gh-store-inc-cache
 	 *
 	 * The binding name is fixed by the adapter, not chosen here: `BINDING_NAME`
 	 * in
 	 * node_modules/@opennextjs/cloudflare/dist/api/overrides/incremental-cache/r2-incremental-cache.js
 	 * is read verbatim off `env`, so renaming it silently disables the cache.
 	 *
-	 * To give `revalidatePath` and `updateTag` real teeth over entries stored
-	 * here, add a D1 tag cache — the default tag cache is a no-op, so today an
-	 * entry lives until its own window expires:
+	 * To also make `revalidatePath` evict entries here, add a D1 tag cache:
 	 *   wrangler d1 create gh-store-tag-cache
 	 * then paste the returned id into a `d1_databases` entry bound as
 	 * `NEXT_TAG_CACHE_D1` and set `tagCache: d1NextTagCache` in
 	 * open-next.config.ts. `opennextjs-cloudflare deploy` creates the
-	 * `revalidations` table itself. Left out because a database id cannot be
-	 * written down before the database exists.
+	 * `revalidations` table itself. Left out for the same reason: a database id
+	 * cannot be written down before the database exists.
 	 */
-	"r2_buckets": [
-		{
-			"binding": "NEXT_INC_CACHE_R2_BUCKET",
-			"bucket_name": "gh-store-inc-cache"
-		}
-	],
+	// "r2_buckets": [
+	// 	{
+	// 		"binding": "NEXT_INC_CACHE_R2_BUCKET",
+	// 		"bucket_name": "gh-store-inc-cache"
+	// 	}
+	// ],
 	"images": {
 		// Enable image optimization
 		// see https://opennext.js.org/cloudflare/howtos/image

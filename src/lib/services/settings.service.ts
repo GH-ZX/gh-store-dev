@@ -22,13 +22,9 @@ import { createSupabasePublicClient } from "@/lib/supabase/public";
  * value that is identical all day was the most expensive thing on the critical
  * path of every render.
  *
- * `updateColumn` in the admin website service tags every write, but the tag
- * cannot bite yet: OpenNext is running the no-op tag cache, whose `getByTag`
- * returns nothing and whose `writeTags` does nothing. So the window below — not
- * the tag — is what actually bounds how long an owner waits to see a change,
- * and it is deliberately short for that reason rather than tuned for hit rate.
- * The tag is still correct, and becomes the real mechanism the day a
- * `NEXT_TAG_CACHE_D1` binding exists; at that point this window can grow.
+ * `updateColumn` in the admin website service calls `updateTag` on every write,
+ * so the owner sees an edit on the very next response. The one-minute window is
+ * only a backstop for a write path that forgets to.
  */
 
 /** Invalidated by every action that writes `store_settings`. */
@@ -50,22 +46,23 @@ async function fetchPublicStoreSettings() {
 
 const cachedHomeLayout = unstable_cache(fetchHomeLayout, ["home-layout"], {
   tags: [STORE_SETTINGS_TAG],
-  revalidate: 15,
+  revalidate: 60,
 });
 
 const cachedPublicStoreSettings = unstable_cache(fetchPublicStoreSettings, ["public-store-settings"], {
   tags: [STORE_SETTINGS_TAG],
-  revalidate: 15,
+  revalidate: 60,
 });
 
 /*
  * A short-lived copy in the isolate's own memory, in front of everything else.
  *
- * A Worker isolate serves many requests before it is recycled, so remembering
- * the row for a few seconds removes almost all of those reads at any real
- * request rate — and a hit here costs no I/O at all, not even the R2 lookup
- * behind it. Measured on production: eight renders produced two RPC calls
- * instead of eight.
+ * `unstable_cache` only persists if OpenNext has an incremental cache to write
+ * through to, and until the R2 bucket exists it has none — measured: six
+ * renders still produced six `get_public_store_settings` calls. This layer
+ * needs no binding at all. A Worker isolate serves many requests before it is
+ * recycled, so remembering the row for a few seconds removes almost all of
+ * them at any real request rate.
  *
  * Only the resolved value is stored, never the in-flight promise. Caching a
  * pending promise at module scope is what made the supplier-wallet read throw
@@ -73,14 +70,12 @@ const cachedPublicStoreSettings = unstable_cache(fetchPublicStoreSettings, ["pub
  * request would await an I/O context belonging to the first. A plain value has
  * no such attachment.
  *
- * The window is deliberately small, and smaller than the one behind it, because
- * the two compound: this layer can be holding a value that was already up to
- * fifteen seconds old when it read it. Isolate memory is also the one part of
- * the chain no invalidation can ever reach — not `updateTag`, not a tag cache,
- * because it is per-isolate memory rather than storage. Five seconds absorbs a
- * burst while keeping the worst case an owner can experience around twenty.
+ * The window is deliberately small. Isolate memory cannot be reached by
+ * `updateTag`, so this is the one part of the chain an owner's save cannot
+ * invalidate — a few seconds is short enough to feel immediate and long enough
+ * to absorb a burst.
  */
-const ISOLATE_TTL_MS = 5_000;
+const ISOLATE_TTL_MS = 15_000;
 
 type IsolateEntry<T> = { value: T; at: number };
 

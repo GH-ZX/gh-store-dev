@@ -1,38 +1,44 @@
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
-import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
-import memoryQueue from "@opennextjs/cloudflare/overrides/queue/memory-queue";
+// import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
+// import memoryQueue from "@opennextjs/cloudflare/overrides/queue/memory-queue";
 
 /*
- * Somewhere for cached work to land.
+ * Incremental cache: prepared, not yet armed.
  *
- * Without an incremental cache OpenNext runs on the `dummy` override, which
- * stores nothing. Every route in this app renders dynamically — the root layout
- * reads a request header and the locale layout reads the session cookie — so
- * this is not about serving prerendered pages. What it backs is the data cache:
- * `unstable_cache` refuses to persist anything without a store behind it, and
- * measured against production, six renders still produced six
- * `get_public_store_settings` calls before this existed.
+ * Without one, OpenNext runs on the `dummy` override, which stores nothing:
+ * every prerenderable page is rendered from scratch on every request, and each
+ * of those renders makes several PostgREST calls to a database in Singapore
+ * that answers in ~500ms even when it is warm. The queries themselves take
+ * under a millisecond — practically the whole page is the ocean. R2 gives that
+ * work somewhere to land, so the second visitor to a page pays for none of it.
+ *
+ * It is left commented out because the bucket does not exist yet, and an R2
+ * binding to a missing bucket fails the deploy outright rather than degrading.
+ * Enabling it is one command and one commit, and both halves have to land
+ * together:
+ *
+ *   wrangler r2 bucket create gh-store-inc-cache
+ *
+ * then uncomment the two imports above, the two lines in the config below, and
+ * the `r2_buckets` block in wrangler.jsonc.
  *
  * The binding name is not ours to choose: `r2-incremental-cache.js` reads
  * `getCloudflareContext().env.NEXT_INC_CACHE_R2_BUCKET` (see `BINDING_NAME` on
  * line 6 of that file in @opennextjs/cloudflare 1.20.2), so wrangler.jsonc has
  * to declare exactly that name.
  *
- * `memoryQueue` regenerates an entry once it goes stale and de-dupes concurrent
- * revalidations of one path per isolate. It needs no binding beyond
- * `WORKER_SELF_REFERENCE`, which is already declared.
+ * `memoryQueue` is what regenerates an entry once it goes stale. It needs no
+ * binding of its own beyond `WORKER_SELF_REFERENCE`, which is already declared,
+ * and it de-dupes concurrent revalidations of one path per isolate — without it
+ * a stale page would keep being served until the next deployment changed the
+ * build id.
  *
- * Still on the `dummy` tag cache, which is a genuine no-op — `getByTag` returns
- * an empty array and `writeTags` does nothing. So `updateTag` cannot evict
- * anything stored here, and a cached entry lives until its own window expires.
- * That is why the settings cache in settings.service.ts keeps a short window
- * instead of a long one and a tag: the tag is correct for the day a tag cache
- * exists, and the window is what actually bounds staleness today. Giving
- * `revalidatePath`/`updateTag` real teeth means a `NEXT_TAG_CACHE_D1` binding
- * and `tagCache: d1NextTagCache`; the database id only exists once someone
- * creates the database, so it is not written down here.
+ * The tag cache stays on `dummy` even after that, so `revalidatePath` will not
+ * evict entries here. Turning it on means a `NEXT_TAG_CACHE_D1` binding, and a
+ * D1 database id only exists once someone creates the database — a placeholder
+ * would fail the deploy. See the note beside the R2 binding in wrangler.jsonc.
  */
 export default defineCloudflareConfig({
-	incrementalCache: r2IncrementalCache,
-	queue: memoryQueue,
+	// incrementalCache: r2IncrementalCache,
+	// queue: memoryQueue,
 });
