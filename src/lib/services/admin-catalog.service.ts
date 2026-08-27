@@ -111,6 +111,7 @@ async function countOffersByGame(client: Client, gameIds: string[]): Promise<Map
   }
 
   for (const row of data) {
+    // Offers without a game do not contribute to a game's total.
     if (!row.game_id) {
       continue;
     }

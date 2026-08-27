@@ -49,9 +49,9 @@ export function TelegramConnectPanel({
 
   const code = state.code ?? null;
   const bot = botUsername ? `@${botUsername.replace(/^@/, "")}` : null;
-  const botLink = botUsername
-    ? `https://t.me/${botUsername.replace(/^@/, "")}`
-    : `/${locale}/contact`;
+  // Only a configured bot gets an affordance — an internal page dressed up as
+  // "Open the bot" in a new tab would be a lie about where the click leads.
+  const botLink = bot ? `https://t.me/${bot.slice(1)}` : null;
 
   return (
     <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-6">
@@ -150,7 +150,7 @@ export function TelegramConnectPanel({
                 className="font-medium text-[var(--accent)] underline-offset-2 hover:underline"
                 dir="ltr"
               >
-                {bot ?? messages.telegramConnect.openBotAction}
+                {bot}
               </a>
             </p>
           ) : null}

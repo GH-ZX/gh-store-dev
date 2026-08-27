@@ -712,6 +712,7 @@ async function gameIdsSellingOfferTypes(types: string[]): Promise<Set<string>> {
     throw new CatalogReadError();
   }
 
+  // Product-only offers (no game) cannot narrow a game search.
   return new Set(data.flatMap((row) => (row.game_id ? [row.game_id] : [])));
 }
 
