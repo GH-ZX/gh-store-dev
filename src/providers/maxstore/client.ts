@@ -117,7 +117,13 @@ export class MaxStoreClient {
     // The path carries product and order ids, so it is grouped before logging.
     const route = sanitisePath(path);
 
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    // Order creation is idempotent at MaxStore via `order_uuid`, but a network
+    // timeout leaves the result unknown. Do not repeat a spending POST from this
+    // client: fulfillment records the ambiguous attempt and reconciliation checks
+    // the existing order instead.
+    const attempts = method === "POST" && path === "/api/v2/order" ? 1 : MAX_ATTEMPTS;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const startedAt = Date.now();
       let response: Response;
 
@@ -134,7 +140,7 @@ export class MaxStoreClient {
           cache: "no-store",
         });
       } catch (error) {
-        if (attempt === MAX_ATTEMPTS) {
+        if (attempt === attempts) {
           logFailure("provider.maxstore", "provider_unreachable", error, {
             provider: "maxstore",
             method,
@@ -196,7 +202,7 @@ export class MaxStoreClient {
        * for the server's own suggested interval where it gave one, since a
        * provider that says when to come back knows better than a fixed curve.
        */
-      if (error instanceof MaxStoreAuthError || !error.retryable || attempt === MAX_ATTEMPTS) {
+      if (error instanceof MaxStoreAuthError || !error.retryable || attempt === attempts) {
         log.error("provider.maxstore", "provider_call_failed", {
           provider: "maxstore",
           method,

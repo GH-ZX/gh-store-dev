@@ -181,6 +181,35 @@ function describe(error: unknown): { customer: string; code: string | null } {
   };
 }
 
+/**
+ * A failed purchase request is not always a failed purchase. Network, server,
+ * rate-limit, and contract errors can happen after the supplier accepted the
+ * order but before our server received the response. Never refund or retry that
+ * ambiguous case automatically; the stable provider key lets reconciliation
+ * look up the original order safely.
+ */
+async function handlePurchaseError(
+  context: FulfillmentContext,
+  attemptId: string,
+  error: unknown,
+): Promise<FulfillmentOutcome> {
+  const detail = describe(error);
+  const explicitRejection =
+    (error instanceof G2BulkError || error instanceof MaxStoreError || error instanceof BatStoreError) &&
+    (error.kind === "request" || error.kind === "auth");
+
+  if (!explicitRejection) {
+    await recordAttempt(attemptId, {
+      status: "processing",
+      errorMessage: detail.customer,
+      errorCode: detail.code,
+    });
+    return { state: "processing" };
+  }
+
+  return failAndRefund(context, attemptId, detail.customer, detail.code);
+}
+
 type FulfillmentContext = {
   orderId: string;
   orderNumber: string;
@@ -334,7 +363,13 @@ async function setOrderStatus(orderId: string, status: string): Promise<void> {
  * `(provider, idempotency_key)` is unique, so re-running fulfilment for the same
  * item reuses the existing attempt instead of starting a second purchase.
  */
-type OpenAttempt = { id: string; externalOrderId: string | null; status: string };
+type OpenAttempt = {
+  id: string;
+  externalOrderId: string | null;
+  status: string;
+  /** True only for the worker that atomically claimed the purchase slot. */
+  ownsPurchaseClaim: boolean;
+};
 
 async function openAttempt(
   context: FulfillmentContext,
@@ -344,6 +379,41 @@ async function openAttempt(
   const supabase = createSupabaseServiceClient();
   const key = providerIdempotencyKey(context.orderItemId);
 
+  const { data, error } = await supabase
+    .from("fulfillment_attempts")
+    .upsert(
+      {
+        order_item_id: context.orderItemId,
+        provider,
+        status: "pending",
+        idempotency_key: key,
+        request_payload: requestPayload,
+      },
+      { onConflict: "provider,idempotency_key", ignoreDuplicates: true },
+    )
+    .select("id, external_order_id, status")
+    .maybeSingle();
+
+  if (data) {
+    const { data: claimed } = await supabase
+      .from("fulfillment_attempts")
+      .update({ status: "processing", last_checked_at: new Date().toISOString() })
+      .eq("id", data.id)
+      .eq("status", "pending")
+      .is("external_order_id", null)
+      .select("id")
+      .maybeSingle();
+
+    return {
+      id: data.id,
+      externalOrderId: data.external_order_id,
+      status: "processing",
+      ownsPurchaseClaim: Boolean(claimed),
+    };
+  }
+
+  // Another worker may have inserted the unique attempt first. Read it back;
+  // never start a provider purchase when the claim is ambiguous.
   const { data: existing } = await supabase
     .from("fulfillment_attempts")
     .select("id, external_order_id, status")
@@ -352,30 +422,34 @@ async function openAttempt(
     .maybeSingle();
 
   if (existing) {
+    if (existing.status === "pending" && existing.external_order_id === null) {
+      const { data: claimed } = await supabase
+        .from("fulfillment_attempts")
+        .update({ status: "processing", last_checked_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .eq("status", "pending")
+        .is("external_order_id", null)
+        .select("id")
+        .maybeSingle();
+
+      return {
+        id: existing.id,
+        externalOrderId: existing.external_order_id,
+        status: "processing",
+        ownsPurchaseClaim: Boolean(claimed),
+      };
+    }
+
     return {
       id: existing.id,
       externalOrderId: existing.external_order_id,
       status: existing.status,
+      ownsPurchaseClaim: false,
     };
   }
 
-  const { data, error } = await supabase
-    .from("fulfillment_attempts")
-    .insert({
-      order_item_id: context.orderItemId,
-      provider,
-      status: "pending",
-      idempotency_key: key,
-      request_payload: requestPayload,
-    })
-    .select("id, external_order_id, status")
-    .single();
-
-  if (error) {
-    return null;
-  }
-
-  return { id: data.id, externalOrderId: data.external_order_id, status: data.status };
+  void error;
+  return null;
 }
 
 async function recordAttempt(
@@ -586,7 +660,7 @@ async function fulfillTopup(
 
   let externalOrderId = attempt.externalOrderId;
 
-  if (!externalOrderId) {
+  if (!externalOrderId && attempt.ownsPurchaseClaim) {
     try {
       const placed = await client.placeGameOrder(
         context.gameCode,
@@ -622,10 +696,15 @@ async function fulfillTopup(
         return { state: "completed", deliveredItems: [] };
       }
     } catch (error) {
-      const detail = describe(error);
-
-      return failAndRefund(context, attempt.id, detail.customer, detail.code);
+      return handlePurchaseError(context, attempt.id, error);
     }
+  }
+
+  // A concurrent worker that did not win the purchase claim must not call the
+  // provider with an unknown order id. The winner will leave the external id for
+  // the next reconciliation pass if this request returns first.
+  if (!externalOrderId) {
+    return { state: "processing" };
   }
 
   // Poll a bounded number of times. Staying `processing` is a correct answer:
@@ -697,7 +776,7 @@ async function fulfillVoucher(
 
   let externalOrderId = attempt.externalOrderId;
 
-  if (!externalOrderId) {
+  if (!externalOrderId && attempt.ownsPurchaseClaim) {
     try {
       const purchase = await client.purchaseVoucher(
         context.externalProductId,
@@ -728,10 +807,12 @@ async function fulfillVoucher(
         response: purchase,
       });
     } catch (error) {
-      const detail = describe(error);
-
-      return failAndRefund(context, attempt.id, detail.customer, detail.code);
+      return handlePurchaseError(context, attempt.id, error);
     }
+  }
+
+  if (!externalOrderId) {
+    return { state: "processing" };
   }
 
   for (let round = 0; round < POLL_ATTEMPTS; round += 1) {
@@ -880,7 +961,7 @@ async function fulfillMaxStore(
 
   await setOrderStatus(context.orderId, "fulfilling");
 
-  if (!attempt.externalOrderId) {
+  if (!attempt.externalOrderId && attempt.ownsPurchaseClaim) {
     try {
       const placed = await client.placeOrder({
         productId: context.externalProductId,
@@ -911,9 +992,7 @@ async function fulfillMaxStore(
         return failAndRefund(context, attempt.id, "The supplier rejected this order.");
       }
     } catch (error) {
-      const detail = describe(error);
-
-      return failAndRefund(context, attempt.id, detail.customer, detail.code);
+      return handlePurchaseError(context, attempt.id, error);
     }
   }
 
@@ -1021,7 +1100,7 @@ async function fulfillBatStore(
 
   await setOrderStatus(context.orderId, "fulfilling");
 
-  if (!attempt.externalOrderId) {
+  if (!attempt.externalOrderId && attempt.ownsPurchaseClaim) {
     try {
       const placed = await client.createOrder({
         productId: context.externalProductId,
@@ -1056,9 +1135,7 @@ async function fulfillBatStore(
         return failAndRefund(context, attempt.id, "The supplier rejected this order.");
       }
     } catch (error) {
-      const detail = describe(error);
-
-      return failAndRefund(context, attempt.id, detail.customer, detail.code);
+      return handlePurchaseError(context, attempt.id, error);
     }
   }
 
@@ -1261,6 +1338,18 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
 
   if (attempt.status === "completed" || attempt.status === "refunded") {
     return { action: "skipped", reason: "Already settled." };
+  }
+
+  // `processing` without a provider id means a worker may have timed out after
+  // submitting the purchase but before saving its response. Never issue another
+  // purchase in this ambiguous state; leave it for manual provider lookup.
+  if (attempt.status === "processing" && !attempt.external_order_id) {
+    log.warn("fulfilment", "purchase_claim_ambiguous", {
+      orderId: context.orderId,
+      orderNumber: context.orderNumber,
+      provider,
+    });
+    return { action: "escalated", reason: "A purchase may be in progress without a supplier reference." };
   }
 
   const ageMinutes = minutesSince(attempt.created_at, now);

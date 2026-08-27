@@ -108,6 +108,7 @@ export function OrderStatusPanel({
   walletHref,
 }: OrderStatusPanelProps) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [allCopied, setAllCopied] = useState(false);
   const detail = messages.orderDetail;
   const state = presentation({ messages, status, fulfillmentState, isRefunded });
   const failed = state.tone === "danger" || state.tone === "warning";
@@ -119,6 +120,15 @@ export function OrderStatusPanel({
     } catch {
       // A blocked clipboard is not an error worth interrupting for: the code is
       // on screen and can be selected by hand.
+    }
+  }
+
+  async function copyAllCodes() {
+    try {
+      await navigator.clipboard.writeText(codes.join("\n"));
+      setAllCopied(true);
+    } catch {
+      // The individual codes remain visible and selectable.
     }
   }
 
@@ -145,8 +155,17 @@ export function OrderStatusPanel({
 
       {codes.length > 0 ? (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold text-[var(--ink)]">{detail.codesTitle}</h3>
-          <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{detail.codesDescription}</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--ink)]">{detail.codesTitle}</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{detail.codesDescription}</p>
+            </div>
+            {codes.length > 1 ? (
+              <Button type="button" variant="secondary" size="sm" onClick={() => void copyAllCodes()}>
+                {allCopied ? detail.copiedLabel : detail.copyAction}
+              </Button>
+            ) : null}
+          </div>
 
           <ul className="mt-4 grid gap-2">
             {codes.map((code) => (

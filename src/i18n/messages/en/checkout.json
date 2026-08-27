@@ -96,7 +96,7 @@
     "pendingTitle": "Order queued",
     "pendingDescription": "We have your order and delivery starts shortly. Refresh to follow the status.",
     "processingTitle": "Delivery in progress",
-    "processingDescription": "The supplier is working on this order and it can take a few minutes. Refresh to follow the status.",
+    "processingDescription": "The supplier is working on this order and it can take a few minutes. This page checks automatically for the result.",
     "completedTitle": "Delivered",
     "completedDescription": "This order reached your account. If you cannot find it, contact support with the order number.",
     "failedTitle": "This order could not be delivered",
