@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { OrderRefresh } from "@/components/checkout/order-refresh";
 import { OrderStatusPanel } from "@/components/checkout/order-status";
 import { ReviewForm } from "@/components/reviews/review-form";
 import { Badge } from "@/components/ui/badge";
@@ -122,6 +123,14 @@ export default async function OrderDetailPage({
 
   const detail = messages.orderDetail;
   const submittedFields = order.items.flatMap((item) => item.fields);
+  const waitingForFulfillment =
+    order.status === "pending" ||
+    order.status === "paid" ||
+    order.status === "processing" ||
+    order.status === "fulfilling" ||
+    order.fulfillmentState === "pending" ||
+    order.fulfillmentState === "processing" ||
+    order.fulfillmentState === "reconcile";
 
   /*
    * Only a delivered order can be reviewed, so nothing is asked of the reviews
@@ -144,6 +153,7 @@ export default async function OrderDetailPage({
       </nav>
 
       <SectionHeader as="h1" eyebrow={detail.eyebrow} title={detail.title} className="mt-5" />
+      <OrderRefresh enabled={waitingForFulfillment} />
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <span className="text-sm font-semibold text-[var(--ink)]">

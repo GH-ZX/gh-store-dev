@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactElement, SVGProps } from "react";
@@ -25,14 +23,6 @@ import { cn } from "@/lib/cn";
 
 type IconType = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
-const GROUP_ICONS: Record<string, IconType> = {
-  overview: GridIcon,
-  sales: ReceiptIcon,
-  people: UserIcon,
-  storefront: GamepadIcon,
-  system: CableIcon,
-};
-
 const PAGE_ICONS: Record<string, IconType> = {
   overview: GridIcon,
   catalog: GamepadIcon,
@@ -50,11 +40,12 @@ const PAGE_ICONS: Record<string, IconType> = {
 };
 
 /**
- * A persistent, link-first navigation for the admin workspace.
+ * Simple dashboard header navigation.
  *
- * Every group is a real link to its first page; the current group's pages appear
- * in a second row. Nothing depends on hover, hidden dropdowns, or client-only
- * state, so direct links and refreshes always render the right navigation.
+ * The dashboard is a work surface, not a second website header. It keeps one
+ * compact current-page bar visible and puts every destination in a native
+ * disclosure menu. This works on small screens, supports keyboard navigation,
+ * and has no hover state or client-side menu state to get out of sync.
  */
 export function DashboardNav({
   locale,
@@ -65,87 +56,84 @@ export function DashboardNav({
 }) {
   const pathname = usePathname() ?? "";
   const base = `/${locale}/dashboard`;
-  function isActive(href: string): boolean {
-    return isDashboardNavActive(base, href, pathname);
-  }
-
-  const active = DASHBOARD_NAV_GROUPS.find((group) =>
-    group.items.some((item) => {
-      if (!item.href) return false;
+  const pages = DASHBOARD_NAV_GROUPS.flatMap((group) =>
+    group.items.flatMap((item) => {
+      if (!item.href) return [];
       const href = item.href === "/" ? base : `${base}${item.href}`;
-      return isDashboardNavActive(base, href, pathname);
+      return [{ ...item, href, group: group.key }];
     }),
-  ) ?? DASHBOARD_NAV_GROUPS[0];
-  const activeItems = (active?.items ?? [])
-    .filter((it) => it.href)
-    .map((it) => ({
-      ...it,
-      href: it.href === "/" ? base : `${base}${it.href}`,
-      label: messages.nav[it.key as keyof AdminMessages["shell"]["nav"]] ?? it.key,
-    }));
+  );
+  const current = pages.find((page) => isDashboardNavActive(base, page.href, pathname)) ?? pages[0];
+  const CurrentIcon = current ? PAGE_ICONS[current.key] ?? GridIcon : GridIcon;
+  const currentLabel = current
+    ? messages.nav[current.key as keyof AdminMessages["shell"]["nav"]] ?? current.key
+    : messages.title;
 
   return (
     <nav aria-label={messages.navLabel} className="sticky top-[4.75rem] z-30 sm:top-[5.25rem]">
-      <div className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_88%,transparent)] p-2 shadow-[var(--elevation-2)] backdrop-blur-xl">
-        {/* Five top-level buttons */}
-        <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:gap-1.5">
-          {DASHBOARD_NAV_GROUPS.map((group) => {
-            const label = (messages.groups as Record<string, string>)[group.key] ?? group.key;
-            const Icon = GROUP_ICONS[group.key] ?? GridIcon;
-            const groupActive = group.key === active?.key;
-            const firstItem = group.items.find((item) => item.href);
-            if (!firstItem?.href) return null;
-            const href = firstItem.href === "/" ? base : `${base}${firstItem.href}`;
-            return (
-              <Link
-                key={group.key}
-                href={href}
-                prefetch={false}
-                aria-current={groupActive ? "page" : undefined}
-                className={cn(
-                  "inline-flex min-w-0 items-center justify-center gap-2 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-semibold transition-colors sm:flex-1 sm:justify-center",
-                  groupActive
-                    ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-[var(--elevation-1)]"
-                    : "bg-[var(--surface)] text-[var(--ink-soft)] hover:bg-[var(--line)] hover:text-[var(--ink)]",
-                )}
-              >
-                <Icon className="size-4 shrink-0" />
-                <span className="truncate">{label}</span>
-                <span className={cn("text-xs tabular-nums opacity-60", groupActive && "opacity-80")}>
-                  {group.items.filter((it) => it.href).length}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+      <div className="flex min-h-14 items-center gap-2 rounded-[var(--radius-card)] border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_94%,transparent)] px-3 shadow-[var(--elevation-1)] backdrop-blur-xl sm:px-4">
+        <Link
+          href={base}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-1 py-2 text-sm font-semibold text-[var(--ink)]"
+        >
+          <GridIcon className="size-4 shrink-0 text-[var(--accent)]" />
+          <span className="truncate">{messages.title}</span>
+        </Link>
 
-        {/* Second row: the active group's pages. It wraps instead of scrolling on narrow screens. */}
-        {active && activeItems.length > 1 ? (
-          <div className="mt-2 flex flex-wrap gap-1.5 border-t border-[var(--line)] pt-2">
-            {activeItems.map((item) => {
-              const Icon = PAGE_ICONS[item.key] ?? GridIcon;
-              const current = isActive(item.href);
+        <span className="hidden h-5 w-px bg-[var(--line)] sm:block" aria-hidden="true" />
+        <span className="hidden min-w-0 items-center gap-2 text-sm text-[var(--ink-muted)] sm:flex">
+          <CurrentIcon className="size-4 shrink-0" />
+          <span className="max-w-48 truncate">{currentLabel}</span>
+        </span>
+
+        <details className="relative shrink-0">
+          <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--ink-soft)] transition-colors hover:border-[var(--line-strong)] hover:text-[var(--ink)] [&::-webkit-details-marker]:hidden">
+            <span className="sm:hidden">{currentLabel}</span>
+            <span className="hidden sm:inline">{messages.navLabel}</span>
+            <span aria-hidden="true" className="text-xs text-[var(--ink-muted)]">⌄</span>
+          </summary>
+
+          <div className="absolute end-0 top-12 z-50 grid max-h-[min(70vh,34rem)] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-2 shadow-[var(--elevation-3)]">
+            {DASHBOARD_NAV_GROUPS.map((group) => {
+              const groupLabel =
+                (messages.groups as Record<string, string>)[group.key] ?? group.key;
+
               return (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  prefetch={false}
-                  aria-current={current ? "page" : undefined}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                    current
-                      ? "bg-[var(--ink)] text-[var(--shell)]"
-                      : "bg-[var(--surface)] text-[var(--ink-muted)] hover:bg-[var(--line)] hover:text-[var(--ink)]",
-                  )}
-                >
-                  <Icon className="size-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">{item.label}</span>
-                </Link>
+                <div key={group.key} className="not-first:mt-2 not-first:border-t not-first:border-[var(--line)] not-first:pt-2">
+                  <p className="px-3 py-1.5 text-[0.6875rem] font-semibold tracking-[0.12em] text-[var(--ink-faint)] uppercase">
+                    {groupLabel}
+                  </p>
+                  <div className="grid gap-0.5">
+                    {group.items.map((item) => {
+                      if (!item.href) return null;
+                      const href = item.href === "/" ? base : `${base}${item.href}`;
+                      const active = isDashboardNavActive(base, href, pathname);
+                      const Icon = PAGE_ICONS[item.key] ?? GridIcon;
+                      const label = messages.nav[item.key as keyof AdminMessages["shell"]["nav"]] ?? item.key;
+
+                      return (
+                        <Link
+                          key={item.key}
+                          href={href}
+                          aria-current={active ? "page" : undefined}
+                          className={cn(
+                            "flex min-h-10 items-center gap-3 rounded-[var(--radius-control)] px-3 text-sm transition-colors",
+                            active
+                              ? "bg-[var(--accent)] font-semibold text-[var(--accent-ink)]"
+                              : "text-[var(--ink-soft)] hover:bg-[var(--shell)] hover:text-[var(--ink)]",
+                          )}
+                        >
+                          <Icon className="size-4 shrink-0" />
+                          <span className="min-w-0 flex-1 truncate">{label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </div>
-        ) : null}
-
+        </details>
       </div>
     </nav>
   );

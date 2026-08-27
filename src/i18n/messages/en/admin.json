@@ -139,7 +139,7 @@
     "description": "Connect digital product suppliers and control pricing and syncing.",
     "g2bulk": {
       "name": "G2Bulk",
-      "summary": "Supplier for game top-ups and digital cards. The API key is used on the server only.",
+      "summary": "Supplier for digital top-ups and cards. The API key is used on the server only.",
       "statusConfigured": "Key saved",
       "statusMissing": "No key added yet",
       "keyHintLabel": "Saved key",
@@ -382,7 +382,7 @@
     },
     "maxstore": {
       "name": "MaxStore",
-      "summary": "A second supplier: game top-ups, numbers, social media services, support apps, and recharge accounts.",
+      "summary": "A second supplier: digital top-ups, numbers, social media services, support apps, and recharge accounts.",
       "statusConfigured": "Token saved",
       "statusMissing": "No token",
       "keyHintLabel": "Saved token",
@@ -419,7 +419,7 @@
     },
     "batstore": {
       "name": "BatStore",
-      "summary": "A Telegram-bot reseller: game top-ups, accounts, and activation services paid for from a wallet balance.",
+      "summary": "A Telegram-bot reseller: digital products, accounts, and activation services paid for from a wallet balance.",
       "statusConfigured": "Token saved",
       "statusMissing": "No token",
       "keyHintLabel": "Saved token",
@@ -450,7 +450,7 @@
     },
     "igdb": {
       "name": "IGDB artwork",
-      "summary": "Game covers and artwork from IGDB, for hand-built catalog entries.",
+      "summary": "Product artwork from IGDB, for hand-built catalog entries.",
       "statusConfigured": "Connected",
       "statusMissing": "Not connected",
       "clientIdLabel": "Twitch client ID",
@@ -545,8 +545,8 @@
     "goToImport": "Open import picker",
     "providers": {
       "g2bulk": {
-        "title": "G2Bulk — Games",
-        "description": "Digital game top-ups, gift cards, and redeem codes."
+        "title": "G2Bulk — Products",
+        "description": "Digital top-ups, gift cards, and redeem codes."
       },
       "g2bulkVouchers": {
         "title": "G2Bulk — Voucher categories",
@@ -554,7 +554,7 @@
       },
       "maxstore": {
         "title": "MaxStore",
-        "description": "Game currencies, in-game items, and subscriptions."
+        "description": "Digital currencies, in-app items, and subscriptions."
       },
       "batstore": {
         "title": "BatStore",
@@ -593,15 +593,15 @@
     "supplierLinkSave": "Save link",
     "supplierLinkSaved": "Supplier link saved.",
     "game": {
-      "title": "Game details",
-      "description": "The Arabic name is what most customers read, so keep it accurate.",
+      "title": "Product details",
+      "description": "The product names are what customers read, so keep them accurate.",
       "nameAr": "Name in Arabic",
       "nameEn": "Name in English",
       "categoryLabel": "Category",
       "categoryHint": "The category this product appears under in the store.",
       "categoryNone": "No category",
       "slug": "URL slug",
-      "slugHint": "Changing this changes the game's URL in the store.",
+      "slugHint": "Changing this changes the product's URL in the store.",
       "pointsNameAr": "Currency name in Arabic",
       "pointsNameEn": "Currency name in English",
       "pointsHint": "For example: UC, diamonds, points.",
@@ -618,21 +618,21 @@
       "isFeatured": "Featured",
       "showInCarousel": "Show in the hero carousel",
       "carouselOrder": "Carousel order",
-      "saveAction": "Save game",
-      "saved": "Game saved.",
-      "deleteAction": "Delete game",
-      "deleteConfirm": "This deletes the game and all its packages. It cannot be undone.",
-      "deleted": "Game deleted.",
+      "saveAction": "Save product",
+      "saved": "Product saved.",
+      "deleteAction": "Delete product",
+      "deleteConfirm": "This deletes the product and all its packages. It cannot be undone.",
+      "deleted": "Product deleted.",
       "igdb": {
         "title": "Find artwork on IGDB",
-        "description": "Search by game name and pick an image. Choosing fills the URL fields below; save the game to keep it.",
-        "searchLabel": "Game name",
+        "description": "Search by product name and pick an image. Choosing fills the URL fields below; save the product to keep it.",
+        "searchLabel": "Product name",
         "searchPlaceholder": "e.g. PUBG Mobile",
         "searchAction": "Search",
         "useAsCover": "Use as cover",
         "useAsArtwork": "Use as artwork",
         "pickHint": "Clicking a tile fills the cover field.",
-        "emptyQuery": "Type a game name first.",
+        "emptyQuery": "Type a product name first.",
         "notConfigured": "Connect IGDB on the Providers page first.",
         "failed": "The search failed. Check the IGDB connection on Providers, then try again.",
         "emptyTitle": "Nothing found",
@@ -678,11 +678,11 @@
       "offer_not_found": "That package no longer exists."
     },
     "create": {
-      "action": "New game",
-      "title": "New game",
+      "action": "New product",
+      "title": "New product",
       "description": "For anything the supplier import does not carry.",
       "formTitle": "Name and address",
-      "formDescription": "The rest — artwork, description, packages — is edited once the game exists.",
+      "formDescription": "The rest — artwork, description, packages — is edited once the product exists.",
       "nameArLabel": "Name (Arabic)",
       "nameEnLabel": "Name (English)",
       "slugLabel": "Address",
@@ -1342,9 +1342,9 @@
     "toggleOff": "Done editing",
     "toggleHint": "Only you can see these controls.",
     "editSection": "Edit section",
-    "editGame": "Edit game",
+    "editGame": "Edit product",
     "sectionPanelTitle": "Section",
-    "gamePanelTitle": "Game",
+    "gamePanelTitle": "Product",
     "titleAr": "Title in Arabic",
     "titleEn": "Title in English",
     "subtitleAr": "Subtitle in Arabic",
