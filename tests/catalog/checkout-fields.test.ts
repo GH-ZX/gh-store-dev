@@ -81,6 +81,14 @@ describe("resolveCheckoutFieldKeys", () => {
     expect(result.kind).toBe("none");
     expect(result.keys.size).toBe(0);
   });
+  it("returns none for stored delivery", () => {
+    const result = resolveCheckoutFieldKeys(
+      { deliveryKind: "stored", offerFields: [] },
+      { gameFieldKeys: ["uid"] },
+    );
+    expect(result.kind).toBe("none");
+    expect(result.keys.size).toBe(0);
+  });
 
   it("uses offer fields when they exist", () => {
     const result = resolveCheckoutFieldKeys(
@@ -115,6 +123,10 @@ describe("resolveQuantityMax", () => {
 
   it("uses provider max for direct delivery", () => {
     expect(resolveQuantityMax({ deliveryKind: "direct", providerMax: 5 })).toBe(5);
+  });
+  it("uses provider max for stored delivery", () => {
+    expect(resolveQuantityMax({ deliveryKind: "stored", providerMax: 4 })).toBe(4);
+    expect(resolveQuantityMax({ deliveryKind: "stored", providerMax: null })).toBe(10);
   });
 
   it("caps at 10", () => {

@@ -138,7 +138,7 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   // browser, so a crafted form cannot point checkout at a different product.
   const { data: offer, error: offerError } = await supabase
     .from("offers")
-    .select("id, games!inner (slug)")
+    .select("id, delivery_kind, games!inner (slug)")
     .eq("slug", input.offerSlug)
     .eq("is_active", true)
     .eq("games.slug", input.gameSlug)
@@ -149,7 +149,14 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
     return { ok: false, reason: "unavailable" };
   }
 
-  if (!isAdmin && !(await isG2BulkOfferAffordable(offer.id, input.quantity))) {
+  const deliveryKind = offer.delivery_kind;
+
+  if (
+    !isAdmin &&
+    deliveryKind !== "manual" &&
+    deliveryKind !== "stored" &&
+    !(await isG2BulkOfferAffordable(offer.id, input.quantity))
+  ) {
     return { ok: false, reason: "supplier_unavailable" };
   }
 

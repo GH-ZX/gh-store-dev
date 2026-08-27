@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.17"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       audit_logs: {
@@ -1992,6 +1967,11 @@ export type Database = {
           wallet_id: string
         }[]
       }
+      admin_daily_sales_series: { Args: { p_days?: number }; Returns: Json }
+      admin_overview_snapshot: {
+        Args: { p_grace_minutes?: number }
+        Returns: Json
+      }
       approve_recharge_request: {
         Args: {
           p_credit_amount?: number
@@ -2021,6 +2001,28 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      claim_stock_items: {
+        Args: { p_offer_id: string; p_order_id: string; p_quantity: number }
+        Returns: {
+          content: string
+          created_at: string
+          id: string
+          offer_id: string
+          sold_to_order_id: string | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "stock_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_telegram_owner: {
+        Args: { p_chat_id: number; p_secret: string }
+        Returns: boolean
       }
       consume_telegram_link_code: {
         Args: {
@@ -2221,6 +2223,27 @@ export type Database = {
           status: string
         }[]
       }
+      telegram_admin_adjust_wallet: {
+        Args: {
+          p_actor: string
+          p_amount: number
+          p_description?: string
+          p_idempotency_key?: string
+          p_user_id: string
+        }
+        Returns: {
+          balance: number
+          idempotent: boolean
+          transaction_id: string
+          wallet_id: string
+        }[]
+      }
+      telegram_admin_reject_recharge: {
+        Args: { p_actor: string; p_note?: string; p_request_id: string }
+        Returns: {
+          status: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -2349,9 +2372,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

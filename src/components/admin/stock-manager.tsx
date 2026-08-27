@@ -3,7 +3,6 @@
 import { useCallback, useState, useTransition } from "react";
 import { AdminCard, TextField } from "@/components/admin/admin-form";
 import { Button } from "@/components/ui/button";
-import type { Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
 import {
   addStockItemAction,
@@ -15,7 +14,6 @@ type StockItem = { id: string; content: string; createdAt: string };
 type Messages = AdminMessages["catalog"]["stock"];
 
 type StockManagerProps = {
-  locale: Locale;
   messages: Messages;
   gameId: string;
   offerId: string;

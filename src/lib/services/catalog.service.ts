@@ -307,10 +307,10 @@ export type StoreOfferDetail = {
   inputFields: StoreInputField[];
   relatedOffers: StoreOffer[];
   /**
-   * `direct` offers ask the buyer nothing — pay and receive. `account` offers
-   * collect the fields below before payment.
+   * `account` and `manual` offers collect fields before payment. `direct` and
+   * `stored` offers deliver goods without customer account details.
    */
-  deliveryKind: "account" | "direct";
+  deliveryKind: "account" | "direct" | "manual" | "stored";
   /** The provider's own quantity ceiling, when its import recorded one. */
   quantityMax: number | null;
 };
@@ -392,7 +392,13 @@ export async function getOfferBySlug(
     throw new CatalogReadError();
   }
 
-  const deliveryKind = offerRowResult.data?.delivery_kind === "direct" ? "direct" : "account";
+  const rawDeliveryKind = offerRowResult.data?.delivery_kind;
+  const deliveryKind =
+    rawDeliveryKind === "direct" ||
+    rawDeliveryKind === "manual" ||
+    rawDeliveryKind === "stored"
+      ? rawDeliveryKind
+      : "account";
   const offerFieldDefs = normalizeOfferInputFields(offerRowResult.data?.input_fields);
   const resolution = resolveCheckoutFieldKeys(
     { deliveryKind, offerFields: offerFieldDefs },

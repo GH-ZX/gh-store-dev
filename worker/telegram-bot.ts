@@ -94,7 +94,7 @@ async function telegram(method: string, body: Record<string, unknown>, token: st
   }
 }
 
-async function sendText(chatId: string, text: string, token: string): Promise<boolean> {
+async function sendText(chatId: string, text: string, token: string, keyboard?: unknown): Promise<boolean> {
   return telegram(
     "sendMessage",
     {
@@ -102,6 +102,7 @@ async function sendText(chatId: string, text: string, token: string): Promise<bo
       text: text.slice(0, 4000),
       parse_mode: "HTML",
       disable_web_page_preview: true,
+      ...(keyboard ? { reply_markup: keyboard } : {}),
     },
     token,
   );
@@ -249,7 +250,6 @@ function ownerAlertText(row: AlertRow): string {
         "🛒 <b>New order</b>",
         `Order: <b>${escapeHtml(p.order_number ?? row.id)}</b>`,
         `Amount: <b>${money(p.total)}</b>`,
-        `Dashboard: https://gh-store.me/dashboard/orders`,
       ].join("\n");
 
     case "order_failed":
@@ -258,7 +258,13 @@ function ownerAlertText(row: AlertRow): string {
         `Order: <b>${escapeHtml(p.order_number ?? row.id)}</b>`,
         `Refunded: ${p.refunded === true ? "✅ Yes" : "⚠️ No — needs a decision"}`,
         `Reason: ${escapeHtml(p.reason ?? "unknown")}`,
-        `Dashboard: https://gh-store.me/dashboard/orders`,
+      ].join("\n");
+
+    case "order_delivered":
+      return [
+        "✅ <b>Order delivered</b>",
+        `Order: <b>${escapeHtml(p.order_number ?? row.id)}</b>`,
+        `Amount: <b>${money(p.total ?? p.amount)}</b>`,
       ].join("\n");
 
     case "recharge_request":
@@ -267,7 +273,6 @@ function ownerAlertText(row: AlertRow): string {
         `Reference: <code>${escapeHtml(p.reference ?? "—")}</code>`,
         `Amount: <b>${money(p.amount)}</b>`,
         `Method: ${escapeHtml(p.method ?? "—")}`,
-        `Review: https://gh-store.me/dashboard/recharges`,
       ].join("\n");
 
     case "support_message":
@@ -275,7 +280,6 @@ function ownerAlertText(row: AlertRow): string {
         "💬 <b>New support message</b>",
         `Subject: <b>${escapeHtml(p.subject ?? "—")}</b>`,
         p.body ? `\n${escapeHtml(p.body)}` : "",
-        `Open: https://gh-store.me/dashboard/support`,
       ]
         .filter((line) => line.length > 0)
         .join("\n");
@@ -286,11 +290,66 @@ function ownerAlertText(row: AlertRow): string {
         `Balance: <b>${money(p.balance)}</b>`,
         `Required: ${money(p.required)}`,
         `Checkout is refusing purchases until the G2Bulk wallet is topped up.`,
-        `Providers: https://gh-store.me/dashboard/providers`,
       ].join("\n");
+
+    case "low_stock":
+      return [
+        "📦 <b>Low stock</b>",
+        `Offer: <code>${escapeHtml(p.offer_id ?? p.offer_slug ?? "—")}</code>`,
+        `Remaining: <b>${escapeHtml(String(p.remaining ?? p.available ?? "—"))}</b>`,
+      ].join("\n");
+
+    case "wallet_adjusted":
+      return [
+        "💰 <b>Wallet adjusted</b>",
+        `User: <code>${escapeHtml(p.user_id ?? "—")}</code>`,
+        `Amount: <b>${money(p.amount)}</b>`,
+        `Balance: <b>${money(p.balance)}</b>`,
+      ].join("\n");
+
+    case "new_customer":
+      return [
+        "👤 <b>New customer</b>",
+        `${escapeHtml(p.full_name ?? p.email ?? p.username ?? p.user_id ?? "—")}`,
+        p.email ? `Email: <code>${escapeHtml(p.email)}</code>` : "",
+        `ID: <code>${escapeHtml(p.user_id ?? "—")}</code>`,
+      ]
+        .filter((line) => line.length > 0)
+        .join("\n");
 
     default:
       return `📢 ${escapeHtml(row.type)}`;
+  }
+}
+
+function ownerAlertKeyboard(row: AlertRow): unknown | undefined {
+  const p = row.payload as Record<string, unknown>;
+  const id = String(p.user_id ?? p.order_id ?? p.request_id ?? p.thread_id ?? "");
+  switch (row.type) {
+    case "order_placed":
+    case "order_failed":
+    case "order_delivered":
+      return p.order_id
+        ? { inline_keyboard: [[{ text: "Open order", url: `https://gh-store.me/en/dashboard/orders/${encodeURIComponent(String(p.order_id))}` }]] }
+        : { inline_keyboard: [[{ text: "Open orders", url: "https://gh-store.me/en/dashboard/orders" }]] };
+    case "recharge_request":
+    case "recharge_approved":
+    case "recharge_rejected":
+      return { inline_keyboard: [[{ text: "Open recharges", url: "https://gh-store.me/en/dashboard/recharges" }]] };
+    case "support_message":
+    case "support_reply":
+      return { inline_keyboard: [[{ text: "Open support", url: "https://gh-store.me/en/dashboard/support" }]] };
+    case "low_wallet":
+      return { inline_keyboard: [[{ text: "Providers", url: "https://gh-store.me/en/dashboard/providers" }]] };
+    case "low_stock":
+      return { inline_keyboard: [[{ text: "Catalog", url: "https://gh-store.me/en/dashboard/catalog" }]] };
+    case "wallet_adjusted":
+    case "new_customer":
+      return id
+        ? { inline_keyboard: [[{ text: "Open customer", url: `https://gh-store.me/en/dashboard/customers/${encodeURIComponent(id)}` }]] }
+        : undefined;
+    default:
+      return undefined;
   }
 }
 
@@ -391,6 +450,21 @@ function customerAlertText(row: AlertRow, locale: "ar" | "en"): string {
             .filter((line) => line.length > 0)
             .join("\n");
 
+    case "wallet_adjusted":
+      return locale === "ar"
+        ? [
+            "💰 <b>تم تعديل رصيدك</b>",
+            `المبلغ: <b>${money(p.amount)}</b>`,
+            `الرصيد: <b>${money(p.balance)}</b>`,
+            "المحفظة: https://gh-store.me/ar/wallet",
+          ].join("\n")
+        : [
+            "💰 <b>Your balance was adjusted</b>",
+            `Amount: <b>${money(p.amount)}</b>`,
+            `Balance: <b>${money(p.balance)}</b>`,
+            "Wallet: https://gh-store.me/en/wallet",
+          ].join("\n");
+
     default:
       return locale === "ar" ? `📢 ${escapeHtml(row.type)}` : `📢 ${escapeHtml(row.type)}`;
   }
@@ -454,7 +528,7 @@ export async function deliverTelegramAlerts(env: BotEnv): Promise<void> {
       continue;
     }
 
-    const sent = await sendText(owner, ownerAlertText(alert), token);
+    const sent = await sendText(owner, ownerAlertText(alert), token, ownerAlertKeyboard(alert));
 
     if (sent) {
       await markAlert(env, alert.id, "sent");

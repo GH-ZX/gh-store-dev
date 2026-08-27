@@ -40,10 +40,11 @@ export default async function CatalogGamePage({
 
   const { game, offers } = detail;
 
-  // Load stock for stored offers
-  const supabase = createSupabaseServiceClient();
+  // Stock reads need service authority, but ordinary catalog editing must still
+  // work when fulfillment is intentionally not configured.
   const storedOffers = offers.filter((o) => o.deliveryKind === "stored");
-  const stockSummaries = storedOffers.length > 0
+  const supabase = storedOffers.length > 0 ? createSupabaseServiceClient() : null;
+  const stockSummaries = supabase
     ? await getStockSummaries(
         supabase,
         storedOffers.map((o) => o.id),
@@ -51,16 +52,18 @@ export default async function CatalogGamePage({
     : new Map();
 
   const stockItemLists = new Map<string, { id: string; content: string; createdAt: string }[]>();
-  for (const offer of storedOffers) {
-    const items = await listStockItems(supabase, offer.id);
-    stockItemLists.set(
-      offer.id,
-      items.map((i) => ({
-        id: i.id,
-        content: i.content,
-        createdAt: i.createdAt,
-      })),
-    );
+  if (supabase) {
+    for (const offer of storedOffers) {
+      const items = await listStockItems(supabase, offer.id);
+      stockItemLists.set(
+        offer.id,
+        items.map((i) => ({
+          id: i.id,
+          content: i.content,
+          createdAt: i.createdAt,
+        })),
+      );
+    }
   }
 
   return (
@@ -177,7 +180,6 @@ export default async function CatalogGamePage({
           {storedOffers.map((offer) => (
             <StockManager
               key={offer.id}
-              locale={locale}
               messages={messages.stock}
               gameId={game.id}
               offerId={offer.id}

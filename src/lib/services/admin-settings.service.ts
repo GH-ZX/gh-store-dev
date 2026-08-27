@@ -583,22 +583,20 @@ export async function saveTelegramSettings(update: TelegramSettingsUpdate): Prom
 }
 
 /**
- * The address the Telegram webhook is registered at.
+ * The public Telegram webhook address.
  *
- * A Supabase Edge Function, like the G2Bulk and Sam callbacks: this address is
- * public however and wherever the store is deployed, and it does not depend on
- * the Cloudflare Worker's environment. The secret is part of the address.
+ * Telegram carries the shared secret in its native
+ * `X-Telegram-Bot-Api-Secret-Token` header, so the secret never appears in the
+ * callback URL or intermediary access logs.
  */
-export function telegramWebhookUrl(secret?: string | null): string | null {
+export function telegramWebhookUrl(): string | null {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
 
   if (!supabaseUrl) {
     return null;
   }
 
-  const base = functionUrl(supabaseUrl, telegramWebhookFunction);
-
-  return secret ? `${base}?token=${encodeURIComponent(secret)}` : base;
+  return functionUrl(supabaseUrl, telegramWebhookFunction);
 }
 
 /**
@@ -806,8 +804,7 @@ export async function registerTelegramWebhook(token: string, secret: string, own
   ok: boolean;
   kind: string;
 }> {
-  // The token lives in the URL itself, exactly like the G2Bulk callback.
-  const url = telegramWebhookUrl(secret);
+  const url = telegramWebhookUrl();
 
   if (!url) {
     return { ok: false, kind: "invalid_url" };
@@ -822,7 +819,11 @@ export async function registerTelegramWebhook(token: string, secret: string, own
     const webhookResult = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url, allowed_updates: ["message", "callback_query"] }),
+      body: JSON.stringify({
+        url,
+        secret_token: secret,
+        allowed_updates: ["message", "callback_query"],
+      }),
     });
 
     const payload = (await webhookResult.json().catch(() => null)) as { ok?: boolean; description?: string } | null;

@@ -27,9 +27,9 @@ export type NotificationType =
   | "recharge_approved"
   | "recharge_rejected"
   | "support_reply"
+  | "wallet_adjusted"
   /** The one an owner writes themselves, rather than one the store derives. */
   | "admin_message";
-
 export type CustomerNotification = {
   id: string;
   type: string;

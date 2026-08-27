@@ -99,17 +99,17 @@ export type ContainerFieldSource = {
 /**
  * Which fields this checkout shows, and where they came from.
  *
- * - `direct`: nothing. The goods arrive after payment; asking for a player id
- *   a product will never use is a wall between the customer and the buy.
+ * - `direct` and `stored`: nothing. The goods arrive after payment; asking for
+ *   a player id a product will never use is a wall between the customer and the
+ *   buy.
  * - otherwise the offer's own definitions when it has any, else the game's
- *   container rows — the pre-existing behaviour for imports that never wrote
- *   per-offer fields.
+ *   container rows — the pre-existing behaviour for account/manual offers.
  */
 export function resolveCheckoutFieldKeys(
   offer: CheckoutFieldSource,
   container: ContainerFieldSource,
 ): { kind: "none" | "offer" | "game"; keys: Set<string> } {
-  if (offer.deliveryKind === "direct") {
+  if (offer.deliveryKind === "direct" || offer.deliveryKind === "stored") {
     return { kind: "none", keys: new Set() };
   }
 
@@ -123,9 +123,9 @@ export function resolveCheckoutFieldKeys(
 /**
  * How many units one purchase may carry.
  *
- * Direct goods are stock: buying three of them buys three codes, and the
- * providers' own bounds (`qty_values.max`) say how high that goes, capped at
- * ten like every multi-unit purchase here. An `account` top-up stays
+ * Direct and stored goods are stock: buying three of them buys three codes, and
+ * the providers' own bounds (`qty_values.max`) say how high that goes, capped at
+ * ten like every multi-unit purchase here. An account/manual offer stays
  * single-unit — the supplier's order takes no quantity, so two units would be
  * two deliveries wearing one charge.
  */
@@ -133,7 +133,7 @@ export function resolveQuantityMax(input: {
   deliveryKind: string | null;
   providerMax: number | null;
 }): number {
-  if (input.deliveryKind !== "direct") {
+  if (input.deliveryKind !== "direct" && input.deliveryKind !== "stored") {
     return 1;
   }
 

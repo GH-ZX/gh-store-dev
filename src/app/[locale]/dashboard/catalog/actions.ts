@@ -484,7 +484,7 @@ export async function addStockItemAction(
       offerId,
       content,
     );
-    revalidatePath(`/${gameId}`, "page");
+    revalidatePath("/", "layout");
     return {
       item: { id: item.id, content: item.content, createdAt: item.createdAt },
     };
@@ -506,7 +506,7 @@ export async function bulkAddStockItemsAction(
       offerId,
       contents,
     );
-    revalidatePath(`/${gameId}`, "page");
+    revalidatePath("/", "layout");
     return { count };
   } catch {
     return { error: "Failed to bulk add stock items" };
@@ -525,7 +525,7 @@ export async function deleteStockItemAction(
       createSupabaseServiceClient(),
       stockItemId,
     );
-    revalidatePath(`/${gameId}`, "page");
+    revalidatePath("/", "layout");
     return { success };
   } catch {
     return { error: "Failed to delete stock item" };

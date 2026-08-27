@@ -151,22 +151,24 @@ export async function deleteStockItem(
 }
 
 /**
- * Claim one stock item for an order (atomic via RPC).
- * Returns the claimed item's content, or throws if no stock is available.
+ * Claim all stock items for an order atomically.
+ * Returns the claimed contents, or throws without consuming partial stock.
  */
-export async function claimStockItem(
+export async function claimStockItems(
   supabase: SupabaseClient,
   offerId: string,
   orderId: string,
-): Promise<string> {
-  const { data, error } = await supabase.rpc("claim_stock_item", {
+  quantity: number,
+): Promise<string[]> {
+  const { data, error } = await supabase.rpc("claim_stock_items", {
     p_offer_id: offerId,
     p_order_id: orderId,
+    p_quantity: quantity,
   });
 
   if (error) throw error;
 
-  const item = data as DbStockItem | null;
-  if (!item) throw new Error("No stock available");
-  return item.content;
+  const items = (data ?? []) as DbStockItem[];
+  if (items.length !== quantity) throw new Error("Not enough stock available");
+  return items.map((item) => item.content);
 }

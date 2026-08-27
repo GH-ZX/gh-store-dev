@@ -27,7 +27,7 @@ import { classifyOrderStatus as classifyBatStoreOrder } from "@/providers/batsto
 import { g2bulkCallbackUrl } from "@/lib/supabase/functions-url";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@/lib/supabase/service";
 import { readRefundOnFulfillmentFailure } from "@/lib/settings/fulfillment-settings";
-import { claimStockItem } from "@/lib/services/stock.service";
+import { claimStockItems } from "@/lib/services/stock.service";
 import type { Json } from "@/types/database";
 import { log, logFailure } from "@/lib/logging/logger";
 
@@ -798,30 +798,42 @@ async function fulfillStored(
   }
 
   if (!context.offerId) {
-    return { state: "failed", reason: "No offer ID for stock lookup.", refunded: false };
+    return failAndRefund(context, attempt.id, "The stored offer is no longer available.");
   }
 
-  const deliveredItems: string[] = [];
+  let deliveredItems: string[];
 
   try {
-    for (let i = 0; i < context.quantity; i++) {
-      const content = await claimStockItem(supabase, context.offerId, context.orderId);
-      deliveredItems.push(content);
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { state: "failed", reason: `Stock claim failed: ${message}`, refunded: false };
+    deliveredItems = await claimStockItems(
+      supabase,
+      context.offerId,
+      context.orderId,
+      context.quantity,
+    );
+  } catch {
+    return failAndRefund(context, attempt.id, "The requested stock is no longer available.");
   }
 
-  // Store delivered content on the attempt for the customer to read.
-  await supabase
-    .from("fulfillment_attempts")
-    .update({
-      status: "completed",
-      delivered_payload: { codes: deliveredItems } satisfies Record<string, unknown>,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", attempt.id);
+  await recordAttempt(attempt.id, {
+    status: "completed",
+    delivered: { items: deliveredItems },
+  });
+  await setOrderStatus(context.orderId, "completed");
+
+  // Nudge the owner when a stored offer is about to run out.
+  try {
+    const { data: remaining } = await supabase.rpc("count_stock", { p_offer_id: context.offerId });
+    const count = typeof remaining === "number" ? remaining : Number(remaining ?? 0);
+    if (Number.isFinite(count) && count <= 3) {
+      await enqueueTelegramAlert({
+        type: "low_stock",
+        dedupKey: `low_stock:${context.offerId}:${count}`,
+        payload: { offer_id: context.offerId, remaining: count },
+      });
+    }
+  } catch {
+    // Alerting never blocks delivery.
+  }
 
   return { state: "completed", deliveredItems };
 }
@@ -1452,8 +1464,14 @@ async function announceOutcome(
       entityId: context.orderId,
     });
 
-    // The linked customer hears about it in Telegram too; the owner alert for
-    // the same event is enqueued separately at order placement.
+    await enqueueTelegramAlert({
+      type: "order_delivered",
+      payload: {
+        order_id: context.orderId,
+        order_number: context.orderNumber,
+        quantity: context.quantity,
+      },
+    });
     await enqueueTelegramAlert({
       type: "order_delivered",
       userId: order.user_id,
@@ -1463,7 +1481,6 @@ async function announceOutcome(
         quantity: context.quantity,
       },
     });
-
     return;
   }
 

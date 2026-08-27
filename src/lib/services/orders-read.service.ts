@@ -166,21 +166,22 @@ function toFieldEntries(value: unknown): { key: string; value: string }[] {
 /**
  * Codes out of a delivered payload.
  *
- * The worker stores `{ items: string[] }`. Anything else is treated as "no codes"
- * rather than rendered raw: a JSON blob on an order page tells a customer nothing
- * and may carry provider internals.
+ * The current worker stores `{ items: string[] }`; `{ codes: string[] }` is also
+ * accepted for records written by the first stored-product implementation.
+ * Anything else is treated as "no codes" rather than rendered raw: a JSON blob
+ * on an order page tells a customer nothing and may carry provider internals.
  */
-function toDeliveredCodes(payload: unknown): string[] {
+export function toDeliveredCodes(payload: unknown): string[] {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return [];
   }
 
-  const items = (payload as { items?: unknown }).items;
+  const record = payload as { items?: unknown; codes?: unknown };
+  const items = record.items ?? record.codes;
 
   if (!Array.isArray(items)) {
     return [];
   }
-
   return items.flatMap((item) => {
     if (typeof item === "string" && item.trim()) {
       return [item.trim()];

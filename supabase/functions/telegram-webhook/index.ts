@@ -1,5 +1,5 @@
+import { adminKeyboard, handleAdminCallback, handleAdminText, resolveAdminActor, type AdminContext } from "./admin.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-
 /**
  * GH Store Telegram bot webhook.
  *
@@ -17,10 +17,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  *   account with a short-lived code minted on the site's profile page — the bot
  *   never asks for a password.
  *
- * The gate is the same as the other callbacks: a per-store secret carried in
- * the URL Telegram was given, compared in constant time before anything is read
- * or written. `verify_jwt` is off — Telegram cannot send a Supabase JWT — so
- * this check runs first and is the only gate.
+ * The gate is Telegram's native `X-Telegram-Bot-Api-Secret-Token` header,
+ * compared in constant time before anything is read or written. A query-token
+ * fallback remains for manually configured legacy webhooks. `verify_jwt` is
+ * off — Telegram cannot send a Supabase JWT — so this check is the only gate.
  *
  * It answers `200` immediately and does the work after, because Telegram
  * retries any webhook that answers slowly.
@@ -1545,7 +1545,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
     webhook_secret?: unknown;
   } | null;
   const expected = text(telegramSettings?.webhook_secret);
-  const token = new URL(request.url).searchParams.get("token")?.trim() ?? "";
+  const token =
+    request.headers.get("x-telegram-bot-api-secret-token")?.trim() ??
+    new URL(request.url).searchParams.get("token")?.trim() ??
+    "";
 
   if (!expected || token.length === 0 || !(await secretMatches(token, expected))) {
     return json({ ok: false, error: "unauthorized" }, 401);
@@ -1578,9 +1581,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return;
     }
 
-    const interfaceLocale = localeOf(message?.from?.language_code ?? callback?.from?.language_code);
-    const ownerChatId = text(telegramSettings?.chat_id);
-    const isOwner = ownerChatId !== null && ownerChatId === String(chatId);
+    let ownerChatId = text(telegramSettings?.chat_id);
+    let isOwner = ownerChatId !== null && ownerChatId === String(chatId);
     const link = await readChatLink(supabase, chatId);
     const linked = link !== null;
     const locale = await effectiveLocale(supabase, chatId, interfaceLocale);
@@ -1594,18 +1596,20 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const command = message.text.trim().split(/\s+/)[0] ?? "";
       const rest = message.text.trim().slice(command.length).trim();
 
+      // The first owner sends `/start <webhook-secret>`.
+      if (command === "/start" && !isOwner && ownerChatId === null && rest) {
+        const { data: claimed, error: claimError } = await supabase.rpc("claim_telegram_owner", {
+          p_chat_id: chatId,
+          p_secret: rest,
+        });
+        if (!claimError && claimed === true) {
+          ownerChatId = String(chatId);
+          isOwner = true;
+        }
+      }
+
       // ── Owner /start ─────────────────────────────────────────────────────
       if (command === "/start" && isOwner) {
-        if (ownerChatId === null) {
-          // Store the same wrapped shape the app's own writers use
-          // (`telegram` column value = `{ telegram: { ... } }`) so the dashboard
-          // readers see the settings. A flat write here would confuse them.
-          await supabase
-            .from("store_settings")
-            .update({ telegram: { telegram: { ...telegramSettings, chat_id: String(chatId) } } })
-            .eq("id", "global");
-        }
-
         await sendText(
           botToken,
           chatId,
@@ -1624,7 +1628,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
             "",
             "Dashboard: https://gh-store.me/dashboard",
           ].join("\n"),
-          adminKeyboard(locale),
+          adminKeyboard(locale as AdminLocale),
         );
         return;
       }
@@ -1635,8 +1639,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
         return;
       }
 
-      // Owner-only commands.
+      // Owner-only commands — full admin control centre.
       if (isOwner) {
+        const actorId = await resolveAdminActor(supabase);
+        if (actorId) {
+          const adminCtx: AdminContext = {
+            supabase,
+            token: botToken,
+            chatId,
+            locale: locale as AdminLocale,
+            actorId,
+          };
+          if (await handleAdminText({ ...adminCtx, text: message.text, pending: prefs.pending })) {
+            return;
+          }
+        }
         if (command === "/help" || command === "/alerts") {
           await sendText(
             botToken,
@@ -1670,10 +1687,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
             chatId,
             [
               "📊 <b>Store stats</b>",
-              `Active orders: <b>${orders.count ?? 0}</b>`,
-              `Completed: <b>${completed.count ?? 0}</b>`,
-              `Pending recharges: <b>${recharges.count ?? 0}</b>`,
-              `Open support: <b>${support.count ?? 0}</b>`,
+              `Active orders: <b>${(orders as { count?: number }).count ?? 0}</b>`,
+              `Completed: <b>${(completed as { count?: number }).count ?? 0}</b>`,
+              `Pending recharges: <b>${(recharges as { count?: number }).count ?? 0}</b>`,
+              `Open support: <b>${(support as { count?: number }).count ?? 0}</b>`,
             ].join("\n"),
             {
               inline_keyboard: [
@@ -1686,35 +1703,23 @@ Deno.serve(async (request: Request): Promise<Response> => {
           );
           return;
         }
-
-        if (command === "/pending") {
-          const { data: rows } = await supabase
-            .from("recharge_requests")
-            .select("reference, requested_amount, payment_method")
-            .eq("status", "pending")
-            .order("created_at", { ascending: true })
-            .limit(10);
-
-          if (!rows || rows.length === 0) {
-            await sendText(botToken, chatId, "✅ No recharge requests waiting.");
-            return;
-          }
-
+        if (command === "/help" || command === "/alerts") {
           await sendText(
             botToken,
             chatId,
             [
-              `⏳ <b>Pending recharges (${rows.length})</b>`,
-              ...rows.map(
-                (row, index) =>
-                  `${index + 1}. <code>${escapeHtml(row.reference)}</code> — <b>${money(row.requested_amount)}</b> · ${escapeHtml(row.payment_method ?? "—")}`,
-              ),
+              "<b>GH-Store owner bot</b>",
+              "/stats — store totals and balances",
+              "/pending — recharges waiting for review",
+              "/alerts — alert type guidance",
+              "/help — this message",
               "",
-              "Review: https://gh-store.me/dashboard/recharges",
+              "Store events are delivered automatically: new orders, failed orders, recharge requests, support messages, and low supplier balance.",
             ].join("\n"),
           );
           return;
         }
+
 
         // Not an owner command — fall through to the customer path.
       }
@@ -1954,16 +1959,33 @@ Deno.serve(async (request: Request): Promise<Response> => {
       const data = callback.data ?? "";
       const mid = callback.message?.message_id;
 
-      // ── Owner: only admin actions ─────────────────────────────────────────
+      // ── Owner: admin control centre ────────────────────────────────────────
       if (isOwner) {
+        const actorId = await resolveAdminActor(supabase);
+        if (actorId) {
+          const adminCtx: AdminContext = {
+            supabase,
+            token: botToken,
+            chatId,
+            locale: locale as AdminLocale,
+            actorId,
+            messageId: mid,
+          };
+          if (await handleAdminCallback({ ...adminCtx, data })) {
+            if (callback.id) {
+              await telegram(botToken, "answerCallbackQuery", { callback_query_id: callback.id });
+            }
+            return;
+          }
+        }
         switch (data) {
           case "menu":
-            await reply(botToken, chatId, "\ud83d\udc4b <b>GH-Store owner bot</b>\n\nUse the buttons below for management.", adminKeyboard(locale), mid);
+            await reply(botToken, chatId, "👋 <b>GH-Store owner bot</b>\n\nUse the buttons below for management.", adminKeyboard(locale as AdminLocale), mid);
             break;
           case "language": {
             const next: Locale = locale === "ar" ? "en" : "ar";
             await writePref(supabase, chatId, { locale: next });
-            await reply(botToken, chatId, `${t(next, "languageChanged")} (${next})`, adminKeyboard(next), mid);
+            await reply(botToken, chatId, `${t(next, "languageChanged")} (${next})`, adminKeyboard(next as AdminLocale), mid);
             break;
           }
           case "pending": {
@@ -1972,23 +1994,22 @@ Deno.serve(async (request: Request): Promise<Response> => {
               .select("reference, requested_amount, payment_method")
               .eq("status", "pending")
               .order("created_at", { ascending: true })
-              .limit(10);
-            if (rows && rows.length > 0) {
+              .limit(10) as unknown as { reference: string; requested_amount: number; payment_method: string | null }[];
+            if (rows && (rows as unknown[]).length > 0) {
               await reply(
-                botToken, chatId,
-                [`\u23f3 <b>Pending recharges (${rows.length})</b>`,
-                  ...rows.map((row, i) => `${i+1}. <code>${escapeHtml(row.reference)}</code> \u2014 <b>${money(row.requested_amount)}</b> \u00b7 ${escapeHtml(row.payment_method ?? "\u2014")}`),
-                ].join("\n"),
-                undefined, mid,
+                botToken,
+                chatId,
+                [`⏳ <b>Pending recharges (${(rows as unknown[]).length})</b>`, ...((rows as unknown) as Array<{ reference: string; requested_amount: number; payment_method: string | null }>).map((row, i) => `${i + 1}. <code>${esc(row.reference)}</code> — <b>${money(row.requested_amount)}</b> · ${esc(row.payment_method ?? "—")}`)].join("\n"),
+                undefined,
+                mid,
               );
             } else {
-              await reply(botToken, chatId, "\u2705 No recharge requests waiting.", undefined, mid);
+              await reply(botToken, chatId, "✅ No recharge requests waiting.", undefined, mid);
             }
             break;
           }
           default:
-            // Block all customer actions for owner
-            await reply(botToken, chatId, "Use the dashboard for store management: https://gh-store.me/dashboard", adminKeyboard(locale), mid);
+            await reply(botToken, chatId, "Use the dashboard for store management: https://gh-store.me/dashboard", adminKeyboard(locale as AdminLocale), mid);
             break;
         }
         if (callback.id) {
@@ -2144,8 +2165,17 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
   };
 
-  // Fire and forget, like the Worker's waitUntil.
-  void handle();
+  const edgeRuntime = (
+    globalThis as typeof globalThis & {
+      EdgeRuntime?: { waitUntil(promise: Promise<unknown>): void };
+    }
+  ).EdgeRuntime;
+
+  if (edgeRuntime) {
+    edgeRuntime.waitUntil(handle());
+  } else {
+    await handle();
+  }
 
   return json({ ok: true }, 200);
 });

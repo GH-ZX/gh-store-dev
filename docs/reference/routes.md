@@ -26,13 +26,13 @@ This is the functional route contract extracted from the reference store. The fi
 |------------|----------------|
 | Login | `/login` |
 | Profile | `/profile` |
-| Cart | `/cart` |
+| Cart | Not used; checkout starts from an offer page |
 | Checkout | `/checkout` |
 | Recharge | `/recharge` |
-| Success | `/success` |
-| Invoice | `/invoice/:kind/:id` |
+| Success | The order detail page at `/orders/:orderId` |
+| Invoice | `/orders/:orderId/invoice` and `/recharge/:rechargeId/invoice` |
 | Notifications | `/notifications` |
-| Orders | `/profile` and order detail views |
+| Orders | `/orders` and `/orders/:orderId` |
 
 ## Protected and Admin Routes
 

@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { logOutcome } from "@/lib/logging/logger";
 import { recordAudit } from "@/lib/services/admin-audit.service";
 import { notify } from "@/lib/services/notification.service";
+import { enqueueTelegramAlert } from "@/lib/services/telegram-alerts.service";
 import { safeFilterTerm } from "@/lib/supabase/filters";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -394,6 +395,25 @@ export async function adjustCustomerBalance(input: {
 
   if (!data) {
     throw new Error("The wallet adjustment returned no result.");
+  }
+
+  if (!data.idempotent) {
+    await notify({
+      userId: input.userId,
+      type: "wallet_adjusted",
+      titleAr: input.amount > 0 ? "تم تعديل رصيدك" : "تم خصم من رصيدك",
+      titleEn: input.amount > 0 ? "Your balance was adjusted" : "An amount was deducted from your balance",
+      bodyAr: input.description || (input.amount > 0 ? `تمت إضافة ${input.amount.toFixed(2)} إلى محفظتك.` : `تم خصم ${Math.abs(input.amount).toFixed(2)} من محفظتك.`),
+      bodyEn: input.description || (input.amount > 0 ? `${input.amount.toFixed(2)} was added to your wallet.` : `${Math.abs(input.amount).toFixed(2)} was deducted from your wallet.`),
+      href: "/wallet",
+      entityType: "wallet",
+      entityId: input.userId,
+    });
+    await enqueueTelegramAlert({
+      type: "wallet_adjusted",
+      userId: input.userId,
+      payload: { user_id: input.userId, amount: input.amount, balance: data.balance },
+    });
   }
 
   return { balance: data.balance, idempotent: data.idempotent };

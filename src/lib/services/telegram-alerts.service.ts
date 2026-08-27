@@ -25,14 +25,17 @@ import type { Json } from "@/types/database";
 
 export type TelegramAlertType =
   | "order_placed"
+  | "order_delivered"
   | "order_failed"
   | "recharge_request"
-  | "support_message"
-  | "low_wallet"
-  | "order_delivered"
   | "recharge_approved"
   | "recharge_rejected"
-  | "support_reply";
+  | "support_message"
+  | "support_reply"
+  | "low_wallet"
+  | "low_stock"
+  | "wallet_adjusted"
+  | "new_customer";
 
 export async function enqueueTelegramAlert(input: {
   type: TelegramAlertType;
