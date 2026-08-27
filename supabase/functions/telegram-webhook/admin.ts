@@ -94,6 +94,28 @@ async function showRecharges(ctx: AdminContext): Promise<void> {
   await render(ctx, rows.map((r) => `${esc(r.reference)} · ${money(r.requested_amount)} · ${esc(r.status)}`).join("\n"), { inline_keyboard: [...rows.map((r) => [{ text: `${r.reference}`, callback_data: `adm:r:${r.id}` }]), [{ text: "↩", callback_data: "adm:menu" }]] });
 }
 
+async function showSupport(ctx: AdminContext): Promise<void> {
+  const { data } = await ctx.supabase.from("support_threads").select("id, subject, status").in("status", ["open", "pending"]).order("updated_at", { ascending: true }).limit(10) as { data: unknown };
+  const rows = (data as Array<{ id: string; subject: string; status: string }> | null) ?? [];
+  if (rows.length === 0) { await render(ctx, "No support tickets", adminKeyboard(ctx.locale)); return; }
+  await render(ctx, rows.map((r) => `${esc(r.subject)} · ${esc(r.status)}`).join("\n"), { inline_keyboard: [...rows.map((r) => [{ text: `${r.subject}`, callback_data: `adm:s:${r.id}` }]), [{ text: "↩", callback_data: "adm:menu" }]] });
+}
+
+async function showCatalog(ctx: AdminContext): Promise<void> {
+  const [g, o] = await Promise.all([
+    ctx.supabase.from("games").select("id", { count: "exact", head: true }).eq("is_active", true) as unknown as Promise<{ count?: number }>,
+    ctx.supabase.from("offers").select("id", { count: "exact", head: true }).eq("is_active", true) as unknown as Promise<{ count?: number }>,
+  ]);
+  await render(ctx, `Catalog: Games ${(g as { count?: number }).count ?? 0}, Offers ${(o as { count?: number }).count ?? 0}`, { inline_keyboard: [[{ text: "Open catalog", url: "https://gh-store.me/en/dashboard/catalog" }], [{ text: "↩", callback_data: "adm:menu" }]] });
+}
+
+async function showHealth(ctx: AdminContext): Promise<void> {
+  const { data } = await ctx.supabase.from("store_settings").select("providers, payments").eq("id", "global").maybeSingle() as { data: unknown };
+  const p = (data as { providers?: Record<string, { enabled?: boolean }>; payments?: Record<string, { enabled?: boolean }> } | null) ?? {};
+  const line = (n: string, v?: boolean): string => `${n}: ${v ? "✅" : "⚪"}`;
+  await render(ctx, [`Health`, line("G2Bulk", p.providers?.g2bulk?.enabled), line("MaxStore", p.providers?.maxstore?.enabled), line("Sam", p.providers?.sam?.enabled), line("Binance", p.payments?.binance?.enabled)].join("\n"), adminKeyboard(ctx.locale));
+}
+
 export async function handleAdminText(input: AdminContext & { text: string; pending: string | null }): Promise<boolean> {
   const t = input.text.trim();
   if (!t) return false;
@@ -116,7 +138,10 @@ export async function handleAdminText(input: AdminContext & { text: string; pend
     case "/orders": await showOrders(input); return true;
     case "/recharges":
     case "/pending": await showRecharges(input); return true;
+    case "/support": await showSupport(input); return true;
     case "/customers": await setPending(input, "admin_customer_search"); await render(input, "Send name or email", adminKeyboard(input.locale)); return true;
+    case "/catalog": await showCatalog(input); return true;
+    case "/health": await showHealth(input); return true;
     case "/help": await render(input, `👋 <b>${tr(input.locale, "menu")}</b>`, adminKeyboard(input.locale)); return true;
     default: return false;
   }
@@ -127,13 +152,15 @@ export async function handleAdminCallback(input: AdminContext & { data: string }
   if (!d.startsWith("adm:")) return false;
   const parts = d.split(":");
   const act = parts[1];
-  const id = parts[2];
   switch (act) {
     case "menu": await render(input, `👋 <b>${tr(input.locale, "menu")}</b>`, adminKeyboard(input.locale)); return true;
     case "stats": await showStats(input); return true;
     case "orders": await showOrders(input); return true;
     case "recharges": await showRecharges(input); return true;
+    case "support": await showSupport(input); return true;
     case "customers": await setPending(input, "admin_customer_search"); await render(input, "Send name or email", adminKeyboard(input.locale)); return true;
+    case "catalog": await showCatalog(input); return true;
+    case "health": await showHealth(input); return true;
     default: return false;
   }
 }
