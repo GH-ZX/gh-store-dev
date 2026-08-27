@@ -83,7 +83,14 @@ export function DashboardNav({
     return isDashboardNavActive(base, href, pathname);
   }
 
-  const active = DASHBOARD_NAV_GROUPS.find((g) => g.key === activeGroup) ?? DASHBOARD_NAV_GROUPS[0];
+  const pathnameGroup = DASHBOARD_NAV_GROUPS.find((group) =>
+    group.items.some((item) => {
+      if (!item.href) return false;
+      const href = item.href === "/" ? base : `${base}${item.href}`;
+      return isDashboardNavActive(base, href, pathname);
+    }),
+  );
+  const active = pathnameGroup ?? DASHBOARD_NAV_GROUPS.find((g) => g.key === activeGroup) ?? DASHBOARD_NAV_GROUPS[0];
   const activeItems = (active?.items ?? [])
     .filter((it) => it.href)
     .map((it) => ({
