@@ -1679,6 +1679,30 @@ export type Database = {
           },
         ]
       }
+      sweep_heartbeats: {
+        Row: {
+          id: string
+          last_error: string | null
+          last_failure_at: string | null
+          last_success_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       telegram_alerts: {
         Row: {
           created_at: string

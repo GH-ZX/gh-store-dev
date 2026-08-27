@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { isReconcileAuthorized } from "@/lib/api/reconcile";
 import { log, logFailure } from "@/lib/logging/logger";
+import {
+  recordSweepFailure,
+  recordSweepSuccess,
+} from "@/lib/services/sweep-heartbeat.service";
 import { reconcileStuckOrders } from "@/lib/services/reconciliation.service";
 import { hasServiceRoleKey } from "@/lib/supabase/service";
 
@@ -63,6 +67,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const run = await reconcileStuckOrders();
 
+    // Stamps `sweep_heartbeats` so the Worker's scheduled tick can tell a
+    // healthy sweep from one that has stopped. Fire-and-forget and failure-
+    // proof: observability must not be able to fail the sweep it observes.
+    await recordSweepSuccess();
+
     return json({
       ok: true,
       checked: run.checked,
@@ -75,6 +84,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
   } catch (error) {
     logFailure("fulfilment", "reconcile_failed", error);
+    await recordSweepFailure(error);
 
     return json({ ok: false, error: "reconciliation_failed" }, 500);
   }

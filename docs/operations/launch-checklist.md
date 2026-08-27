@@ -40,8 +40,18 @@ Ordered so each step unblocks the next.
 
 - [ ] Uptime monitor (UptimeRobot/Better Stack/etc.) on `https://gh-store.me/ar`
       and `/en/login`, alerting to your phone.
+- [ ] Add a second probe on `GET https://gh-store.me/api/reconcile`: it always
+      answers **405** while the app is up. If that probe ever fails while the
+      storefront probe passes, the API half of the app is broken in a way the
+      homepage cannot show.
 - [ ] Telegram bot connected for owner alerts (orders, failures, recharges,
-      support, low supplier wallet) — verify one test alert arrives.
+      support, low supplier wallet, stalled fulfilment sweep) — verify one test
+      alert arrives.
+- [ ] Confirm the sweep heartbeat is alive: after the cron has run a few
+      cycles, the `sweep_heartbeats` row (Supabase → Table Editor) shows
+      `last_success_at` within the last ten minutes. From then on, a
+      "Fulfilment sweep has stalled" Telegram alert means the cron, the secret,
+      or the deploy broke — see `docs/operations/incident-response.md`.
 - [ ] Bookmark the "needs attention" orders filter; check it daily at first.
 
 ## 5. SEO and analytics
@@ -63,6 +73,15 @@ Ordered so each step unblocks the next.
 
 ## 7. Cloudflare controls
 
+- [ ] WAF rate-limiting rule on the credential paths. The app throttles login
+      attempts in Worker memory, but every isolate counts separately, so with
+      real traffic the effective ceiling is many times the configured one. Add
+      a Cloudflare rule (Security → WAF → Rate limiting rules) matching
+      `http.request.uri.path in {"/ar/login" "/en/login" "/ar/forgot-password"
+      "/en/forgot-password"}` — with POST method — at something like **10
+      requests / minute / IP**, action block or managed challenge. The login
+      form is a server action POST to the page URL itself, so path + method is
+      the right selector.
 - [ ] WAF/rate-limit rules on `/auth/*`, checkout POSTs, and webhook paths.
 - [ ] Confirm HTTPS/strict TLS and that alternate hosts 301 to `gh-store.me`.
 
@@ -73,3 +92,38 @@ Ordered so each step unblocks the next.
       G2Bulk, Sam, Binance Pay, Telegram bot token, RECONCILE_CRON_SECRET.
 - [ ] Run the rollback drill from `docs/operations/incident-response.md` once,
       before there is traffic to protect.
+
+## 9. Performance: arm the incremental cache
+
+Prepared in the repository and waiting on two resources that must exist first.
+The Worker already caches anonymous HTML for sixty seconds; the incremental
+cache is the layer beneath it — it stops every render of a cacheable page from
+paying the Singapore round-trips again.
+
+- [ ] `pnpm exec wrangler r2 bucket create gh-store-inc-cache`
+- [ ] `pnpm exec wrangler d1 create gh-store-tag-cache` — paste the returned
+      `database_id` into the `d1_databases` block in `wrangler.jsonc`.
+- [ ] Uncomment, in the same commit: the `r2_buckets` block and the `d1_databases`
+      block in `wrangler.jsonc`; the `incrementalCache` and `memoryQueue` lines
+      and the `tagCache: d1NextTagCache` line in `open-next.config.ts` (import
+      paths are in that file's comments).
+- [ ] `pnpm check` — `scripts/validate-production-config.mjs` refuses the
+      half-armed state (a binding without its override, or the reverse), so a
+      mistake surfaces before a deploy does.
+- [ ] Deploy, then verify: load a page twice and check
+      `wrangler tail` for a drop in `get_public_store_settings` calls, and the
+      R2 dashboard for data landing in the bucket.
+
+## 10. Deploy discipline
+
+Deploys already go through `pnpm deploy`. Two safer paths exist and cost
+nothing to use:
+
+- [ ] Canary a risky change: `pnpm upload` builds and uploads a new **version
+      without shifting any traffic**; promote it from the Cloudflare dashboard
+      (Deployments → the version → gradual deployment at 10%) or
+      `pnpm exec wrangler versions deploy <version-id> --percentage 10`.
+- [ ] `pnpm versions` lists what is live; `pnpm rollback` sends traffic back to
+      the previous version in seconds — the fast path from the incident
+      runbook. Both need `wrangler` authenticated locally (`pnpm exec wrangler
+      login`).

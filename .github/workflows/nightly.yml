@@ -1,0 +1,161 @@
+# Nightly release checks.
+#
+# Two gaps that the push-gated CI cannot close:
+#
+#  * A **fresh apply** of every migration to an empty database, followed by the
+#    pgTAP suites. Migrations are applied to staging and production by hand, as
+#    an explicit release step, so nothing on the push path proves the set still
+#    applies cleanly in order — a dependency added backwards is invisible until
+#    release day. A local `supabase db reset` is exactly that proof, and it
+#    needs no cloud project, which is why it runs here and not in CI.
+#
+#  * The **browser suite** (`pnpm test:e2e`). These drive a real store with a
+#    real catalog: CI has no Supabase project, and wiring a push-gated run to
+#    one would fail the pipeline for reasons unrelated to the commit. Nightly,
+#    against staging, that trade is right — a failure names itself without
+#    blocking anyone's push.
+#
+# The browser job runs only when repository secrets provide a staging project
+# (`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`); with
+# no secrets the job skips with a notice instead of failing. Admin cases join
+# automatically when `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` are also set —
+# the Playwright config owns that switch.
+#
+# `workflow_dispatch` runs everything on demand, so a release can re-prove the
+# migration set and the storefront without waiting for the clock.
+
+name: Nightly release checks
+
+on:
+  schedule:
+    # 02:17 UTC daily — off the hour, so shared runners are not contended.
+    - cron: "17 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Every migration, in filename order, into an empty database. Then the pgTAP
+  # identity and support suites against the result. A failure here is drift:
+  # the migration set no longer describes a working database from scratch.
+  sql:
+    name: Fresh apply + pgTAP
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Starts the local stack and replays every migration in
+      # supabase/migrations against an empty database. A seed file would also
+      # run here; the store deliberately has none, so what exists afterwards is
+      # what the migrations alone produce.
+      - name: Apply all migrations to a fresh local database
+        run: supabase db reset
+
+      - name: Enable pgTAP
+        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -c "create extension if not exists pgtap;"
+
+      # A failing assertion prints `not ok`; a broken statement makes psql exit
+      # non-zero. Both are failures, so `pipefail` plus a grep covers the pair.
+      # The hosted suites in supabase/tests/hosted are deliberately absent:
+      # they assert against a live project and belong to the release checklist,
+      # not to a local run.
+      - name: Run pgTAP suites
+        run: |
+          set -o pipefail
+          failed=0
+          for file in supabase/tests/rls/*.sql; do
+            echo "::group::$file"
+            if psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$file" | tee /tmp/tap.out \
+              && ! grep -q '^not ok' /tmp/tap.out; then
+              grep -c '^ok' /tmp/tap.out | xargs -I{} echo "✓ $file: {} assertions passed"
+            else
+              echo "::error::pgTAP failures in $file"
+              cat /tmp/tap.out
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$failed"
+
+  # The full browser suite — anonymous storefront always, administrator flows
+  # when the credentials secrets exist. Playwright uses its bundled Chromium
+  # here; the config falls back to it when no channel is set.
+  e2e:
+    name: Browser suite (staging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    needs: [sql]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Approve dependency build scripts
+        run: pnpm approve-builds --all
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Secrets cannot be read from `if:`, so their presence is resolved here
+      # and every later step asks the output instead.
+      - name: Check staging secrets
+        id: staging
+        env:
+          STAGING_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          STAGING_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -n "$STAGING_URL" ] && [ -n "$STAGING_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Staging secrets are not set; the browser suite was skipped. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY as repository secrets to enable it."
+          fi
+
+      - name: Run browser suite
+        if: steps.staging.outputs.present == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: pnpm test:e2e
+
+      - name: Upload failure report
+        if: failure() && steps.staging.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

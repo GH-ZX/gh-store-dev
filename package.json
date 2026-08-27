@@ -16,6 +16,8 @@
     "preview": "pnpm build:cloudflare && opennextjs-cloudflare preview",
     "deploy": "pnpm build:cloudflare && opennextjs-cloudflare deploy",
     "upload": "pnpm build:cloudflare && opennextjs-cloudflare upload",
+    "versions": "wrangler versions list",
+    "rollback": "wrangler rollback",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {

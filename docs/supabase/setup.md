@@ -20,6 +20,14 @@ supabase start
 supabase test db
 ```
 
+**One deliberate exception, and it is not development:** the nightly CI workflow
+(`.github/workflows/nightly.yml`) runs `supabase db reset` against a throwaway
+local stack to prove the whole migration set still applies cleanly, in order, to
+an empty database — the check hosted staging cannot give, because staging keeps
+its data. The RLS pgTAP suites (`supabase/tests/rls/`) run against that same
+fresh database. Nothing from this job is a development environment; no one works
+against it, and it stops existing when the job ends.
+
 Use the hosted workflow instead:
 
 ```bash
@@ -29,7 +37,7 @@ supabase db push
 supabase gen types typescript --linked > src/types/database.ts
 ```
 
-RLS and migration checks are run against staging through the Supabase SQL editor or a controlled database connection. Production is never used for development tests.
+RLS and migration checks are run against staging through the Supabase SQL editor or a controlled database connection; the `supabase/tests/rls/` pgTAP suites also run automatically in the nightly workflow against a fresh local apply. Production is never used for development tests.
 
 ## Local Variables
 

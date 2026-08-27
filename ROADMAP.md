@@ -494,6 +494,58 @@ is reachable from the dashboard without a SQL statement.
   supply the heading, because each slide is a different game and a heading built
   from one would rename the store every few seconds.
 
+- A nightly release-checks workflow, `.github/workflows/nightly.yml`, closing the
+  two gaps the push-gated CI cannot. `supabase db reset` applies every migration
+  to an empty local database and the `supabase/tests/rls/` pgTAP suites run
+  against the result — the fresh-apply proof that hand-applied migrations
+  otherwise never get, since a dependency added backwards is invisible until
+  release day. The browser suite runs nightly against staging when the
+  repository secrets name a Supabase project, skipping with a notice when they
+  do not, so a pipeline never fails for reasons unrelated to a commit. The
+  hosted suites in `supabase/tests/hosted/` stay a release-checklist step; they
+  assert against a live project.
+
+- The trending-offers scan is cached. It read every paid order item of the last
+  thirty days on every homepage render, a cost growing linearly with order
+  volume for a ranking that moves in hours. It now goes through the same
+  read-through pair the store settings use — isolate memory, then the OpenNext
+  incremental cache once the R2 bucket exists — and caches only the ranked
+  offer ids, so no language lands in the cache. The pair moved into
+  `src/lib/cache/read-through.ts` rather than being copied.
+
+- A report-only content-security policy rides on every response, beside the
+  enforced `frame-ancestors`. It changes no behavior; it asks browsers to report
+  what a full policy would have blocked, and the reports land in
+  `/api/csp-report` and flow into the store's own log. Running it from before
+  launch means the enforcement decision, when it comes, rests on a week of real
+  traffic naming the hosts the storefront actually uses rather than on a hopeful
+  guess.
+
+- The fulfilment sweep has a heartbeat. `POST /api/reconcile` stamps
+  `sweep_heartbeats` after every run (migration `20260830000000`), and the
+  Worker's scheduled tick compares the stamp against the clock; four missed
+  crons enqueue a `sweep_stalled` Telegram alert, deduped per day, naming the
+  last success and the last error. A sweep that stops used to fail nobody
+  loudly — orders simply stayed `fulfilling` until a customer complained. The
+  incident runbook now walks the stall, and the launch checklist adds a
+  `GET /api/reconcile` probe (always 405 while healthy) to catch the app half
+  of it.
+
+- Fulfilment is split by concern. `fulfillment.service.ts` had grown to 1,632
+  lines carrying four suppliers' flows, the attempt bookkeeping, settlement,
+  refunds and the customer messages in one file. It is now a barrel over
+  `src/lib/services/fulfillment/`: context, attempts, settle, one file per
+  supplier, and the two entry points. Every rule moved unchanged — the split is
+  for the next reader of the money path, not for the compiler.
+
+- The deploy path grew the safer gears it already documented. `pnpm versions`
+  and `pnpm rollback` make version inspection and the seconds-long rollback one
+  command; `pnpm upload` already uploads a version without shifting traffic,
+  which is the canary. `scripts/validate-production-config.mjs` now refuses the
+  half-armed cache — a `wrangler.jsonc` binding without its OpenNext override,
+  or the reverse — because that is the state that fails a deploy after the
+  build has already spent its minutes.
+
 ### Done
 
 - Signed-in and administrator browser suite, in `tests/e2e/admin.setup.ts` and
@@ -516,11 +568,17 @@ is reachable from the dashboard without a SQL statement.
 ### Remaining
 
 - Verify production Auth URLs, canonical URLs, payment webhooks, and provider webhooks.
-- Add integration, SQL, and provider coverage on top of the unit suite.
+- Run the hosted pgTAP suites (`supabase/tests/hosted/`) against staging — they
+  need a live project and stay a checklist step; the identity/support suites now
+  run in CI against a fresh local apply.
+- Arm the R2 incremental cache and D1 tag cache: the bindings are prepared and
+  guarded by the config validator, and the bucket and database themselves are
+  the launch checklist's step 9.
 - Complete keyboard and accessibility checks.
 - Run performance, bundle, and Core Web Vitals checks.
 - Run production smoke tests with approved test accounts.
-- Verify rollback procedures and document incident response.
+- Verify rollback procedures with the drill in `docs/operations/incident-response.md`.
+- Tighten the report-only CSP to enforce, on the evidence its reports collect.
 
 ### Owner-confirmed complete; evidence still tracked
 

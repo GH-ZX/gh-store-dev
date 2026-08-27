@@ -7,11 +7,21 @@ import type { Database } from "@/types/database";
 /**
  * Service-role client. Bypasses row-level security entirely.
  *
- * Exactly one part of the application needs this: fulfilment. Placing an order
- * runs under the customer's own session through a definer RPC, but advancing a
- * fulfilment — recording a provider result, and refunding a terminal failure —
- * must not be something a customer's session can do. If it were, a shopper could
- * claim a refund on an order the supplier actually delivered.
+ * This client exists because some work must not run under a customer's session:
+ * advancing a fulfilment and refunding a terminal failure (a shopper must never
+ * be able to claim a refund on an order the supplier actually delivered), and
+ * the neighbouring machinery that must keep running when no customer is
+ * involved — the reconciliation sweep, the notification and alert queues the
+ * sweep feeds, invoice reads the customer's own RLS row set cannot express, and
+ * the trending scan over every customer's order items, which RLS rightly locks
+ * to its owner. Admin dashboard writes use it too, only after `requireAdmin`
+ * has asserted the session in the caller's own request.
+ *
+ * The common shape of every legitimate use: the service client decides something
+ * the calling session must not be able to decide, or reads across rows the
+ * calling session must not be able to see. Anything that *can* run under the
+ * caller's session still does, so RLS keeps answering for the reads it exists
+ * to answer for.
  *
  * `import "server-only"` makes it a build error for this key to reach a client
  * bundle. Never use this client to serve data to a page: RLS is the safety net

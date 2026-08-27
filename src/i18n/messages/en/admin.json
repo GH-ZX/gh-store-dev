@@ -330,7 +330,8 @@
         "order_failed": "Failed orders",
         "recharge_request": "Manual recharge requests",
         "support_message": "New support messages",
-        "low_wallet": "Low supplier wallet"
+        "low_wallet": "Low supplier wallet",
+        "sweep_stalled": "Stalled fulfilment sweep"
       },
       "saveAction": "Save Telegram settings",
       "saved": "Telegram settings saved.",

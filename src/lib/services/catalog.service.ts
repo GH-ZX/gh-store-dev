@@ -1,4 +1,5 @@
 import type { Locale } from "@/i18n/config";
+import { unstable_cache } from "next/cache";
 import {
   normalizeOfferInputFields,
   resolveCheckoutFieldKeys,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/catalog/offer-mapper";
 import { toSearchTokens, type SearchFilter } from "@/lib/catalog/search";
 import { catalogPageRange, type CatalogPage, toCatalogPage } from "@/lib/catalog/pagination";
+import { isolateCached, readThrough } from "@/lib/cache/read-through";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -634,11 +636,22 @@ export async function getOffersByIds(locale: Locale, ids: string[]): Promise<Sto
 const TRENDING_WINDOW_DAYS = 30;
 const TRENDING_MIN_RESULTS = 4;
 
-export async function getTrendingOffers(locale: Locale, limit: number): Promise<StoreOffer[]> {
-  if (!hasServiceRoleKey()) {
-    return [];
-  }
+/*
+ * The scan reads every paid order item of the last thirty days, and the
+ * homepage runs it on every render — a cost that grows linearly with order
+ * volume for a ranking that moves on the scale of hours. Two cache layers sit
+ * in front of it, the same pair the store settings use (see
+ * `@/lib/cache/read-through`): isolate memory for the first hit in a burst,
+ * and Next's incremental cache across isolates once the R2 backing store
+ * exists. A minute of staleness is far below the rate at which a ranking can
+ * meaningfully change, and the ids alone are cached — offer rows are resolved
+ * afterwards with the caller's locale, so no language lands in the cache.
+ */
+const TRENDING_REVALIDATE_SECONDS = 60;
+const TRENDING_ISOLATE_TTL_MS = 60_000;
 
+/** The ranked offer ids, and nothing locale-dependent. */
+async function scanTrendingOfferIds(limit: number): Promise<string[]> {
   const service = createSupabaseServiceClient();
   const cutoff = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60_000).toISOString();
 
@@ -671,7 +684,48 @@ export async function getTrendingOffers(locale: Locale, limit: number): Promise<
     .slice(0, limit)
     .map(([offerId]) => offerId);
 
-  if (ranked.length < TRENDING_MIN_RESULTS) {
+  return ranked.length < TRENDING_MIN_RESULTS ? [] : ranked;
+}
+
+/**
+ * `unstable_cache` folds its arguments into the cache key, so one wrapper
+ * serves every item count the owner can configure. The isolate layer is keyed
+ * by hand because its entries close over the limit; the map is bounded by the
+ * handful of distinct counts a settings row can hold.
+ */
+const cachedTrendingOfferIds = unstable_cache(
+  scanTrendingOfferIds,
+  ["trending-offers"],
+  { revalidate: TRENDING_REVALIDATE_SECONDS },
+);
+
+const trendingReaders = new Map<number, () => Promise<string[]>>();
+
+function trendingReader(limit: number): () => Promise<string[]> {
+  const existing = trendingReaders.get(limit);
+
+  if (existing) {
+    return existing;
+  }
+
+  const reader = isolateCached(
+    () => readThrough(() => cachedTrendingOfferIds(limit), () => scanTrendingOfferIds(limit)),
+    TRENDING_ISOLATE_TTL_MS,
+  );
+
+  trendingReaders.set(limit, reader);
+
+  return reader;
+}
+
+export async function getTrendingOffers(locale: Locale, limit: number): Promise<StoreOffer[]> {
+  if (!hasServiceRoleKey()) {
+    return [];
+  }
+
+  const ranked = await trendingReader(limit)();
+
+  if (ranked.length === 0) {
     return [];
   }
 

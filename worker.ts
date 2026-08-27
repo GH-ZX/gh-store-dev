@@ -235,9 +235,21 @@ const worker = {
     // fetched here rather than at the top of the file so that the cost of
     // compiling it lands on the four cron ticks an hour that need it, and not
     // on every cold storefront request.
+    //
+    // The sweep heartbeat is checked before the drain, in the same tick: an
+    // alert it enqueues for a stalled sweep is delivered by this very drain
+    // rather than waiting another five minutes for the next one.
     if (withinBudget() && env.SUPABASE_SERVICE_ROLE_KEY) {
-      const { runTelegramScheduled } = await import("./worker/telegram-bot");
-      jobs.push(runTelegramScheduled(env));
+      jobs.push(
+        (async () => {
+          const { checkSweepHeartbeat, runTelegramScheduled } = await import(
+            "./worker/telegram-bot"
+          );
+
+          await checkSweepHeartbeat(env);
+          await runTelegramScheduled(env);
+        })(),
+      );
     }
 
     if (jobs.length > 0) {

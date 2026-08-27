@@ -21,6 +21,11 @@ import type { Json } from "@/types/database";
  * `dedupKey` is optional and deliberately rare — it exists for events that fire
  * repeatedly (a low wallet blocking every checkout) where a unique key makes
  * the insert a no-op instead of a flood.
+ *
+ * Most types here are written from the app, but the Worker also inserts into
+ * the same queue — `sweep_stalled` is written by `worker/telegram-bot.ts`,
+ * which watches the sweep from outside the app — so this union and the
+ * Worker's rendering must move together.
  */
 
 export type TelegramAlertType =
@@ -35,7 +40,8 @@ export type TelegramAlertType =
   | "low_wallet"
   | "low_stock"
   | "wallet_adjusted"
-  | "new_customer";
+  | "new_customer"
+  | "sweep_stalled";
 
 export async function enqueueTelegramAlert(input: {
   type: TelegramAlertType;

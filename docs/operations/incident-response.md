@@ -28,8 +28,10 @@ middle of an incident is the wrong time to learn where the rollback button is.
 Cloudflare keeps every deployment. From a machine with `wrangler` access:
 
 ```bash
-pnpm exec wrangler deployments list      # find the last known-good version id
-pnpm exec wrangler rollback <version-id> # or `wrangler rollback` for previous
+pnpm versions                # what has been uploaded, and which is live
+pnpm rollback                # traffic back to the previous version, in seconds
+# or a specific known-good id:
+pnpm exec wrangler rollback <version-id>
 ```
 
 Rollback takes seconds and needs no rebuild. If the bad change was a migration,
@@ -47,6 +49,32 @@ version over your rollback.
 - Never hand-edit order/wallet rows during an incident except through the
   dashboard's audited operations (order refund, wallet adjustment) — freehand SQL
   during pressure is how a bad hour becomes a bad week.
+
+## The sweep has stalled (S2)
+
+A "🛑 Fulfilment sweep has stalled" Telegram alert means orders are no longer
+being reconciled — new orders still check out, but anything the supplier did not
+finish in ten seconds stays `fulfilling` until the sweep returns. The alert
+names the last success and the last error. In order of likelihood:
+
+1. **`RECONCILE_CRON_SECRET` was rotated on one side only.** The Worker's secret
+   and the app's must match; a mismatch shows as `reconcile_unauthorized` in the
+   Worker logs (`wrangler tail`).
+2. **The cron stopped firing.** Cloudflare → Workers → `gh-store` → Settings →
+   Triggers: the `*/5 * * * *` cron must be present and not erroring.
+3. **The latest deploy broke the API.** `curl -s -o /dev/null -w "%{http_code}"
+   https://gh-store.me/api/reconcile` must answer **405** (method not allowed —
+   the app is up). A 500 with `reconciliation_failed` in the logs means the
+   sweep itself is throwing; the alert's `last_error` says where.
+4. **A deploy is mid-flight or failed.** Check the Workers Builds log; roll back
+   if the last deploy is the suspect.
+
+While it is down, orders accumulate at `fulfilling`. They recover on their own
+once the sweep runs again — the sweep never buys, so nothing double-orders —
+but walk the "needs attention" filter afterwards for anything it escalated.
+
+A probe on `GET /api/reconcile` (always 405 while healthy) in your uptime
+monitor catches the app half; the Telegram alert catches the cron half.
 
 ## Money-specific checks
 

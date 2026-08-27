@@ -13,6 +13,9 @@
 | Sam webhook secret | Supabase secret/database protected by admin policy | Never |
 | Binance credentials | Worker secret | Never |
 | IGDB client secret | Edge/Worker secret | Never |
+| `RECONCILE_CRON_SECRET` | Worker secret, checked by `POST /api/reconcile` | Never |
+| Telegram bot token / webhook secret | Worker secret or `store_settings.telegram` (server-side) | Never |
+| `MAXSTORE_API_TOKEN` / `BATSTORE_API_TOKEN` | Worker env or `store_settings.providers` (server-side) | Never |
 
 ## Rules
 

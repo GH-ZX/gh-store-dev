@@ -70,6 +70,13 @@ Run the browser suite when Chrome and a configured environment are available:
 pnpm test:e2e
 ```
 
+A nightly workflow (`.github/workflows/nightly.yml`) applies every migration to
+a fresh local database, runs the `supabase/tests/rls/` pgTAP suites against the
+result, and runs the browser suite against staging when the repository secrets
+(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) name a
+project. It can also be triggered by hand from the Actions tab before a
+release.
+
 Administrator browser tests additionally use `E2E_ADMIN_EMAIL` and
 `E2E_ADMIN_PASSWORD`. Credentials remain local environment variables and are
 never committed.
@@ -95,6 +102,15 @@ second cron for the same work.
 pnpm run preview
 pnpm run deploy
 ```
+
+For riskier changes, `pnpm run upload` builds and uploads a new Worker version
+without shifting any traffic — promote it gradually from the Cloudflare
+dashboard or `pnpm exec wrangler versions deploy <version-id> --percentage 10`.
+`pnpm run versions` lists what has been uploaded, and `pnpm run rollback`
+sends traffic back to the previous version in seconds. Both need `wrangler`
+authenticated locally (`pnpm exec wrangler login`). See the launch checklist
+for arming the R2 incremental cache and the incident runbook for when to
+rollback.
 
 The Worker cron invokes `POST /api/reconcile` every five minutes. It requires
 both `NEXT_PUBLIC_APP_URL` and `RECONCILE_CRON_SECRET`; missing or failed

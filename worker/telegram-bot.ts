@@ -317,6 +317,21 @@ function ownerAlertText(row: AlertRow): string {
         .filter((line) => line.length > 0)
         .join("\n");
 
+    case "sweep_stalled":
+      return [
+        "🛑 <b>Fulfilment sweep has stalled</b>",
+        `Last success: <b>${escapeHtml(
+          textValue(p.last_success_at) ?? "never recorded",
+        )}</b>`,
+        typeof p.minutes_since === "number"
+          ? `Quiet for: <b>${escapeHtml(String(p.minutes_since))} minutes</b>`
+          : "",
+        textValue(p.last_error) ? `Last error: ${escapeHtml(String(p.last_error))}` : "",
+        "Orders may be stuck at fulfilling. Check the Worker cron, RECONCILE_CRON_SECRET, and the latest deploy.",
+      ]
+        .filter((line) => line.length > 0)
+        .join("\n");
+
     default:
       return `📢 ${escapeHtml(row.type)}`;
   }
@@ -343,6 +358,10 @@ function ownerAlertKeyboard(row: AlertRow): unknown | undefined {
       return { inline_keyboard: [[{ text: "Providers", url: "https://gh-store.me/en/dashboard/providers" }]] };
     case "low_stock":
       return { inline_keyboard: [[{ text: "Catalog", url: "https://gh-store.me/en/dashboard/catalog" }]] };
+    case "sweep_stalled":
+      // The sweep's failure mode is orders parked at `fulfilling`, so the one
+      // place an owner must look is the list that shows them.
+      return { inline_keyboard: [[{ text: "Open orders", url: "https://gh-store.me/en/dashboard/orders" }]] };
     case "wallet_adjusted":
     case "new_customer":
       return id
@@ -551,4 +570,118 @@ export async function runTelegramScheduled(env: BotEnv): Promise<void> {
   }
 
   await deliverTelegramAlerts(env);
+}
+
+// ─── Sweep heartbeat ────────────────────────────────────────────────────────
+
+/**
+ * Alert the owner when the reconciliation sweep has gone quiet.
+ *
+ * The sweep itself runs inside the store (POST /api/reconcile) and stamps
+ * `sweep_heartbeats` after every attempt; this check runs here, on the same
+ * cron that triggers the sweep, and compares the stamp against the clock. A
+ * sweep that has stopped — a rotated secret, a broken deploy — otherwise fails
+ * nobody loudly: orders simply stay `fulfilling` until a customer complains.
+ *
+ * The threshold is four missed ticks (the cron fires every five minutes and a
+ * sweep takes well under one), so a stall is noticed within minutes without
+ * alerting on a single slow run. Enqueued alerts are deduped per day, so a
+ * stall that outlasts the first message still surfaces on the next day
+ * instead of becoming wallpaper.
+ */
+const SWEEP_STALL_THRESHOLD_MS = 20 * 60_000;
+
+type SweepHeartbeatRow = {
+  last_success_at: string | null;
+  last_failure_at: string | null;
+  last_error: string | null;
+};
+
+export type SweepStallState = {
+  stalled: boolean;
+  /** False when no sweep has ever stamped a success — also a stall. */
+  everRan: boolean;
+  minutesSince: number | null;
+};
+
+/** The pure decision, exported so the threshold's behaviour is testable. */
+export function sweepStallState(
+  now: number,
+  heartbeat: SweepHeartbeatRow | null,
+  thresholdMs: number = SWEEP_STALL_THRESHOLD_MS,
+): SweepStallState {
+  if (!heartbeat || !heartbeat.last_success_at) {
+    return { stalled: true, everRan: false, minutesSince: null };
+  }
+
+  const since = now - Date.parse(heartbeat.last_success_at);
+
+  if (!Number.isFinite(since)) {
+    // An unparseable stamp means the sweep's writes are broken — treat it as
+    // the stall it functionally is, with no interval to report.
+    return { stalled: true, everRan: true, minutesSince: null };
+  }
+
+  return {
+    stalled: since > thresholdMs,
+    everRan: true,
+    minutesSince: Math.round(since / 60_000),
+  };
+}
+
+export async function checkSweepHeartbeat(env: BotEnv): Promise<void> {
+  const { telegram } = await readSettings(env);
+
+  if (telegram.enabled === false) {
+    return;
+  }
+
+  const token = textValue(telegram.bot_token) ?? textValue(env.TELEGRAM_BOT_TOKEN);
+  const owner = textValue(telegram.chat_id);
+
+  if (!token || !owner) {
+    return;
+  }
+
+  const { ok, json } = await supabaseJson(
+    env,
+    "sweep_heartbeats?id=eq.global&select=last_success_at,last_failure_at,last_error",
+  );
+
+  /*
+   * A table the store has not migrated to yet is a pending migration, not a
+   * stall the owner can fix from an alert — skip until the row exists.
+   */
+  if (!ok) {
+    return;
+  }
+
+  const raw = Array.isArray(json) ? json[0] : json;
+  const row =
+    raw && typeof raw === "object" ? (raw as SweepHeartbeatRow) : null;
+  const state = sweepStallState(Date.now(), row);
+
+  if (!state.stalled) {
+    return;
+  }
+
+  const day = new Date().toISOString().slice(0, 10);
+  const { ok: enqueued } = await supabaseJson(env, "telegram_alerts", {
+    method: "POST",
+    body: {
+      type: "sweep_stalled",
+      status: "pending",
+      // One alert per day per stall: a unique index on (type, dedup_key)
+      // turns a repeat insert into a 409, which the delivery loop absorbs.
+      dedup_key: `sweep_stalled:${day}`,
+      payload: {
+        last_success_at: row?.last_success_at ?? null,
+        last_failure_at: row?.last_failure_at ?? null,
+        last_error: row?.last_error ?? null,
+        minutes_since: state.minutesSince,
+      },
+    },
+  });
+
+  botLog("sweep_stalled_alert", { enqueued, minutesSince: state.minutesSince });
 }

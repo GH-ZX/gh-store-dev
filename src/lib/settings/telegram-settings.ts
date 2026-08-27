@@ -22,6 +22,7 @@ export const TELEGRAM_ALERT_TYPES = [
   "recharge_request",
   "support_message",
   "low_wallet",
+  "sweep_stalled",
 ] as const;
 
 export type TelegramAlertType = (typeof TELEGRAM_ALERT_TYPES)[number];
