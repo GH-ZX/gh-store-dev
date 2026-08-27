@@ -618,6 +618,7 @@ export async function verifyTelegramBotToken(token: string): Promise<{
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{}",
+      signal: AbortSignal.timeout(10_000),
     });
     const payload = (await response.json().catch(() => null)) as {
       ok?: boolean;
@@ -660,6 +661,7 @@ export async function readTelegramWebhookState(token: string): Promise<{
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{}",
+      signal: AbortSignal.timeout(10_000),
     });
     const payload = (await response.json().catch(() => null)) as {
       ok?: boolean;
@@ -735,6 +737,7 @@ async function telegramPost(token: string, method: string, body: Record<string, 
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
     });
     const payload = (await response.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
 
@@ -824,6 +827,7 @@ export async function registerTelegramWebhook(token: string, secret: string, own
         secret_token: secret,
         allowed_updates: ["message", "callback_query"],
       }),
+      signal: AbortSignal.timeout(10_000),
     });
 
     const payload = (await webhookResult.json().catch(() => null)) as { ok?: boolean; description?: string } | null;

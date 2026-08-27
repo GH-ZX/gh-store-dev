@@ -1462,12 +1462,25 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
   }
 
   if (decision.action === "complete") {
+    const requiresDeliveryPayload =
+      context.deliveryKind === "stored" ||
+      context.offerType !== "topup";
+
+    if (requiresDeliveryPayload && (!deliveredPayload || deliveredPayload.items.length === 0)) {
+      log.warn("fulfilment", "provider_completed_without_delivery", {
+        orderId: context.orderId,
+        orderNumber: context.orderNumber,
+        provider,
+      });
+      return { action: "escalated", reason: "Supplier completed the order without delivery data." };
+    }
+
     await recordAttempt(attempt.id, {
       status: "completed",
       ...(deliveredPayload ? { delivered: deliveredPayload } : {}),
     });
     await setOrderStatus(context.orderId, "completed");
-    await announceOutcome(context, { state: "completed", deliveredItems: [] });
+    await announceOutcome(context, { state: "completed", deliveredItems: deliveredPayload?.items ?? [] });
 
     return { action: "completed" };
   }

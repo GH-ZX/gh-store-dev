@@ -245,7 +245,8 @@ begin
     return;
   end if;
 
-  if v_order.payment_status <> 'paid' then
+  if v_order.payment_status <> 'paid'
+     or v_order.status <> 'failed' then
     raise exception 'Order is not in a refundable state' using errcode = 'P0001';
   end if;
 

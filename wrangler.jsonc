@@ -49,7 +49,7 @@
 		"NEXT_PUBLIC_APP_URL": "https://gh-store.me"
 	},
 	"triggers": {
-		"crons": ["*/15 * * * *"]
+		"crons": ["*/5 * * * *"]
 	},
 	"assets": {
 		"directory": ".open-next/assets",
