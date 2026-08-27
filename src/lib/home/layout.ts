@@ -76,6 +76,10 @@ const homeSectionInputSchema = z.object({
   autoplay: z.boolean().optional().catch(undefined),
   loop: z.boolean().optional().catch(undefined),
   align: z.enum(["start", "center"]).optional().catch(undefined),
+  image_fit: z.enum(["cover", "contain"]).optional().catch(undefined),
+  image_aspect: z.enum(["auto", "16:9", "4:3", "1:1"]).optional().catch(undefined),
+  image_position_x: z.coerce.number().optional().catch(undefined),
+  image_position_y: z.coerce.number().optional().catch(undefined),
   game_ids: looseList,
   offer_ids: looseList,
   review_ids: looseList,
@@ -112,6 +116,11 @@ export type HomeSection = {
   loop: boolean;
   /** Where a slide settles: `center` reads as a showcase, `start` as a shelf. */
   align: "start" | "center";
+  /** Carousel artwork framing. */
+  imageFit: "cover" | "contain";
+  imageAspect: "auto" | "16:9" | "4:3" | "1:1";
+  imagePositionX: number;
+  imagePositionY: number;
   gameIds: string[];
   offerIds: string[];
   reviewIds: string[];
@@ -186,6 +195,10 @@ export function createHomeSection(type: HomeSectionType, id: string): HomeSectio
     autoplay: true,
     loop: true,
     align: "center",
+    imageFit: "cover",
+    imageAspect: "auto",
+    imagePositionX: 50,
+    imagePositionY: 50,
     gameIds: [],
     offerIds: [],
     reviewIds: [],
@@ -273,6 +286,10 @@ export function normalizeHomeLayout(value: unknown): HomeSection[] {
       autoplay: input.autoplay !== false,
       loop: input.loop !== false,
       align: input.align ?? "center",
+      imageFit: input.image_fit ?? "cover",
+      imageAspect: input.image_aspect ?? "auto",
+      imagePositionX: input.image_position_x === undefined ? 50 : clamp(input.image_position_x, 0, 100),
+      imagePositionY: input.image_position_y === undefined ? 50 : clamp(input.image_position_y, 0, 100),
       gameIds: toIdList(input.game_ids),
       offerIds: toIdList(input.offer_ids),
       reviewIds: toIdList(input.review_ids),

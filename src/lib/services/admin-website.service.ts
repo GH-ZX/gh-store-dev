@@ -325,6 +325,10 @@ function toStoredSection(section: HomeSection): JsonObject {
     autoplay: section.autoplay,
     loop: section.loop,
     align: section.align,
+    image_fit: section.imageFit,
+    image_aspect: section.imageAspect,
+    image_position_x: section.imagePositionX,
+    image_position_y: section.imagePositionY,
     game_ids: [...section.gameIds],
     offer_ids: [...section.offerIds],
     review_ids: [...section.reviewIds],
@@ -515,6 +519,10 @@ export async function saveCarouselSettings(input: {
   intervalSeconds: number;
   loop: boolean;
   align: "start" | "center";
+  imageFit: "cover" | "contain";
+  imageAspect: "auto" | "16:9" | "4:3" | "1:1";
+  imagePositionX: number;
+  imagePositionY: number;
 }): Promise<void> {
   await requireAdmin();
 
@@ -526,6 +534,10 @@ export async function saveCarouselSettings(input: {
           intervalSeconds: input.intervalSeconds,
           loop: input.loop,
           align: input.align,
+          imageFit: input.imageFit,
+          imageAspect: input.imageAspect,
+          imagePositionX: input.imagePositionX,
+          imagePositionY: input.imagePositionY,
         }
       : section,
   );

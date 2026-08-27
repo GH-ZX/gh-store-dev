@@ -16,7 +16,10 @@ import type { CommonMessages, SearchMessages } from "@/i18n/messages";
 import { signOutAction } from "@/lib/auth/actions";
 import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
 import type { SessionSummary } from "@/lib/services/session.service";
-import type { HeaderWalletPanel } from "@/lib/wallet-panel";
+import {
+  formatHeaderWalletAmount,
+  type HeaderWalletPanel,
+} from "@/lib/wallet-panel";
 
 /**
  * Storefront header.
@@ -164,6 +167,19 @@ export function SiteHeader({
                 clear: searchMessages.clear,
               }}
             />
+
+            {session && walletPanel?.kind === "customer" ? (
+              <Link
+                href={`/${locale}/wallet`}
+                aria-label={messages.account.walletLabel}
+                className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-2.5 text-xs font-semibold text-[var(--ink)] sm:px-3 sm:text-sm"
+              >
+                <span aria-hidden="true">💰</span>
+                <span className="tabular-nums" dir="ltr">
+                  {formatHeaderWalletAmount(walletPanel.balance, walletPanel.currency, locale)}
+                </span>
+              </Link>
+            ) : null}
 
             <Link
               href={`/${locale}/search`}

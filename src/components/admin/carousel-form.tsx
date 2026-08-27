@@ -82,6 +82,53 @@ export function CarouselForm({ section, messages, errors }: CarouselFormProps) {
         ]}
       />
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SelectField
+          label={messages.imageFitLabel}
+          hint={messages.imageFitHint}
+          name="image_fit"
+          defaultValue={section.imageFit}
+          options={[
+            { value: "cover", label: messages.imageFitCover },
+            { value: "contain", label: messages.imageFitContain },
+          ]}
+        />
+        <SelectField
+          label={messages.imageAspectLabel}
+          hint={messages.imageAspectHint}
+          name="image_aspect"
+          defaultValue={section.imageAspect}
+          options={[
+            { value: "auto", label: messages.imageAspectAuto },
+            { value: "16:9", label: messages.imageAspect169 },
+            { value: "4:3", label: messages.imageAspect43 },
+            { value: "1:1", label: messages.imageAspect11 },
+          ]}
+        />
+        <TextField
+          label={messages.imagePositionXLabel}
+          hint={messages.imagePositionHint}
+          name="image_position_x"
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          defaultValue={section.imagePositionX}
+          dir="ltr"
+        />
+        <TextField
+          label={messages.imagePositionYLabel}
+          hint={messages.imagePositionHint}
+          name="image_position_y"
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          defaultValue={section.imagePositionY}
+          dir="ltr"
+        />
+      </div>
+
       <p className="text-xs leading-5 text-[var(--ink-faint)]">{messages.reducedMotionNote}</p>
 
       <FormResult

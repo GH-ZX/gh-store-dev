@@ -662,6 +662,10 @@ export async function savePageSeoAction(
 const carouselSchema = z.object({
   loop: z.boolean(),
   align: z.enum(["start", "center"]),
+  image_fit: z.enum(["cover", "contain"]),
+  image_aspect: z.enum(["auto", "16:9", "4:3", "1:1"]),
+  image_position_x: z.coerce.number().int().min(0).max(100),
+  image_position_y: z.coerce.number().int().min(0).max(100),
   interval_seconds: z.coerce
     .number()
     .int()
@@ -678,6 +682,10 @@ export async function saveCarouselAction(
   const parsed = carouselSchema.safeParse({
     loop: formFlag(formData, "loop"),
     align: formText(formData, "align") ?? "center",
+    image_fit: formText(formData, "image_fit") ?? "cover",
+    image_aspect: formText(formData, "image_aspect") ?? "auto",
+    image_position_x: formText(formData, "image_position_x") ?? "50",
+    image_position_y: formText(formData, "image_position_y") ?? "50",
     interval_seconds: formText(formData, "interval_seconds") ?? "6",
   });
 
@@ -690,6 +698,10 @@ export async function saveCarouselAction(
       loop: parsed.data.loop,
       align: parsed.data.align,
       intervalSeconds: parsed.data.interval_seconds,
+      imageFit: parsed.data.image_fit,
+      imageAspect: parsed.data.image_aspect,
+      imagePositionX: parsed.data.image_position_x,
+      imagePositionY: parsed.data.image_position_y,
     });
   } catch (error) {
     logFailure("admin.website", "carousel_save_failed", error);

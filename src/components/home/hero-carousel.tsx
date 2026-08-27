@@ -53,6 +53,10 @@ export type HeroCarouselProps = {
   autoplay?: boolean;
   loop?: boolean;
   align?: "start" | "center";
+  imageFit?: "cover" | "contain";
+  imageAspect?: "auto" | "16:9" | "4:3" | "1:1";
+  imagePositionX?: number;
+  imagePositionY?: number;
   labels: {
     regionLabel: string;
     slideLabel: string;
@@ -79,6 +83,10 @@ export function HeroCarousel({
   autoplay = true,
   loop = true,
   align = "center",
+  imageFit = "cover",
+  imageAspect = "auto",
+  imagePositionX = 50,
+  imagePositionY = 50,
   labels,
   liveEdit,
   className,
@@ -196,7 +204,13 @@ export function HeroCarousel({
           */}
         <div
           ref={emblaRef}
-          className="gh-sheen relative aspect-[4/5] overflow-hidden rounded-[var(--radius-inner)] border border-[var(--line)] bg-[var(--surface-inset)] sm:aspect-[16/9] lg:aspect-[2.4/1]"
+          className={cn(
+            "gh-sheen relative overflow-hidden rounded-[var(--radius-inner)] border border-[var(--line)] bg-[var(--surface-inset)]",
+            imageAspect === "16:9" && "aspect-video",
+            imageAspect === "4:3" && "aspect-[4/3]",
+            imageAspect === "1:1" && "aspect-square",
+            imageAspect === "auto" && "aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.4/1]",
+          )}
         >
           {/* `touch-action` keeps a vertical scroll the page's, not the carousel's. */}
           <div className="flex h-full touch-pan-y">
@@ -246,7 +260,9 @@ export function HeroCarousel({
                           alt={game.name}
                           priority={slideIndex === 0}
                           sizes="(min-width: 1280px) 1280px, (min-width: 640px) 92vw, 100vw"
-                          className="size-full drop-shadow-[0_18px_48px_rgba(0,0,0,0.35)]"
+                          fit={imageFit}
+                          focus={{ x: imagePositionX, y: imagePositionY }}
+                          className="drop-shadow-[0_18px_48px_rgba(0,0,0,0.35)]"
                         />
                       </div>
                     </div>

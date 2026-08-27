@@ -107,6 +107,10 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             intervalSeconds={carousel.section?.intervalSeconds ?? 6}
             loop={carousel.section?.loop ?? true}
             align={carousel.section?.align ?? "center"}
+            imageFit={carousel.section?.imageFit ?? "cover"}
+            imageAspect={carousel.section?.imageAspect ?? "auto"}
+            imagePositionX={carousel.section?.imagePositionX ?? 50}
+            imagePositionY={carousel.section?.imagePositionY ?? 50}
             labels={{
               regionLabel: home.carousel.regionLabel,
               slideLabel: home.carousel.slideLabel,
