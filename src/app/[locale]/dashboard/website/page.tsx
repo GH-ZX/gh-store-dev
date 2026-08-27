@@ -49,7 +49,7 @@ export default async function WebsiteSettingsPage({
         />
       </AdminCard>
 
-      <AdminCard title={messages.sections.title} description={messages.sections.description}>
+      <AdminCard title={messages.sections.title} description={messages.sections.description} collapsible defaultOpen={false}>
         <HomeLayoutEditor
           sections={settings.sections}
           candidates={candidates}
@@ -59,7 +59,7 @@ export default async function WebsiteSettingsPage({
         />
       </AdminCard>
 
-      <AdminCard title={messages.social.title} description={messages.social.description}>
+      <AdminCard title={messages.social.title} description={messages.social.description} collapsible defaultOpen={false}>
         <SocialLinksEditor
           links={settings.socialLinks}
           messages={messages.social}
@@ -67,7 +67,7 @@ export default async function WebsiteSettingsPage({
         />
       </AdminCard>
 
-      <AdminCard title={messages.contact.title} description={messages.contact.description}>
+      <AdminCard title={messages.contact.title} description={messages.contact.description} collapsible defaultOpen={false}>
         <ContactChannelsEditor
           channels={settings.contactChannels}
           noteAr={settings.contactNoteAr}
@@ -77,7 +77,7 @@ export default async function WebsiteSettingsPage({
         />
       </AdminCard>
 
-      <AdminCard title={messages.carousel.title} description={messages.carousel.description}>
+      <AdminCard title={messages.carousel.title} description={messages.carousel.description} collapsible defaultOpen={false}>
         <CarouselForm
           section={settings.sections.find((section) => section.type === "carousel") ?? null}
           messages={messages.carousel}
@@ -85,11 +85,11 @@ export default async function WebsiteSettingsPage({
         />
       </AdminCard>
 
-      <AdminCard title={messages.seo.title} description={messages.seo.description}>
+      <AdminCard title={messages.seo.title} description={messages.seo.description} collapsible defaultOpen={false}>
         <SeoForm seo={settings.seo} messages={messages.seo} errors={messages.errors} />
       </AdminCard>
 
-      <AdminCard title={messages.pageSeo.title} description={messages.pageSeo.description}>
+      <AdminCard title={messages.pageSeo.title} description={messages.pageSeo.description} collapsible defaultOpen={false}>
         <PageSeoEditor
           pages={settings.seo.pages}
           messages={messages.pageSeo}

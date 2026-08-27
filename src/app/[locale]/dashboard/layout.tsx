@@ -44,11 +44,7 @@ export default async function DashboardLayout({ children, params }: LayoutProps<
     // Marked so the stylesheet can keep the owner's ambient backdrop off a
     // working surface; the layer itself is rendered by the locale shell above.
     <div data-dashboard-shell className="gh-page py-6 sm:py-8">
-      <DashboardNav
-        locale={locale}
-        messages={messages.shell}
-        signOutLabel={messages.auth.signOutAction}
-      />
+      <DashboardNav locale={locale} messages={messages.shell} />
 
       <div className="mt-6">{children}</div>
     </div>

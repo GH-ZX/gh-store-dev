@@ -131,13 +131,51 @@ export function AdminCard({
   actions,
   className,
   children,
+  collapsible = false,
+  defaultOpen = true,
 }: {
   title?: string;
   description?: string;
   actions?: ReactNode;
   className?: string;
   children: ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
 }) {
+  const header = title || description || actions ? (
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        {title ? <h2 className="text-base font-semibold text-[var(--ink)]">{title}</h2> : null}
+        {description ? <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">{description}</p> : null}
+      </div>
+      {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
+    </div>
+  ) : null;
+
+  if (collapsible) {
+    return (
+      <details
+        open={defaultOpen}
+        className={cn(
+          "group rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)]",
+          className,
+        )}
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 sm:p-6 [&::-webkit-details-marker]:hidden">
+          <div className="min-w-0 flex-1">
+            {title ? <h2 className="text-base font-semibold text-[var(--ink)]">{title}</h2> : null}
+            {description ? <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">{description}</p> : null}
+          </div>
+          <span className="flex shrink-0 items-center gap-2">
+            {actions ? <span className="flex flex-wrap gap-2">{actions}</span> : null}
+            <span className="inline-flex size-6 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--ink-muted)] transition-transform group-open:rotate-180">⌄</span>
+          </span>
+        </summary>
+        <div className="px-5 pb-5 sm:px-6 sm:pb-6">{children}</div>
+      </details>
+    );
+  }
+
   return (
     <section
       className={cn(
@@ -145,19 +183,7 @@ export function AdminCard({
         className,
       )}
     >
-      {title || actions ? (
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            {title ? (
-              <h2 className="text-base font-semibold text-[var(--ink)]">{title}</h2>
-            ) : null}
-            {description ? (
-              <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">{description}</p>
-            ) : null}
-          </div>
-          {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
-        </div>
-      ) : null}
+      {header}
       {children}
     </section>
   );
