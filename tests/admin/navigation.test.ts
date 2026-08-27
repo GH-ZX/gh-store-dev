@@ -7,6 +7,17 @@ describe("dashboard navigation groups", () => {
     expect(order).toEqual(["overview", "sales", "people", "storefront", "system"]);
   });
 
+  it("gives every group a navigable first page", () => {
+    expect(DASHBOARD_NAV_GROUPS.every((group) => group.items.some((item) => item.href))).toBe(true);
+    expect(DASHBOARD_NAV_GROUPS.map((group) => group.items.find((item) => item.href)?.href)).toEqual([
+      "/",
+      "/orders",
+      "/customers",
+      "/catalog",
+      "/providers",
+    ]);
+  });
+
   it("keeps every expected page under its group", () => {
     const byGroup = Object.fromEntries(
       DASHBOARD_NAV_GROUPS.map((group) => [group.key, group.items.map((item) => item.key)]),

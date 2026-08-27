@@ -115,22 +115,22 @@
       "empty": "No orders yet."
     },
     "actions": {
-      "addGame": "Add a game",
+      "addGame": "Add a product",
       "importG2B": "Import from G2Bulk",
       "recharges": "Review recharges",
       "appearance": "Store appearance",
       "viewStore": "View store"
     },
     "stats": {
-      "games": "Games",
-      "activeGames": "Published games",
+      "games": "Products",
+      "activeGames": "Published products",
       "offers": "Packages",
       "activeOffers": "Published packages",
       "orders": "Orders",
       "customers": "Customers"
     },
     "emptyCatalogTitle": "The catalog is empty",
-    "emptyCatalogDescription": "Connect the G2Bulk provider and import games so they appear in the store.",
+    "emptyCatalogDescription": "Connect a provider and import products so they appear in the store.",
     "goToProviders": "Set up providers"
   },
   "providers": {
@@ -153,8 +153,8 @@
       "testAction": "Verify key",
       "balanceLabel": "Supplier wallet balance",
       "accountLabel": "Account",
-      "importAction": "Import games",
-      "importHint": "Fetch the provider's game list and choose what to add to your store.",
+      "importAction": "Import products",
+      "importHint": "Fetch the provider's product list and choose what to add to your store.",
       "logsHeading": "Recent syncs",
       "logsEmpty": "No syncs yet.",
       "logsUnavailable": "The sync history could not be read, so nothing is shown rather than an empty list that would look like no syncs have run.",
@@ -945,11 +945,11 @@
     "pageSeo": {
       "title": "Page listings",
       "description": "How each page appears in search results and when its link is shared. Blank keeps the page's own wording.",
-      "emptyHint": "Only pages worth finding are listed. Game and offer pages take their titles from the product itself.",
+      "emptyHint": "Only pages worth finding are listed. Product and offer pages take their titles from the product itself.",
       "stateSet": "Custom",
       "stateDefault": "Page default",
       "pages": {
-        "/games": "Games",
+        "/games": "Products",
         "/gift-cards": "Gift cards",
         "/sale": "Offers",
         "/search": "Search",
@@ -964,7 +964,7 @@
     },
     "carousel": {
       "title": "Carousel",
-      "description": "How the featured games at the top of the homepage behave.",
+      "description": "How the featured products at the top of the homepage behave.",
       "missing": "The homepage has no carousel section. Add one in the layout above.",
       "intervalLabel": "Seconds per slide",
       "intervalHint": "Between 3 and 30.",

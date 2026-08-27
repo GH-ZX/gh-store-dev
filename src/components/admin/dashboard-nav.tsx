@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactElement, type SVGProps } from "react";
+import type { ReactElement, SVGProps } from "react";
 import {
   CableIcon,
   DepositIcon,
@@ -50,14 +50,11 @@ const PAGE_ICONS: Record<string, IconType> = {
 };
 
 /**
- * Five buttons, no dropdown overlay.
+ * A persistent, link-first navigation for the admin workspace.
  *
- * Desktop: five equal buttons in one row. The active group's pages appear as
- * a second, quiet row directly underneath — no overlay, no hover, no scroll.
- * Mobile: the same five buttons wrap, and the active group's pages wrap as a
- * second row. Every tap is a real navigation, nothing hides behind a hover
- * that fails on a phone. No logout or "back to store" — those live in the
- * site header, not the working surface.
+ * Every group is a real link to its first page; the current group's pages appear
+ * in a second row. Nothing depends on hover, hidden dropdowns, or client-only
+ * state, so direct links and refreshes always render the right navigation.
  */
 export function DashboardNav({
   locale,
@@ -68,29 +65,17 @@ export function DashboardNav({
 }) {
   const pathname = usePathname() ?? "";
   const base = `/${locale}/dashboard`;
-  const [activeGroup, setActiveGroup] = useState<string | null>(() => {
-    for (const g of DASHBOARD_NAV_GROUPS) {
-      for (const it of g.items) {
-        if (!it.href) continue;
-        const href = it.href === "/" ? base : `${base}${it.href}`;
-        if (isDashboardNavActive(base, href, pathname)) return g.key;
-      }
-    }
-    return DASHBOARD_NAV_GROUPS[0]?.key ?? null;
-  });
-
   function isActive(href: string): boolean {
     return isDashboardNavActive(base, href, pathname);
   }
 
-  const pathnameGroup = DASHBOARD_NAV_GROUPS.find((group) =>
+  const active = DASHBOARD_NAV_GROUPS.find((group) =>
     group.items.some((item) => {
       if (!item.href) return false;
       const href = item.href === "/" ? base : `${base}${item.href}`;
       return isDashboardNavActive(base, href, pathname);
     }),
-  );
-  const active = pathnameGroup ?? DASHBOARD_NAV_GROUPS.find((g) => g.key === activeGroup) ?? DASHBOARD_NAV_GROUPS[0];
+  ) ?? DASHBOARD_NAV_GROUPS[0];
   const activeItems = (active?.items ?? [])
     .filter((it) => it.href)
     .map((it) => ({
@@ -98,8 +83,6 @@ export function DashboardNav({
       href: it.href === "/" ? base : `${base}${it.href}`,
       label: messages.nav[it.key as keyof AdminMessages["shell"]["nav"]] ?? it.key,
     }));
-
-  const isSingleItemGroup = activeItems.length === 1;
 
   return (
     <nav aria-label={messages.navLabel} className="sticky top-[4.75rem] z-30 sm:top-[5.25rem]">
@@ -109,58 +92,34 @@ export function DashboardNav({
           {DASHBOARD_NAV_GROUPS.map((group) => {
             const label = (messages.groups as Record<string, string>)[group.key] ?? group.key;
             const Icon = GROUP_ICONS[group.key] ?? GridIcon;
-            const groupActive = group.key === activeGroup;
-            const hasItems = group.items.some((it) => it.href);
-            // Groups with a single page act as a direct link.
-            const single = group.items.length === 1 && group.items[0]?.href ? group.items[0] : null;
-            if (single?.href) {
-              const href = single.href === "/" ? base : `${base}${single.href}`;
-              const current = isActive(href);
-              return (
-                <Link
-                  key={group.key}
-                  href={href}
-                  prefetch={false}
-                  aria-current={current ? "page" : undefined}
-                  onClick={() => setActiveGroup(group.key)}
-                  className={cn(
-                    "inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium transition-colors sm:justify-start",
-                    current
-                      ? "bg-[var(--accent)] text-[var(--accent-ink)]"
-                      : "bg-[var(--surface)] text-[var(--ink-muted)] hover:text-[var(--ink)]",
-                  )}
-                >
-                  <Icon className="size-4 shrink-0" />
-                  <span className="whitespace-nowrap">{label}</span>
-                </Link>
-              );
-            }
+            const groupActive = group.key === active?.key;
+            const firstItem = group.items.find((item) => item.href);
+            if (!firstItem?.href) return null;
+            const href = firstItem.href === "/" ? base : `${base}${firstItem.href}`;
             return (
-              <button
+              <Link
                 key={group.key}
-                type="button"
-                aria-pressed={groupActive}
-                onClick={() => setActiveGroup(group.key)}
+                href={href}
+                prefetch={false}
+                aria-current={groupActive ? "page" : undefined}
                 className={cn(
-                  "inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium transition-colors sm:justify-start",
+                  "inline-flex min-w-0 items-center justify-center gap-2 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-semibold transition-colors sm:flex-1 sm:justify-center",
                   groupActive
-                    ? "bg-[var(--accent)] text-[var(--accent-ink)]"
-                    : hasItems
-                      ? "bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface)]"
-                      : "text-[var(--ink-muted)]",
+                    ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-[var(--elevation-1)]"
+                    : "bg-[var(--surface)] text-[var(--ink-soft)] hover:bg-[var(--line)] hover:text-[var(--ink)]",
                 )}
               >
                 <Icon className="size-4 shrink-0" />
-                <span className="whitespace-nowrap">{label}</span>
-                <span className={cn("ms-1 text-xs opacity-60", groupActive && "opacity-80")}>
+                <span className="truncate">{label}</span>
+                <span className={cn("text-xs tabular-nums opacity-60", groupActive && "opacity-80")}>
                   {group.items.filter((it) => it.href).length}
                 </span>
-              </button>
+              </Link>
             );
           })}
         </div>
 
-        {/* Second row: the active group's pages. No overlay, no scroll, wraps on mobile. */}
+        {/* Second row: the active group's pages. It wraps instead of scrolling on narrow screens. */}
         {active && activeItems.length > 1 ? (
           <div className="mt-2 flex flex-wrap gap-1.5 border-t border-[var(--line)] pt-2">
             {activeItems.map((item) => {
@@ -187,30 +146,6 @@ export function DashboardNav({
           </div>
         ) : null}
 
-        {/* Single-item group hint: still show its one page as a quiet pill so the second row is not empty. */}
-        {active && isSingleItemGroup ? (
-          <div className="mt-2 flex flex-wrap gap-1.5 border-t border-[var(--line)] pt-2">
-            {activeItems.map((item) => {
-              const Icon = PAGE_ICONS[item.key] ?? GridIcon;
-              const current = isActive(item.href);
-              return (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  prefetch={false}
-                  aria-current={current ? "page" : undefined}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium sm:text-sm",
-                    current ? "bg-[var(--ink)] text-[var(--shell)]" : "bg-[var(--surface)] text-[var(--ink-muted)]",
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        ) : null}
       </div>
     </nav>
   );
