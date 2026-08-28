@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import useEmblaCarousel from "embla-carousel-react";
-import Autoplay from "embla-carousel-autoplay";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { GameEditor } from "@/components/live-edit/game-editor";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
@@ -112,43 +111,13 @@ export function HeroCarousel({
   const total = games.length;
   const rotating = autoplay && total > 1;
 
-  const isClient = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
-
-  /*
-   * Rebuilt only when a decision changes, never per render: handing Embla a new
-   * plugin array on every render tears the carousel down mid-drag.
-   *
-   * The instance is kept so the pause button can stop and resume the timer
-   * without rebuilding — `stop()` freezes where the countdown is, `play()`
-   * continues it, and the drag behaviour is untouched either way.
-   */
-  const autoplayPlugin = useMemo(
-    () =>
-      isClient && rotating
-        ? Autoplay({
-            delay: Math.max(2, intervalSeconds) * 1000,
-            stopOnInteraction: false,
-          })
-        : null,
-    [isClient, rotating, intervalSeconds],
-  );
-
-  const plugins = useMemo(() => (autoplayPlugin ? [autoplayPlugin] : []), [autoplayPlugin]);
-
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    {
-      loop,
-      align,
-      direction: locale === "ar" ? "rtl" : "ltr",
-      containScroll: false,
-      dragFree: false,
-    },
-    plugins,
-  );
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop,
+    align,
+    direction: locale === "ar" ? "rtl" : "ltr",
+    containScroll: false,
+    dragFree: false,
+  });
 
   const [selected, setSelected] = useState(0);
   const [canPrev, setCanPrev] = useState(false);
@@ -168,54 +137,41 @@ export function HeroCarousel({
     () => false,
   );
   const [userPaused, setUserPaused] = useState<boolean | null>(null);
+  const [tabHidden, setTabHidden] = useState(false);
   const paused = userPaused ?? reducedMotion;
 
   /*
-   * The plugin is an external system, so the effect's job is exactly to keep
-   * it in step with the state: paused stops the timer where it is, unpausing
-   * resumes it.
+   * Watch tab visibility to pause rotation when document is hidden.
    */
   useEffect(() => {
-    if (!autoplayPlugin || !emblaApi) {
-      return;
+    function onVisibilityChange() {
+      setTabHidden(document.hidden);
     }
-
-    try {
-      if (paused) {
-        autoplayPlugin.stop();
-      } else {
-        autoplayPlugin.play();
-      }
-    } catch {
-      // Guard against any lifecycle race conditions
-    }
-  }, [autoplayPlugin, emblaApi, paused]);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
 
   /*
-   * A hidden tab has no audience; stop the timer and only resume it for a
-   * visitor who had not paused the strip themselves.
+   * Native robust autoplay timer: advances the carousel without any embla plugin
+   * lifecycle / internalEngine race conditions.
    */
   useEffect(() => {
-    if (!autoplayPlugin || !emblaApi) {
+    if (!emblaApi || !rotating || paused || tabHidden) {
       return;
     }
 
-    function onVisibilityChange() {
-      try {
-        if (document.hidden) {
-          autoplayPlugin?.stop();
-        } else if (!paused) {
-          autoplayPlugin?.play();
-        }
-      } catch {
-        // Guard against any lifecycle race conditions
+    const intervalMs = Math.max(2, intervalSeconds) * 1000;
+    const timer = setInterval(() => {
+      if (!emblaApi) return;
+      if (emblaApi.canScrollNext()) {
+        emblaApi.scrollNext();
+      } else {
+        emblaApi.scrollTo(0);
       }
-    }
+    }, intervalMs);
 
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, [autoplayPlugin, emblaApi, paused]);
+    return () => clearInterval(timer);
+  }, [emblaApi, rotating, paused, tabHidden, intervalSeconds]);
 
   const toggleRotation = useCallback(() => {
     setUserPaused(!paused);
