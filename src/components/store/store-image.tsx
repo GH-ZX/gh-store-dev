@@ -52,6 +52,26 @@ function supabaseResponsiveSources(src: string): string | undefined {
     return undefined;
   }
 }
+
+function resolveImageSource(src: string): string {
+  if (!src) return src;
+  // Local paths, data URLs, and Supabase storage URLs are served directly
+  if (src.startsWith("/") || src.startsWith("data:") || src.startsWith("blob:")) {
+    return src;
+  }
+  try {
+    const url = new URL(src);
+    // If it is Supabase Storage, it already has edge image resizing/CDN
+    if (url.pathname.includes("/storage/v1/object/public/")) {
+      return src;
+    }
+    // Route third-party supplier CDN images through our edge proxy
+    return `/api/media-proxy?url=${encodeURIComponent(src)}`;
+  } catch {
+    return src;
+  }
+}
+
 export type StoreImageProps = {
   src: string | null;
   alt: string;
@@ -82,10 +102,11 @@ export function StoreImage({
   }
 
   const srcSet = supabaseResponsiveSources(src);
+  const resolvedSrc = resolveImageSource(src);
 
   return (
     <img
-      src={src}
+      src={resolvedSrc}
       srcSet={srcSet}
       alt={alt}
       loading={priority ? "eager" : "lazy"}
