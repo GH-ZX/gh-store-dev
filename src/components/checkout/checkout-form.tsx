@@ -248,6 +248,8 @@ export function CheckoutForm({
               );
             }
 
+            const isNumericField = field.fieldType === "number" || field.fieldType === "uid";
+
             return (
               <TextField
                 key={field.id}
@@ -255,7 +257,7 @@ export function CheckoutForm({
                 hint={field.placeholder ?? undefined}
                 name={name}
                 type={inputType(field.fieldType)}
-                inputMode={field.fieldType === "number" ? "numeric" : undefined}
+                inputMode={isNumericField ? "numeric" : field.fieldType === "email" ? "email" : undefined}
                 dir={LTR_FIELD_TYPES.includes(field.fieldType) ? "ltr" : undefined}
                 required={field.isRequired}
                 maxLength={200}

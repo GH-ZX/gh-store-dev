@@ -112,6 +112,12 @@ export function HeroCarousel({
   const total = games.length;
   const rotating = autoplay && total > 1;
 
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
   /*
    * Rebuilt only when a decision changes, never per render: handing Embla a new
    * plugin array on every render tears the carousel down mid-drag.
@@ -122,22 +128,13 @@ export function HeroCarousel({
    */
   const autoplayPlugin = useMemo(
     () =>
-      rotating
+      isClient && rotating
         ? Autoplay({
             delay: Math.max(2, intervalSeconds) * 1000,
-            /*
-             * The carousel advances no matter what the visitor is doing. The
-             * default stops — an interaction, hover, focus — let a frame that
-             * is being read sit still, but they also read as "it only moves
-             * when I am not looking", and the storefront needs the featured
-             * games to sell themselves. The progress rail keeps the next swap
-             * visible and the pause button hands control to a visitor who
-             * wants it.
-             */
             stopOnInteraction: false,
           })
         : null,
-    [rotating, intervalSeconds],
+    [isClient, rotating, intervalSeconds],
   );
 
   const plugins = useMemo(() => (autoplayPlugin ? [autoplayPlugin] : []), [autoplayPlugin]);
@@ -147,9 +144,7 @@ export function HeroCarousel({
       loop,
       align,
       direction: locale === "ar" ? "rtl" : "ltr",
-      // One game fills the frame, so there is never a partial slide to trim.
       containScroll: false,
-      // A slide is a destination, not a shelf to flick through.
       dragFree: false,
     },
     plugins,
@@ -181,38 +176,46 @@ export function HeroCarousel({
    * resumes it.
    */
   useEffect(() => {
-    if (!autoplayPlugin) {
+    if (!autoplayPlugin || !emblaApi) {
       return;
     }
 
-    if (paused) {
-      autoplayPlugin.stop();
-    } else {
-      autoplayPlugin.play();
+    try {
+      if (paused) {
+        autoplayPlugin.stop();
+      } else {
+        autoplayPlugin.play();
+      }
+    } catch {
+      // Guard against any lifecycle race conditions
     }
-  }, [autoplayPlugin, paused]);
+  }, [autoplayPlugin, emblaApi, paused]);
 
   /*
    * A hidden tab has no audience; stop the timer and only resume it for a
    * visitor who had not paused the strip themselves.
    */
   useEffect(() => {
-    if (!autoplayPlugin) {
+    if (!autoplayPlugin || !emblaApi) {
       return;
     }
 
     function onVisibilityChange() {
-      if (document.hidden) {
-        autoplayPlugin?.stop();
-      } else if (!paused) {
-        autoplayPlugin?.play();
+      try {
+        if (document.hidden) {
+          autoplayPlugin?.stop();
+        } else if (!paused) {
+          autoplayPlugin?.play();
+        }
+      } catch {
+        // Guard against any lifecycle race conditions
       }
     }
 
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, [autoplayPlugin, paused]);
+  }, [autoplayPlugin, emblaApi, paused]);
 
   const toggleRotation = useCallback(() => {
     setUserPaused(!paused);

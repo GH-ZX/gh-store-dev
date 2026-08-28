@@ -181,7 +181,7 @@ export default async function CheckoutPage({
           balance={balance}
           insufficient={insufficient}
           shortfall={total - balance}
-          walletHref={`/${locale}/wallet`}
+          walletHref={`/${locale}/recharge?amount=${encodeURIComponent((total - balance).toFixed(2))}&returnTo=${encodeURIComponent(`/${locale}/checkout/${gameSlug}/${offerSlug}`)}`}
           gift={isGift}
         />
       </div>
