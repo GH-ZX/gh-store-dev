@@ -49,6 +49,9 @@ export function GameCard({
         "group relative flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--elevation-2)]",
         "transition-[transform,border-color,box-shadow] duration-[var(--duration)] ease-[var(--ease-spring)]",
         "hover:-translate-y-1.5 hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:shadow-[var(--elevation-3)]",
+        // Touch has no hover: the press answers the finger the way the hover
+        // answers the cursor, so a tapped tile visibly acknowledges it.
+        "active:translate-y-0 active:scale-[0.98] active:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] active:shadow-[var(--elevation-1)]",
         className,
       )}
     >
@@ -59,7 +62,7 @@ export function GameCard({
           priority={priority}
           focus={game.carouselFocus}
           sizes="(min-width: 1024px) 22rem, (min-width: 640px) 45vw, 80vw"
-          className="transition-transform duration-[var(--duration-slow)] ease-[var(--ease-out-expo)] group-hover:scale-[1.06]"
+          className="transition-transform duration-[var(--duration-slow)] ease-[var(--ease-out-expo)] group-hover:scale-[1.06] group-active:scale-[1.02]"
         />
       </div>
       <div
@@ -98,7 +101,7 @@ export function GameCard({
         </div>
 
         <span
-          className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--line-strong)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] text-[var(--ink-soft)] backdrop-blur-md transition-[background-color,color,transform] duration-[var(--duration)] ease-[var(--ease-spring)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
+          className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--line-strong)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] text-[var(--ink-soft)] backdrop-blur-md transition-[background-color,color,transform] duration-[var(--duration)] ease-[var(--ease-spring)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)] group-active:bg-[var(--accent)] group-active:text-[var(--accent-ink)]"
           aria-hidden="true"
         >
           <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />

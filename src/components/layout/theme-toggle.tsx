@@ -34,7 +34,7 @@ export function ThemeToggle({
       type="button"
       onClick={toggle}
       title={labels.toggleLabel}
-      className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] [&>svg]:size-[1.125rem]"
+      className="grid size-11 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] [&>svg]:size-[1.125rem]"
     >
       <SunIcon className="gh-only-dark" />
       <MoonIcon className="gh-only-light" />

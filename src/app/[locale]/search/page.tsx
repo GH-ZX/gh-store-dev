@@ -59,6 +59,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
             placeholder: messages.placeholder,
             submit: messages.submit,
             clear: messages.clear,
+            suggestionsLabel: messages.suggestionsLabel,
           }}
         />
         <SearchFilters locale={locale} query={query} filter={filter} messages={messages} />

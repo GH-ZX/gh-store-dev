@@ -79,7 +79,7 @@ export function OfferCard({
     : undefined;
 
   const interactive =
-    "transition-[transform,border-color,box-shadow] duration-[var(--duration)] ease-[var(--ease-spring)] hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:shadow-[var(--elevation-2)]";
+    "transition-[transform,border-color,box-shadow] duration-[var(--duration)] ease-[var(--ease-spring)] hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:shadow-[var(--elevation-2)] active:translate-y-0 active:scale-[0.98] active:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] active:shadow-[var(--elevation-1)]";
   const capitalAmount = offer.supplierCostUsd ?? null;
 
   if (compact) {
@@ -119,7 +119,7 @@ export function OfferCard({
         </span>
 
         <span
-          className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
+          className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)] group-active:bg-[var(--accent)] group-active:text-[var(--accent-ink)]"
           aria-hidden="true"
         >
           <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
@@ -181,7 +181,7 @@ export function OfferCard({
               discountLabel={discountLabel}
             />
             <span
-              className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
+              className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)] group-active:bg-[var(--accent)] group-active:text-[var(--accent-ink)]"
               aria-hidden="true"
             >
               <ArrowIcon direction="end" className="size-3.5 rtl:rotate-180" />

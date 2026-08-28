@@ -130,7 +130,15 @@ a {
   padding-inline: var(--page-gutter);
 }
 
-/* Horizontal rails: scroll-snap without a visible scrollbar. */
+/*
+ * Horizontal rails: scroll-snap without a visible scrollbar.
+ *
+ * The scrollbar is hidden, so an overflowing rail needs another way to say
+ * "there is more off the edge". The fade is not part of the utility: which
+ * side hides content is measured by the Rail component (`data-edge`), so a
+ * short row that fits is hard-edged on both sides exactly like a grid, and a
+ * scrolled-to-end rail stops hinting at content that is no longer there.
+ */
 @utility gh-rail {
   display: grid;
   grid-auto-flow: column;
@@ -139,6 +147,35 @@ a {
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   scroll-padding-inline: var(--page-gutter);
+}
+
+/* Content hides past the reading-direction end (right in LTR, left in RTL). */
+.gh-rail[data-edge="end"] {
+  mask-image: linear-gradient(to right, black calc(100% - 1.25rem), transparent);
+}
+
+[dir="rtl"] .gh-rail[data-edge="end"] {
+  mask-image: linear-gradient(to left, black calc(100% - 1.25rem), transparent);
+}
+
+/* Content hides past the reading-direction start (left in LTR, right in RTL). */
+.gh-rail[data-edge="start"] {
+  mask-image: linear-gradient(to right, transparent, black 1.25rem);
+}
+
+[dir="rtl"] .gh-rail[data-edge="start"] {
+  mask-image: linear-gradient(to left, transparent, black 1.25rem);
+}
+
+/* Overflowing on both sides — one symmetric gradient serves both directions. */
+.gh-rail[data-edge="both"] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 1.25rem,
+    black calc(100% - 1.25rem),
+    transparent
+  );
 }
 
 @utility gh-rail-item {

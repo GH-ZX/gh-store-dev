@@ -6,6 +6,7 @@
   "placeholder": "مثال: شحن ببجي، بطاقة ستيم…",
   "submit": "ابحث",
   "clear": "مسح البحث",
+  "suggestionsLabel": "اقتراحات",
   "filtersLabel": "تصفية النتائج",
   "filters": {
     "all": "الكل",

@@ -81,7 +81,7 @@ export function AccountMenu({
         <Link
           href={`/${locale}/notifications`}
           title={notificationsLabel}
-          className="relative flex min-h-10 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-3 text-sm text-[var(--ink)] transition-colors duration-[var(--duration)] hover:border-[var(--accent)]"
+          className="relative flex min-h-11 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-3 text-sm text-[var(--ink)] transition-colors duration-[var(--duration)] hover:border-[var(--accent)]"
         >
           <BellIcon className="size-4 shrink-0 text-[var(--accent)]" />
           <span className="sr-only">{notificationsLabel}</span>
@@ -93,7 +93,7 @@ export function AccountMenu({
 
       <details className="relative">
         <summary
-          className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+          className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
           aria-label={messages.account.accountMenuLabel}
         >
           <UserIcon className="size-4 shrink-0" />

@@ -117,6 +117,8 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
               goToGame: home.carousel.goToGame,
               previous: home.carousel.previous,
               next: home.carousel.next,
+              pause: home.carousel.pause,
+              play: home.carousel.play,
               details: common.actions.details,
               featured: common.badges.featured,
             }}

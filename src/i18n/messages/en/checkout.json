@@ -18,7 +18,9 @@
     "giftNote": "Gift order: recorded as a paid invoice, no wallet balance involved.",
     "insufficientTitle": "Your balance is too low",
     "insufficientDescription": "You need {amount} more to place this order. Add balance, then try again.",
-    "walletAction": "My wallet"
+    "walletAction": "My wallet",
+    "trustInstant": "Delivered to your order page within seconds of confirming.",
+    "trustSecure": "Paid from your store wallet — your card details are never shared with anyone."
   },
   "fields": {
     "title": "Your in-game account details",

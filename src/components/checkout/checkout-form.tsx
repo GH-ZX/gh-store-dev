@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState, useTransition } from "react";
+import { useActionState, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   checkoutFieldName,
   INITIAL_CHECKOUT_STATE,
@@ -15,6 +16,7 @@ import { FormResult, SelectField, TextField } from "@/components/admin/admin-for
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/config";
 import type { CheckoutMessages } from "@/i18n/messages";
+import { formatPrice } from "@/lib/format/money";
 import type { StoreInputField } from "@/lib/services/catalog.service";
 
 /**
@@ -36,6 +38,11 @@ export type CheckoutFormProps = {
   fields: StoreInputField[];
   /** Set when the wallet balance does not cover the total. */
   disabled: boolean;
+  /** The quoted total, for the sticky bar's amount. A quote, never arithmetic. */
+  total: number;
+  currency: string;
+  /** Server-decided balance after purchase; null on the admin gift path. */
+  balanceAfter: number | null;
   /**
    * Admin checkout. The admin has no wallet; their order is a gift. Shows the
    * recipient prefill and a confirm button that does not talk about paying.
@@ -44,6 +51,12 @@ export type CheckoutFormProps = {
 };
 
 type ErrorKey = keyof CheckoutMessages["errors"];
+
+/**
+ * Stable id for the checkout form, so the sticky bar's submit button — portaled
+ * outside of it — can still point at it with the `form` attribute.
+ */
+const CHECKOUT_FORM_ID = "gh-checkout-form";
 
 /** Only genuinely Latin values get an explicit direction. */
 const LTR_FIELD_TYPES: StoreInputField["fieldType"][] = ["number", "email", "uid"];
@@ -71,11 +84,28 @@ export function CheckoutForm({
   offerSlug,
   fields,
   disabled,
+  total,
+  currency,
+  balanceAfter,
   gift = false,
 }: CheckoutFormProps) {
   const [state, formAction, pending] = useActionState<CheckoutActionState, FormData>(
     placeOrderAction,
     INITIAL_CHECKOUT_STATE,
+  );
+
+  /*
+   * The sticky bar is portaled to <body>, because the page template wrapper
+   * keeps `filter: blur(0)` from its entrance animation (fill-mode: both), and
+   * a non-`none` filter makes an ancestor the containing block for `fixed`
+   * children — a plain fixed bar would anchor to the bottom of the document,
+   * not the viewport. The form attribute keeps it a real submit control of the
+   * form it lives outside of.
+   */
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
   );
 
   // Tied to this mount, not to each submit, so a retry of the same intent stays
@@ -135,8 +165,20 @@ export function CheckoutForm({
   const prefillError =
     prefill.status === "error" ? (messages.fields.giftRecipientErrors?.[prefill.reason] ?? "") : null;
 
+  const submitLabel = pending
+    ? messages.fields.submitPending
+    : gift
+      ? messages.fields.giftSubmitAction
+      : messages.fields.submitAction;
+
   return (
-    <form ref={formRef} action={formAction} className="grid gap-5">
+    <>
+      <form
+        ref={formRef}
+        id={CHECKOUT_FORM_ID}
+        action={formAction}
+        className="grid gap-5"
+      >
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="gameSlug" value={gameSlug} />
       <input type="hidden" name="offerSlug" value={offerSlug} />
@@ -234,13 +276,53 @@ export function CheckoutForm({
           disabled={disabled || pending}
           aria-disabled={disabled || pending}
         >
-          {pending
-            ? messages.fields.submitPending
-            : gift
-              ? messages.fields.giftSubmitAction
-              : messages.fields.submitAction}
+          {submitLabel}
         </Button>
       </div>
-    </form>
+      </form>
+
+      {/*
+        * Thumb-reachable pay bar on a phone. The summary rail stacks *below*
+        * the form on mobile, so the total would otherwise sit under the pay
+        * button and the pay button would scroll away while the customer works
+        * the fields. Portaled out of the page wrapper — see the note above —
+        * and submitted through `form`, so it is the same checkout, not a copy
+        * of it. Total stays a server quote; nothing is computed here.
+        */}
+      {mounted
+        ? createPortal(
+            <div
+              className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[color-mix(in_srgb,var(--canvas-raised)_94%,transparent)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[var(--elevation-2)] backdrop-blur-xl lg:hidden print:hidden"
+            >
+              <div className="flex items-center gap-4 px-[var(--page-gutter)]">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[var(--ink-faint)]">
+                    {messages.summary.totalLabel}
+                  </p>
+                  <p className="text-base font-semibold text-[var(--ink)] tabular-nums" dir="ltr">
+                    {formatPrice(total, currency, locale)}
+                  </p>
+                  {balanceAfter !== null && !disabled ? (
+                    <p className="text-xs text-[var(--ink-muted)] tabular-nums" dir="ltr">
+                      {messages.summary.balanceAfterLabel}: {formatPrice(balanceAfter, currency, locale)}
+                    </p>
+                  ) : null}
+                </div>
+                <Button
+                  type="submit"
+                  form={CHECKOUT_FORM_ID}
+                  className="ms-auto"
+                  size="md"
+                  disabled={disabled || pending}
+                  aria-disabled={disabled || pending}
+                >
+                  {submitLabel}
+                </Button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }

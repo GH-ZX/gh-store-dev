@@ -3,11 +3,11 @@
 import Link from "next/link";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { GameEditor } from "@/components/live-edit/game-editor";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
-import { ArrowIcon } from "@/components/ui/icons";
+import { ArrowIcon, PauseIcon, PlayIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
 import type { StoreGame } from "@/lib/catalog/game-mapper";
@@ -28,11 +28,18 @@ import { formatMessage } from "@/i18n/format";
  * the option set, slide 1 is the rightmost and dragging left still means "next"
  * in reading order.
  *
+ * **Rotation and its off switch.** The strip advances by itself because the
+ * owner's storefront sells the featured games by moving them, but an advancing
+ * frame can outrun a reader, so control is served three ways: a pause/play
+ * button beside the progress rail; a stop while the tab is hidden, resuming
+ * only if the visitor had not paused it themselves; and a paused start for a
+ * visitor whose OS asks for reduced motion, who can still press play. While
+ * paused the region turns into a polite live region, so a manual slide change
+ * is announced instead of sliding by unheard.
+ *
  * **Reduced motion.** The global `prefers-reduced-motion` rule collapses the
- * zoom and the progress fill for a visitor who asks for less motion, but the
- * strip itself always advances — the owner's storefront sells the featured
- * games by moving them, and that decision is not up for negotiation by the
- * visitor's OS. Control stays with the arrows and the progress rail.
+ * zoom and the progress fill for a visitor who asks for less motion. Combined
+ * with the paused start, the strip sits still until they ask it to move.
  *
  * **The whole slide is the link.** A picture of a game with a title on it reads
  * as something to press, on a phone especially, and asking for the small pill
@@ -63,6 +70,8 @@ export type HeroCarouselProps = {
     goToGame: string;
     previous: string;
     next: string;
+    pause: string;
+    play: string;
     details: string;
     featured: string;
   };
@@ -74,6 +83,15 @@ export type HeroCarouselProps = {
 /** Zero-padded two-digit number for the editorial counter, e.g. `01`. */
 function padTwo(value: number): string {
   return String(value).padStart(2, "0");
+}
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(onChange: () => void): () => void {
+  const media = window.matchMedia(REDUCED_MOTION_QUERY);
+  media.addEventListener("change", onChange);
+
+  return () => media.removeEventListener("change", onChange);
 }
 
 export function HeroCarousel({
@@ -97,28 +115,32 @@ export function HeroCarousel({
   /*
    * Rebuilt only when a decision changes, never per render: handing Embla a new
    * plugin array on every render tears the carousel down mid-drag.
+   *
+   * The instance is kept so the pause button can stop and resume the timer
+   * without rebuilding — `stop()` freezes where the countdown is, `play()`
+   * continues it, and the drag behaviour is untouched either way.
    */
-  const plugins = useMemo(
+  const autoplayPlugin = useMemo(
     () =>
       rotating
-        ? [
-            Autoplay({
-              delay: Math.max(2, intervalSeconds) * 1000,
-              /*
-               * The carousel advances no matter what the visitor is doing. The
-               * default stops — an interaction, hover, focus — let a frame that
-               * is being read sit still, but they also read as "it only moves
-               * when I am not looking", and the storefront needs the featured
-               * games to sell themselves. The progress rail keeps the next swap
-               * visible and the arrows still hand control to a visitor who
-               * wants it.
-               */
-              stopOnInteraction: false,
-            }),
-          ]
-        : [],
+        ? Autoplay({
+            delay: Math.max(2, intervalSeconds) * 1000,
+            /*
+             * The carousel advances no matter what the visitor is doing. The
+             * default stops — an interaction, hover, focus — let a frame that
+             * is being read sit still, but they also read as "it only moves
+             * when I am not looking", and the storefront needs the featured
+             * games to sell themselves. The progress rail keeps the next swap
+             * visible and the pause button hands control to a visitor who
+             * wants it.
+             */
+            stopOnInteraction: false,
+          })
+        : null,
     [rotating, intervalSeconds],
   );
+
+  const plugins = useMemo(() => (autoplayPlugin ? [autoplayPlugin] : []), [autoplayPlugin]);
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
@@ -136,6 +158,65 @@ export function HeroCarousel({
   const [selected, setSelected] = useState(0);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
+
+  /*
+   * Rotation state, read reactively. `reducedMotion` comes through a store
+   * subscription rather than an effect-written flag, so the OS preference —
+   * including a mid-session change — just is the state. `userPaused` is the
+   * visitor's explicit choice, and `null` means they have not made one yet:
+   * an untouched strip follows the OS (reduced motion starts paused), and one
+   * press of the button overrides either from then on.
+   */
+  const reducedMotion = useSyncExternalStore(
+    subscribeReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false,
+  );
+  const [userPaused, setUserPaused] = useState<boolean | null>(null);
+  const paused = userPaused ?? reducedMotion;
+
+  /*
+   * The plugin is an external system, so the effect's job is exactly to keep
+   * it in step with the state: paused stops the timer where it is, unpausing
+   * resumes it.
+   */
+  useEffect(() => {
+    if (!autoplayPlugin) {
+      return;
+    }
+
+    if (paused) {
+      autoplayPlugin.stop();
+    } else {
+      autoplayPlugin.play();
+    }
+  }, [autoplayPlugin, paused]);
+
+  /*
+   * A hidden tab has no audience; stop the timer and only resume it for a
+   * visitor who had not paused the strip themselves.
+   */
+  useEffect(() => {
+    if (!autoplayPlugin) {
+      return;
+    }
+
+    function onVisibilityChange() {
+      if (document.hidden) {
+        autoplayPlugin?.stop();
+      } else if (!paused) {
+        autoplayPlugin?.play();
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [autoplayPlugin, paused]);
+
+  const toggleRotation = useCallback(() => {
+    setUserPaused(!paused);
+  }, [paused]);
 
   const onSelect = useCallback(() => {
     if (emblaApi) {
@@ -195,6 +276,12 @@ export function HeroCarousel({
       className={cn("relative", className)}
       aria-roledescription="carousel"
       aria-label={labels.regionLabel}
+      /*
+       * While rotating, a live region would re-announce the slide every few
+       * seconds; while paused it is exactly what a reader wants. The APG
+       * carousel pattern is the source for both halves of this rule.
+       */
+      aria-live={rotating && !paused ? "off" : "polite"}
     >
       <div className="relative overflow-hidden rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-1.5 shadow-[var(--elevation-2)] backdrop-blur-xl">
         {/*
@@ -405,6 +492,23 @@ export function HeroCarousel({
         */}
       {total > 1 ? (
         <div className="mt-4 flex items-center gap-4 sm:mt-5">
+          {/*
+            * The pause/play control, at the thumb end of the progress rail. The
+            * icon shows the action, not the state, so a paused strip offers the
+            * play glyph — and the accessible label follows the action too.
+            */}
+          {rotating ? (
+            <button
+              type="button"
+              onClick={toggleRotation}
+              aria-label={paused ? labels.play : labels.pause}
+              aria-pressed={paused}
+              className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] shadow-[var(--elevation-1)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+            >
+              {paused ? <PlayIcon className="size-4" /> : <PauseIcon className="size-4" />}
+            </button>
+          ) : null}
+
           <div
             className="flex flex-1 items-center gap-1.5"
             role="group"
@@ -423,13 +527,13 @@ export function HeroCarousel({
                   className="group/seg h-1.5 flex-1 cursor-pointer overflow-hidden rounded-full bg-[var(--surface-inset)] transition-colors duration-[var(--duration)] hover:bg-[var(--line)] focus-visible:bg-[var(--line-strong)]"
                 >
                   <span
-                    key={isActive ? `active:${selected}` : `idle:${slideIndex}`}
+                    key={isActive ? `active:${selected}:${paused}` : `idle:${slideIndex}`}
                     className={cn(
                       "block h-full w-full origin-left rounded-full bg-[var(--accent)] rtl:origin-right",
-                      isActive ? (rotating ? "gh-progress" : "scale-x-100") : "scale-x-0",
+                      isActive ? (rotating && !paused ? "gh-progress" : "scale-x-100") : "scale-x-0",
                     )}
                     style={
-                      isActive && rotating
+                      isActive && rotating && !paused
                         ? { animationDuration: `${Math.max(2, intervalSeconds)}s` }
                         : undefined
                     }

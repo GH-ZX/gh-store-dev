@@ -6,6 +6,7 @@
   "placeholder": "Try: PUBG UC, Steam card…",
   "submit": "Search",
   "clear": "Clear search",
+  "suggestionsLabel": "Suggestions",
   "filtersLabel": "Filter results",
   "filters": {
     "all": "All",

@@ -4,7 +4,9 @@
     "slideLabel": "Slide {index} of {total}",
     "goToGame": "Go to {name}",
     "previous": "Previous game",
-    "next": "Next game"
+    "next": "Next game",
+    "pause": "Pause rotation",
+    "play": "Resume rotation"
   },
   "sections": {
     "gamesSubtitle": "Pick your game and start topping up.",

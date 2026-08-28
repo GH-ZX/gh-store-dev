@@ -121,6 +121,7 @@ export function MobileNav({
   );
 
   const panelId = useId();
+  const overlayRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname() ?? "";
@@ -143,6 +144,48 @@ export function MobileNav({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         close();
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      /*
+       * Focus trap. The sheet announces itself as a modal (`aria-modal`), so
+       * Tab must not walk out into the page it covers — a screen-reader user
+       * would land on controls that are invisible and untouchable. The cycle
+       * wraps at both ends of the overlay, which includes the backdrop close
+       * button; everything in here is part of the dialog.
+       */
+      const overlay = overlayRef.current;
+
+      if (!overlay) {
+        return;
+      }
+
+      const focusables = Array.from(
+        overlay.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+
+      if (focusables.length === 0) {
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey) {
+        if (active === first || !overlay.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !overlay.contains(active)) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
@@ -151,6 +194,10 @@ export function MobileNav({
      * was rather than to `""`, so a page that sets its own overflow keeps it.
      */
     const previousOverflow = document.body.style.overflow;
+    // Copied out for the cleanup: the ref's `.current` can have moved on by
+    // the time the sheet closes, and the focus return belongs to the trigger
+    // that opened this one.
+    const trigger = triggerRef.current;
 
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", onKeyDown);
@@ -162,6 +209,13 @@ export function MobileNav({
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
+
+      /*
+       * Focus came in here when the sheet opened, so it goes back out to the
+       * trigger that opened it — not dropped wherever the page happens to
+       * have it, which for a keyboard user means losing their place.
+       */
+      trigger?.focus();
     };
   }, [open, close]);
 
@@ -235,7 +289,7 @@ export function MobileNav({
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? labels.close : labels.menu}
-        className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] lg:hidden"
+        className="grid size-11 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] lg:hidden"
       >
         <span className="relative block h-3.5 w-4.5" aria-hidden="true">
           <span
@@ -263,6 +317,7 @@ export function MobileNav({
       {mounted
         ? createPortal(
             <div
+              ref={overlayRef}
               // The document's direction, restored: the pinned header bar above
               // would otherwise impose its own on everything written inside.
               dir={dir}

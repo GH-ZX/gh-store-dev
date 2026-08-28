@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { WalletPanel } from "@/components/layout/wallet-panel";
 import { SearchField } from "@/components/search/search-field";
 import { Button } from "@/components/ui/button";
-import { SearchIcon } from "@/components/ui/icons";
+import { SearchIcon, WalletIcon } from "@/components/ui/icons";
 import { getLocaleDirection, type Locale } from "@/i18n/config";
 import type { CommonMessages, SearchMessages } from "@/i18n/messages";
 import { signOutAction } from "@/lib/auth/actions";
@@ -165,6 +165,7 @@ export function SiteHeader({
                 placeholder: messages.actions.searchPlaceholder,
                 submit: searchMessages.submit,
                 clear: searchMessages.clear,
+                suggestionsLabel: searchMessages.suggestionsLabel,
               }}
             />
 
@@ -172,9 +173,9 @@ export function SiteHeader({
               <Link
                 href={`/${locale}/wallet`}
                 aria-label={messages.account.walletLabel}
-                className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-2.5 text-xs font-semibold text-[var(--ink)] sm:px-3 sm:text-sm"
+                className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-2.5 text-xs font-semibold text-[var(--ink)] sm:px-3 sm:text-sm"
               >
-                <span aria-hidden="true">💰</span>
+                <WalletIcon className="size-3.5 shrink-0 sm:size-4" />
                 <span className="tabular-nums" dir="ltr">
                   {formatHeaderWalletAmount(walletPanel.balance, walletPanel.currency, locale)}
                 </span>
@@ -184,7 +185,7 @@ export function SiteHeader({
             <Link
               href={`/${locale}/search`}
               aria-label={messages.actions.search}
-              className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] xl:hidden [&>svg]:size-4.5"
+              className="grid size-11 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] xl:hidden [&>svg]:size-4.5"
             >
               <SearchIcon />
             </Link>

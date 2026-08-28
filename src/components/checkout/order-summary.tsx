@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { NoticePanel } from "@/components/shared/states";
 import { ButtonLink } from "@/components/ui/button";
-import { AlertIcon, WalletIcon } from "@/components/ui/icons";
+import { AlertIcon, BoltIcon, ShieldIcon, WalletIcon } from "@/components/ui/icons";
 import { Price } from "@/components/ui/price";
 import type { Locale } from "@/i18n/config";
 import { formatMessage, type CheckoutMessages } from "@/i18n/messages";
@@ -130,6 +130,23 @@ export function OrderSummary({
           )}
         </>
       )}
+
+      {/*
+        * Trust at the decision point. The home page carries the full trust
+        * strip; here, where the customer is about to commit money, the two
+        * claims that answer "is this safe and how long does it take" repeat in
+        * miniature — the same pattern the offer page already runs.
+        */}
+      <div className="mt-5 grid gap-2.5 border-t border-[var(--line)] pt-4">
+        <p className="flex items-start gap-2 text-xs leading-5 text-[var(--ink-muted)]">
+          <BoltIcon className="mt-0.5 size-4 shrink-0 text-[var(--accent)]" />
+          {messages.summary.trustInstant}
+        </p>
+        <p className="flex items-start gap-2 text-xs leading-5 text-[var(--ink-muted)]">
+          <ShieldIcon className="mt-0.5 size-4 shrink-0 text-[var(--accent)]" />
+          {messages.summary.trustSecure}
+        </p>
+      </div>
     </div>
   );
 }

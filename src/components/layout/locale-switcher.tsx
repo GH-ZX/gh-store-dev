@@ -45,7 +45,7 @@ export function LocaleSwitcher({
       lang={target}
       aria-label={labels.switchLabel}
       title={labels.switchLabel}
-      className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+      className="grid size-11 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
     >
       <GlobeIcon className="size-[1.125rem] shrink-0" />
     </Link>

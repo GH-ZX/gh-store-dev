@@ -146,6 +146,9 @@ export default async function CheckoutPage({
                 offerSlug={offer.slug}
                 fields={inputFields}
                 disabled={insufficient}
+                total={total}
+                currency={offer.currency}
+                balanceAfter={isGift ? null : balance - total}
                 gift={isGift}
               />
             </div>
@@ -182,6 +185,12 @@ export default async function CheckoutPage({
           gift={isGift}
         />
       </div>
+
+      {/*
+        * The sticky pay bar overlays the viewport bottom on a phone, so the
+        * document ends with room to scroll the footer clear of it.
+        */}
+      <div aria-hidden="true" className="h-24 lg:hidden" />
     </Section>
   );
 }
