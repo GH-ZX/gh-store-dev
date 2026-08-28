@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
    */
   const hasSession = request.cookies
     .getAll()
-    .some((cookie) => /^sb-.*-auth-token/.test(cookie.name));
+    .some((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token"));
 
   if (!hasSession) {
     return response;
@@ -62,6 +62,7 @@ export async function middleware(request: NextRequest) {
       },
       setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value, options }) => {
+          request.cookies.set(name, value);
           response.cookies.set(name, value, hardenSessionCookieOptions(options));
         });
         Object.entries(headers).forEach(([key, value]) => {
