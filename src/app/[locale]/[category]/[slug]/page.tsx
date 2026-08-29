@@ -17,7 +17,7 @@ import { getProductBySlug } from "@/lib/services/catalog.service";
 
 export async function generateMetadata({
   params,
-}: PageProps<"/[locale]/games/[slug]">): Promise<Metadata> {
+}: PageProps<"/[locale]/[category]/[slug]">): Promise<Metadata> {
   const locale = await resolveLocaleParam(params);
   const { slug } = await params;
   const detail = await getProductBySlug(locale, slug);
@@ -30,14 +30,14 @@ export async function generateMetadata({
 
   return buildPageMetadata({
     locale,
-    path: `/games/${slug}`,
+    path: `/${detail.game.categorySlug}/${slug}`,
     title: detail.game.name,
     description: detail.game.description ?? messages.gameDetail.chooseOffer,
     imageUrl: detail.game.imageUrl,
   });
 }
 
-export default async function ProductDetailPage({ params }: PageProps<"/[locale]/games/[slug]">) {
+export default async function ProductDetailPage({ params }: PageProps<"/[locale]/[category]/[slug]">) {
   const locale = await resolveLocaleParam(params);
   const { slug } = await params;
   const common = getMessages(locale, "common");

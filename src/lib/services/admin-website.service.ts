@@ -224,6 +224,7 @@ export type PickCandidate = {
 
 export type HomePickCandidates = {
   games: PickCandidate[];
+  categories: PickCandidate[];
   offers: PickCandidate[];
   reviews: PickCandidate[];
 };
@@ -248,19 +249,25 @@ export async function getHomePickCandidates(): Promise<HomePickCandidates> {
 
   const client = await createSupabaseServerClient();
 
-  const [games, offers, reviews] = await Promise.all([
+  const [games, categories, offers, reviews] = await Promise.all([
     client
-      .from("games")
+      .from("products")
       .select("id, name_ar, name_en, image_url, logo_url")
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
       .order("name_en", { ascending: true })
       .limit(PICK_CANDIDATE_LIMIT),
     client
-      .from("offers")
-      .select("id, name_ar, name_en, price, currency, games!inner(name_en, is_active)")
+      .from("categories")
+      .select("id, name_ar, name_en")
       .eq("is_active", true)
-      .eq("games.is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("name_en", { ascending: true }),
+    client
+      .from("offers")
+      .select("id, name_ar, name_en, price, currency, products!inner(name_en, is_active)")
+      .eq("is_active", true)
+      .eq("products.is_active", true)
       .order("sort_order", { ascending: true })
       .limit(PICK_CANDIDATE_LIMIT),
     client
@@ -271,8 +278,8 @@ export async function getHomePickCandidates(): Promise<HomePickCandidates> {
       .limit(PICK_CANDIDATE_LIMIT),
   ]);
 
-  if (games.error || offers.error || reviews.error) {
-    const reason = games.error ?? offers.error ?? reviews.error;
+  if (games.error || categories.error || offers.error || reviews.error) {
+    const reason = games.error ?? categories.error ?? offers.error ?? reviews.error;
 
     throw new Error(`Reading homepage pick candidates failed: ${reason?.message}`);
   }
@@ -285,13 +292,20 @@ export async function getHomePickCandidates(): Promise<HomePickCandidates> {
       detail: null,
       imageUrl: game.logo_url ?? game.image_url,
     })),
+    categories: categories.data.map((cat) => ({
+      id: cat.id,
+      labelAr: cat.name_ar,
+      labelEn: cat.name_en,
+      detail: null,
+      imageUrl: null,
+    })),
     offers: offers.data.map((offer) => ({
       id: offer.id,
       labelAr: offer.name_ar,
       labelEn: offer.name_en,
       // Package names repeat across games — "1000 points" says nothing on its
       // own — so the game it belongs to is the label that makes it pickable.
-      detail: offer.games.name_en,
+      detail: offer.products.name_en,
       imageUrl: null,
     })),
     reviews: reviews.data.map((review) => ({
@@ -329,7 +343,7 @@ function toStoredSection(section: HomeSection): JsonObject {
     image_aspect: section.imageAspect,
     image_position_x: section.imagePositionX,
     image_position_y: section.imagePositionY,
-    game_ids: [...section.gameIds],
+    game_ids: [...section.productIds],
     offer_ids: [...section.offerIds],
     review_ids: [...section.reviewIds],
     show_submit_form: section.showSubmitForm,

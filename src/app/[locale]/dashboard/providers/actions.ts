@@ -219,7 +219,7 @@ export async function importG2BulkGamesAction(
         .maybeSingle();
 
       if (mapping?.game_id) {
-        await supabase.from("games").update({ category_id: categoryId }).eq("id", mapping.game_id);
+        await supabase.from("products").update({ category_id: categoryId }).eq("id", mapping.game_id);
       }
     }
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SearchField } from "@/components/search/search-field";
 import { SearchFilters } from "@/components/search/search-filters";
 import { EmptyState, ErrorState } from "@/components/shared/states";
-import { GameGrid, OfferGrid } from "@/components/store/collections";
+import { ProductGrid, OfferGrid } from "@/components/store/collections";
 import { SearchIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
@@ -121,7 +121,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
                 title={messages.gamesHeading}
                 subtitle={formatMessage(messages.gamesCount, { count: results.games.length }, locale)}
               />
-              <GameGrid
+              <ProductGrid
                 className="mt-6"
                 games={results.games}
                 locale={locale}

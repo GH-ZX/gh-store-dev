@@ -72,7 +72,8 @@ export function OfferCard({
   className,
 }: OfferCardProps) {
   const slug = gameSlug ?? offer.game?.slug ?? null;
-  const href = slug ? `/${locale}/games/${slug}/${offer.slug}` : `/${locale}/games`;
+  const categorySlug = offer.game?.categorySlug ?? "games";
+  const href = slug ? `/${locale}/${categorySlug}/${slug}/${offer.slug}` : `/${locale}/games`;
   const TypeIcon = TYPE_ICONS[offer.offerType];
   const discountLabel = offer.discountPercent
     ? formatMessage(labels.discount, { percent: offer.discountPercent }, locale)

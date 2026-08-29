@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { EmptyState, ErrorState } from "@/components/shared/states";
-import { GameGrid } from "@/components/store/collections";
+import { ProductGrid } from "@/components/store/collections";
 import { Pager } from "@/components/admin/pager";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
@@ -9,7 +9,7 @@ import { getGameCardLabels } from "@/lib/catalog/labels";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { buildStorePageMetadata } from "@/lib/seo-settings";
 import { parsePage } from "@/lib/paging";
-import { getActiveGamesPage, tryCatalogRead } from "@/lib/services/catalog.service";
+import { getActiveProductsPage, tryCatalogRead } from "@/lib/services/catalog.service";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/games">): Promise<Metadata> {
   const locale = await resolveLocaleParam(params);
@@ -29,7 +29,7 @@ export default async function GamesPage({ params, searchParams }: PageProps<"/[l
   const page = parsePage(query.page, 1000);
   const common = getMessages(locale, "common");
   const messages = getMessages(locale, "catalog");
-  const result = await tryCatalogRead(() => getActiveGamesPage(locale, page));
+  const result = await tryCatalogRead(() => getActiveProductsPage(locale, page));
 
   if (!result.ok) {
     return (
@@ -71,7 +71,7 @@ export default async function GamesPage({ params, searchParams }: PageProps<"/[l
           <p className="mt-8 text-sm text-[var(--ink-muted)] tabular-nums">
             {formatMessage(messages.games.count, { count: games.total }, locale)}
           </p>
-          <GameGrid
+          <ProductGrid
             className="mt-4"
             games={games.items}
             locale={locale}

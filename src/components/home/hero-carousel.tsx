@@ -1,23 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import useEmblaCarousel from "embla-carousel-react";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { GameEditor } from "@/components/live-edit/game-editor";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
-import { ArrowIcon, PauseIcon, PlayIcon } from "@/components/ui/icons";
+import { ArrowIcon, ChevronIcon, CloseIcon, PauseIcon, PencilIcon, PlayIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
-import type { StoreGame } from "@/lib/catalog/game-mapper";
+import type { StoreProduct } from "@/lib/catalog/game-mapper";
 import { cn } from "@/lib/cn";
 import { formatMessage } from "@/i18n/format";
+import { reorderCarouselGames } from "@/app/[locale]/dashboard/catalog/actions";
+
+/** Combined Embla state to avoid three separate re-renders per slide change. */
+type EmblaState = { selected: number; canPrev: boolean; canNext: boolean };
 
 /**
- * Featured games carousel, on Embla.
+ * Featured products carousel, on Embla.
  *
  * A cinematic hero rather than a card: the artwork bleeds to the frame, a
- * strong canvas wash rises from the bottom for the caption, and the game's
+ * strong canvas wash rises from the bottom for the caption, and the product's
  * name is set large enough to lead the page. Motion is a slow Ken Burns zoom
  * on the active slide and a caption that rises into place.
  *
@@ -28,7 +33,7 @@ import { formatMessage } from "@/i18n/format";
  * in reading order.
  *
  * **Rotation and its off switch.** The strip advances by itself because the
- * owner's storefront sells the featured games by moving them, but an advancing
+ * owner's storefront sells the featured products by moving them, but an advancing
  * frame can outrun a reader, so control is served three ways: a pause/play
  * button beside the progress rail; a stop while the tab is hidden, resuming
  * only if the visitor had not paused it themselves; and a paused start for a
@@ -40,7 +45,7 @@ import { formatMessage } from "@/i18n/format";
  * zoom and the progress fill for a visitor who asks for less motion. Combined
  * with the paused start, the strip sits still until they ask it to move.
  *
- * **The whole slide is the link.** A picture of a game with a title on it reads
+ * **The whole slide is the link.** A picture of a product with a title on it reads
  * as something to press, on a phone especially, and asking for the small pill
  * instead is a rule only the person who built it knows. Embla suppresses the
  * click that ends a drag — it watches its own root in the capture phase and
@@ -52,7 +57,7 @@ import { formatMessage } from "@/i18n/format";
  * because Embla supplies gestures, not meaning.
  */
 export type HeroCarouselProps = {
-  games: StoreGame[];
+  products: StoreProduct[];
   locale: Locale;
   intervalSeconds: number;
   /** Rotation, always on for a strip with more than one slide. */
@@ -66,7 +71,7 @@ export type HeroCarouselProps = {
   labels: {
     regionLabel: string;
     slideLabel: string;
-    goToGame: string;
+    goToProduct: string;
     previous: string;
     next: string;
     pause: string;
@@ -94,7 +99,7 @@ function subscribeReducedMotion(onChange: () => void): () => void {
 }
 
 export function HeroCarousel({
-  games,
+  products,
   locale,
   intervalSeconds,
   autoplay = true,
@@ -108,8 +113,9 @@ export function HeroCarousel({
   liveEdit,
   className,
 }: HeroCarouselProps) {
-  const total = games.length;
+  const total = products.length;
   const rotating = autoplay && total > 1;
+  const router = useRouter();
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop,
@@ -119,9 +125,7 @@ export function HeroCarousel({
     dragFree: false,
   });
 
-  const [selected, setSelected] = useState(0);
-  const [canPrev, setCanPrev] = useState(false);
-  const [canNext, setCanNext] = useState(false);
+  const [emblaState, setEmblaState] = useState<EmblaState>({ selected: 0, canPrev: false, canNext: false });
 
   /*
    * Rotation state, read reactively. `reducedMotion` comes through a store
@@ -139,6 +143,9 @@ export function HeroCarousel({
   const [userPaused, setUserPaused] = useState<boolean | null>(null);
   const [tabHidden, setTabHidden] = useState(false);
   const paused = userPaused ?? reducedMotion;
+
+  /* Carousel reorder mode (admin only) — shows up/down arrows on thumbnails. */
+  const [reorderMode, setReorderMode] = useState(false);
 
   /*
    * Watch tab visibility to pause rotation when document is hidden.
@@ -179,9 +186,11 @@ export function HeroCarousel({
 
   const onSelect = useCallback(() => {
     if (emblaApi) {
-      setSelected(emblaApi.selectedScrollSnap());
-      setCanPrev(emblaApi.canScrollPrev());
-      setCanNext(emblaApi.canScrollNext());
+      setEmblaState({
+        selected: emblaApi.selectedScrollSnap(),
+        canPrev: emblaApi.canScrollPrev(),
+        canNext: emblaApi.canScrollNext(),
+      });
     }
   }, [emblaApi]);
 
@@ -214,14 +223,37 @@ export function HeroCarousel({
     };
   }, [emblaApi, onSelect]);
 
+  /*
+   * Reorder functions — swap two adjacent products in the carousel.
+   * Calls the server action to persist the new order, then refreshes
+   * the page so the component re-renders with the updated order.
+   */
+  const moveGame = useCallback(
+    async (fromIndex: number, direction: "left" | "right") => {
+      const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1;
+      if (toIndex < 0 || toIndex >= total) return;
+
+      const fromId = products[fromIndex].id;
+      const toId = products[toIndex].id;
+
+      const result = await reorderCarouselGames(fromId, toId);
+      if (result.success) {
+        router.refresh();
+      }
+    },
+    [products, total, router],
+  );
+
   if (total === 0) {
     return null;
   }
 
+  const { selected, canPrev, canNext } = emblaState;
+
   /*
    * Editorial counter, e.g. `01 / 05`. The brand face (Tektur) gives the row a
    * numeral character the Geist body cannot, and the width is tabular so a
-   * tenth game does not nudge the digits.
+   * tenth product does not nudge the digits.
    */
   const counter = (
     <span className="hidden flex-none items-baseline gap-2 font-brand text-sm tracking-[0.22em] text-[var(--ink-soft)] tabular-nums sm:inline-flex" aria-hidden="true">
@@ -245,7 +277,7 @@ export function HeroCarousel({
       <div className="relative overflow-hidden rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-1.5 shadow-[var(--elevation-2)] backdrop-blur-xl">
         {/*
           * The viewport clips; the container is the flex track Embla moves.
-          * Tall on a phone, wide on a desktop — one game should never be
+           * Tall on a phone, wide on a desktop — one product should never be
           * several screens tall on a laptop or a letterbox on a phone.
           */}
         <div
@@ -260,12 +292,12 @@ export function HeroCarousel({
         >
           {/* `touch-action` keeps a vertical scroll the page's, not the carousel's. */}
           <div className="flex h-full touch-pan-y">
-            {games.map((game, slideIndex) => {
+            {products.map((product, slideIndex) => {
               const isActive = slideIndex === selected;
 
               return (
                 <div
-                  key={game.id}
+                  key={product.id}
                   role="group"
                   aria-roledescription="slide"
                   aria-label={formatMessage(
@@ -282,7 +314,7 @@ export function HeroCarousel({
                   className="relative min-w-0 shrink-0 grow-0 basis-full"
                 >
                   <Link
-                    href={`/${locale}/games/${game.slug}`}
+                    href={`/${locale}/${product.categorySlug}/${product.slug}`}
                     // Off the tab order while off-screen: a keyboard reader
                     // should not tab into a slide nobody can see.
                     tabIndex={isActive ? undefined : -1}
@@ -302,8 +334,8 @@ export function HeroCarousel({
                     <div className="absolute inset-0 grid place-items-center">
                       <div className="aspect-[4/3] h-full max-w-full">
                         <StoreImage
-                          src={game.imageUrl}
-                          alt={game.name}
+                          src={product.imageUrl}
+                          alt={product.name}
                           priority={slideIndex === 0}
                           sizes="(min-width: 1280px) 1280px, (min-width: 640px) 92vw, 100vw"
                           fit={imageFit}
@@ -329,37 +361,37 @@ export function HeroCarousel({
                     {/*
                       * The caption. Capped so the copy does not run the width of
                       * a wide screen, and rising into place on the active slide
-                      * so a new game announces itself instead of appearing.
+                      * so a new product announces itself instead of appearing.
                       */}
                     <div className="absolute inset-x-0 bottom-0 max-w-3xl p-5 sm:p-8 lg:p-12">
                       <div className={cn(isActive && "gh-rise")}>
                         <div className="flex flex-wrap items-center gap-2">
-                          {game.carouselBadge ? (
-                            <Badge tone="accent">{game.carouselBadge}</Badge>
-                          ) : game.isFeatured ? (
+                          {product.carouselBadge ? (
+                            <Badge tone="accent">{product.carouselBadge}</Badge>
+                          ) : product.isFeatured ? (
                             <Badge tone="accent">{labels.featured}</Badge>
                           ) : null}
-                          {game.pointsName ? <Badge tone="neutral">{game.pointsName}</Badge> : null}
+                          {product.pointsName ? <Badge tone="neutral">{product.pointsName}</Badge> : null}
                         </div>
 
                         <h3 className="mt-4 max-w-[18ch] text-[clamp(2rem,4.5vw,4.25rem)] leading-[1.04] font-semibold tracking-[-0.04em] text-[var(--ink)] [text-shadow:0_2px_18px_rgba(0,0,0,0.45)]">
-                          {game.name}
+                          {product.name}
                         </h3>
 
-                        {game.description ? (
+                        {product.description ? (
                           <p className="mt-3 line-clamp-2 max-w-xl text-sm leading-7 text-[var(--ink-soft)] [text-shadow:0_1px_8px_rgba(0,0,0,0.4)] sm:text-base">
-                            {game.description}
+                            {product.description}
                           </p>
                         ) : null}
 
                         {/*
                           * A span, not a link: the slide around it already goes
-                          * to the game, and a link inside a link is invalid HTML
+                          * to the product, and a link inside a link is invalid HTML
                           * that browsers repair by guessing. It keeps the pill
                           * shape because that is what says "this is pressable" at
                           * a glance, and it reacts to hover on the whole slide.
                           */}
-                        <span className="mt-6 inline-flex min-h-13 items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--accent)] ps-6 pe-1.5 text-sm font-semibold text-[var(--accent-ink)] shadow-[var(--elevation-1)] transition-colors duration-[var(--duration)] group-hover:bg-[var(--accent-strong)] sm:min-h-11">
+                        <span className="mt-6 inline-flex min-h-13 items-center gap-2 rounded-[var(--radius-pill)] bg-white/15 backdrop-blur-lg ps-6 pe-1.5 text-sm font-semibold text-white shadow-[var(--elevation-1)] transition-colors duration-[var(--duration)] hover:bg-white/25 sm:min-h-11">
                           {labels.details}
                           <span className="grid size-9 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent-ink)_14%,transparent)] transition-transform duration-[var(--duration)] ease-[var(--ease-spring)] group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">
                             <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
@@ -378,9 +410,9 @@ export function HeroCarousel({
                   {liveEdit && isActive ? (
                     <div className="absolute top-4 start-4 z-10">
                       <GameEditor
-                        gameId={game.id}
-                        gameSlug={game.slug}
-                        label={game.name}
+                        gameId={product.id}
+                        gameSlug={product.slug}
+                        label={product.name}
                         locale={locale}
                         messages={liveEdit}
                       />
@@ -436,75 +468,133 @@ export function HeroCarousel({
             </div>
           </>
         ) : null}
-      </div>
 
-      {/*
-        * Position markers as a segmented progress rail — one segment per game,
-        * and the active one is both the marker and the countdown to the next:
-        * it fills over `intervalSeconds` while rotation runs, and a segment is
-        * the keyboard-reachable way to jump to a slide, so the button is the
-        * target and carries the name.
-        *
-        * Every segment gets a `key` that turns the fill into a new element each
-        * time it activates, which is what restarts the `gh-progress` animation
-        * in step with Embla's own timer.
-        */}
-      {total > 1 ? (
-        <div className="mt-4 flex items-center gap-4 sm:mt-5">
-          {/*
-            * The pause/play control, at the thumb end of the progress rail. The
-            * icon shows the action, not the state, so a paused strip offers the
-            * play glyph — and the accessible label follows the action too.
-            */}
-          {rotating ? (
-            <button
-              type="button"
-              onClick={toggleRotation}
-              aria-label={paused ? labels.play : labels.pause}
-              aria-pressed={paused}
-              className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] shadow-[var(--elevation-1)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+        {/*
+           * Thumbnail strip — one logo per product, keyboard-reachable.
+          * Sits inside the carousel frame, directly below the image.
+          */}
+        {total > 1 ? (
+          <div className="flex items-center gap-4 bg-black/20 backdrop-blur-md px-4 py-3 sm:gap-5 sm:px-6">
+            {rotating ? (
+              <button
+                type="button"
+                onClick={toggleRotation}
+                aria-label={paused ? labels.play : labels.pause}
+                aria-pressed={paused}
+                className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] shadow-[var(--elevation-1)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+              >
+                {paused ? <PlayIcon className="size-3" /> : <PauseIcon className="size-3" />}
+              </button>
+            ) : null}
+
+            <div
+              className="flex flex-1 items-end gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-5"
+              role="group"
+              aria-label={labels.regionLabel}
             >
-              {paused ? <PlayIcon className="size-4" /> : <PauseIcon className="size-4" />}
-            </button>
-          ) : null}
+              {products.map((product, slideIndex) => {
+                const isActive = slideIndex === selected;
+                const thumbSrc = product.logoUrl || product.imageUrl;
+                const color = product.carouselColor;
 
-          <div
-            className="flex flex-1 items-center gap-1.5"
-            role="group"
-            aria-label={labels.regionLabel}
-          >
-            {games.map((game, slideIndex) => {
-              const isActive = slideIndex === selected;
+                return (
+                  <div key={product.id} className="relative shrink-0">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => emblaApi?.scrollTo(slideIndex)}
+                        aria-label={formatMessage(labels.goToProduct, { name: product.name }, locale)}
+                        aria-current={isActive ? "true" : undefined}
+                        className={cn(
+                          "group/thumb relative h-11 w-11 cursor-pointer overflow-hidden rounded-lg border-2 transition-all duration-[var(--duration)] sm:h-13 sm:w-13",
+                          isActive
+                            ? "border-[var(--accent)] shadow-[var(--elevation-1)]"
+                            : "border-transparent opacity-60 hover:opacity-90",
+                        )}
+                      >
+                        {thumbSrc ? (
+                          <img
+                            src={thumbSrc}
+                            alt=""
+                            className="size-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <div className="size-full bg-[var(--surface-inset)]" />
+                        )}
+                      </button>
 
-              return (
-                <button
-                  key={game.id}
-                  type="button"
-                  onClick={() => emblaApi?.scrollTo(slideIndex)}
-                  aria-label={formatMessage(labels.goToGame, { name: game.name }, locale)}
-                  aria-current={isActive ? "true" : undefined}
-                  className="group/seg h-1.5 flex-1 cursor-pointer overflow-hidden rounded-full bg-[var(--surface-inset)] transition-colors duration-[var(--duration)] hover:bg-[var(--line)] focus-visible:bg-[var(--line-strong)]"
-                >
-                  <span
-                    key={isActive ? `active:${selected}:${paused}` : `idle:${slideIndex}`}
-                    className={cn(
-                      "block h-full w-full origin-left rounded-full bg-[var(--accent)] rtl:origin-right",
-                      isActive ? (rotating && !paused ? "gh-progress" : "scale-x-100") : "scale-x-0",
-                    )}
-                    style={
-                      isActive && rotating && !paused
-                        ? { animationDuration: `${Math.max(2, intervalSeconds)}s` }
-                        : undefined
-                    }
-                  />
-                </button>
-              );
-            })}
+                      {/*
+                        * Coloured accent line below the thumbnail.
+                        * Only visible on the active slide.
+                        */}
+                      <span
+                        className={cn(
+                          "h-0.5 w-full rounded-full transition-all duration-500",
+                          isActive ? "opacity-100" : "opacity-0",
+                        )}
+                        style={{ backgroundColor: color || "var(--accent)" }}
+                        aria-hidden="true"
+                      />
+
+                      {/*
+                        * Admin reorder arrows — visible only in reorder mode,
+                        * horizontal left/right below the coloured line.
+                        */}
+                      {reorderMode ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={slideIndex === 0}
+                            onClick={() => moveGame(slideIndex, "left")}
+                            aria-label="Move left"
+                            className="grid size-5 place-items-center rounded bg-[var(--surface)] text-[var(--ink-soft)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] disabled:opacity-20"
+                          >
+                            <ChevronIcon direction="start" className="size-3" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={slideIndex === total - 1}
+                            onClick={() => moveGame(slideIndex, "right")}
+                            aria-label="Move right"
+                            className="grid size-5 place-items-center rounded bg-[var(--surface)] text-[var(--ink-soft)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] disabled:opacity-20"
+                          >
+                            <ChevronIcon direction="end" className="size-3" />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {counter}
+
+            {/*
+              * Reorder toggle pen — visible only in edit mode.
+              * Toggles reorder mode to show up/down arrows on thumbnails.
+              */}
+            {liveEdit ? (
+              <button
+                type="button"
+                onClick={() => setReorderMode((prev) => !prev)}
+                aria-label={reorderMode ? "Done reordering" : "Reorder carousel"}
+                aria-pressed={reorderMode}
+                className={cn(
+                  "grid size-8 shrink-0 place-items-center rounded-full shadow-[var(--elevation-1)] transition-all duration-[var(--duration)]",
+                  reorderMode
+                    ? "border-2 border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                    : "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]",
+                )}
+              >
+                {reorderMode ? <CloseIcon className="size-3.5" /> : <PencilIcon className="size-3.5" />}
+              </button>
+            ) : null}
           </div>
-
-          {counter}
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </section>
   );
 }

@@ -1,10 +1,10 @@
 {
   "carousel": {
-    "regionLabel": "Featured games",
+    "regionLabel": "Featured products",
     "slideLabel": "Slide {index} of {total}",
-    "goToGame": "Go to {name}",
-    "previous": "Previous game",
-    "next": "Next game",
+    "goToProduct": "Go to {name}",
+    "previous": "Previous product",
+    "next": "Next product",
     "pause": "Pause rotation",
     "play": "Resume rotation"
   },

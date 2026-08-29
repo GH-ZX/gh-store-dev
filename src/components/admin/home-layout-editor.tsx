@@ -71,7 +71,9 @@ type SectionRow = {
 function picksOf(section: HomeSection): string[] {
   switch (sectionPickKind(section.type)) {
     case "games":
-      return section.gameIds;
+      return section.productIds;
+    case "categories":
+      return section.categoryIds;
     case "offers":
       return section.offerIds;
     case "reviews":
@@ -133,7 +135,7 @@ export function HomeLayoutEditor({
   );
   const [rows, setRows] = useState<SectionRow[]>(() => toRows(sections));
   const [syncedSignature, setSyncedSignature] = useState(() => layoutSignature(sections));
-  const [addType, setAddType] = useState<HomeSectionType>("game_picks");
+  const [addType, setAddType] = useState<HomeSectionType>("product_picks");
 
   const savedSignature = layoutSignature(sections);
 

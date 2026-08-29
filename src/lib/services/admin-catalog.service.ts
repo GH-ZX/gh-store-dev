@@ -104,19 +104,19 @@ async function countOffersByGame(client: Client, gameIds: string[]): Promise<Map
     return counts;
   }
 
-  const { data, error } = await client.from("offers").select("game_id").in("game_id", gameIds);
+  const { data, error } = await client.from("offers").select("product_id").in("product_id", gameIds);
 
   if (error) {
     throw new Error(`Counting offers failed: ${error.message}`);
   }
 
   for (const row of data) {
-    // Offers without a game do not contribute to a game's total.
-    if (!row.game_id) {
+    // Offers without a product do not contribute to a product's total.
+    if (!row.product_id) {
       continue;
     }
 
-    counts.set(row.game_id, (counts.get(row.game_id) ?? 0) + 1);
+    counts.set(row.product_id, (counts.get(row.product_id) ?? 0) + 1);
   }
 
   return counts;
@@ -228,7 +228,7 @@ export async function listAdminGames({
 
   const client = await createSupabaseServerClient();
   let games = client
-    .from("games")
+    .from("products")
     .select(LIST_COLUMNS)
     .order("sort_order", { ascending: true })
     .order("name_en", { ascending: true });
@@ -347,7 +347,7 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
 
   const client = await createSupabaseServerClient();
   const { data: game, error } = await client
-    .from("games")
+    .from("products")
     .select(
       "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order",
     )
@@ -366,7 +366,7 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
     client
       .from("offers")
       .select(OFFER_COLUMNS)
-      .eq("game_id", gameId)
+      .eq("product_id", gameId)
       .order("sort_order", { ascending: true })
       .order("price", { ascending: true }),
     providerInfoByGame(client, [gameId]),
@@ -443,7 +443,7 @@ export async function updateAdminGame(gameId: string, fields: AdminGameFields): 
   // A slug is the game's public URL, so a collision is reported as its own
   // failure instead of a generic "could not save".
   const { data: clash, error: clashError } = await client
-    .from("games")
+    .from("products")
     .select("id")
     .eq("slug", fields.slug)
     .neq("id", gameId)
@@ -458,7 +458,7 @@ export async function updateAdminGame(gameId: string, fields: AdminGameFields): 
   }
 
   const { data, error } = await client
-    .from("games")
+    .from("products")
     .update({
       category_id: fields.categoryId,
       name_ar: fields.nameAr,
@@ -533,7 +533,7 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
   const { data: owned, error: ownedError } = await client
     .from("offers")
     .select("id")
-    .eq("game_id", gameId);
+    .eq("product_id", gameId);
 
   if (ownedError) {
     throw new Error(`Reading the game's offers failed: ${ownedError.message}`);
@@ -578,7 +578,7 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
         updated_at: updatedAt,
       })
       .eq("id", row.id)
-      .eq("game_id", gameId);
+      .eq("product_id", gameId);
 
     if (error) {
       throw new Error(`Saving a package failed: ${error.message}`);
@@ -673,7 +673,7 @@ export async function deleteAdminGame(gameId: string): Promise<void> {
 
   const client = await createSupabaseServerClient();
   const { data, error } = await client
-    .from("games")
+    .from("products")
     .delete()
     .eq("id", gameId)
     .select("id, slug, name_ar, name_en")
@@ -722,7 +722,7 @@ export async function removeImportedGame(
   const client = await createSupabaseServerClient();
   const { data: mapping, error } = await client
     .from("provider_game_mappings")
-    .select("game_id, games (name_en, name_ar)")
+    .select("game_id, products (name_en, name_ar)")
     .eq("provider_name", providerName)
     .eq("external_game_code", providerCode)
     .maybeSingle();
@@ -737,7 +737,7 @@ export async function removeImportedGame(
     return { ok: false, reason: "not_imported" };
   }
 
-  const game = (Array.isArray(mapping.games) ? mapping.games[0] : mapping.games) as
+  const game = (Array.isArray(mapping.products) ? mapping.products[0] : mapping.products) as
     | { name_en: string; name_ar: string }
     | null;
 
@@ -793,7 +793,7 @@ export async function createAdminGame(input: {
 
   const client = await createSupabaseServerClient();
   const { data, error } = await client
-    .from("games")
+    .from("products")
     .insert({
       name_ar: input.nameAr,
       name_en: input.nameEn,
@@ -847,7 +847,7 @@ export async function createAdminOffer(
 
   const client = await createSupabaseServerClient();
   const { data: game, error: gameError } = await client
-    .from("games")
+    .from("products")
     .select("id")
     .eq("id", gameId)
     .maybeSingle();
@@ -863,7 +863,7 @@ export async function createAdminOffer(
   const { data, error } = await client
     .from("offers")
     .insert({
-      game_id: gameId,
+      product_id: gameId,
       name_ar: input.nameAr,
       name_en: input.nameEn,
       description_ar: input.descriptionAr,
@@ -917,7 +917,7 @@ export async function deleteAdminOffer(gameId: string, offerId: string): Promise
     .from("offers")
     .delete()
     .eq("id", offerId)
-    .eq("game_id", gameId)
+    .eq("product_id", gameId)
     .select("id")
     .maybeSingle();
 

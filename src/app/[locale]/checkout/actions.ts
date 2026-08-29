@@ -212,11 +212,11 @@ export async function prefillGiftFieldsAction(
 
   const { data: offer } = await supabase
     .from("offers")
-    .select("id, games!inner (slug)")
+    .select("id, products!inner (slug)")
     .eq("slug", offerSlug)
     .eq("is_active", true)
-    .eq("games.slug", gameSlug)
-    .eq("games.is_active", true)
+    .eq("products.slug", gameSlug)
+    .eq("products.is_active", true)
     .maybeSingle();
 
   if (!offer) {

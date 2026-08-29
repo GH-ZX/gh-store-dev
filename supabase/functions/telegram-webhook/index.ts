@@ -772,7 +772,7 @@ async function readGames(
   categoryId: string | null,
 ): Promise<{ id: string; slug: string; name: string }[]> {
   let query = supabase
-    .from("games")
+    .from("products")
     .select("id, slug, name_ar, name_en")
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
@@ -907,7 +907,7 @@ async function showOffers(
   }
 
   const { data: game } = await supabase
-    .from("games")
+    .from("products")
     .select("category_id")
     .eq("id", gameId)
     .maybeSingle();
@@ -1393,7 +1393,7 @@ async function searchCatalogText(
 
   const [gamesResult, offersResult] = await Promise.all([
     supabase
-      .from("games")
+      .from("products")
       .select("name_ar, name_en, slug")
       .eq("is_active", true)
       .or(`name_ar.ilike.%${token}%,name_en.ilike.%${token}%`)

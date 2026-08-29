@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "@/components/ui/icons";
+import { PencilIcon, PlusIcon } from "@/components/ui/icons";
 import type { AdminMessages } from "@/i18n/messages";
 import type { Locale } from "@/i18n/config";
+import { cn } from "@/lib/cn";
 
 /**
  * Whether the owner is editing the page they are looking at.
@@ -39,33 +39,48 @@ export function LiveEditMode({ messages, locale, children }: LiveEditModeProps) 
       {children}
 
       {/*
-        * Fixed to the bottom of the viewport, over everything, on the side the
-        * language ends on. It has to stay reachable while scrolling — the
-        * heading being edited may be a screen away from the one that started
-        * it — and it must not sit under the mobile drawer's own controls.
+        * Floating edit toggle — a pen icon fixed to the bottom-end corner.
+        * When active, expands to show a plus button for adding products and
+        * a close button to exit edit mode.
         */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 sm:bottom-6">
-        <div className="pointer-events-auto flex items-center gap-3 rounded-[var(--radius-pill)] border border-[var(--line-strong)] bg-[color-mix(in_srgb,var(--shell)_92%,transparent)] py-2 ps-4 pe-2 shadow-[var(--elevation-3)] backdrop-blur-xl">
-          {editing ? (
+      <div className="fixed bottom-4 end-4 z-50 flex flex-col items-end gap-2 sm:bottom-6 sm:end-6">
+        {editing ? (
+          <div className="flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line-strong)] bg-[color-mix(in_srgb,var(--shell)_92%,transparent)] px-2 py-1.5 shadow-[var(--elevation-3)] backdrop-blur-xl">
             <Link
               href={`/${locale}/dashboard/catalog`}
-              className="pointer-events-auto grid size-9 shrink-0 place-items-center rounded-full border border-[var(--accent)] bg-[color-mix(in_srgb,var(--shell)_88%,transparent)] text-[var(--accent)] backdrop-blur-md transition-colors duration-[var(--duration)] hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+              className="grid size-8 place-items-center rounded-full border border-[var(--accent)] bg-[color-mix(in_srgb,var(--shell)_88%,transparent)] text-[var(--accent)] backdrop-blur-md transition-colors duration-[var(--duration)] hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
               aria-label={messages.addProduct}
               title={messages.addProduct}
             >
               <PlusIcon className="size-4" />
             </Link>
-          ) : null}
-          <p className="hidden text-xs text-[var(--ink-faint)] sm:block">{messages.toggleHint}</p>
-          <Button
-            type="button"
-            variant={editing ? "primary" : "secondary"}
-            onClick={() => setEditing((current) => !current)}
-            aria-pressed={editing}
-          >
-            {editing ? messages.toggleOff : messages.toggleOn}
-          </Button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="grid size-8 place-items-center rounded-full bg-[var(--danger)] text-white shadow-[var(--elevation-1)] transition-colors duration-[var(--duration)] hover:bg-[color-mix(in_srgb,var(--danger)_85%,black)]"
+              aria-label={messages.toggleOff}
+            >
+              <span className="sr-only">{messages.toggleOff}</span>
+              <span className="text-lg leading-none">&times;</span>
+            </button>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => setEditing((current) => !current)}
+          aria-pressed={editing}
+          aria-label={messages.toggleOn}
+          title={messages.toggleHint}
+          className={cn(
+            "grid size-12 place-items-center rounded-full shadow-[var(--elevation-3)] backdrop-blur-xl transition-all duration-[var(--duration)]",
+            editing
+              ? "border-2 border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+              : "border border-[var(--line-strong)] bg-[color-mix(in_srgb,var(--shell)_92%,transparent)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]",
+          )}
+        >
+          <PencilIcon className="size-5" />
+        </button>
       </div>
     </LiveEditContext.Provider>
   );

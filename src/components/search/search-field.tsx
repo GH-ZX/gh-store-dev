@@ -52,8 +52,8 @@ type Suggestion = {
 };
 
 type SuggestResponse = {
-  games: { slug: string; name: string }[];
-  offers: { gameSlug: string; offerSlug: string; name: string }[];
+  games: { slug: string; categorySlug: string; name: string }[];
+  offers: { gameSlug: string; categorySlug: string; offerSlug: string; name: string }[];
 };
 
 /** Below this the catalog matches half its rows and the dropdown reads as noise. */
@@ -177,14 +177,14 @@ export function SearchField({
               key: `game:${game.slug}`,
               kind: "game" as const,
               label: game.name,
-              href: `/${locale}/games/${game.slug}`,
+              href: `/${locale}/${game.categorySlug}/${game.slug}`,
             })),
             ...data.offers
               .map((offer) => ({
                 key: `offer:${offer.gameSlug}:${offer.offerSlug}`,
                 kind: "offer" as const,
                 label: offer.name,
-                href: `/${locale}/games/${offer.gameSlug}/${offer.offerSlug}`,
+                href: `/${locale}/${offer.categorySlug}/${offer.gameSlug}/${offer.offerSlug}`,
               })),
           ];
 

@@ -1,7 +1,7 @@
 import type { Locale } from "@/i18n/config";
 
-/** Shape of the `games` relation when an offer read joins its parent game. */
-type OfferGameRelation = {
+/** Shape of the `products` relation when an offer read joins its parent product. */
+type OfferProductRelation = {
   slug: string;
   name_ar: string;
   name_en: string;
@@ -9,6 +9,7 @@ type OfferGameRelation = {
   logo_url: string | null;
   points_name_ar?: string | null;
   points_name_en?: string | null;
+  categories?: { slug: string } | { slug: string }[] | null;
 };
 
 export type OfferRow = {
@@ -26,11 +27,12 @@ export type OfferRow = {
   region_code?: string | null;
   sale_image_url?: string | null;
   /** Supabase returns an object for a to-one join, but tolerate an array. */
-  games?: OfferGameRelation | OfferGameRelation[] | null;
+  products?: OfferProductRelation | OfferProductRelation[] | null;
 };
 
-export type StoreOfferGame = {
+export type StoreOfferProduct = {
   slug: string;
+  categorySlug: string;
   name: string;
   imageUrl: string | null;
   logoUrl: string | null;
@@ -49,7 +51,7 @@ export type StoreOffer = {
   regionCode: string | null;
   imageUrl: string | null;
   /** Present when the read joined the parent game, needed for offer links. */
-  game: StoreOfferGame | null;
+  game: StoreOfferProduct | null;
   /** Whole-percent discount, or null when there is no higher original price. */
   discountPercent: number | null;
   /**
@@ -66,11 +68,11 @@ export const OFFER_SELECT =
   "id, slug, offer_type, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, region_code, sale_image_url";
 
 /** Offer columns plus the parent game fields needed to build an offer link. */
-export const OFFER_WITH_GAME_SELECT = `${OFFER_SELECT}, games!inner (slug, name_ar, name_en, image_url, logo_url, points_name_ar, points_name_en)`;
+export const OFFER_WITH_PRODUCT_SELECT = `${OFFER_SELECT}, products!inner (slug, name_ar, name_en, image_url, logo_url, points_name_ar, points_name_en, categories!products_category_id_fkey(slug))`;
 
 function firstRelation(
-  value: OfferGameRelation | OfferGameRelation[] | null | undefined,
-): OfferGameRelation | null {
+  value: OfferProductRelation | OfferProductRelation[] | null | undefined,
+): OfferProductRelation | null {
   if (!value) {
     return null;
   }
@@ -105,9 +107,11 @@ export function toStoreOffer(row: OfferRow, locale: Locale): StoreOffer {
   const isArabic = locale === "ar";
   const offerType =
     row.offer_type === "gift_card" || row.offer_type === "redeem_code" ? row.offer_type : "topup";
-  const game = firstRelation(row.games);
+  const game = firstRelation(row.products);
 
   const pointsName = game ? (isArabic ? game.points_name_ar : game.points_name_en) : null;
+  const cat = game?.categories;
+  const catSlug = (Array.isArray(cat) ? cat[0]?.slug : (cat && typeof cat === "object" && "slug" in cat ? cat.slug : null)) ?? "games";
 
   return {
     id: row.id,
@@ -124,6 +128,7 @@ export function toStoreOffer(row: OfferRow, locale: Locale): StoreOffer {
     game: game
       ? {
           slug: game.slug,
+          categorySlug: catSlug,
           name: isArabic ? game.name_ar : game.name_en,
           imageUrl: game.image_url,
           logoUrl: game.logo_url,

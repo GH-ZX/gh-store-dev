@@ -352,7 +352,7 @@ export type Database = {
             foreignKeyName: "game_input_fields_game_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
-            referencedRelation: "games"
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -396,90 +396,7 @@ export type Database = {
             foreignKeyName: "game_regions_game_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
-            referencedRelation: "games"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      games: {
-        Row: {
-          carousel_badge_ar: string | null
-          carousel_badge_en: string | null
-          carousel_focus_x: number
-          carousel_focus_y: number
-          carousel_order: number | null
-          category_id: string | null
-          created_at: string
-          description_ar: string | null
-          description_en: string | null
-          id: string
-          image_url: string | null
-          is_active: boolean
-          is_featured: boolean
-          logo_url: string | null
-          name_ar: string
-          name_en: string
-          points_name_ar: string | null
-          points_name_en: string | null
-          show_in_carousel: boolean
-          slug: string
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          carousel_badge_ar?: string | null
-          carousel_badge_en?: string | null
-          carousel_focus_x?: number
-          carousel_focus_y?: number
-          carousel_order?: number | null
-          category_id?: string | null
-          created_at?: string
-          description_ar?: string | null
-          description_en?: string | null
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          is_featured?: boolean
-          logo_url?: string | null
-          name_ar: string
-          name_en: string
-          points_name_ar?: string | null
-          points_name_en?: string | null
-          show_in_carousel?: boolean
-          slug: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          carousel_badge_ar?: string | null
-          carousel_badge_en?: string | null
-          carousel_focus_x?: number
-          carousel_focus_y?: number
-          carousel_order?: number | null
-          category_id?: string | null
-          created_at?: string
-          description_ar?: string | null
-          description_en?: string | null
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          is_featured?: boolean
-          logo_url?: string | null
-          name_ar?: string
-          name_en?: string
-          points_name_ar?: string | null
-          points_name_en?: string | null
-          show_in_carousel?: boolean
-          slug?: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "games_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -632,7 +549,6 @@ export type Database = {
           delivery_kind: string
           description_ar: string | null
           description_en: string | null
-          game_id: string | null
           id: string
           input_fields: Json
           is_active: boolean
@@ -642,7 +558,7 @@ export type Database = {
           offer_type: string
           original_price: number | null
           price: number
-          product_id: string | null
+          product_id: string
           region_code: string | null
           sale_image_url: string | null
           slug: string
@@ -655,7 +571,6 @@ export type Database = {
           delivery_kind?: string
           description_ar?: string | null
           description_en?: string | null
-          game_id?: string | null
           id?: string
           input_fields?: Json
           is_active?: boolean
@@ -665,7 +580,7 @@ export type Database = {
           offer_type?: string
           original_price?: number | null
           price: number
-          product_id?: string | null
+          product_id: string
           region_code?: string | null
           sale_image_url?: string | null
           slug: string
@@ -678,7 +593,6 @@ export type Database = {
           delivery_kind?: string
           description_ar?: string | null
           description_en?: string | null
-          game_id?: string | null
           id?: string
           input_fields?: Json
           is_active?: boolean
@@ -688,7 +602,7 @@ export type Database = {
           offer_type?: string
           original_price?: number | null
           price?: number
-          product_id?: string | null
+          product_id?: string
           region_code?: string | null
           sale_image_url?: string | null
           slug?: string
@@ -696,13 +610,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "offers_game_id_fkey"
-            columns: ["game_id"]
-            isOneToOne: false
-            referencedRelation: "games"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "offers_product_id_fkey"
             columns: ["product_id"]
@@ -989,6 +896,15 @@ export type Database = {
           metadata: Json
           name_ar: string
           name_en: string
+          points_name_ar: string | null
+          points_name_en: string | null
+          carousel_badge_ar: string | null
+          carousel_badge_en: string | null
+          carousel_focus_x: number
+          carousel_focus_y: number
+          carousel_color: string | null
+          show_in_carousel: boolean
+          carousel_order: number | null
           product_kind: string
           slug: string
           sort_order: number
@@ -1007,6 +923,15 @@ export type Database = {
           metadata?: Json
           name_ar: string
           name_en: string
+          points_name_ar?: string | null
+          points_name_en?: string | null
+          carousel_badge_ar?: string | null
+          carousel_badge_en?: string | null
+          carousel_focus_x?: number
+          carousel_focus_y?: number
+          carousel_color?: string | null
+          show_in_carousel?: boolean
+          carousel_order?: number | null
           product_kind?: string
           slug: string
           sort_order?: number
@@ -1025,6 +950,15 @@ export type Database = {
           metadata?: Json
           name_ar?: string
           name_en?: string
+          points_name_ar?: string | null
+          points_name_en?: string | null
+          carousel_badge_ar?: string | null
+          carousel_badge_en?: string | null
+          carousel_focus_x?: number
+          carousel_focus_y?: number
+          carousel_color?: string | null
+          show_in_carousel?: boolean
+          carousel_order?: number | null
           product_kind?: string
           slug?: string
           sort_order?: number
@@ -1112,7 +1046,7 @@ export type Database = {
             foreignKeyName: "provider_game_mappings_game_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
-            referencedRelation: "games"
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]

@@ -1,12 +1,13 @@
 import type { Locale } from "@/i18n/config";
-import type { StoreGame } from "@/lib/catalog/game-mapper";
+import type { StoreProduct } from "@/lib/catalog/game-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import type { HomeSection } from "@/lib/home/layout";
 import { logFailure } from "@/lib/logging/logger";
 import {
-  getActiveGames,
+  getActiveProducts,
   getCarouselGames,
-  getGamesByIds,
+  getProductsByCategories,
+  getProductsByIds,
   getOffersByIds,
   getOffersByType,
   getSaleOffers,
@@ -28,7 +29,7 @@ import type { SamMethod } from "@/lib/settings/sam-settings";
  */
 
 export type ResolvedHomeSection =
-  | { kind: "games"; section: HomeSection; games: StoreGame[] }
+  | { kind: "games"; section: HomeSection; games: StoreProduct[] }
   | { kind: "offers"; section: HomeSection; offers: StoreOffer[] }
   | { kind: "reviews"; section: HomeSection; reviews: StoreReview[] }
   | { kind: "social"; section: HomeSection }
@@ -40,10 +41,10 @@ export type ResolvedHomeSection =
     }
   | { kind: "how"; section: HomeSection };
 
-/** Featured games for the hero, resolved separately from the section list. */
+/** Featured products for the hero, resolved separately from the section list. */
 export type HomeCarousel = {
   section: HomeSection | null;
-  games: StoreGame[];
+  products: StoreProduct[];
 };
 
 /**
@@ -105,11 +106,19 @@ async function resolveSection(
       return offers.length > 0 ? { kind: "offers", section, offers } : null;
     }
     case "games": {
-      const games = await safely(section.type, () => getActiveGames(locale, section.limit), []);
+      const games = await safely(section.type, () => getActiveProducts(locale, section.limit), []);
       return games.length > 0 ? { kind: "games", section, games } : null;
     }
-    case "game_picks": {
-      const games = await safely(section.type, () => getGamesByIds(locale, section.gameIds), []);
+    case "category": {
+      const games = await safely(
+        section.type,
+        () => getProductsByCategories(locale, section.categoryIds, section.limit),
+        [],
+      );
+      return games.length > 0 ? { kind: "games", section, games } : null;
+    }
+    case "product_picks": {
+      const games = await safely(section.type, () => getProductsByIds(locale, section.productIds), []);
       return games.length > 0 ? { kind: "games", section, games } : null;
     }
     case "gift_cards": {
@@ -179,11 +188,11 @@ export async function getHomeCarousel(locale: Locale, layout: HomeSection[]): Pr
   const section = layout.find((candidate) => candidate.type === "carousel" && candidate.enabled) ?? null;
 
   if (!section) {
-    return { section: null, games: [] };
+    return { section: null, products: [] };
   }
 
   return {
     section,
-    games: await safely("carousel", () => getCarouselGames(locale, section.limit), []),
+    products: await safely("carousel", () => getCarouselGames(locale, section.limit), []),
   };
 }

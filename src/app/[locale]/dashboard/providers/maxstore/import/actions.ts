@@ -74,12 +74,12 @@ export async function importMaxStoreAction(
       if (mapping?.offer_id) {
         const { data: offer } = await supabase
           .from("offers")
-          .select("game_id")
+          .select("product_id")
           .eq("id", mapping.offer_id)
           .maybeSingle();
 
-        if (offer?.game_id) {
-          await supabase.from("games").update({ category_id: formCategoryId }).eq("id", offer.game_id);
+        if (offer?.product_id) {
+          await supabase.from("products").update({ category_id: formCategoryId }).eq("id", offer.product_id);
         }
       }
     }

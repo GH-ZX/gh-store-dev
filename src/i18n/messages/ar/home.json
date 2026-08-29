@@ -1,10 +1,10 @@
 {
   "carousel": {
-    "regionLabel": "الألعاب المميزة",
+    "regionLabel": "المنتجات المميزة",
     "slideLabel": "الشريحة {index} من {total}",
-    "goToGame": "انتقل إلى {name}",
-    "previous": "اللعبة السابقة",
-    "next": "اللعبة التالية",
+    "goToProduct": "انتقل إلى {name}",
+    "previous": "المنتج السابق",
+    "next": "المنتج التالي",
     "pause": "إيقاف التدوير مؤقتًا",
     "play": "استئناف التدوير"
   },

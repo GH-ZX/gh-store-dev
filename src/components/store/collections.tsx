@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { GameCard } from "@/components/store/game-card";
+import { ProductCard } from "@/components/store/game-card";
 import { OfferCard, type OfferCardLabels } from "@/components/store/offer-card";
 import { Rail, RailItem } from "@/components/ui/rail";
 import type { Locale } from "@/i18n/config";
 import { formatPrice } from "@/lib/format/money";
-import type { StoreGame } from "@/lib/catalog/game-mapper";
+import type { StoreProduct } from "@/lib/catalog/game-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import { cn } from "@/lib/cn";
 
@@ -23,7 +23,7 @@ export type CollectionLayout = "grid" | "rail";
  * A game without active offers renders no line rather than a fake number.
  */
 function priceTeaser(
-  game: StoreGame,
+  game: StoreProduct,
   labels: { from?: string },
   locale: Locale,
 ): string | undefined {
@@ -97,7 +97,7 @@ export function OfferGrid({
 }
 
 export type GameCollectionProps = {
-  games: StoreGame[];
+  games: StoreProduct[];
   locale: Locale;
   labels: { featured: string; from?: string };
   layout?: CollectionLayout;
@@ -110,11 +110,11 @@ export type GameCollectionProps = {
    * knowing what the control is. Called only where the caller supplies one, so
    * a visitor's page renders exactly what it did before.
    */
-  renderOverlay?: (game: StoreGame) => ReactNode;
+  renderOverlay?: (game: StoreProduct) => ReactNode;
   className?: string;
 };
 
-export function GameGrid({
+export function ProductGrid({
   games,
   locale,
   labels,
@@ -129,8 +129,8 @@ export function GameGrid({
       <Rail label={railLabel} itemWidth="sm" className={className}>
         {games.map((game, index) => (
           <RailItem key={game.id}>
-            <GameCard
-              game={game}
+            <ProductCard
+              product={game}
               locale={locale}
               labels={labels}
               meta={priceTeaser(game, labels, locale)}
@@ -147,8 +147,8 @@ export function GameGrid({
     <ul className={cn("grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5", className)}>
       {games.map((game, index) => (
         <li key={game.id}>
-          <GameCard
-            game={game}
+          <ProductCard
+            product={game}
             locale={locale}
             labels={labels}
             meta={priceTeaser(game, labels, locale)}

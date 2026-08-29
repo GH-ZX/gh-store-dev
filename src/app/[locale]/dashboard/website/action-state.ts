@@ -71,10 +71,11 @@ export function sectionUsesLimit(type: HomeSectionType): boolean {
  * nothing. Returning the kind rather than a boolean lets one picker serve all
  * three.
  */
-export type SectionPickKind = "games" | "offers" | "reviews";
+export type SectionPickKind = "games" | "categories" | "offers" | "reviews";
 
 const SECTION_PICK_KINDS: Partial<Record<HomeSectionType, SectionPickKind>> = {
-  game_picks: "games",
+  product_picks: "games",
+  category: "categories",
   offer_picks: "offers",
   customer_reviews: "reviews",
 };

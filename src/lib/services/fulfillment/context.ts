@@ -101,7 +101,7 @@ export async function loadContext(orderId: string): Promise<FulfillmentContext |
 
     const { data: offer } = await supabase
       .from("offers")
-      .select("game_id, delivery_kind")
+      .select("product_id, delivery_kind")
       .eq("id", item.offer_id)
       .maybeSingle();
 
@@ -112,12 +112,12 @@ export async function loadContext(orderId: string): Promise<FulfillmentContext |
         ? offer.delivery_kind
         : "account";
 
-    if (offer?.game_id) {
+    if (offer?.product_id) {
       const { data: gameMapping } = await supabase
         .from("provider_game_mappings")
         .select("external_game_code")
         .eq("provider_name", G2BULK_PROVIDER_NAME)
-        .eq("game_id", offer.game_id)
+        .eq("game_id", offer.product_id)
         .maybeSingle();
 
       gameCode = gameMapping?.external_game_code ?? null;

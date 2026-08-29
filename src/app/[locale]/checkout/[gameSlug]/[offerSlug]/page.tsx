@@ -110,7 +110,7 @@ export default async function CheckoutPage({
     <Section spacing="page" mesh>
       <nav aria-label={offer.name}>
         <Link
-          href={`/${locale}/games/${game.slug}/${offer.slug}`}
+          href={`/${locale}/${game.categorySlug}/${game.slug}/${offer.slug}`}
           className="inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
         >
           <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />

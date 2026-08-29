@@ -97,7 +97,7 @@ async function findMappedGameId(supabase: Client, code: string): Promise<string 
 }
 
 async function takenGameSlugs(supabase: Client): Promise<Set<string>> {
-  const { data, error } = await supabase.from("games").select("slug");
+  const { data, error } = await supabase.from("products").select("slug");
 
   if (error) {
     throw new Error(`Reading existing game slugs failed: ${error.message}`);
@@ -127,7 +127,7 @@ async function importOneGame(
   if (!gameId) {
     const slug = uniqueSlug(toGameSlug({ code, name: providerName }), gameSlugs, code);
     const { data, error } = await supabase
-      .from("games")
+      .from("products")
       .insert({
         slug,
         name_ar: providerName,
@@ -203,7 +203,7 @@ async function importOneGame(
   // A game the provider has emptied cannot be sold, so it leaves the storefront
   // even if an admin had published it.
   if (catalogue.catalogues.length === 0) {
-    const { error } = await supabase.from("games").update({ is_active: false }).eq("id", gameId);
+    const { error } = await supabase.from("products").update({ is_active: false }).eq("id", gameId);
 
     if (error) {
       throw new Error(`Deactivating the empty game failed: ${error.message}`);
@@ -222,7 +222,7 @@ async function importOffers(
   const { data: existingOffers, error: offersError } = await supabase
     .from("offers")
     .select("id, slug, is_sale, is_active")
-    .eq("game_id", gameId);
+    .eq("product_id", gameId);
 
   if (offersError) {
     throw new Error(`Reading existing offers failed: ${offersError.message}`);
@@ -327,7 +327,7 @@ async function importOffers(
     const { data: created, error: createError } = await supabase
       .from("offers")
       .insert({
-        game_id: gameId,
+        product_id: gameId,
         slug,
         offer_type: "topup",
         name_ar: item.name,

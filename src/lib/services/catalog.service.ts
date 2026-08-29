@@ -4,10 +4,10 @@ import {
   normalizeOfferInputFields,
   resolveCheckoutFieldKeys,
 } from "@/lib/catalog/checkout-fields";
-import { GAME_SELECT, toStoreGame, type StoreGame } from "@/lib/catalog/game-mapper";
+import { PRODUCT_SELECT, toStoreProduct, type StoreProduct } from "@/lib/catalog/game-mapper";
 import {
   OFFER_SELECT,
-  OFFER_WITH_GAME_SELECT,
+  OFFER_WITH_PRODUCT_SELECT,
   toStoreOffer,
   type StoreOffer,
 } from "@/lib/catalog/offer-mapper";
@@ -95,12 +95,55 @@ function orIlike(columns: string[], token: string): string {
   return columns.map((column) => `${column}.ilike.%${token}%`).join(",");
 }
 
-export async function getActiveGames(locale: Locale, limit?: number): Promise<StoreGame[]> {
+export async function getActiveProducts(locale: Locale, limit?: number): Promise<StoreProduct[]> {
+  const supabase = createSupabasePublicClient();
+
+  const { data: gamesCategory } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", "games")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  let query = supabase
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("name_en", { ascending: true });
+
+  if (gamesCategory) {
+    query = query.eq("category_id", gamesCategory.id);
+  }
+
+  if (limit !== undefined) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new CatalogReadError();
+  }
+
+  return attachPriceFrom(data.map((game) => toStoreProduct(game, locale)));
+}
+
+export async function getProductsByCategories(
+  locale: Locale,
+  categoryIds: string[],
+  limit?: number,
+): Promise<StoreProduct[]> {
+  if (categoryIds.length === 0) {
+    return [];
+  }
+
   const supabase = createSupabasePublicClient();
   let query = supabase
-    .from("games")
-    .select(GAME_SELECT)
+    .from("products")
+    .select(PRODUCT_SELECT)
     .eq("is_active", true)
+    .in("category_id", categoryIds)
     .order("sort_order", { ascending: true })
     .order("name_en", { ascending: true });
 
@@ -114,7 +157,7 @@ export async function getActiveGames(locale: Locale, limit?: number): Promise<St
     throw new CatalogReadError();
   }
 
-  return attachPriceFrom(data.map((game) => toStoreGame(game, locale)));
+  return attachPriceFrom(data.map((game) => toStoreProduct(game, locale)));
 }
 
 /**
@@ -124,7 +167,7 @@ export async function getActiveGames(locale: Locale, limit?: number): Promise<St
  * number is decorative — a teaser, never a charged figure — so a failed read
  * returns the games untouched instead of failing the page.
  */
-async function attachPriceFrom(games: StoreGame[]): Promise<StoreGame[]> {
+async function attachPriceFrom(games: StoreProduct[]): Promise<StoreProduct[]> {
   if (games.length === 0) {
     return games;
   }
@@ -132,10 +175,10 @@ async function attachPriceFrom(games: StoreGame[]): Promise<StoreGame[]> {
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("offers")
-    .select("game_id, price")
+    .select("product_id, price")
     .eq("is_active", true)
     .in(
-      "game_id",
+      "product_id",
       games.map((game) => game.id),
     );
 
@@ -146,14 +189,14 @@ async function attachPriceFrom(games: StoreGame[]): Promise<StoreGame[]> {
   const minByGame = new Map<string, number>();
 
   for (const row of data) {
-    if (typeof row.game_id !== "string" || typeof row.price !== "number") {
+    if (typeof row.product_id !== "string" || typeof row.price !== "number") {
       continue;
     }
 
-    const current = minByGame.get(row.game_id);
+    const current = minByGame.get(row.product_id);
 
     if (current === undefined || row.price < current) {
-      minByGame.set(row.game_id, row.price);
+      minByGame.set(row.product_id, row.price);
     }
   }
 
@@ -163,12 +206,12 @@ async function attachPriceFrom(games: StoreGame[]): Promise<StoreGame[]> {
 }
 
 /** Games an admin flagged for the homepage hero, in the configured order. */
-export async function getActiveGamesPage(locale: Locale, page: number): Promise<CatalogPage<StoreGame>> {
+export async function getActiveProductsPage(locale: Locale, page: number): Promise<CatalogPage<StoreProduct>> {
   const supabase = createSupabasePublicClient();
   const { from, to } = catalogPageRange(page);
   const { data, error, count } = await supabase
-    .from("games")
-    .select(GAME_SELECT, { count: "exact" })
+    .from("products")
+    .select(PRODUCT_SELECT, { count: "exact" })
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("name_en", { ascending: true })
@@ -179,15 +222,15 @@ export async function getActiveGamesPage(locale: Locale, page: number): Promise<
   }
 
   const total = count ?? data.length;
-  const games = await attachPriceFrom(data.map((game) => toStoreGame(game, locale)));
+  const games = await attachPriceFrom(data.map((game) => toStoreProduct(game, locale)));
   return toCatalogPage(games, page, total);
 }
 
-export async function getCarouselGames(locale: Locale, limit: number): Promise<StoreGame[]> {
+export async function getCarouselGames(locale: Locale, limit: number): Promise<StoreProduct[]> {
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
-    .from("games")
-    .select(GAME_SELECT)
+    .from("products")
+    .select(PRODUCT_SELECT)
     .eq("is_active", true)
     .eq("show_in_carousel", true)
     .order("carousel_order", { ascending: true, nullsFirst: false })
@@ -198,7 +241,7 @@ export async function getCarouselGames(locale: Locale, limit: number): Promise<S
     throw new CatalogReadError();
   }
 
-  return data.map((game) => toStoreGame(game, locale));
+  return data.map((game) => toStoreProduct(game, locale));
 }
 
 /**
@@ -207,15 +250,15 @@ export async function getCarouselGames(locale: Locale, limit: number): Promise<S
  * Results follow the admin's id order rather than the database order, and ids
  * that are missing or no longer active are skipped instead of rendering a hole.
  */
-export async function getGamesByIds(locale: Locale, ids: string[]): Promise<StoreGame[]> {
+export async function getProductsByIds(locale: Locale, ids: string[]): Promise<StoreProduct[]> {
   if (ids.length === 0) {
     return [];
   }
 
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
-    .from("games")
-    .select(GAME_SELECT)
+    .from("products")
+    .select(PRODUCT_SELECT)
     .eq("is_active", true)
     .in("id", ids);
 
@@ -223,25 +266,25 @@ export async function getGamesByIds(locale: Locale, ids: string[]): Promise<Stor
     throw new CatalogReadError();
   }
 
-  const byId = new Map(data.map((game) => [game.id, toStoreGame(game, locale)]));
+  const byId = new Map(data.map((game) => [game.id, toStoreProduct(game, locale)]));
 
   const ordered = ids
     .map((id) => byId.get(id))
-    .filter((game): game is StoreGame => game !== undefined);
+    .filter((game): game is StoreProduct => game !== undefined);
 
   return attachPriceFrom(ordered);
 }
 
-export type StoreGameDetail = {
-  game: StoreGame;
+export type StoreProductDetail = {
+  game: StoreProduct;
   offers: StoreOffer[];
 };
 
-export async function getGameBySlug(locale: Locale, slug: string): Promise<StoreGameDetail | null> {
+export async function getProductBySlug(locale: Locale, slug: string): Promise<StoreProductDetail | null> {
   const supabase = createSupabasePublicClient();
   const { data: game, error: gameError } = await supabase
-    .from("games")
-    .select(GAME_SELECT)
+    .from("products")
+    .select(PRODUCT_SELECT)
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
@@ -257,7 +300,7 @@ export async function getGameBySlug(locale: Locale, slug: string): Promise<Store
   const { data: offers, error: offersError } = await supabase
     .from("offers")
     .select(OFFER_SELECT)
-    .eq("game_id", game.id)
+    .eq("product_id", game.id)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true });
@@ -268,6 +311,8 @@ export async function getGameBySlug(locale: Locale, slug: string): Promise<Store
 
   // The parent game is already loaded, so attach it instead of re-joining it:
   // offer cards and links need the game slug and name.
+  // The parent game is already loaded, so attach it instead of re-joining it:
+  // offer cards and links need the game slug and name.
   const relation = {
     slug: game.slug,
     name_ar: game.name_ar,
@@ -276,11 +321,12 @@ export async function getGameBySlug(locale: Locale, slug: string): Promise<Store
     logo_url: game.logo_url,
     points_name_ar: game.points_name_ar,
     points_name_en: game.points_name_en,
+    categories: (game as Record<string, unknown>).categories ?? null,
   };
 
   return {
-    game: toStoreGame(game, locale),
-    offers: await withAdminCosts(offers.map((offer) => toStoreOffer({ ...offer, games: relation }, locale))),
+    game: toStoreProduct(game, locale),
+    offers: await withAdminCosts(offers.map((offer) => toStoreOffer({ ...offer, products: relation as never }, locale))),
   };
 }
 
@@ -305,7 +351,7 @@ export type StoreInputField = {
 
 export type StoreOfferDetail = {
   offer: StoreOffer;
-  game: StoreGame;
+  game: StoreProduct;
   inputFields: StoreInputField[];
   relatedOffers: StoreOffer[];
   /**
@@ -356,7 +402,7 @@ export async function getOfferBySlug(
   gameSlug: string,
   offerSlug: string,
 ): Promise<StoreOfferDetail | null> {
-  const detail = await getGameBySlug(locale, gameSlug);
+  const detail = await getProductBySlug(locale, gameSlug);
 
   if (!detail) {
     return null;
@@ -462,10 +508,10 @@ export async function getOffersByType(
   const types = offerType === "gift_card" ? GIFT_CARD_OFFER_TYPES : [offerType];
   let query = supabase
     .from("offers")
-    .select(OFFER_WITH_GAME_SELECT)
+    .select(OFFER_WITH_PRODUCT_SELECT)
     .in("offer_type", types)
     .eq("is_active", true)
-    .eq("games.is_active", true)
+    .eq("products.is_active", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true });
 
@@ -492,10 +538,10 @@ export async function getOffersByTypePage(
   const { from, to } = catalogPageRange(page);
   const { data, error, count } = await supabase
     .from("offers")
-    .select(OFFER_WITH_GAME_SELECT, { count: "exact" })
+    .select(OFFER_WITH_PRODUCT_SELECT, { count: "exact" })
     .in("offer_type", types)
     .eq("is_active", true)
-    .eq("games.is_active", true)
+    .eq("products.is_active", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true })
     .range(from, to);
@@ -512,10 +558,10 @@ export async function getSaleOffers(locale: Locale, limit?: number): Promise<Sto
   const supabase = createSupabasePublicClient();
   let query = supabase
     .from("offers")
-    .select(OFFER_WITH_GAME_SELECT)
+    .select(OFFER_WITH_PRODUCT_SELECT)
     .eq("is_active", true)
     .eq("is_sale", true)
-    .eq("games.is_active", true)
+    .eq("products.is_active", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true });
 
@@ -544,10 +590,10 @@ export async function getSaleOffersPage(locale: Locale, page: number): Promise<C
   const { from, to } = catalogPageRange(page);
   const { data, error, count } = await supabase
     .from("offers")
-    .select(OFFER_WITH_GAME_SELECT, { count: "exact" })
+    .select(OFFER_WITH_PRODUCT_SELECT, { count: "exact" })
     .eq("is_active", true)
     .eq("is_sale", true)
-    .eq("games.is_active", true)
+    .eq("products.is_active", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true })
     .range(from, to);
@@ -564,10 +610,10 @@ export async function getSuggestedOffers(locale: Locale, limit: number): Promise
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("offers")
-    .select(OFFER_WITH_GAME_SELECT)
+    .select(OFFER_WITH_PRODUCT_SELECT)
     .eq("is_active", true)
-    .eq("games.is_active", true)
-    .eq("games.is_featured", true)
+    .eq("products.is_active", true)
+    .eq("products.is_featured", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true })
     .limit(limit);
@@ -584,9 +630,9 @@ export async function getSuggestedOffers(locale: Locale, limit: number): Promise
   // catalog still renders a useful section.
   const { data: fallback, error: fallbackError } = await supabase
     .from("offers")
-    .select(OFFER_WITH_GAME_SELECT)
+    .select(OFFER_WITH_PRODUCT_SELECT)
     .eq("is_active", true)
-    .eq("games.is_active", true)
+    .eq("products.is_active", true)
     .order("price", { ascending: true })
     .limit(limit);
 
@@ -605,9 +651,9 @@ export async function getOffersByIds(locale: Locale, ids: string[]): Promise<Sto
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("offers")
-    .select(OFFER_WITH_GAME_SELECT)
+    .select(OFFER_WITH_PRODUCT_SELECT)
     .eq("is_active", true)
-    .eq("games.is_active", true)
+    .eq("products.is_active", true)
     .in("id", ids);
 
   if (error) {
@@ -738,7 +784,7 @@ export async function getTrendingOffers(locale: Locale, limit: number): Promise<
 }
 
 export type CatalogSearchResult = {
-  games: StoreGame[];
+  games: StoreProduct[];
   offers: StoreOffer[];
 };
 
@@ -758,7 +804,7 @@ async function gameIdsSellingOfferTypes(types: string[]): Promise<Set<string>> {
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("offers")
-    .select("game_id")
+    .select("product_id")
     .eq("is_active", true)
     .in("offer_type", types);
 
@@ -767,7 +813,7 @@ async function gameIdsSellingOfferTypes(types: string[]): Promise<Set<string>> {
   }
 
   // Product-only offers (no game) cannot narrow a game search.
-  return new Set(data.flatMap((row) => (row.game_id ? [row.game_id] : [])));
+  return new Set(data.flatMap((row) => (row.product_id ? [row.product_id] : [])));
 }
 
 /**
@@ -799,8 +845,8 @@ export async function searchCatalog(
   const wantsOffers = filter === "all" || filter === "offers";
 
   let gamesQuery = supabase
-    .from("games")
-    .select(GAME_SELECT)
+    .from("products")
+    .select(PRODUCT_SELECT)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .limit(SEARCH_RESULT_LIMIT);
@@ -825,17 +871,17 @@ export async function searchCatalog(
   }
 
   if (!wantsOffers) {
-    return { games: matchedGames.map((game) => toStoreGame(game, locale)), offers: [] };
+    return { games: matchedGames.map((game) => toStoreProduct(game, locale)), offers: [] };
   }
 
   const matchedGameIds = matchedGameRows.slice(0, SEARCH_GAME_FANOUT_LIMIT).map((game) => game.id);
-  const gameIdClause = matchedGameIds.length > 0 ? `,game_id.in.(${matchedGameIds.join(",")})` : "";
+  const gameIdClause = matchedGameIds.length > 0 ? `,product_id.in.(${matchedGameIds.join(",")})` : "";
 
   let offersQuery = supabase
     .from("offers")
-    .select(OFFER_WITH_GAME_SELECT)
+    .select(OFFER_WITH_PRODUCT_SELECT)
     .eq("is_active", true)
-    .eq("games.is_active", true)
+    .eq("products.is_active", true)
     .order("price", { ascending: true })
     .limit(SEARCH_RESULT_LIMIT);
 
@@ -850,7 +896,7 @@ export async function searchCatalog(
   }
 
   return {
-    games: wantsGames ? matchedGames.map((game) => toStoreGame(game, locale)) : [],
+    games: wantsGames ? matchedGames.map((game) => toStoreProduct(game, locale)) : [],
     offers: await withAdminCosts(offers.map((offer) => toStoreOffer(offer, locale))),
   };
 }

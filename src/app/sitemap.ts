@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n/config";
 import { buildLocalePath, getSiteUrl } from "@/lib/seo";
-import { getActiveGames } from "@/lib/services/catalog.service";
+import { getActiveProducts } from "@/lib/services/catalog.service";
 
 /**
  * Storefront sitemap.
@@ -56,7 +56,7 @@ function entriesForPath(
 async function gamePaths(): Promise<string[]> {
   try {
     // The default locale read is enough: slugs are shared across locales.
-    const games = await getActiveGames(SUPPORTED_LOCALES[0] as Locale);
+    const games = await getActiveProducts(SUPPORTED_LOCALES[0] as Locale);
 
     return games.map((game) => `/games/${game.slug}`);
   } catch {

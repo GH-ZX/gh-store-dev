@@ -22,8 +22,8 @@ import { searchCatalog } from "@/lib/services/catalog.service";
 export const dynamic = "force-dynamic";
 
 type SuggestPayload = {
-  games: { slug: string; name: string }[];
-  offers: { gameSlug: string; offerSlug: string; name: string }[];
+  games: { slug: string; categorySlug: string; name: string }[];
+  offers: { gameSlug: string; categorySlug: string; offerSlug: string; name: string }[];
 };
 
 function json(body: SuggestPayload): NextResponse {
@@ -49,13 +49,14 @@ export async function GET(request: Request): Promise<NextResponse> {
     const { games, offers } = await searchCatalog(localeParam as Locale, query, "all");
 
     return json({
-      games: games.slice(0, 5).map((game) => ({ slug: game.slug, name: game.name })),
+      games: games.slice(0, 5).map((game) => ({ slug: game.slug, categorySlug: game.categorySlug, name: game.name })),
       offers: offers
         // An offer read without its game join has no destination of its own.
         .filter((offer) => offer.game?.slug)
         .slice(0, 3)
         .map((offer) => ({
           gameSlug: offer.game!.slug,
+          categorySlug: offer.game!.categorySlug,
           offerSlug: offer.slug,
           name: offer.name,
         })),

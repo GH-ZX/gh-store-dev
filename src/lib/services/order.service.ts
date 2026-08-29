@@ -138,11 +138,11 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   // browser, so a crafted form cannot point checkout at a different product.
   const { data: offer, error: offerError } = await supabase
     .from("offers")
-    .select("id, delivery_kind, games!inner (slug)")
+    .select("id, delivery_kind, products!inner (slug)")
     .eq("slug", input.offerSlug)
     .eq("is_active", true)
-    .eq("games.slug", input.gameSlug)
-    .eq("games.is_active", true)
+    .eq("products.slug", input.gameSlug)
+    .eq("products.is_active", true)
     .maybeSingle();
 
   if (offerError || !offer) {

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { GameEditor } from "@/components/live-edit/game-editor";
 import { SectionEditor } from "@/components/live-edit/section-editor";
 import { ReviewCard } from "@/components/store/review-card";
-import { GameGrid, OfferGrid } from "@/components/store/collections";
+import { ProductGrid, OfferGrid } from "@/components/store/collections";
 import { ButtonLink } from "@/components/ui/button";
 import { SocialIcon } from "@/components/ui/brand-icons";
 import { ArrowIcon, BoltIcon, SupportIcon, WalletIcon } from "@/components/ui/icons";
@@ -46,7 +46,7 @@ export type HomeSectionsProps = {
 function fallbackSubtitle(section: HomeSection, home: HomeMessages): string | undefined {
   switch (section.type) {
     case "games":
-    case "game_picks":
+    case "product_picks":
       return home.sections.gamesSubtitle;
     case "gift_cards":
       return home.sections.giftCardsSubtitle;
@@ -195,7 +195,7 @@ export function HomeSections({
           return (
             <Section key={section.id} spacing="normal">
               {header}
-              <GameGrid
+              <ProductGrid
                 className="mt-8"
                 games={resolved.games}
                 locale={locale}

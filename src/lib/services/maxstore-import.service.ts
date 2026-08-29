@@ -243,7 +243,7 @@ export async function loadMaxStoreCatalogue(
 }
 
 async function takenSlugs(supabase: Client): Promise<Set<string>> {
-  const { data } = await supabase.from("games").select("slug");
+  const { data } = await supabase.from("products").select("slug");
 
   return new Set((data ?? []).map((row) => row.slug));
 }
@@ -282,8 +282,8 @@ async function importCategoryOffers(
 
   const { data: targetOffers } = await supabase
     .from("offers")
-    .select("id, game_id, slug, is_sale, is_active")
-    .eq("game_id", gameId);
+    .select("id, product_id, slug, is_sale, is_active")
+    .eq("product_id", gameId);
   const offers = targetOffers ?? [];
   const productIds = products.map((product) => product.id);
   const { data: productMappings } = await supabase
@@ -295,7 +295,7 @@ async function importCategoryOffers(
   const { data: mappedOffers } = mappedOfferIds.length
     ? await supabase
         .from("offers")
-        .select("id, game_id, slug, is_sale, is_active")
+        .select("id, product_id, slug, is_sale, is_active")
         .in("id", mappedOfferIds)
     : { data: [] };
   const offerById = new Map([...(offers ?? []), ...(mappedOffers ?? [])].map((offer) => [offer.id, offer]));
@@ -318,7 +318,7 @@ async function importCategoryOffers(
       byProductId.set(mapping.external_product_id, {
         offerId: mapping.offer_id,
         pricingMode: mapping.pricing_mode,
-        gameId: offer.game_id,
+        gameId: offer.product_id,
         slug: offer.slug,
         isSale: offer.is_sale,
         isActive: offer.is_active,
@@ -365,7 +365,7 @@ async function importCategoryOffers(
       if (moved) {
         await supabase
           .from("offers")
-          .update({ game_id: gameId, slug: nextSlug, updated_at: updatedAt })
+          .update({ product_id: gameId, slug: nextSlug, updated_at: updatedAt })
           .eq("id", existing.offerId);
         existing.gameId = gameId;
         existing.slug = nextSlug;
@@ -404,7 +404,7 @@ async function importCategoryOffers(
     const { data: created } = await supabase
       .from("offers")
       .insert({
-        game_id: gameId,
+        product_id: gameId,
         slug,
         name_ar: product.name,
         name_en: product.name,
@@ -484,12 +484,12 @@ async function removeEmptyLegacyUncategorisedContainer(supabase: Client): Promis
   }
 
   const gameIds = candidates.map((candidate) => candidate.game_id);
-  const { data: offers } = await supabase.from("offers").select("game_id").in("game_id", gameIds);
-  const occupied = new Set((offers ?? []).map((offer) => offer.game_id));
+  const { data: offers } = await supabase.from("offers").select("product_id").in("product_id", gameIds);
+  const occupied = new Set((offers ?? []).map((offer) => offer.product_id));
 
   for (const candidate of candidates) {
     if (!occupied.has(candidate.game_id)) {
-      await supabase.from("games").delete().eq("id", candidate.game_id);
+      await supabase.from("products").delete().eq("id", candidate.game_id);
     }
   }
 }
@@ -505,7 +505,7 @@ async function importOneCategory(
   const code = toMaxStoreGameCode(category.id);
   const { data: mapping } = await supabase
     .from("provider_game_mappings")
-    .select("game_id, games (image_url)")
+    .select("game_id, products (image_url)")
     .eq("provider_name", MAXSTORE_PROVIDER_NAME)
     .eq("external_game_code", code)
     .maybeSingle();
@@ -520,13 +520,13 @@ async function importOneCategory(
    * art of any kind keeps what it has.
    */
   const productImage = products.find((product) => product.imageUrl)?.imageUrl ?? null;
-  const existingGame = Array.isArray(mapping?.games)
-    ? ((mapping?.games as unknown[])[0] as { image_url: string | null } | undefined)
-    : (mapping?.games as { image_url: string | null } | undefined);
+  const existingGame = Array.isArray(mapping?.products)
+    ? ((mapping?.products as unknown[])[0] as { image_url: string | null } | undefined)
+    : (mapping?.products as { image_url: string | null } | undefined);
 
   if (!gameId) {
     const { data: game, error } = await supabase
-      .from("games")
+      .from("products")
       .insert({
         slug: uniqueSlug(toMaxStoreGameSlug({ id: category.id, title: category.title }), slugs),
         name_ar: category.title,
@@ -544,7 +544,7 @@ async function importOneCategory(
     gameId = game.id;
     status = "created";
   } else if (!existingGame?.image_url && productImage) {
-    await supabase.from("games").update({ image_url: productImage }).eq("id", gameId);
+    await supabase.from("products").update({ image_url: productImage }).eq("id", gameId);
   }
 
   const counts = await importCategoryOffers(supabase, gameId, products, options, deactivateMissing);

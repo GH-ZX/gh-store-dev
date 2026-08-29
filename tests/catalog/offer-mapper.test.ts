@@ -60,10 +60,11 @@ describe("catalog offer mapper", () => {
   });
 
   it("localizes the joined game and exposes its slug for linking", () => {
-    const offer = toStoreOffer({ ...row, games: gameRelation }, "ar");
+    const offer = toStoreOffer({ ...row, products: gameRelation }, "ar");
 
     expect(offer.game).toEqual({
       slug: "valorant",
+      categorySlug: "games",
       name: "فالورانت",
       imageUrl: "https://cdn.example/valorant.png",
       logoUrl: "https://cdn.example/valorant-logo.png",
@@ -71,22 +72,22 @@ describe("catalog offer mapper", () => {
   });
 
   it("accepts a to-one join returned as an array", () => {
-    expect(toStoreOffer({ ...row, games: [gameRelation] }, "en").game?.slug).toBe("valorant");
+    expect(toStoreOffer({ ...row, products: [gameRelation] }, "en").game?.slug).toBe("valorant");
   });
 
   it("has no game when the read did not join one", () => {
     expect(toStoreOffer(row, "en").game).toBeNull();
-    expect(toStoreOffer({ ...row, games: null }, "en").game).toBeNull();
-    expect(toStoreOffer({ ...row, games: [] }, "en").game).toBeNull();
+    expect(toStoreOffer({ ...row, products: null }, "en").game).toBeNull();
+    expect(toStoreOffer({ ...row, products: [] }, "en").game).toBeNull();
   });
 
   it("prefers the offer's own artwork over the game artwork", () => {
     expect(
-      toStoreOffer({ ...row, sale_image_url: "https://cdn.example/sale.png", games: gameRelation }, "en")
+      toStoreOffer({ ...row, sale_image_url: "https://cdn.example/sale.png", products: gameRelation }, "en")
         .imageUrl,
     ).toBe("https://cdn.example/sale.png");
 
-    expect(toStoreOffer({ ...row, games: gameRelation }, "en").imageUrl).toBe(
+    expect(toStoreOffer({ ...row, products: gameRelation }, "en").imageUrl).toBe(
       "https://cdn.example/valorant.png",
     );
 
@@ -98,17 +99,17 @@ describe("numeric denomination names", () => {
   const gameWithPoints = { ...gameRelation, points_name_ar: "شدة", points_name_en: "UC" };
 
   it("appends the game currency to a bare number", () => {
-    expect(toStoreOffer({ ...row, name_en: "60", games: gameWithPoints }, "en").name).toBe("60 UC");
-    expect(toStoreOffer({ ...row, name_ar: "60", games: gameWithPoints }, "ar").name).toBe("60 شدة");
+    expect(toStoreOffer({ ...row, name_en: "60", products: gameWithPoints }, "en").name).toBe("60 UC");
+    expect(toStoreOffer({ ...row, name_ar: "60", products: gameWithPoints }, "ar").name).toBe("60 شدة");
   });
 
   it("leaves a descriptive name alone", () => {
     expect(
-      toStoreOffer({ ...row, name_en: "Meltdown Supplies", games: gameWithPoints }, "en").name,
+      toStoreOffer({ ...row, name_en: "Meltdown Supplies", products: gameWithPoints }, "en").name,
     ).toBe("Meltdown Supplies");
   });
 
   it("leaves a number alone when the game has no currency name", () => {
-    expect(toStoreOffer({ ...row, name_en: "60", games: gameRelation }, "en").name).toBe("60");
+    expect(toStoreOffer({ ...row, name_en: "60", products: gameRelation }, "en").name).toBe("60");
   });
 });

@@ -90,16 +90,16 @@ describe("home layout normalization", () => {
     const [section] = normalizeHomeLayout([
       {
         id: "picks",
-        type: "game_picks",
-        game_ids: ["3f1a6f0e-1c6b-4a3f-9d2e-9f7c2f5b1a11"],
+        type: "product_picks",
+        product_ids: ["3f1a6f0e-1c6b-4a3f-9d2e-9f7c2f5b1a11"],
       },
     ]);
 
-    expect(section.gameIds).toEqual(["3f1a6f0e-1c6b-4a3f-9d2e-9f7c2f5b1a11"]);
+    expect(section.productIds).toEqual(["3f1a6f0e-1c6b-4a3f-9d2e-9f7c2f5b1a11"]);
 
-    const [invalid] = normalizeHomeLayout([{ id: "picks", type: "game_picks", game_ids: ["nope"] }]);
+    const [invalid] = normalizeHomeLayout([{ id: "picks", type: "product_picks", product_ids: ["nope"] }]);
 
-    expect(invalid.gameIds).toEqual([]);
+    expect(invalid.productIds).toEqual([]);
   });
 
   it("prefers an admin title and falls back to the built-in one", () => {
@@ -139,7 +139,7 @@ describe("home layout normalization", () => {
 
 describe("section editor rules", () => {
   it("names the pick list each section type owns, and none for the rest", () => {
-    expect(sectionPickKind("game_picks")).toBe("games");
+    expect(sectionPickKind("product_picks")).toBe("games");
     expect(sectionPickKind("offer_picks")).toBe("offers");
     expect(sectionPickKind("customer_reviews")).toBe("reviews");
     expect(sectionPickKind("sale_offers")).toBeNull();

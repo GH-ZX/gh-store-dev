@@ -103,7 +103,7 @@ async function showSupport(ctx: AdminContext): Promise<void> {
 
 async function showCatalog(ctx: AdminContext): Promise<void> {
   const [g, o] = await Promise.all([
-    ctx.supabase.from("games").select("id", { count: "exact", head: true }).eq("is_active", true) as unknown as Promise<{ count?: number }>,
+    ctx.supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true) as unknown as Promise<{ count?: number }>,
     ctx.supabase.from("offers").select("id", { count: "exact", head: true }).eq("is_active", true) as unknown as Promise<{ count?: number }>,
   ]);
   await render(ctx, `Catalog: Games ${(g as { count?: number }).count ?? 0}, Offers ${(o as { count?: number }).count ?? 0}`, { inline_keyboard: [[{ text: "Open catalog", url: "https://gh-store.me/en/dashboard/catalog" }], [{ text: "↩", callback_data: "adm:menu" }]] });

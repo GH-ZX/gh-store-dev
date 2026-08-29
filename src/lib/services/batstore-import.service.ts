@@ -106,13 +106,13 @@ export async function loadBatStoreCatalogue(
 
   const { data: mappings } = await supabase
     .from("provider_game_mappings")
-    .select("external_game_code, games (category_id)")
+    .select("external_game_code, products (category_id)")
     .eq("provider_name", BATSTORE_PROVIDER_NAME);
 
   const imported = new Map<string, string | null>(
     (mappings ?? [])
       .map((row) => {
-        const game = Array.isArray(row.games) ? row.games[0] : row.games;
+        const game = Array.isArray(row.products) ? row.products[0] : row.products;
 
         return [row.external_game_code, game?.category_id ?? null] as const;
       })
@@ -139,7 +139,7 @@ export async function loadBatStoreCatalogue(
 }
 
 async function takenSlugs(supabase: Client): Promise<Set<string>> {
-  const { data } = await supabase.from("games").select("slug");
+  const { data } = await supabase.from("products").select("slug");
 
   return new Set((data ?? []).map((row) => row.slug));
 }
@@ -214,7 +214,7 @@ async function importOneProduct(
 
   if (!gameId) {
     const { data: game, error } = await supabase
-      .from("games")
+      .from("products")
       .insert({
         slug: uniqueSlug(toBatStoreGameSlug(product), slugs),
         name_ar: product.name,
@@ -236,7 +236,7 @@ async function importOneProduct(
     // A re-import re-homes the product under the category the operator just
     // picked; names and artwork stay as the editor left them.
     const { error } = await supabase
-      .from("games")
+      .from("products")
       .update({ category_id: selection.categoryId, updated_at: nowIso() })
       .eq("id", gameId);
 
@@ -262,7 +262,7 @@ async function importOneProduct(
   const { data: existingOffers } = await supabase
     .from("offers")
     .select("id, slug, is_sale, is_active")
-    .eq("game_id", gameId);
+    .eq("product_id", gameId);
 
   const offers = existingOffers ?? [];
   const offerIds = offers.map((offer) => offer.id);
@@ -317,7 +317,7 @@ async function importOneProduct(
   const { data: created, error: createError } = await supabase
     .from("offers")
     .insert({
-      game_id: gameId,
+      product_id: gameId,
       slug,
       name_ar: product.name,
       name_en: product.name,

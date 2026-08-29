@@ -17,11 +17,12 @@ export const HOME_SECTION_TYPES = [
   "trust_strip",
   "how_it_works",
   "games",
+  "category",
   "trending_offers",
   "gift_cards",
   "sale_offers",
   "suggested_offers",
-  "game_picks",
+  "product_picks",
   "offer_picks",
   "customer_reviews",
   "social_links",
@@ -80,7 +81,8 @@ const homeSectionInputSchema = z.object({
   image_aspect: z.enum(["auto", "16:9", "4:3", "1:1"]).optional().catch(undefined),
   image_position_x: z.coerce.number().optional().catch(undefined),
   image_position_y: z.coerce.number().optional().catch(undefined),
-  game_ids: looseList,
+  product_ids: looseList,
+  category_ids: looseList,
   offer_ids: looseList,
   review_ids: looseList,
   show_submit_form: z.boolean().optional().catch(undefined),
@@ -121,7 +123,8 @@ export type HomeSection = {
   imageAspect: "auto" | "16:9" | "4:3" | "1:1";
   imagePositionX: number;
   imagePositionY: number;
-  gameIds: string[];
+  productIds: string[];
+  categoryIds: string[];
   offerIds: string[];
   reviewIds: string[];
   showSubmitForm: boolean;
@@ -152,11 +155,12 @@ const SECTION_DEFAULTS: Record<HomeSectionType, SectionDefaults> = {
     limit: 1,
   },
   games: { titleAr: "شحن الألعاب", titleEn: "Game top-ups", limit: 12 },
+  category: { titleAr: "منتجات مختارة", titleEn: "Featured products", limit: 8 },
   trending_offers: { titleAr: "الأكثر مبيعًا", titleEn: "Trending now", limit: 8 },
   gift_cards: { titleAr: "بطاقات وأكواد", titleEn: "Gift cards & codes", limit: 8 },
   sale_offers: { titleAr: "عروض وخصومات", titleEn: "On sale", limit: 8 },
   suggested_offers: { titleAr: "الأكثر طلبًا", titleEn: "Bestsellers", limit: 10 },
-  game_picks: { titleAr: "ألعاب مختارة", titleEn: "Handpicked games", limit: 8 },
+  product_picks: { titleAr: "منتجات مختارة", titleEn: "Handpicked products", limit: 8 },
   offer_picks: { titleAr: "باقات مختارة", titleEn: "Handpicked offers", limit: 8 },
   customer_reviews: { titleAr: "آراء الزبائن", titleEn: "What customers say", limit: 8 },
   social_links: {
@@ -199,7 +203,8 @@ export function createHomeSection(type: HomeSectionType, id: string): HomeSectio
     imageAspect: "auto",
     imagePositionX: 50,
     imagePositionY: 50,
-    gameIds: [],
+    productIds: [],
+    categoryIds: [],
     offerIds: [],
     reviewIds: [],
     showSubmitForm: true,
@@ -214,7 +219,8 @@ function clamp(value: number, min: number, max: number): number {
 function cloneDefaultLayout(): HomeSection[] {
   return DEFAULT_HOME_LAYOUT.map((section) => ({
     ...section,
-    gameIds: [...section.gameIds],
+    productIds: [...section.productIds],
+    categoryIds: [...section.categoryIds],
     offerIds: [...section.offerIds],
     reviewIds: [...section.reviewIds],
   }));
@@ -290,7 +296,8 @@ export function normalizeHomeLayout(value: unknown): HomeSection[] {
       imageAspect: input.image_aspect ?? "auto",
       imagePositionX: input.image_position_x === undefined ? 50 : clamp(input.image_position_x, 0, 100),
       imagePositionY: input.image_position_y === undefined ? 50 : clamp(input.image_position_y, 0, 100),
-      gameIds: toIdList(input.game_ids),
+      productIds: toIdList(input.product_ids),
+      categoryIds: toIdList(input.category_ids),
       offerIds: toIdList(input.offer_ids),
       reviewIds: toIdList(input.review_ids),
       showSubmitForm: input.show_submit_form !== false,
@@ -318,7 +325,8 @@ export function getHomeSectionSubtitle(section: HomeSection, locale: Locale): st
 export function getHomeSectionPagePath(section: HomeSection): string | null {
   switch (section.type) {
     case "games":
-    case "game_picks":
+    case "product_picks":
+    case "category":
       return "/games";
     case "gift_cards":
       return "/gift-cards";

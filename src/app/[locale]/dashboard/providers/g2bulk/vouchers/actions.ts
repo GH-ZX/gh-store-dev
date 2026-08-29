@@ -86,7 +86,7 @@ export async function importG2BulkVouchersAction(
         .maybeSingle();
 
       if (mapping?.game_id) {
-        await supabase.from("games").update({ category_id: formCategoryId }).eq("id", mapping.game_id);
+        await supabase.from("products").update({ category_id: formCategoryId }).eq("id", mapping.game_id);
       }
     }
 

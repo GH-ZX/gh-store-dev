@@ -761,11 +761,12 @@
         "trust_strip": "Trust strip",
         "how_it_works": "How it works",
         "games": "All games",
+        "category": "By category",
         "trending_offers": "Trending now",
         "gift_cards": "Cards and codes",
         "sale_offers": "Discounted offers",
         "suggested_offers": "Bestsellers",
-        "game_picks": "Handpicked games",
+        "product_picks": "Handpicked products",
         "offer_picks": "Handpicked packages",
         "customer_reviews": "Customer reviews",
         "social_links": "Social links"

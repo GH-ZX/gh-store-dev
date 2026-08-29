@@ -531,3 +531,50 @@ export async function deleteStockItemAction(
     return { error: "Failed to delete stock item" };
   }
 }
+
+/**
+ * Swap carousel_order between two games.
+ *
+ * Both games must already have `show_in_carousel = true`. The action swaps
+ * their `carousel_order` values so the customer-facing carousel reflects
+ * the new arrangement immediately after revalidation.
+ */
+export async function reorderCarouselGames(
+  gameAId: string,
+  gameBId: string,
+): Promise<{ success?: boolean; error?: string }> {
+  await requireAdmin();
+
+  const supabase = createSupabaseServiceClient();
+
+  const { data: games, error: fetchError } = await supabase
+    .from("products")
+    .select("id, carousel_order")
+    .in("id", [gameAId, gameBId]);
+
+  if (fetchError || !games || games.length !== 2) {
+    return { error: "Failed to fetch games" };
+  }
+
+  const gameA = games.find((g) => g.id === gameAId)!;
+  const gameB = games.find((g) => g.id === gameBId)!;
+
+  // Update each game individually to avoid upsert requiring all required fields
+  const [updateA, updateB] = await Promise.all([
+    supabase
+      .from("products")
+      .update({ carousel_order: gameB.carousel_order })
+      .eq("id", gameAId),
+    supabase
+      .from("products")
+      .update({ carousel_order: gameA.carousel_order })
+      .eq("id", gameBId),
+  ]);
+
+  if (updateA.error || updateB.error) {
+    return { error: "Failed to update carousel order" };
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}

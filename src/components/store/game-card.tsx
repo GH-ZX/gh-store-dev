@@ -4,7 +4,7 @@ import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import type { StoreGame } from "@/lib/catalog/game-mapper";
+import type { StoreProduct } from "@/lib/catalog/game-mapper";
 import { cn } from "@/lib/cn";
 
 /**
@@ -14,8 +14,8 @@ import { cn } from "@/lib/cn";
  * is a single tab stop per card. Artwork sits behind a bottom-weighted scrim so
  * the title stays legible over any image.
  */
-export type GameCardProps = {
-  game: StoreGame;
+export type ProductCardProps = {
+  product: StoreProduct;
   locale: Locale;
   labels: { featured: string; from?: string };
   /** Trailing metadata line, e.g. a "from $2.50" price. */
@@ -32,18 +32,18 @@ export type GameCardProps = {
   className?: string;
 };
 
-export function GameCard({
-  game,
+export function ProductCard({
+  product,
   locale,
   labels,
   meta,
   priority = false,
   overlay,
   className,
-}: GameCardProps) {
+}: ProductCardProps) {
   const card = (
     <Link
-      href={`/${locale}/games/${game.slug}`}
+      href={`/${locale}/${product.categorySlug}/${product.slug}`}
       prefetch={false}
       className={cn(
         "group relative flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--elevation-2)]",
@@ -57,10 +57,10 @@ export function GameCard({
     >
       <div className="absolute inset-0">
         <StoreImage
-          src={game.imageUrl}
+          src={product.imageUrl}
           alt=""
           priority={priority}
-          focus={game.carouselFocus}
+          focus={product.carouselFocus}
           sizes="(min-width: 1024px) 22rem, (min-width: 640px) 45vw, 80vw"
           className="transition-transform duration-[var(--duration-slow)] ease-[var(--ease-out-expo)] group-hover:scale-[1.06] group-active:scale-[1.02]"
         />
@@ -70,23 +70,23 @@ export function GameCard({
         aria-hidden="true"
       />
 
-      {game.isFeatured ? (
+      {product.isFeatured ? (
         <div className="absolute top-3 end-3">
           <Badge tone="accent">{labels.featured}</Badge>
         </div>
       ) : null}
 
       <div className="relative flex items-end gap-3 p-4">
-        {game.logoUrl ? (
+        {product.logoUrl ? (
           <span className="grid size-12 shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
-            <StoreImage src={game.logoUrl} alt="" sizes="3rem" />
+            <StoreImage src={product.logoUrl} alt="" sizes="3rem" />
           </span>
         ) : null}
 
         <div className="min-w-0 flex-1">
-          {game.pointsName ? (
+          {product.pointsName ? (
             <p className="truncate text-[0.6875rem] font-semibold tracking-[0.1em] text-[var(--accent)] uppercase">
-              {game.pointsName}
+              {product.pointsName}
             </p>
           ) : null}
           {/*
@@ -95,7 +95,7 @@ export function GameCard({
             * aspect ratio, so the second line costs nothing.
             */}
           <h3 className="mt-1 line-clamp-2 text-sm leading-5 font-semibold tracking-tight text-[var(--ink)] sm:text-base sm:leading-6">
-            {game.name}
+            {product.name}
           </h3>
           {meta ? <p className="mt-1 truncate text-xs text-[var(--ink-muted)] tabular-nums">{meta}</p> : null}
         </div>

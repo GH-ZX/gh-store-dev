@@ -54,8 +54,8 @@ import type { SamMethod } from "@/lib/settings/sam-settings";
  */
 
 type CatalogCounters = {
-  games: number;
-  active_games: number;
+  products: number;
+  active_products: number;
   offers: number;
   active_offers: number;
   orders: number;
@@ -133,8 +133,8 @@ export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
   const catalog = (await readOverviewSnapshot())?.catalog;
 
   return {
-    games: catalog?.games ?? null,
-    activeGames: catalog?.active_games ?? null,
+    games: catalog?.products ?? null,
+    activeGames: catalog?.active_products ?? null,
     offers: catalog?.offers ?? null,
     activeOffers: catalog?.active_offers ?? null,
     orders: catalog?.orders ?? null,

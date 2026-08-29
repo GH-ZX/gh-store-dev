@@ -80,7 +80,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
    * makes one request and not two — and the connection it opens is reused by
    * the remaining slides, which come from the same host.
    */
-  const heroImage = carousel.games[0]?.imageUrl;
+  const heroImage = carousel.products[0]?.imageUrl;
 
   if (heroImage) {
     preload(heroImage, { as: "image", fetchPriority: "high" });
@@ -89,20 +89,20 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   /*
    * The homepage is the carousel: no name banner, no pitch. The store's name
    * lives in the visible header, the page title, and the description metadata —
-   * a crawler still finds it, and a visitor lands straight on the games.
+   * a crawler still finds it, and a visitor lands straight on the products.
    */
   const page = (
     <>
       {/*
         * The carousel leads. There used to be a pitch above it — a headline, two
-        * buttons and three stat tiles — which pushed the actual games below the
+        * buttons and three stat tiles — which pushed the actual products below the
         * fold on a phone and told a visitor nothing they had not already assumed
-        * by arriving. The games are the pitch.
+        * by arriving. The products are the pitch.
         */}
-      {carousel.games.length > 0 ? (
+      {carousel.products.length > 0 ? (
         <Section spacing="page" mesh>
           <HeroCarousel
-            games={carousel.games}
+            products={carousel.products}
             locale={locale}
             intervalSeconds={carousel.section?.intervalSeconds ?? 6}
             loop={carousel.section?.loop ?? true}
@@ -114,7 +114,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             labels={{
               regionLabel: home.carousel.regionLabel,
               slideLabel: home.carousel.slideLabel,
-              goToGame: home.carousel.goToGame,
+              goToProduct: home.carousel.goToProduct,
               previous: home.carousel.previous,
               next: home.carousel.next,
               pause: home.carousel.pause,

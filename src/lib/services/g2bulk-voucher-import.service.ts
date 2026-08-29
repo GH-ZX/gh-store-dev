@@ -296,7 +296,7 @@ async function readGameMapping(
 }
 
 async function takenGameSlugs(supabase: Client): Promise<Set<string>> {
-  const { data, error } = await supabase.from("games").select("slug");
+  const { data, error } = await supabase.from("products").select("slug");
 
   if (error) {
     throw new Error(`Reading existing game slugs failed: ${error.message}`);
@@ -345,7 +345,7 @@ async function importOneCategory(
       String(category.id),
     );
     const { data, error } = await supabase
-      .from("games")
+      .from("products")
       .insert({
         slug,
         name_ar: category.title,
@@ -375,14 +375,14 @@ async function importOneCategory(
 
   // Reconcile the container itself: nothing in stock means nothing to sell.
   if (!group.hasStock) {
-    const { error } = await supabase.from("games").update({ is_active: false }).eq("id", gameId);
+    const { error } = await supabase.from("products").update({ is_active: false }).eq("id", gameId);
 
     if (error) {
       throw new Error(`Deactivating the empty voucher group failed: ${error.message}`);
     }
   } else if (existingMapping && parkedBySync(existingMapping.metadata)) {
     // It was parked by an earlier run and the provider is stocking it again.
-    const { error } = await supabase.from("games").update({ is_active: true }).eq("id", gameId);
+    const { error } = await supabase.from("products").update({ is_active: true }).eq("id", gameId);
 
     if (error) {
       throw new Error(`Reactivating the voucher group failed: ${error.message}`);
@@ -424,7 +424,7 @@ async function importVoucherOffers(
   const { data: existingOffers, error: offersError } = await supabase
     .from("offers")
     .select("id, slug, is_sale, is_active")
-    .eq("game_id", gameId);
+    .eq("product_id", gameId);
 
   if (offersError) {
     throw new Error(`Reading existing offers failed: ${offersError.message}`);
@@ -535,7 +535,7 @@ async function importVoucherOffers(
     const { data: created, error: createError } = await supabase
       .from("offers")
       .insert({
-        game_id: gameId,
+        product_id: gameId,
         slug,
         offer_type: "gift_card",
         name_ar: product.title,
