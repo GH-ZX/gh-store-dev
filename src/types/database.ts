@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -349,7 +349,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "game_input_fields_game_id_fkey"
+            foreignKeyName: "game_input_fields_product_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "products"
@@ -393,7 +393,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "game_regions_game_id_fkey"
+            foreignKeyName: "game_regions_product_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "products"
@@ -558,7 +558,7 @@ export type Database = {
           offer_type: string
           original_price: number | null
           price: number
-          product_id: string
+          product_id: string | null
           region_code: string | null
           sale_image_url: string | null
           slug: string
@@ -580,7 +580,7 @@ export type Database = {
           offer_type?: string
           original_price?: number | null
           price: number
-          product_id: string
+          product_id?: string | null
           region_code?: string | null
           sale_image_url?: string | null
           slug: string
@@ -602,7 +602,7 @@ export type Database = {
           offer_type?: string
           original_price?: number | null
           price?: number
-          product_id?: string
+          product_id?: string | null
           region_code?: string | null
           sale_image_url?: string | null
           slug?: string
@@ -884,6 +884,12 @@ export type Database = {
       }
       products: {
         Row: {
+          carousel_badge_ar: string | null
+          carousel_badge_en: string | null
+          carousel_color: string | null
+          carousel_focus_x: number
+          carousel_focus_y: number
+          carousel_order: number | null
           category_id: string | null
           created_at: string
           description_ar: string | null
@@ -898,19 +904,19 @@ export type Database = {
           name_en: string
           points_name_ar: string | null
           points_name_en: string | null
-          carousel_badge_ar: string | null
-          carousel_badge_en: string | null
-          carousel_focus_x: number
-          carousel_focus_y: number
-          carousel_color: string | null
-          show_in_carousel: boolean
-          carousel_order: number | null
           product_kind: string
+          show_in_carousel: boolean
           slug: string
           sort_order: number
           updated_at: string
         }
         Insert: {
+          carousel_badge_ar?: string | null
+          carousel_badge_en?: string | null
+          carousel_color?: string | null
+          carousel_focus_x?: number
+          carousel_focus_y?: number
+          carousel_order?: number | null
           category_id?: string | null
           created_at?: string
           description_ar?: string | null
@@ -925,19 +931,19 @@ export type Database = {
           name_en: string
           points_name_ar?: string | null
           points_name_en?: string | null
-          carousel_badge_ar?: string | null
-          carousel_badge_en?: string | null
-          carousel_focus_x?: number
-          carousel_focus_y?: number
-          carousel_color?: string | null
-          show_in_carousel?: boolean
-          carousel_order?: number | null
           product_kind?: string
+          show_in_carousel?: boolean
           slug: string
           sort_order?: number
           updated_at?: string
         }
         Update: {
+          carousel_badge_ar?: string | null
+          carousel_badge_en?: string | null
+          carousel_color?: string | null
+          carousel_focus_x?: number
+          carousel_focus_y?: number
+          carousel_order?: number | null
           category_id?: string | null
           created_at?: string
           description_ar?: string | null
@@ -952,14 +958,8 @@ export type Database = {
           name_en?: string
           points_name_ar?: string | null
           points_name_en?: string | null
-          carousel_badge_ar?: string | null
-          carousel_badge_en?: string | null
-          carousel_focus_x?: number
-          carousel_focus_y?: number
-          carousel_color?: string | null
-          show_in_carousel?: boolean
-          carousel_order?: number | null
           product_kind?: string
+          show_in_carousel?: boolean
           slug?: string
           sort_order?: number
           updated_at?: string
@@ -1043,7 +1043,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "provider_game_mappings_game_id_fkey"
+            foreignKeyName: "provider_game_mappings_product_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "products"

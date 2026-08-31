@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 
 import { isAdminProfile, requireAuth, UnauthorizedError } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -74,6 +75,18 @@ function reasonFromError(message: string): PlaceOrderResult {
   }
 
   return { ok: false, reason: "unknown" };
+}
+
+/** Run supplier work after the successful checkout response has been released. */
+function scheduleFulfillment(orderId: string): void {
+  after(async () => {
+    try {
+      await fulfillOrder(orderId);
+    } catch (error) {
+      logFailure("fulfilment", "checkout_fulfilment_threw", error, { orderId });
+      // Intentionally swallowed; the order page shows the real state.
+    }
+  });
 }
 
 /**
@@ -187,18 +200,7 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
     },
   });
 
-  /*
-   * Fulfilment runs after the order is safely paid, and its failure must never
-   * fail the checkout response: the customer's money is already accounted for
-   * either way, and a thrown error here would tell them the purchase failed when
-   * it did not. Anything unexpected leaves the order `paid` for the reconciler.
-   */
-  try {
-    await fulfillOrder(data.order_id);
-  } catch (error) {
-    logFailure("fulfilment", "checkout_fulfilment_threw", error, { orderId: data.order_id });
-    // Intentionally swallowed; the order page shows the real state.
-  }
+  scheduleFulfillment(data.order_id);
 
   return {
     ok: true,

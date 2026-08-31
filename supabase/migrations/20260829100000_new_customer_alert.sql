@@ -28,6 +28,7 @@ end;
 $$;
 
 drop trigger if exists trg_notify_new_customer on public.profiles;
+
 create trigger trg_notify_new_customer
   after insert on public.profiles
   for each row execute function public.notify_new_customer();

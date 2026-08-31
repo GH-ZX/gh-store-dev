@@ -93,6 +93,7 @@ $$;
 
 revoke all on function public.telegram_admin_adjust_wallet(uuid, uuid, numeric, text, uuid)
   from public, anon, authenticated;
+
 grant execute on function public.telegram_admin_adjust_wallet(uuid, uuid, numeric, text, uuid)
   to service_role;
 
@@ -132,5 +133,6 @@ $$;
 
 revoke all on function public.telegram_admin_reject_recharge(uuid, uuid, text)
   from public, anon, authenticated;
+
 grant execute on function public.telegram_admin_reject_recharge(uuid, uuid, text)
   to service_role;

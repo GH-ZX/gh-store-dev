@@ -58,6 +58,7 @@ alter table public.game_input_fields
 -- 5. Drop legacy game_id column from offers (product_id is already populated)
 --    Must drop the trigger first since it depends on game_id
 drop trigger if exists offers_sync_product_reference on public.offers;
+
 drop function if exists public.sync_offer_product_reference();
 
 alter table public.offers
@@ -68,6 +69,7 @@ alter table public.offers
 
 -- 6. Update RLS policies on game_regions to reference products
 drop policy if exists game_regions_select_public_active on public.game_regions;
+
 create policy game_regions_select_public_active
 on public.game_regions
 for select
@@ -83,6 +85,7 @@ using (
 
 -- 7. Update RLS policies on game_input_fields to reference products
 drop policy if exists game_input_fields_select_public_active on public.game_input_fields;
+
 create policy game_input_fields_select_public_active
 on public.game_input_fields
 for select
@@ -97,10 +100,12 @@ using (
 
 -- 8. Drop sync triggers (no longer needed)
 drop trigger if exists games_sync_product on public.games;
+
 drop trigger if exists products_sync_game on public.products;
 
 -- 9. Drop sync functions
 drop function if exists public.sync_game_to_product();
+
 drop function if exists public.sync_product_to_game();
 
 -- 10. Recreate the offer sync trigger without game_id dependency
@@ -379,6 +384,7 @@ $$;
 
 -- 14. Update search index references
 drop index if exists public.games_search_trgm_idx;
+
 drop index if exists public.games_active_sort_idx;
 
 create extension if not exists pg_trgm with schema extensions;
@@ -405,6 +411,7 @@ drop table if exists public.games cascade;
 -- 17. Update grants
 grant select on public.categories, public.game_regions,
   public.game_input_fields, public.offers, public.provider_game_mappings to anon, authenticated;
+
 grant select, insert, update, delete on public.categories,
   public.game_regions, public.game_input_fields, public.offers,
   public.provider_game_mappings, public.provider_offer_mappings to authenticated;

@@ -6,9 +6,11 @@
 -- atomic multi-item function below for fulfillment.
 
 revoke all on function public.claim_stock_item(uuid, uuid) from public, anon, authenticated;
+
 grant execute on function public.claim_stock_item(uuid, uuid) to service_role;
 
 revoke all on function public.count_stock(uuid) from public, anon, authenticated;
+
 grant execute on function public.count_stock(uuid) to service_role;
 
 create or replace function public.claim_stock_items(
@@ -27,23 +29,10 @@ declare
 begin
   if p_quantity is null or p_quantity < 1 or p_quantity > 10 then
     raise exception 'Invalid stock quantity' using errcode = 'P0001';
-  end if;  if not exists (select 1 from public.orders where id = p_order_id) then
-    raise exception 'Order not found' using errcode = 'P0001';
   end if;
 
-  -- Retrying after a crash must return the original inventory, not consume a
-  -- second batch. The order id is the fulfillment idempotency key.
-  if exists (
-    select 1
-    from public.stock_items
-    where sold_to_order_id = p_order_id
-  ) then
-    return query
-    select s.*
-    from public.stock_items s
-    where s.sold_to_order_id = p_order_id
-    order by s.created_at, s.id;
-    return;
+  if not exists (select 1 from public.orders where id = p_order_id) then
+    raise exception 'Order not found' using errcode = 'P0001';
   end if;
 
   -- The UPDATE and its row locks are one transaction. If fewer than the
@@ -80,6 +69,7 @@ $$;
 
 revoke all on function public.claim_stock_items(uuid, uuid, integer)
   from public, anon, authenticated;
+
 grant execute on function public.claim_stock_items(uuid, uuid, integer) to service_role;
 
 -- A one-time, secret-gated owner bootstrap for the Telegram webhook. The
@@ -132,4 +122,5 @@ $$;
 
 revoke all on function public.claim_telegram_owner(bigint, text)
   from public, anon, authenticated;
+
 grant execute on function public.claim_telegram_owner(bigint, text) to service_role;
