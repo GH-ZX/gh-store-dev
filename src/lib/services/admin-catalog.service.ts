@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/auth/guards";
 import { toSearchTokens } from "@/lib/catalog/search";
-import type { ProductKind } from "@/lib/catalog/product-kind-mapper";
+import { PRODUCT_KINDS, type ProductKind } from "@/lib/catalog/product-kind-mapper";
 import { recordAudit } from "@/lib/services/admin-audit.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
@@ -25,14 +25,7 @@ import type { Database } from "@/types/database";
 
 type Client = SupabaseClient<Database>;
 
-export const PRODUCT_KINDS = [
-  "game",
-  "digital",
-  "subscription",
-  "service",
-  "virtual_currency",
-  "other",
-] as const satisfies readonly ProductKind[];
+export { PRODUCT_KINDS };
 
 function toProductKindValue(value: string | null): ProductKind {
   return value != null && (PRODUCT_KINDS as readonly string[]).includes(value)

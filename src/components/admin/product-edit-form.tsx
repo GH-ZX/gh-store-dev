@@ -22,7 +22,7 @@ import {
   updateProductAction,
 } from "@/app/[locale]/dashboard/catalog/actions";
 import type { AdminCategory, AdminProduct } from "@/lib/services/admin-catalog.service";
-import { PRODUCT_KINDS } from "@/lib/services/admin-catalog.service";
+import { PRODUCT_KINDS } from "@/lib/catalog/product-kind-mapper";
 
 /**
  * Game editor.
