@@ -205,17 +205,30 @@ async function attachPriceFrom(games: StoreProduct[]): Promise<StoreProduct[]> {
   );
 }
 
-/** Games an admin flagged for the homepage hero, in the configured order. */
+/** Games in the `games` category, in the configured order. */
 export async function getActiveProductsPage(locale: Locale, page: number): Promise<CatalogPage<StoreProduct>> {
   const supabase = createSupabasePublicClient();
-  const { from, to } = catalogPageRange(page);
-  const { data, error, count } = await supabase
+
+  const { data: gamesCategory } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", "games")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  let query = supabase
     .from("products")
     .select(PRODUCT_SELECT, { count: "exact" })
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
-    .order("name_en", { ascending: true })
-    .range(from, to);
+    .order("name_en", { ascending: true });
+
+  if (gamesCategory) {
+    query = query.eq("category_id", gamesCategory.id);
+  }
+
+  const { from, to } = catalogPageRange(page);
+  const { data, error, count } = await query.range(from, to);
 
   if (error) {
     throw new CatalogReadError();
@@ -606,43 +619,6 @@ export async function getSaleOffersPage(locale: Locale, page: number): Promise<C
   return toCatalogPage(offers, page, count ?? offers.length);
 }
 
-export async function getSuggestedOffers(locale: Locale, limit: number): Promise<StoreOffer[]> {
-  const supabase = createSupabasePublicClient();
-  const { data, error } = await supabase
-    .from("offers")
-    .select(OFFER_WITH_PRODUCT_SELECT)
-    .eq("is_active", true)
-    .eq("products.is_active", true)
-    .eq("products.is_featured", true)
-    .order("sort_order", { ascending: true })
-    .order("price", { ascending: true })
-    .limit(limit);
-
-  if (error) {
-    throw new CatalogReadError();
-  }
-
-  if (data.length > 0) {
-    return withAdminCosts(data.map((offer) => toStoreOffer(offer, locale)));
-  }
-
-  // Nothing is featured yet; fall back to the cheapest active offers so a fresh
-  // catalog still renders a useful section.
-  const { data: fallback, error: fallbackError } = await supabase
-    .from("offers")
-    .select(OFFER_WITH_PRODUCT_SELECT)
-    .eq("is_active", true)
-    .eq("products.is_active", true)
-    .order("price", { ascending: true })
-    .limit(limit);
-
-  if (fallbackError) {
-    throw new CatalogReadError();
-  }
-
-  return withAdminCosts(fallback.map((offer) => toStoreOffer(offer, locale)));
-}
-
 export async function getOffersByIds(locale: Locale, ids: string[]): Promise<StoreOffer[]> {
   if (ids.length === 0) {
     return [];
@@ -781,6 +757,174 @@ export async function getTrendingOffers(locale: Locale, limit: number): Promise<
   return offers.sort(
     (first, second) => (rank.get(first.id) ?? ranked.length) - (rank.get(second.id) ?? ranked.length),
   );
+}
+
+/**
+ * The offers real orders have bought in the last seven days, most bought first.
+ *
+ * "Bestsellers" is the homepage's own rank, kept separate from the thirty-day
+ * trend feed. Same read shape as {@link scanTrendingOfferIds}: only money that
+ * actually arrived counts, through the service key because `order_items` is RLS-
+ * locked to its customer. When nothing sold in the window the caller falls back
+ * to a random sample so the section still shows something useful.
+ */
+const BEST_SELLERS_WINDOW_DAYS = 7;
+const BEST_SELLERS_SCAN_CAP = 96;
+/** Below this many real sales, the rail is padded with random packs. */
+const BEST_SELLERS_PAD_THRESHOLD = 4;
+
+async function scanBestSellerOfferIds(limit: number): Promise<string[]> {
+  const service = createSupabaseServiceClient();
+  const cutoff = new Date(Date.now() - BEST_SELLERS_WINDOW_DAYS * 24 * 60 * 60_000).toISOString();
+
+  const { data, error } = await service
+    .from("order_items")
+    .select("offer_id, quantity, orders!inner(payment_status)")
+    .eq("orders.payment_status", "paid")
+    .gte("created_at", cutoff);
+
+  if (error || !data) {
+    throw new CatalogReadError();
+  }
+
+  const counts = new Map<string, number>();
+
+  for (const row of data) {
+    if (typeof row.offer_id !== "string") {
+      continue;
+    }
+
+    const quantity = typeof row.quantity === "number" ? row.quantity : 1;
+    counts.set(row.offer_id, (counts.get(row.offer_id) ?? 0) + Math.max(1, quantity));
+  }
+
+  return [...counts.entries()]
+    .sort((first, second) => second[1] - first[1])
+    .slice(0, limit)
+    .map(([offerId]) => offerId);
+}
+
+const cachedBestSellersIds = unstable_cache(scanBestSellerOfferIds, ["best-sellers"], {
+  revalidate: TRENDING_REVALIDATE_SECONDS,
+});
+
+const bestSellersReaders = new Map<number, () => Promise<string[]>>();
+
+function bestSellersReader(limit: number): () => Promise<string[]> {
+  const existing = bestSellersReaders.get(limit);
+
+  if (existing) {
+    return existing;
+  }
+
+  const reader = isolateCached(
+    () => readThrough(() => cachedBestSellersIds(limit), () => scanBestSellerOfferIds(limit)),
+    TRENDING_ISOLATE_TTL_MS,
+  );
+
+  bestSellersReaders.set(limit, reader);
+
+  return reader;
+}
+
+/**
+ * A random handful of active offers, used when nothing has sold recently.
+ *
+ * PostgREST has no sane random ordering, so ids are gathered and shuffled in
+ * memory. Bounded to a modest pool — a catalog that big is a catalog page, not a
+ * bestsellers rail — and resolved afterwards so only live offers come back.
+ */
+async function getRandomActiveOffers(locale: Locale, limit: number): Promise<StoreOffer[]> {
+  const supabase = createSupabasePublicClient();
+  const { data, error } = await supabase
+    .from("offers")
+    .select(OFFER_WITH_PRODUCT_SELECT)
+    .eq("is_active", true)
+    .eq("products.is_active", true)
+    .limit(200);
+
+  if (error || !data) {
+    throw new CatalogReadError();
+  }
+
+  const offers = await withAdminCosts(data.map((offer) => toStoreOffer(offer, locale)));
+  const pool = [...offers];
+
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  return pool.slice(0, limit);
+}
+
+/**
+ * Bestsellers from the last seven days, most bought first.
+ *
+ * Real sales lead the rail. When at least {@link BEST_SELLERS_PAD_THRESHOLD}
+ * distinct offers have sold, they stand alone; with fewer than that (or none),
+ * random active packs fill the rest up to `limit` — never the whole catalog —
+ * so the row stays populated without burying the genuine bestsellers.
+ */
+export async function getBestSellers(locale: Locale, limit: number): Promise<StoreOffer[]> {
+  const ranked = hasServiceRoleKey() ? await bestSellersReader(limit)() : [];
+
+  if (ranked.length === 0) {
+    return getRandomActiveOffers(locale, limit);
+  }
+
+  const offers = await getOffersByIds(locale, ranked);
+  const rank = new Map(ranked.map((id, index) => [id, index]));
+  const best = offers.sort(
+    (first, second) => (rank.get(first.id) ?? ranked.length) - (rank.get(second.id) ?? ranked.length),
+  );
+
+  if (best.length >= BEST_SELLERS_PAD_THRESHOLD) {
+    return best;
+  }
+
+  const realIds = new Set(best.map((offer) => offer.id));
+  const pad = (await getRandomActiveOffers(locale, limit)).filter((offer) => !realIds.has(offer.id));
+  const fill = pad.slice(0, limit - best.length);
+
+  return [...best, ...fill];
+}
+
+/** Whole-catalog paginated fallback for the bestsellers page when nothing sold. */
+async function listActiveOffersPage(locale: Locale, page: number): Promise<CatalogPage<StoreOffer>> {
+  const supabase = createSupabasePublicClient();
+  const { from, to } = catalogPageRange(page);
+  const { data, error, count } = await supabase
+    .from("offers")
+    .select(OFFER_WITH_PRODUCT_SELECT, { count: "exact" })
+    .eq("is_active", true)
+    .eq("products.is_active", true)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    throw new CatalogReadError();
+  }
+
+  const offers = await withAdminCosts(data.map((offer) => toStoreOffer(offer, locale)));
+  return toCatalogPage(offers, page, count ?? offers.length);
+}
+
+export async function getBestSellersPage(locale: Locale, page: number): Promise<CatalogPage<StoreOffer>> {
+  const { from, to } = catalogPageRange(page);
+  const ranked = hasServiceRoleKey() ? await bestSellersReader(BEST_SELLERS_SCAN_CAP)() : [];
+
+  if (ranked.length === 0) {
+    return listActiveOffersPage(locale, page);
+  }
+
+  const offers = await getOffersByIds(locale, ranked);
+  const rank = new Map(ranked.map((id, index) => [id, index]));
+  const ordered = offers.sort(
+    (first, second) => (rank.get(first.id) ?? ranked.length) - (rank.get(second.id) ?? ranked.length),
+  );
+
+  return toCatalogPage(ordered.slice(from, to), page, ordered.length);
 }
 
 export type CatalogSearchResult = {

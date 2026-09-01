@@ -62,6 +62,7 @@ export function SiteHeader({
     { href: `/${locale}`, label: messages.navigation.home },
     { href: `/${locale}/games`, label: messages.navigation.games },
     { href: `/${locale}/gift-cards`, label: messages.navigation.giftCards },
+    { href: `/${locale}/products`, label: messages.navigation.products },
     { href: `/${locale}/sale`, label: messages.navigation.offers },
   ];
 

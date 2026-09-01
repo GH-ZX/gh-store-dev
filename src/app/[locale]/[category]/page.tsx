@@ -1,56 +1,57 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { EmptyState, ErrorState } from "@/components/shared/states";
 import { ProductGrid } from "@/components/store/collections";
 import { CategoryBreadcrumb } from "@/components/store/category-breadcrumb";
-import { Pager } from "@/components/admin/pager";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { getProductCardLabels } from "@/lib/catalog/labels";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { buildStorePageMetadata } from "@/lib/seo-settings";
-import { parsePage } from "@/lib/paging";
-import { getActiveProductsPage, tryCatalogRead } from "@/lib/services/catalog.service";
+import { getProductsByCategory } from "@/lib/services/product-catalog.service";
+import { tryCatalogRead } from "@/lib/services/catalog.service";
 
-export async function generateMetadata({ params }: PageProps<"/[locale]/games">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/[locale]/[category]">): Promise<Metadata> {
   const locale = await resolveLocaleParam(params);
-  const messages = getMessages(locale, "catalog");
+  const { category } = await params;
+  const result = await tryCatalogRead(() => getProductsByCategory(locale, category));
+
+  if (!result.ok || !result.data) {
+    return {};
+  }
 
   return buildStorePageMetadata({
     locale,
-    path: "/games",
-    title: messages.games.title,
-    description: messages.games.description,
+    path: `/${category}`,
+    title: result.data.category.name,
+    description: result.data.category.description ?? "",
   });
 }
 
-export default async function GamesPage({ params, searchParams }: PageProps<"/[locale]/games">) {
+export default async function CategoryPage({ params }: PageProps<"/[locale]/[category]">) {
   const locale = await resolveLocaleParam(params);
-  const query = await searchParams;
-  const page = parsePage(query.page, 1000);
+  const { category } = await params;
   const common = getMessages(locale, "common");
   const messages = getMessages(locale, "catalog");
-  const result = await tryCatalogRead(() => getActiveProductsPage(locale, page));
+  const result = await tryCatalogRead(() => getProductsByCategory(locale, category));
 
   if (!result.ok) {
     return (
       <Section spacing="page">
         <ErrorState
-          title={messages.games.errorTitle}
-          description={messages.games.errorDescription}
+          title={messages.category.errorTitle}
+          description={messages.category.errorDescription}
           action={{ href: `/${locale}`, label: common.actions.browse }}
         />
       </Section>
     );
   }
 
-  const games = result.data;
-
-  if (page > games.pages) {
-    redirect(`/${locale}/games?page=${games.pages}`);
+  if (!result.data) {
+    notFound();
   }
 
-  const pageHref = (target: number) => `/${locale}/games?page=${target}`;
+  const { category: item, products } = result.data;
 
   return (
     <Section spacing="page" mesh>
@@ -59,44 +60,35 @@ export default async function GamesPage({ params, searchParams }: PageProps<"/[l
         homeLabel={common.navigation.home}
         productsHref={`/${locale}/products`}
         productsLabel={common.navigation.products}
-        categoryName={common.navigation.games}
+        categoryName={item.name}
         navLabel={messages.products.eyebrow}
       />
       <SectionHeader
         className="mt-6"
         as="h1"
-        eyebrow={messages.games.eyebrow}
-        title={messages.games.title}
-        subtitle={messages.games.description}
+        eyebrow={messages.category.eyebrow}
+        title={item.name}
+        subtitle={item.description ?? undefined}
       />
 
-      {games.items.length === 0 ? (
+      {products.length === 0 ? (
         <EmptyState
           className="mt-10"
-          title={messages.games.emptyTitle}
-          description={messages.games.emptyDescription}
+          title={messages.category.emptyTitle}
+          description={messages.category.emptyDescription}
         />
       ) : (
         <>
           <p className="mt-8 text-sm text-[var(--ink-muted)] tabular-nums">
-            {formatMessage(messages.games.count, { count: games.total }, locale)}
+            {formatMessage(messages.category.count, { count: products.length }, locale)}
           </p>
           <ProductGrid
             className="mt-4"
-            games={games.items}
+            games={products}
             locale={locale}
             labels={getProductCardLabels(common, messages)}
-            priorityCount={5}
+            priorityCount={0}
           />
-          <div className="mt-8">
-            <Pager
-              locale={locale}
-              hrefFor={pageHref}
-              page={games.page}
-              pages={games.pages}
-              labels={common.pagination}
-            />
-          </div>
         </>
       )}
     </Section>

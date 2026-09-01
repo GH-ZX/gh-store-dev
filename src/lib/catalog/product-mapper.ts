@@ -1,4 +1,5 @@
 import type { Locale } from "@/i18n/config";
+import type { ProductKind } from "@/lib/catalog/product-kind-mapper";
 
 export type ProductRow = {
   id: string;
@@ -12,19 +13,27 @@ export type ProductRow = {
   image_url: string | null;
   logo_url: string | null;
   is_featured: boolean;
+  product_kind: string | null;
   carousel_badge_ar?: string | null;
   carousel_badge_en?: string | null;
   carousel_focus_x?: number | null;
   carousel_focus_y?: number | null;
   carousel_color?: string | null;
   carousel_logo_tone?: string | null;
-  categories?: { slug: string } | { slug: string }[] | null;
+  categories?:
+    | { slug: string; name_en?: string | null; name_ar?: string | null }
+    | { slug: string; name_en?: string | null; name_ar?: string | null }[]
+    | null;
 };
 
 export type StoreProduct = {
   id: string;
   slug: string;
   categorySlug: string;
+  /** Localized display name of the product's category, e.g. "AI", "Services". */
+  categoryName: string | null;
+  /** Internal classification of the item, e.g. "subscription", "digital", "game". */
+  kind: ProductKind;
   name: string;
   description: string | null;
   pointsName: string | null;
@@ -48,7 +57,7 @@ export type StoreProduct = {
 
 /** Columns every product read selects, so a mapped product renders the same everywhere. */
 export const PRODUCT_SELECT =
-  "id, slug, name_ar, name_en, description_ar, description_en, points_name_ar, points_name_en, image_url, logo_url, is_featured, carousel_badge_ar, carousel_badge_en, carousel_focus_x, carousel_focus_y, carousel_color, carousel_logo_tone, categories!products_category_id_fkey(slug)";
+  "id, slug, name_ar, name_en, description_ar, description_en, points_name_ar, points_name_en, image_url, logo_url, is_featured, product_kind, carousel_badge_ar, carousel_badge_en, carousel_focus_x, carousel_focus_y, carousel_color, carousel_logo_tone, categories!products_category_id_fkey(slug, name_en, name_ar)";
 
 function focusPercentage(value: number | null | undefined): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -63,6 +72,16 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+function toProductKind(value: string | null | undefined): ProductKind {
+  return value === "game" ||
+    value === "digital" ||
+    value === "subscription" ||
+    value === "service" ||
+    value === "virtual_currency"
+    ? value
+    : "other";
+}
+
 export function toStoreProduct(row: ProductRow, locale: Locale): StoreProduct {
   const isArabic = locale === "ar";
   const cat = firstRelation(row.categories);
@@ -71,6 +90,8 @@ export function toStoreProduct(row: ProductRow, locale: Locale): StoreProduct {
     id: row.id,
     slug: row.slug,
     categorySlug: cat?.slug ?? "games",
+    categoryName: cat ? (isArabic ? (cat.name_ar ?? null) : (cat.name_en ?? null)) : null,
+    kind: toProductKind(row.product_kind),
     name: isArabic ? row.name_ar : row.name_en,
     description: isArabic ? row.description_ar : row.description_en,
     pointsName: isArabic ? row.points_name_ar : row.points_name_en,

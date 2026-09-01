@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { StoreProduct } from "@/lib/catalog/product-mapper";
+import type { ProductKind } from "@/lib/catalog/product-kind-mapper";
 import { cn } from "@/lib/cn";
 
 /**
@@ -17,9 +18,9 @@ import { cn } from "@/lib/cn";
 export type ProductCardProps = {
   product: StoreProduct;
   locale: Locale;
-  labels: { featured: string; from?: string };
+  labels: { featured: string; from?: string; productKinds?: Record<ProductKind, string> };
   /** Trailing metadata line, e.g. a "from $2.50" price. */
-  meta?: string;
+  meta?: { label: string; price: string };
   priority?: boolean;
   /**
    * Control layered over the tile, outside the link.
@@ -41,6 +42,13 @@ export function ProductCard({
   overlay,
   className,
 }: ProductCardProps) {
+  const kindBadge = (() => {
+    if (product.kind === "game" || product.kind === "other") {
+      return null;
+    }
+    return labels.productKinds?.[product.kind] ?? null;
+  })();
+
   const card = (
     <Link
       href={`/${locale}/${product.categorySlug}/${product.slug}`}
@@ -76,16 +84,16 @@ export function ProductCard({
         </div>
       ) : null}
 
-      <div className="relative flex items-end gap-3 p-4">
-        {product.logoUrl ? (
-          <span className="grid size-12 shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
-            <StoreImage src={product.logoUrl} alt="" sizes="3rem" />
-          </span>
-        ) : null}
+      {kindBadge ? (
+        <div className="absolute top-3 start-3">
+          <Badge tone="neutral">{kindBadge}</Badge>
+        </div>
+      ) : null}
 
+      <div dir="ltr" className="relative flex items-end gap-3 p-4">
         <div className="min-w-0 flex-1">
           {product.pointsName ? (
-            <p className="truncate text-[0.6875rem] font-semibold tracking-[0.1em] text-[var(--accent)] uppercase">
+            <p dir="ltr" className="truncate text-[0.6875rem] font-semibold tracking-[0.1em] text-[var(--accent)] uppercase">
               {product.pointsName}
             </p>
           ) : null}
@@ -94,17 +102,21 @@ export function ProductCard({
             * different game on a phone. The tile keeps its height from the
             * aspect ratio, so the second line costs nothing.
             */}
-          <h3 className="mt-1 line-clamp-2 text-sm leading-5 font-semibold tracking-tight text-[var(--ink)] sm:text-base sm:leading-6">
+          <h3 dir="ltr" className="mt-1 line-clamp-2 text-sm leading-5 font-semibold tracking-tight text-[var(--ink)] sm:text-base sm:leading-6">
             {product.name}
           </h3>
-          {meta ? <p className="mt-1 truncate text-xs text-[var(--ink-muted)] tabular-nums">{meta}</p> : null}
+          {meta ? (
+            <p className="mt-1 truncate text-xs text-[var(--ink-muted)]">
+              {meta.label} <bdi dir="ltr" className="tabular-nums">{meta.price}</bdi>
+            </p>
+          ) : null}
         </div>
 
         <span
           className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--line-strong)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] text-[var(--ink-soft)] backdrop-blur-md transition-[background-color,color,transform] duration-[var(--duration)] ease-[var(--ease-spring)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)] group-active:bg-[var(--accent)] group-active:text-[var(--accent-ink)]"
           aria-hidden="true"
         >
-          <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
+          <ArrowIcon direction="end" className="size-4" />
         </span>
       </div>
     </Link>

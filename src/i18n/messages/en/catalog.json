@@ -57,11 +57,48 @@
     "emptyTitle": "No current offers",
     "emptyDescription": "No discounts are running right now. Follow us to hear about the next offers first.",
     "errorTitle": "We could not load the offers",
+    "errorDescription": "No discounts are running right now. Follow us to hear about the next offers first."
+  },
+  "bestSellers": {
+    "eyebrow": "Bestsellers",
+    "title": "Most popular this week.",
+    "description": "The packages customers have been buying most in the last seven days.",
+    "count": "{count} offers available",
+    "emptyTitle": "No bestsellers yet",
+    "emptyDescription": "No sales are ranked yet. Check back soon to see what customers are buying.",
+    "errorTitle": "We could not load the bestsellers",
+    "errorDescription": "Please refresh the page in a moment."
+  },
+  "category": {
+    "eyebrow": "Catalog",
+    "count": "{count} products available",
+    "emptyTitle": "No products in this section yet",
+    "emptyDescription": "We are preparing this section. Check back soon to find products here.",
+    "errorTitle": "We could not load the catalog",
+    "errorDescription": "Please refresh the page in a moment."
+  },
+  "products": {
+    "eyebrow": "Catalog",
+    "title": "Browse every product.",
+    "description": "Everything GH Store sells, all in one place.",
+    "categoriesHeading": "All Products",
+    "count": "{count} products available",
+    "emptyTitle": "No products available yet",
+    "emptyDescription": "We are preparing the catalog. Check back soon to find products here.",
+    "errorTitle": "We could not load the catalog",
     "errorDescription": "Please refresh the page in a moment."
   },
   "offerTypes": {
     "topup": "Direct top-up",
     "gift_card": "Gift card",
     "redeem_code": "Redeem code"
+  },
+  "productKinds": {
+    "game": "Game",
+    "digital": "Digital",
+    "subscription": "Subscription",
+    "service": "Service",
+    "virtual_currency": "Virtual currency",
+    "other": "Other"
   }
 }

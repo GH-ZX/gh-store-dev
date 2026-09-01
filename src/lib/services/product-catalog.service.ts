@@ -1,5 +1,5 @@
 import type { Locale } from "@/i18n/config";
-import { PRODUCT_SELECT, toStoreProduct, type StoreProduct } from "@/lib/catalog/product-kind-mapper";
+import { PRODUCT_SELECT, toStoreProduct, type StoreProduct } from "@/lib/catalog/product-mapper";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { CatalogReadError } from "@/lib/services/catalog.service";
 

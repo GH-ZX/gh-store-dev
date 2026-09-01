@@ -26,12 +26,15 @@ function priceTeaser(
   game: StoreProduct,
   labels: { from?: string },
   locale: Locale,
-): string | undefined {
+): { label: string; price: string } | undefined {
   if (typeof game.priceFrom !== "number" || !labels.from) {
     return undefined;
   }
 
-  return `${labels.from} ${formatPrice(game.priceFrom, "USD", locale)}`;
+  return {
+    label: labels.from,
+    price: formatPrice(game.priceFrom, "USD", locale),
+  };
 }
 
 export type OfferCollectionProps = {

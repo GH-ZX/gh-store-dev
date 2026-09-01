@@ -13,11 +13,12 @@ const row = {
   image_url: null,
   logo_url: null,
   is_featured: true,
+  product_kind: "game",
   carousel_badge_ar: "الأكثر طلبًا",
   carousel_badge_en: "Most wanted",
   carousel_focus_x: 30,
   carousel_focus_y: 20,
-  categories: [{ slug: "games" }],
+  categories: [{ slug: "games", name_en: "Games", name_ar: "الألعاب" }],
 };
 
 describe("catalog product mapper", () => {
@@ -26,6 +27,8 @@ describe("catalog product mapper", () => {
       id: "game-1",
       slug: "valorant",
       categorySlug: "games",
+      categoryName: "الألعاب",
+      kind: "game",
       name: "فالورانت",
       description: "اشحن نقاط فالورانت.",
       pointsName: "نقاط",
@@ -45,6 +48,7 @@ describe("catalog product mapper", () => {
     expect(product.name).toBe("Valorant");
     expect(product.description).toBe("Top up Valorant points.");
     expect(product.carouselBadge).toBe("Most wanted");
+    expect(product.categoryName).toBe("Games");
   });
 
   it("centres artwork when no focus point is set", () => {
@@ -71,5 +75,12 @@ describe("catalog product mapper", () => {
       "dark",
     );
     expect(toStoreProduct({ ...row, carousel_logo_tone: "#' weird" }, "en").carouselLogoTone).toBeNull();
+  });
+
+  it("maps a valid product kind and defaults an unknown one", () => {
+    expect(toStoreProduct({ ...row, product_kind: "subscription" }, "en").kind).toBe("subscription");
+    expect(toStoreProduct({ ...row, product_kind: "digital" }, "en").kind).toBe("digital");
+    expect(toStoreProduct({ ...row, product_kind: "bogus" }, "en").kind).toBe("other");
+    expect(toStoreProduct({ ...row, product_kind: null }, "en").kind).toBe("other");
   });
 });

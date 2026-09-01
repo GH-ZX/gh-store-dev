@@ -125,7 +125,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
                 className="mt-6"
                 games={results.games}
                 locale={locale}
-                labels={getProductCardLabels(common)}
+                labels={getProductCardLabels(common, getMessages(locale, "catalog"))}
                 priorityCount={5}
               />
             </div>

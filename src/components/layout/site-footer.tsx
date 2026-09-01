@@ -28,6 +28,7 @@ export function SiteFooter({ locale, messages, socialLinks, year, brandName }: S
       links: [
         { href: `/${locale}/games`, label: messages.navigation.games },
         { href: `/${locale}/gift-cards`, label: messages.navigation.giftCards },
+        { href: `/${locale}/products`, label: messages.navigation.products },
         { href: `/${locale}/sale`, label: messages.links.sale },
         { href: `/${locale}/search`, label: messages.links.search },
       ],

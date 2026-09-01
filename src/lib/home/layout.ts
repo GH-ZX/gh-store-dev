@@ -326,14 +326,18 @@ export function getHomeSectionPagePath(section: HomeSection): string | null {
   switch (section.type) {
     case "games":
     case "product_picks":
-    case "category":
       return "/games";
+    // A "browse by category" section points at the whole catalog.
+    case "category":
+      return "/products";
     case "gift_cards":
       return "/gift-cards";
     case "sale_offers":
     case "offer_picks":
-    case "suggested_offers":
       return "/sale";
+    // The bestsellers row links to its own ranking page.
+    case "suggested_offers":
+      return "/best-sellers";
     case "how_it_works":
       return "/how";
     case "social_links":

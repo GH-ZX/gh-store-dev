@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/shared/states";
 import { DescriptionText } from "@/components/store/description-text";
+import { ProductBreadcrumb } from "@/components/store/product-breadcrumb";
 import { OfferGrid } from "@/components/store/collections";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge, Eyebrow } from "@/components/ui/badge";
-import { ChevronIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { getOfferCardLabels } from "@/lib/catalog/labels";
@@ -54,15 +53,13 @@ export default async function ProductDetailPage({ params }: PageProps<"/[locale]
   return (
     <>
       <Section spacing="page" mesh>
-        <nav aria-label={messages.gameDetail.backToGames}>
-          <Link
-            href={`/${locale}/games`}
-            className="inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
-          >
-            <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
-            {messages.gameDetail.backToGames}
-          </Link>
-        </nav>
+        <ProductBreadcrumb
+          locale={locale}
+          homeLabel={common.navigation.home}
+          categorySlug={game.categorySlug}
+          categoryName={game.categoryName ?? common.navigation.games}
+          productName={game.name}
+        />
 
         <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_minmax(0,26rem)] lg:items-center">
           <div>
@@ -115,7 +112,7 @@ export default async function ProductDetailPage({ params }: PageProps<"/[locale]
             className="mt-8"
             title={messages.gameDetail.emptyTitle}
             description={messages.gameDetail.emptyDescription}
-            action={{ href: `/${locale}/games`, label: messages.gameDetail.backToGames }}
+            action={{ href: `/${locale}/${game.categorySlug}`, label: game.categoryName ?? common.navigation.games }}
           />
         ) : (
           <OfferGrid

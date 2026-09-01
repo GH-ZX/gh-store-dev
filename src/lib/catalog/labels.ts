@@ -1,4 +1,5 @@
 import type { OfferCardLabels } from "@/components/store/offer-card";
+import type { ProductKind } from "@/lib/catalog/product-kind-mapper";
 import type { CatalogMessages, CommonMessages } from "@/i18n/messages";
 
 /**
@@ -22,9 +23,20 @@ export function getOfferCardLabels(common: CommonMessages, catalog: CatalogMessa
   };
 }
 
-export function getProductCardLabels(common: CommonMessages): { featured: string; from: string } {
+export type ProductCardLabels = {
+  featured: string;
+  from?: string;
+  /** Localized display name for each product kind, for the tile badge. */
+  productKinds: Record<ProductKind, string>;
+};
+
+export function getProductCardLabels(
+  common: CommonMessages,
+  catalog: CatalogMessages,
+): ProductCardLabels {
   return {
     featured: common.badges.featured,
     from: common.price.from,
+    productKinds: catalog.productKinds,
   };
 }

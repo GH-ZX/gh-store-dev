@@ -9,9 +9,9 @@ import {
   getProductsByCategories,
   getProductsByIds,
   getOffersByIds,
+  getBestSellers,
   getOffersByType,
   getSaleOffers,
-  getSuggestedOffers,
   getTrendingOffers,
 } from "@/lib/services/catalog.service";
 import { getPublishedReviews, type StoreReview } from "@/lib/services/reviews.service";
@@ -134,7 +134,7 @@ async function resolveSection(
       return offers.length > 0 ? { kind: "offers", section, offers } : null;
     }
     case "suggested_offers": {
-      const offers = await safely(section.type, () => getSuggestedOffers(locale, section.limit), []);
+      const offers = await safely(section.type, () => getBestSellers(locale, section.limit), []);
       return offers.length > 0 ? { kind: "offers", section, offers } : null;
     }
     case "offer_picks": {

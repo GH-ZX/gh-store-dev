@@ -199,7 +199,7 @@ export function HomeSections({
                 className="mt-8"
                 games={resolved.games}
                 locale={locale}
-                labels={getProductCardLabels(common)}
+                labels={getProductCardLabels(common, catalog)}
                 renderOverlay={
                   liveEdit
                     ? (game) => (

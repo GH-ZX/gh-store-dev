@@ -84,8 +84,8 @@ export function SectionHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between",
-        align === "center" && "sm:flex-col sm:items-center sm:text-center",
+        "flex flex-row flex-wrap items-end justify-between gap-x-5 gap-y-4",
+        align === "center" && "flex-col sm:flex-col sm:items-center sm:text-center",
         className,
       )}
     >

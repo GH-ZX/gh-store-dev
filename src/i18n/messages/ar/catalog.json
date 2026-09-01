@@ -59,9 +59,46 @@
     "errorTitle": "تعذر تحميل العروض",
     "errorDescription": "حاول تحديث الصفحة بعد قليل."
   },
+  "bestSellers": {
+    "eyebrow": "الأكثر مبيعًا",
+    "title": "الأكثر مبيعًا هذا الأسبوع.",
+    "description": "الباقات التي اشتراها الزبائن أكثر خلال آخر سبعة أيام.",
+    "count": "{count} عرض متاح",
+    "emptyTitle": "لا توجد مبيعات بعد",
+    "emptyDescription": "لم تُصنَّف المبيعات بعد. عُد قريبًا لترى ما يشتريه الزبائن.",
+    "errorTitle": "تعذر تحميل الأكثر مبيعًا",
+    "errorDescription": "حاول تحديث الصفحة بعد قليل."
+  },
+  "category": {
+    "eyebrow": "الكتالوج",
+    "count": "{count} منتج متاح",
+    "emptyTitle": "لا توجد منتجات في هذا القسم بعد",
+    "emptyDescription": "نجهّز هذا القسم حاليًا. عُد قريبًا لتجد المنتجات هنا.",
+    "errorTitle": "تعذر تحميل الكتالوج",
+    "errorDescription": "حاول تحديث الصفحة بعد قليل."
+  },
+  "products": {
+    "eyebrow": "الكتالوج",
+    "title": "تصفح كل المنتجات.",
+    "description": "كل ما تبيعه GH Store في مكان واحد.",
+    "categoriesHeading": "كل المنتجات",
+    "count": "{count} منتج متاح",
+    "emptyTitle": "لا توجد منتجات متاحة الآن",
+    "emptyDescription": "نجهّز الكتالوج حاليًا. عُد قريبًا لتجد المنتجات هنا.",
+    "errorTitle": "تعذر تحميل الكتالوج",
+    "errorDescription": "حاول تحديث الصفحة بعد قليل."
+  },
   "offerTypes": {
     "topup": "شحن مباشر",
     "gift_card": "بطاقة هدايا",
     "redeem_code": "كود استرداد"
+  },
+  "productKinds": {
+    "game": "لعبة",
+    "digital": "رقمي",
+    "subscription": "اشتراك",
+    "service": "خدمة",
+    "virtual_currency": "عملة افتراضية",
+    "other": "أخرى"
   }
 }
