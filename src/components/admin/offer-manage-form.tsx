@@ -14,7 +14,7 @@ import {
   deleteOfferAction,
 } from "@/app/[locale]/dashboard/catalog/actions";
 import { toSlug } from "@/lib/catalog/slug";
-import type { AdminGameOffer } from "@/lib/services/admin-catalog.service";
+import type { AdminProductOffer } from "@/lib/services/admin-catalog.service";
 
 /**
  * Adding a package by hand, and removing one.
@@ -30,7 +30,7 @@ import type { AdminGameOffer } from "@/lib/services/admin-catalog.service";
 export type OfferManageFormProps = {
   locale: Locale;
   gameId: string;
-  offers: AdminGameOffer[];
+  offers: AdminProductOffer[];
   messages: AdminMessages["catalog"]["manageOffers"];
   errors: AdminMessages["catalog"]["errors"];
   /** Storefront labels for `offer_type`, so the select never shows a column value. */

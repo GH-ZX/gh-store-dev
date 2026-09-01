@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { ProductCard } from "@/components/store/game-card";
+import { ProductCard } from "@/components/store/product-card";
 import { OfferCard, type OfferCardLabels } from "@/components/store/offer-card";
 import { Rail, RailItem } from "@/components/ui/rail";
 import type { Locale } from "@/i18n/config";
 import { formatPrice } from "@/lib/format/money";
-import type { StoreProduct } from "@/lib/catalog/game-mapper";
+import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import { cn } from "@/lib/cn";
 

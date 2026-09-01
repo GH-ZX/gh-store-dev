@@ -13,7 +13,7 @@ import { formatMessage, getMessages } from "@/i18n/messages";
 import { cn } from "@/lib/cn";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import {
-  listAdminGames,
+  listAdminProducts,
   listAdminProviderCategories,
 } from "@/lib/services/admin-catalog.service";
 
@@ -85,7 +85,7 @@ export default async function CatalogPage({
   const messages = getMessages(locale, "admin").catalog;
   const filters = parseFilters(await searchParams);
   const [games, providerCategories] = await Promise.all([
-    listAdminGames({
+    listAdminProducts({
       query: filters.query,
       publishedOnly: filters.publishedOnly,
       category: filters.category,

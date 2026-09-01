@@ -1,11 +1,11 @@
 import type { Locale } from "@/i18n/config";
-import type { StoreProduct } from "@/lib/catalog/game-mapper";
+import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import type { HomeSection } from "@/lib/home/layout";
 import { logFailure } from "@/lib/logging/logger";
 import {
   getActiveProducts,
-  getCarouselGames,
+  getCarouselProducts,
   getProductsByCategories,
   getProductsByIds,
   getOffersByIds,
@@ -193,6 +193,6 @@ export async function getHomeCarousel(locale: Locale, layout: HomeSection[]): Pr
 
   return {
     section,
-    products: await safely("carousel", () => getCarouselGames(locale, section.limit), []),
+    products: await safely("carousel", () => getCarouselProducts(locale, section.limit), []),
   };
 }

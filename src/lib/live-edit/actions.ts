@@ -7,9 +7,9 @@ import { formFlag, formText } from "@/lib/forms/form-data";
 import { HOME_SECTION_LIMIT_MAX, HOME_SECTION_LIMIT_MIN } from "@/lib/home/layout";
 import { logFailure } from "@/lib/logging/logger";
 import {
-  GameNotFoundError,
-  getAdminGame,
-  updateAdminGame,
+  ProductNotFoundError,
+  getAdminProduct,
+  updateAdminProduct,
 } from "@/lib/services/admin-catalog.service";
 import { getWebsiteSettings, saveHomeLayout } from "@/lib/services/admin-website.service";
 import type { LiveEditState } from "@/lib/live-edit/action-state";
@@ -125,7 +125,7 @@ export async function saveHomeSectionCopyAction(
  * visitor needs — and widening it so an editor that opens once could avoid a
  * round trip would put an admin's data in every visitor's payload.
  */
-export type GamePresentation = {
+export type ProductPresentation = {
   nameAr: string;
   nameEn: string;
   descriptionAr: string;
@@ -140,17 +140,17 @@ export type GamePresentation = {
   carouselColor: string;
 };
 
-export type LoadGamePresentationResult =
-  | { ok: true; game: GamePresentation }
+export type LoadProductPresentationResult =
+  | { ok: true; game: ProductPresentation }
   | { ok: false; error: "not_found" | "unknown" };
 
-export async function loadGamePresentationAction(
+export async function loadProductPresentationAction(
   gameId: string,
-): Promise<LoadGamePresentationResult> {
+): Promise<LoadProductPresentationResult> {
   await requireAdmin();
 
   try {
-    const detail = await getAdminGame(gameId);
+    const detail = await getAdminProduct(gameId);
 
     if (!detail) {
       return { ok: false, error: "not_found" };
@@ -178,7 +178,7 @@ export async function loadGamePresentationAction(
       },
     };
   } catch (error) {
-    if (error instanceof GameNotFoundError) {
+    if (error instanceof ProductNotFoundError) {
       return { ok: false, error: "not_found" };
     }
 
@@ -212,7 +212,7 @@ const gamePresentationSchema = z.object({
  * a page an owner is browsing — the catalog page owns them, with its own
  * warnings.
  */
-export async function saveGamePresentationAction(
+export async function saveProductPresentationAction(
   _state: LiveEditState,
   formData: FormData,
 ): Promise<LiveEditState> {
@@ -241,7 +241,7 @@ export async function saveGamePresentationAction(
   const input = parsed.data;
 
   try {
-    const detail = await getAdminGame(input.game_id);
+    const detail = await getAdminProduct(input.game_id);
 
     if (!detail) {
       return failure("not_found");
@@ -250,7 +250,7 @@ export async function saveGamePresentationAction(
     // Read, merge, write: the fields this panel does not show — slug, sort
     // order, publication, the points name — are carried across from the row as
     // it stands rather than being re-sent by the browser and trusted.
-    await updateAdminGame(input.game_id, {
+    await updateAdminProduct(input.game_id, {
       ...detail.game,
       nameAr: input.name_ar,
       nameEn: input.name_en,
@@ -267,7 +267,7 @@ export async function saveGamePresentationAction(
       carouselColor: input.carousel_color ? input.carousel_color : null,
     });
   } catch (error) {
-    if (error instanceof GameNotFoundError) {
+    if (error instanceof ProductNotFoundError) {
       return failure("not_found");
     }
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminCard } from "@/components/admin/admin-form";
-import { GameEditForm } from "@/components/admin/game-edit-form";
+import { ProductEditForm } from "@/components/admin/product-edit-form";
 import { OfferManageForm } from "@/components/admin/offer-manage-form";
 import { OfferRowsForm } from "@/components/admin/offer-rows-form";
 import { ProviderLinkForm } from "@/components/admin/provider-link-form";
@@ -12,7 +12,7 @@ import { ChevronIcon, LinkIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
-import { getAdminGame, listAdminCategories } from "@/lib/services/admin-catalog.service";
+import { getAdminProduct, listAdminCategories } from "@/lib/services/admin-catalog.service";
 import { getStockSummaries, listStockItems } from "@/lib/services/stock.service";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -27,11 +27,11 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  */
 export default async function CatalogGamePage({
   params,
-}: PageProps<"/[locale]/dashboard/catalog/[gameId]">) {
+}: PageProps<"/[locale]/dashboard/catalog/[productId]">) {
   const locale = await resolveLocaleParam(params);
-  const { gameId } = await params;
+  const { productId } = await params;
   const messages = getMessages(locale, "admin").catalog;
-  const detail = await getAdminGame(gameId);
+  const detail = await getAdminProduct(productId);
   const categories = await listAdminCategories();
 
   if (!detail) {
@@ -143,7 +143,7 @@ export default async function CatalogGamePage({
         />
       </AdminCard>
 
-      <GameEditForm
+        <ProductEditForm
         locale={locale}
         messages={messages.game}
         errors={messages.errors}

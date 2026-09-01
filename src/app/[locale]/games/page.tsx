@@ -5,7 +5,7 @@ import { ProductGrid } from "@/components/store/collections";
 import { Pager } from "@/components/admin/pager";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
-import { getGameCardLabels } from "@/lib/catalog/labels";
+import { getProductCardLabels } from "@/lib/catalog/labels";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { buildStorePageMetadata } from "@/lib/seo-settings";
 import { parsePage } from "@/lib/paging";
@@ -75,7 +75,7 @@ export default async function GamesPage({ params, searchParams }: PageProps<"/[l
             className="mt-4"
             games={games.items}
             locale={locale}
-            labels={getGameCardLabels(common)}
+            labels={getProductCardLabels(common)}
             priorityCount={5}
           />
           <div className="mt-8">

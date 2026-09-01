@@ -8,18 +8,18 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
 import {
-  createAdminGame,
+  createAdminProduct,
   createAdminOffer,
-  deleteAdminGame,
+  deleteAdminProduct,
   deleteAdminOffer,
-  GameNotFoundError,
+  ProductNotFoundError,
   OfferNotFoundError,
   OfferSlugTakenError,
   PRICING_MODES,
   ProviderLinkInvalidError,
-  setAdminGameProviderLink,
+  setAdminProductProviderLink,
   SlugTakenError,
-  updateAdminGame,
+  updateAdminProduct,
   updateAdminOffers,
   type AdminOfferUpdate,
 } from "@/lib/services/admin-catalog.service";
@@ -114,7 +114,7 @@ function errorKey(error: unknown): string {
     return "slug_taken";
   }
 
-  if (error instanceof GameNotFoundError) {
+  if (error instanceof ProductNotFoundError) {
     return "not_found";
   }
 
@@ -144,7 +144,7 @@ function revalidateCatalog(locale: Locale, gameId: string): void {
   revalidatePath(`/${locale}/dashboard/catalog/${gameId}`);
 }
 
-export async function updateGameAction(
+export async function updateProductAction(
   _state: CatalogActionState,
   formData: FormData,
 ): Promise<CatalogActionState> {
@@ -181,7 +181,7 @@ export async function updateGameAction(
   const { gameId, ...fields } = parsed.data;
 
   try {
-    await updateAdminGame(gameId, { ...fields, categoryId: fields.categoryId || null });
+    await updateAdminProduct(gameId, { ...fields, categoryId: fields.categoryId || null });
   } catch (error) {
     return failed(errorKey(error));
   }
@@ -191,7 +191,7 @@ export async function updateGameAction(
   return { ...INITIAL_CATALOG_STATE, notice: "saved" };
 }
 
-export async function deleteGameAction(
+export async function deleteProductAction(
   _state: CatalogActionState,
   formData: FormData,
 ): Promise<CatalogActionState> {
@@ -206,7 +206,7 @@ export async function deleteGameAction(
   const locale = resolveLocale(formText(formData, "locale"));
 
   try {
-    await deleteAdminGame(parsed.data.gameId);
+    await deleteAdminProduct(parsed.data.gameId);
   } catch (error) {
     return failed(errorKey(error));
   }
@@ -248,7 +248,7 @@ export async function saveProviderLinkAction(
   const locale = resolveLocale(formText(formData, "locale"));
 
   try {
-    await setAdminGameProviderLink(parsed.data.gameId, parsed.data.url);
+    await setAdminProductProviderLink(parsed.data.gameId, parsed.data.url);
   } catch (error) {
     return failed(errorKey(error));
   }
@@ -315,7 +315,7 @@ const createGameSchema = z.object({
   slug: z.string().trim().min(1).max(80).regex(SLUG_PATTERN),
 });
 
-export async function createGameAction(
+export async function createProductAction(
   _state: CatalogActionState,
   formData: FormData,
 ): Promise<CatalogActionState> {
@@ -335,7 +335,7 @@ export async function createGameAction(
   let gameId: string;
 
   try {
-    gameId = await createAdminGame(parsed.data);
+    gameId = await createAdminProduct(parsed.data);
   } catch (error) {
     return failed(errorKey(error));
   }
@@ -543,7 +543,7 @@ export async function deleteStockItemAction(
  * their `carousel_order` values so the customer-facing carousel reflects
  * the new arrangement immediately after revalidation.
  */
-export async function reorderCarouselGames(
+export async function reorderCarouselProducts(
   gameAId: string,
   gameBId: string,
 ): Promise<{ success?: boolean; error?: string }> {

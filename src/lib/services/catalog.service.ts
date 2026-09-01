@@ -4,7 +4,7 @@ import {
   normalizeOfferInputFields,
   resolveCheckoutFieldKeys,
 } from "@/lib/catalog/checkout-fields";
-import { PRODUCT_SELECT, toStoreProduct, type StoreProduct } from "@/lib/catalog/game-mapper";
+import { PRODUCT_SELECT, toStoreProduct, type StoreProduct } from "@/lib/catalog/product-mapper";
 import {
   OFFER_SELECT,
   OFFER_WITH_PRODUCT_SELECT,
@@ -226,7 +226,7 @@ export async function getActiveProductsPage(locale: Locale, page: number): Promi
   return toCatalogPage(games, page, total);
 }
 
-export async function getCarouselGames(locale: Locale, limit: number): Promise<StoreProduct[]> {
+export async function getCarouselProducts(locale: Locale, limit: number): Promise<StoreProduct[]> {
   const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("products")

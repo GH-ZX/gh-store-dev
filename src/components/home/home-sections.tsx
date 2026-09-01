@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GameEditor } from "@/components/live-edit/game-editor";
+import { ProductEditor } from "@/components/live-edit/product-editor";
 import { SectionEditor } from "@/components/live-edit/section-editor";
 import { ReviewCard } from "@/components/store/review-card";
 import { ProductGrid, OfferGrid } from "@/components/store/collections";
@@ -10,7 +10,7 @@ import { Rail, RailItem } from "@/components/ui/rail";
 import { Section, SectionHeader } from "@/components/ui/section";
 import type { Locale } from "@/i18n/config";
 import type { AdminMessages, CatalogMessages, CommonMessages, HomeMessages } from "@/i18n/messages";
-import { getGameCardLabels, getOfferCardLabels } from "@/lib/catalog/labels";
+import { getProductCardLabels, getOfferCardLabels } from "@/lib/catalog/labels";
 import {
   getHomeSectionPagePath,
   getHomeSectionSubtitle,
@@ -199,11 +199,11 @@ export function HomeSections({
                 className="mt-8"
                 games={resolved.games}
                 locale={locale}
-                labels={getGameCardLabels(common)}
+                labels={getProductCardLabels(common)}
                 renderOverlay={
                   liveEdit
                     ? (game) => (
-                        <GameEditor
+                        <ProductEditor
                           gameId={game.id}
                           gameSlug={game.slug}
                           label={game.name}

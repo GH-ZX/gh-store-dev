@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminCard } from "@/components/admin/admin-form";
-import { GameCreateForm } from "@/components/admin/game-create-form";
+import { ProductCreateForm } from "@/components/admin/product-create-form";
 import { ChevronIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
@@ -43,7 +43,7 @@ export default async function NewGamePage({
       </div>
 
       <AdminCard title={messages.create.formTitle} description={messages.create.formDescription}>
-        <GameCreateForm locale={locale} messages={messages.create} errors={messages.errors} />
+        <ProductCreateForm locale={locale} messages={messages.create} errors={messages.errors} />
       </AdminCard>
     </div>
   );

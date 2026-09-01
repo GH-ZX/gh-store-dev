@@ -33,10 +33,10 @@ export class SlugTakenError extends Error {
 }
 
 /** Raised when the edited game disappeared between loading the form and saving it. */
-export class GameNotFoundError extends Error {
+export class ProductNotFoundError extends Error {
   constructor() {
     super("That game no longer exists.");
-    this.name = "GameNotFoundError";
+    this.name = "ProductNotFoundError";
   }
 }
 
@@ -65,7 +65,7 @@ export function toLogoTone(value: string | null | undefined): LogoTone | null {
   return LOGO_TONES.includes(value as LogoTone) ? (value as LogoTone) : null;
 }
 
-export type AdminGameListItem = {
+export type AdminProductListItem = {
   id: string;
   slug: string;
   nameAr: string;
@@ -105,7 +105,7 @@ function orIlike(columns: string[], token: string): string {
  * dashboard list needs every total at once, and a single round trip keeps the
  * page fast as the catalog grows.
  */
-async function countOffersByGame(client: Client, gameIds: string[]): Promise<Map<string, number>> {
+async function countOffersByProduct(client: Client, gameIds: string[]): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
 
   if (gameIds.length === 0) {
@@ -150,7 +150,7 @@ function textMetadata(metadata: unknown, key: string): string | null {
     : null;
 }
 
-async function providerInfoByGame(client: Client, gameIds: string[]): Promise<Map<string, ProviderGameInfo>> {
+async function providerInfoByProduct(client: Client, gameIds: string[]): Promise<Map<string, ProviderGameInfo>> {
   const info = new Map<string, ProviderGameInfo>();
 
   if (gameIds.length === 0) {
@@ -186,7 +186,7 @@ async function providerInfoByGame(client: Client, gameIds: string[]): Promise<Ma
   return info;
 }
 
-export type ListAdminGamesOptions = {
+export type ListAdminProductsOptions = {
   query?: string;
   publishedOnly?: boolean;
   category?: string;
@@ -227,11 +227,11 @@ export async function listAdminProviderCategories(): Promise<AdminProviderCatego
   return [...categories.values()].sort((first, second) => first.title.localeCompare(second.title));
 }
 
-export async function listAdminGames({
+export async function listAdminProducts({
   query,
   publishedOnly = false,
   category,
-}: ListAdminGamesOptions = {}): Promise<AdminGameListItem[]> {
+}: ListAdminProductsOptions = {}): Promise<AdminProductListItem[]> {
   await requireAdmin();
 
   const client = await createSupabaseServerClient();
@@ -259,8 +259,8 @@ export async function listAdminGames({
 
   const gameIds = data.map((game) => game.id);
   const [offerCounts, providerInfo] = await Promise.all([
-    countOffersByGame(client, gameIds),
-    providerInfoByGame(client, gameIds),
+    countOffersByProduct(client, gameIds),
+    providerInfoByProduct(client, gameIds),
   ]);
 
   return data
@@ -289,7 +289,7 @@ export async function listAdminGames({
 }
 
 /** The editable half of a game, shared by the read and the write. */
-export type AdminGameFields = {
+export type AdminProductFields = {
   categoryId: string | null;
   nameAr: string;
   nameEn: string;
@@ -311,7 +311,7 @@ export type AdminGameFields = {
   carouselColor: string | null;
 };
 
-export type AdminGame = AdminGameFields & {
+export type AdminProduct = AdminProductFields & {
   id: string;
   providerName: string | null;
   providerCode: string | null;
@@ -320,7 +320,7 @@ export type AdminGame = AdminGameFields & {
   providerCategoryTitle: string | null;
 };
 
-export type AdminGameOffer = {
+export type AdminProductOffer = {
   id: string;
   slug: string;
   nameAr: string;
@@ -340,15 +340,15 @@ export type AdminGameOffer = {
   deliveryKind: string | null;
 };
 
-export type AdminGameDetail = {
-  game: AdminGame;
-  offers: AdminGameOffer[];
+export type AdminProductDetail = {
+  game: AdminProduct;
+  offers: AdminProductOffer[];
 };
 
 const OFFER_COLUMNS =
   "id, slug, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, delivery_kind, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
 
-export async function getAdminGame(gameId: string): Promise<AdminGameDetail | null> {
+export async function getAdminProduct(gameId: string): Promise<AdminProductDetail | null> {
   await requireAdmin();
 
   if (!UUID_PATTERN.test(gameId)) {
@@ -379,7 +379,7 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
       .eq("product_id", gameId)
       .order("sort_order", { ascending: true })
       .order("price", { ascending: true }),
-    providerInfoByGame(client, [gameId]),
+    providerInfoByProduct(client, [gameId]),
   ]);
 
   if (offers.error) {
@@ -443,11 +443,11 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
   };
 }
 
-export async function updateAdminGame(gameId: string, fields: AdminGameFields): Promise<void> {
+export async function updateAdminProduct(gameId: string, fields: AdminProductFields): Promise<void> {
   await requireAdmin();
 
   if (!UUID_PATTERN.test(gameId)) {
-    throw new GameNotFoundError();
+    throw new ProductNotFoundError();
   }
 
   const client = await createSupabaseServerClient();
@@ -506,7 +506,7 @@ export async function updateAdminGame(gameId: string, fields: AdminGameFields): 
   }
 
   if (!data) {
-    throw new GameNotFoundError();
+    throw new ProductNotFoundError();
   }
 }
 
@@ -536,7 +536,7 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
   await requireAdmin();
 
   if (!UUID_PATTERN.test(gameId)) {
-    throw new GameNotFoundError();
+    throw new ProductNotFoundError();
   }
 
   if (rows.length === 0) {
@@ -641,11 +641,11 @@ export class ProviderLinkInvalidError extends Error {
  * game is updated so an operator who briefly maps two suppliers keeps both
  * links honest, and the product core receives the change through its trigger.
  */
-export async function setAdminGameProviderLink(gameId: string, rawUrl: string): Promise<void> {
+export async function setAdminProductProviderLink(gameId: string, rawUrl: string): Promise<void> {
   const admin = await requireAdmin();
 
   if (!UUID_PATTERN.test(gameId)) {
-    throw new GameNotFoundError();
+    throw new ProductNotFoundError();
   }
 
   const url = rawUrl.trim();
@@ -678,11 +678,11 @@ export async function setAdminGameProviderLink(gameId: string, rawUrl: string): 
   }
 }
 
-export async function deleteAdminGame(gameId: string): Promise<void> {
+export async function deleteAdminProduct(gameId: string): Promise<void> {
   const admin = await requireAdmin();
 
   if (!UUID_PATTERN.test(gameId)) {
-    throw new GameNotFoundError();
+    throw new ProductNotFoundError();
   }
 
   const client = await createSupabaseServerClient();
@@ -698,7 +698,7 @@ export async function deleteAdminGame(gameId: string): Promise<void> {
   }
 
   if (!data) {
-    throw new GameNotFoundError();
+    throw new ProductNotFoundError();
   }
 
   await recordAudit({
@@ -727,7 +727,7 @@ export type RemoveImportedResult =
  * voucher category arrives under a derived code, so both screens resolve
  * through the same mapping table and neither needs to know about the other.
  */
-export async function removeImportedGame(
+export async function removeImportedProduct(
   providerCode: string,
   providerName: string = G2BULK_PROVIDER_NAME,
 ): Promise<RemoveImportedResult> {
@@ -756,11 +756,11 @@ export async function removeImportedGame(
     | null;
 
   try {
-    await deleteAdminGame(mapping.game_id);
+    await deleteAdminProduct(mapping.game_id);
   } catch (deleteError) {
     return {
       ok: false,
-      reason: deleteError instanceof GameNotFoundError ? "not_imported" : "unknown",
+      reason: deleteError instanceof ProductNotFoundError ? "not_imported" : "unknown",
     };
   }
 
@@ -798,7 +798,7 @@ export class OfferNotFoundError extends Error {
  * moment to decide it is ready is after its packages exist — not while typing
  * its name.
  */
-export async function createAdminGame(input: {
+export async function createAdminProduct(input: {
   nameAr: string;
   nameEn: string;
   slug: string;
@@ -856,7 +856,7 @@ export async function createAdminOffer(
   await requireAdmin();
 
   if (!UUID_PATTERN.test(gameId)) {
-    throw new GameNotFoundError();
+    throw new ProductNotFoundError();
   }
 
   const client = await createSupabaseServerClient();
@@ -871,7 +871,7 @@ export async function createAdminOffer(
   }
 
   if (!game) {
-    throw new GameNotFoundError();
+    throw new ProductNotFoundError();
   }
 
   const { data, error } = await client

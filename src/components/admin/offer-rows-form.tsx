@@ -21,7 +21,7 @@ import {
 import { updateOffersAction } from "@/app/[locale]/dashboard/catalog/actions";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format/money";
-import type { AdminGameOffer, PricingMode } from "@/lib/services/admin-catalog.service";
+import type { AdminProductOffer, PricingMode } from "@/lib/services/admin-catalog.service";
 
 /**
  * Package price editor.
@@ -41,7 +41,7 @@ export type OfferRowsFormProps = {
   /** Storefront labels for `offer_type`, so a row never shows a raw column value. */
   offerTypes: CatalogMessages["offerTypes"];
   gameId: string;
-  offers: AdminGameOffer[];
+  offers: AdminProductOffer[];
 };
 
 /** Kept in step with the service's union by `satisfies`, not by convention. */

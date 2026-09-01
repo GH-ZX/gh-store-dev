@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { TrashIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import { removeImportedGameAction } from "@/app/[locale]/dashboard/providers/actions";
+import { removeImportedProductAction } from "@/app/[locale]/dashboard/providers/actions";
 import type { RemoveImportedResult } from "@/lib/services/admin-catalog.service";
 
 /**
@@ -52,7 +52,7 @@ export function ImportRemoveButton({
     }
 
     startTransition(async () => {
-      const result = await removeImportedGameAction({ code, provider, locale });
+      const result = await removeImportedProductAction({ code, provider, locale });
 
       onDone(result, code);
 

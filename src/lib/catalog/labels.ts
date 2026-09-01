@@ -22,7 +22,7 @@ export function getOfferCardLabels(common: CommonMessages, catalog: CatalogMessa
   };
 }
 
-export function getGameCardLabels(common: CommonMessages): { featured: string; from: string } {
+export function getProductCardLabels(common: CommonMessages): { featured: string; from: string } {
   return {
     featured: common.badges.featured,
     from: common.price.from,

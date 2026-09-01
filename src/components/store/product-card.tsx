@@ -4,7 +4,7 @@ import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import type { StoreProduct } from "@/lib/catalog/game-mapper";
+import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import { cn } from "@/lib/cn";
 
 /**

@@ -9,7 +9,7 @@ import {
   INITIAL_CATALOG_STATE,
   type CatalogActionState,
 } from "@/app/[locale]/dashboard/catalog/action-state";
-import { createGameAction } from "@/app/[locale]/dashboard/catalog/actions";
+import { createProductAction } from "@/app/[locale]/dashboard/catalog/actions";
 import { toSlug } from "@/lib/catalog/slug";
 
 /**
@@ -22,15 +22,15 @@ import { toSlug } from "@/lib/catalog/slug";
  * after which it is left alone: a slug is a public address, and quietly
  * rewriting one an operator has chosen is worse than making them fill a field.
  */
-export type GameCreateFormProps = {
+export type ProductCreateFormProps = {
   locale: Locale;
   messages: AdminMessages["catalog"]["create"];
   errors: AdminMessages["catalog"]["errors"];
 };
 
-export function GameCreateForm({ locale, messages, errors }: GameCreateFormProps) {
+export function ProductCreateForm({ locale, messages, errors }: ProductCreateFormProps) {
   const [state, formAction, pending] = useActionState<CatalogActionState, FormData>(
-    createGameAction,
+    createProductAction,
     INITIAL_CATALOG_STATE,
   );
   const [slug, setSlug] = useState("");

@@ -27,7 +27,7 @@ import {
   saveMaxStoreSettings,
 } from "@/lib/services/admin-settings.service";
 import { IgdbClient, IgdbError } from "@/providers/igdb/client";
-import { removeImportedGame, type RemoveImportedResult } from "@/lib/services/admin-catalog.service";
+import { removeImportedProduct, type RemoveImportedResult } from "@/lib/services/admin-catalog.service";
 import { importG2BulkGames } from "@/lib/services/g2bulk-import.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -257,7 +257,7 @@ export async function importG2BulkGamesAction(
  * The game, its packages, and its provider mappings go together; orders that
  * bought them keep their snapshots.
  */
-export async function removeImportedGameAction(input: {
+export async function removeImportedProductAction(input: {
   code: string;
   locale: string;
   provider?: string;
@@ -274,7 +274,7 @@ export async function removeImportedGameAction(input: {
   let result: RemoveImportedResult;
 
   try {
-    result = await removeImportedGame(code, input.provider);
+    result = await removeImportedProduct(code, input.provider);
   } catch (error) {
     logFailure("admin.providers", "imported_game_remove_failed", error, { code });
 

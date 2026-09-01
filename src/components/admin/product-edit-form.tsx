@@ -18,10 +18,10 @@ import {
   type CatalogActionState,
 } from "@/app/[locale]/dashboard/catalog/action-state";
 import {
-  deleteGameAction,
-  updateGameAction,
+  deleteProductAction,
+  updateProductAction,
 } from "@/app/[locale]/dashboard/catalog/actions";
-import type { AdminCategory, AdminGame } from "@/lib/services/admin-catalog.service";
+import type { AdminCategory, AdminProduct } from "@/lib/services/admin-catalog.service";
 
 /**
  * Game editor.
@@ -34,12 +34,12 @@ import type { AdminCategory, AdminGame } from "@/lib/services/admin-catalog.serv
  * Latin-only values — the slug, URLs, numbers — are forced to `dir="ltr"` so
  * they stay readable on the Arabic (RTL) dashboard.
  */
-export type GameEditFormProps = {
+export type ProductEditFormProps = {
   locale: Locale;
   messages: AdminMessages["catalog"]["game"];
   errors: AdminMessages["catalog"]["errors"];
   categories: AdminCategory[];
-  game: AdminGame;
+  game: AdminProduct;
 };
 
 function resolveError(
@@ -53,13 +53,13 @@ function resolveError(
   return errors[key as keyof AdminMessages["catalog"]["errors"]] ?? errors.unknown;
 }
 
-export function GameEditForm({ locale, messages, errors, categories, game }: GameEditFormProps) {
+export function ProductEditForm({ locale, messages, errors, categories, game }: ProductEditFormProps) {
   const [saveState, saveAction, saving] = useActionState<CatalogActionState, FormData>(
-    updateGameAction,
+    updateProductAction,
     INITIAL_CATALOG_STATE,
   );
   const [deleteState, deleteAction, deleting] = useActionState<CatalogActionState, FormData>(
-    deleteGameAction,
+    deleteProductAction,
     INITIAL_CATALOG_STATE,
   );
 

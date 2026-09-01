@@ -14,9 +14,9 @@ import {
   type LiveEditState,
 } from "@/lib/live-edit/action-state";
 import {
-  loadGamePresentationAction,
-  saveGamePresentationAction,
-  type GamePresentation,
+  loadProductPresentationAction,
+  saveProductPresentationAction,
+  type ProductPresentation,
 } from "@/lib/live-edit/actions";
 
 /**
@@ -32,7 +32,7 @@ import {
  * The panel edits only what it shows; the action reads the row, merges these
  * fields into it and writes it back, so nothing this form omits is cleared.
  */
-export type GameEditorProps = {
+export type ProductEditorProps = {
   gameId: string;
   gameSlug: string;
   /** Display name for the panel heading and the trigger's label. */
@@ -42,20 +42,20 @@ export type GameEditorProps = {
   className?: string;
 };
 
-export function GameEditor({
+export function ProductEditor({
   gameId,
   gameSlug,
   label,
   locale,
   messages,
   className,
-}: GameEditorProps) {
+}: ProductEditorProps) {
   const editing = useLiveEdit();
   const [open, setOpen] = useState(false);
-  const [game, setGame] = useState<GamePresentation | null>(null);
+  const [game, setGame] = useState<ProductPresentation | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [state, formAction, pending] = useActionState<LiveEditState, FormData>(
-    saveGamePresentationAction,
+    saveProductPresentationAction,
     INITIAL_LIVE_EDIT_STATE,
   );
 
@@ -90,7 +90,7 @@ export function GameEditor({
     setOpen(true);
     setLoadError(null);
 
-    const result = await loadGamePresentationAction(gameId);
+    const result = await loadProductPresentationAction(gameId);
 
     if (result.ok) {
       setGame(result.game);

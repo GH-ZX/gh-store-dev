@@ -6,7 +6,7 @@ import { ProductGrid, OfferGrid } from "@/components/store/collections";
 import { SearchIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { formatMessage, getMessages } from "@/i18n/messages";
-import { getGameCardLabels, getOfferCardLabels } from "@/lib/catalog/labels";
+import { getProductCardLabels, getOfferCardLabels } from "@/lib/catalog/labels";
 import { parseSearchParams } from "@/lib/catalog/search";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { buildStorePageMetadata } from "@/lib/seo-settings";
@@ -125,7 +125,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
                 className="mt-6"
                 games={results.games}
                 locale={locale}
-                labels={getGameCardLabels(common)}
+                labels={getProductCardLabels(common)}
                 priorityCount={5}
               />
             </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toStoreProduct } from "@/lib/catalog/game-mapper";
+import { toStoreProduct } from "@/lib/catalog/product-mapper";
 
 const row = {
   id: "game-1",

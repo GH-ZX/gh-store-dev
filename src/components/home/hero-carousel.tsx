@@ -4,16 +4,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useEmblaCarousel from "embla-carousel-react";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { GameEditor } from "@/components/live-edit/game-editor";
+import { ProductEditor } from "@/components/live-edit/product-editor";
 import { StoreImage } from "@/components/store/store-image";
 import { Badge } from "@/components/ui/badge";
 import { ArrowIcon, ChevronIcon, CloseIcon, PauseIcon, PencilIcon, PlayIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
-import type { StoreProduct } from "@/lib/catalog/game-mapper";
+import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import { cn } from "@/lib/cn";
 import { formatMessage } from "@/i18n/format";
-import { reorderCarouselGames } from "@/app/[locale]/dashboard/catalog/actions";
+import { reorderCarouselProducts } from "@/app/[locale]/dashboard/catalog/actions";
 
 /** Combined Embla state to avoid three separate re-renders per slide change. */
 type EmblaState = { selected: number; canPrev: boolean; canNext: boolean };
@@ -236,7 +236,7 @@ export function HeroCarousel({
       const fromId = products[fromIndex].id;
       const toId = products[toIndex].id;
 
-      const result = await reorderCarouselGames(fromId, toId);
+      const result = await reorderCarouselProducts(fromId, toId);
       if (result.success) {
         router.refresh();
       }
@@ -409,7 +409,7 @@ export function HeroCarousel({
                     */}
                   {liveEdit && isActive ? (
                     <div className="absolute top-4 start-4 z-10">
-                      <GameEditor
+                      <ProductEditor
                         gameId={product.id}
                         gameSlug={product.slug}
                         label={product.name}
