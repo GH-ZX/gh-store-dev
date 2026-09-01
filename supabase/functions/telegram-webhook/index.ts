@@ -150,11 +150,11 @@ const TEXTS: Record<Locale, Texts> = {
     orderStatus: "الحالة",
     catalog: "🛍 الكتالوج",
     categories: "اختر تصنيفًا:",
-    games: "الألعاب المتاحة:",
+    games: "المنتجات المتاحة:",
     offers: "اختر باقتك:",
     back: "↩ رجوع",
     emptyCatalog: "لا يوجد كتالوج بعد. عد لاحقًا.",
-    noOffers: "لا توجد باقات متاحة لهذا اللعبة حاليًا.",
+    noOffers: "لا توجد باقات متاحة لهذا المنتج حاليًا.",
     deals: "🔥 العروض",
     dealsEmpty: "لا توجد عروض حاليًا.",
     search: "🔍 بحث",
@@ -227,11 +227,11 @@ const TEXTS: Record<Locale, Texts> = {
     orderStatus: "Status",
     catalog: "🛍 Catalog",
     categories: "Pick a category:",
-    games: "Available games:",
+    games: "Available products:",
     offers: "Pick a package:",
     back: "↩ Back",
     emptyCatalog: "The catalog is empty for now. Check back later.",
-    noOffers: "No packages available for this game right now.",
+    noOffers: "No packages available for this product right now.",
     deals: "🔥 Deals",
     dealsEmpty: "No deals right now.",
     search: "🔍 Search",
@@ -766,7 +766,7 @@ async function readCategories(
   }));
 }
 
-async function readGames(
+async function readProducts(
   supabase: ReturnType<typeof createClient>,
   locale: Locale,
   categoryId: string | null,
@@ -795,7 +795,7 @@ async function readGames(
 async function readOffers(
   supabase: ReturnType<typeof createClient>,
   locale: Locale,
-  gameId: string,
+  productId: string,
 ): Promise<
   {
     slug: string;
@@ -803,20 +803,20 @@ async function readOffers(
     price: number;
     currency: string;
     original_price: number | null;
-    gameSlug: string | null;
+    productSlug: string | null;
   }[]
 > {
   const { data } = await supabase
     .from("offers")
-    .select("slug, name_ar, name_en, price, currency, original_price, games!inner (slug)")
-    .eq("game_id", gameId)
+    .select("slug, name_ar, name_en, price, currency, original_price, products!inner (slug)")
+    .eq("product_id", productId)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true })
     .limit(15);
 
   return (data ?? []).map((row) => {
-    const game = Array.isArray(row.games) ? row.games[0] : row.games;
+    const product = Array.isArray(row.products) ? row.products[0] : row.products;
 
     return {
       slug: row.slug,
@@ -824,7 +824,7 @@ async function readOffers(
       price: row.price,
       currency: row.currency,
       original_price: row.original_price,
-      gameSlug: game?.slug ?? null,
+      productSlug: product?.slug ?? null,
     };
   });
 }
@@ -860,7 +860,7 @@ async function showCatalog(
   else await sendText(botToken, chatId, t(locale, "categories"), kb);
 }
 
-async function showGames(
+async function showProducts(
   supabase: ReturnType<typeof createClient>,
   botToken: string,
   chatId: number,
@@ -868,13 +868,13 @@ async function showGames(
   categoryId: string,
   messageId?: number,
 ): Promise<void> {
-  let games = await readGames(supabase, locale, categoryId);
+  let products = await readProducts(supabase, locale, categoryId);
 
-  if (games.length === 0) {
-    games = await readGames(supabase, locale, null);
+  if (products.length === 0) {
+    products = await readProducts(supabase, locale, null);
   }
 
-  if (games.length === 0) {
+  if (products.length === 0) {
     if (messageId) await editText(botToken, chatId, messageId, t(locale, "noOffers"));
     else await sendText(botToken, chatId, t(locale, "noOffers"));
     return;
@@ -882,7 +882,7 @@ async function showGames(
 
   const kb = {
     inline_keyboard: [
-      ...games.map((game) => [{ text: game.name, callback_data: `game:${game.id}` }]),
+      ...products.map((product) => [{ text: product.name, callback_data: `product:${product.id}` }]),
       backRow(locale, "catalog"),
     ],
   };
@@ -895,10 +895,10 @@ async function showOffers(
   botToken: string,
   chatId: number,
   locale: Locale,
-  gameId: string,
+  productId: string,
   messageId?: number,
 ): Promise<void> {
-  const offers = await readOffers(supabase, locale, gameId);
+  const offers = await readOffers(supabase, locale, productId);
 
   if (offers.length === 0) {
     if (messageId) await editText(botToken, chatId, messageId, t(locale, "noOffers"));
@@ -906,10 +906,10 @@ async function showOffers(
     return;
   }
 
-  const { data: game } = await supabase
+  const { data: product } = await supabase
     .from("products")
     .select("category_id")
-    .eq("id", gameId)
+    .eq("id", productId)
     .maybeSingle();
 
   const unit = (currency: string) => (currency === "SYP" ? "SYP" : currency === "EUR" ? "€" : "$");
@@ -936,7 +936,7 @@ async function showOffers(
           callback_data: "bp:cancel",
         },
       ],
-      backRow(locale, game?.category_id ? `cat:${game.category_id}` : "catalog"),
+      backRow(locale, product?.category_id ? `cat:${product.category_id}` : "catalog"),
     ],
   };
   if (messageId) await editText(botToken, chatId, messageId, t(locale, "offers"), kb);
@@ -980,10 +980,10 @@ async function readOfferForBuy(
   supabase: ReturnType<typeof createClient>,
   locale: Locale,
   offerId: string,
-): Promise<{ name: string; price: number; currency: string; gameId: string; gameName: string } | null> {
+): Promise<{ name: string; price: number; currency: string; productId: string; productName: string } | null> {
   const { data } = await supabase
     .from("offers")
-    .select("name_ar, name_en, price, currency, games!inner (id, name_ar, name_en)")
+    .select("name_ar, name_en, price, currency, products!inner (id, name_ar, name_en)")
     .eq("id", offerId)
     .eq("is_active", true)
     .maybeSingle();
@@ -992,14 +992,14 @@ async function readOfferForBuy(
     return null;
   }
 
-  const game = Array.isArray(data.games) ? data.games[0] : data.games;
+  const product = Array.isArray(data.products) ? data.products[0] : data.products;
 
   return {
     name: locale === "ar" ? data.name_ar : data.name_en,
     price: data.price,
     currency: data.currency,
-    gameId: game?.id ?? "",
-    gameName: (game?.name_ar || game?.name_en) ?? "",
+    productId: product?.id ?? "",
+    productName: (product?.name_ar || product?.name_en) ?? "",
   };
 }
 
@@ -1046,7 +1046,7 @@ async function startBuy(
   const wallet = await readWallet(supabase, userId);
   const balanceText = wallet ? `${t(locale, "balance")}: <b>${fmtMoney(wallet.balance, wallet.currency)}</b>` : t(locale, "walletEmpty");
 
-  await writePref(supabase, chatId, { pending: encodeBuyState({ o: offerId, g: offer.gameId, s: "pay" }) });
+  await writePref(supabase, chatId, { pending: encodeBuyState({ o: offerId, g: offer.productId, s: "pay" }) });
 
   const text = [
     `🛒 <b>${offer.name}</b>`,
@@ -1319,7 +1319,7 @@ async function cancelBuy(
 }
 
 /**
- * Deals and featured games — the text-only version of the homepage sections.
+ * Deals and featured products — the text-only version of the homepage sections.
  */
 async function readDeals(
   supabase: ReturnType<typeof createClient>,
@@ -1327,21 +1327,21 @@ async function readDeals(
 ): Promise<{ name: string; price: number; currency: string }[]> {
   const { data } = await supabase
     .from("offers")
-    .select("name_ar, name_en, price, currency, games!inner (name_ar, name_en)")
+    .select("name_ar, name_en, price, currency, products!inner (name_ar, name_en)")
     .eq("is_active", true)
     .eq("is_sale", true)
-    .eq("games.is_active", true)
+    .eq("products.is_active", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true })
     .limit(10);
 
   return (data ?? []).map((row) => {
-    const game = Array.isArray(row.games) ? row.games[0] : row.games;
+    const product = Array.isArray(row.products) ? row.products[0] : row.products;
     const name = locale === "ar" ? row.name_ar : row.name_en;
-    const gameName = game ? (locale === "ar" ? game.name_ar : game.name_en) : null;
+    const productName = product ? (locale === "ar" ? product.name_ar : product.name_en) : null;
 
     return {
-      name: gameName ? `${gameName} — ${name}` : name,
+      name: productName ? `${productName} — ${name}` : name,
       price: row.price,
       currency: row.currency,
     };
@@ -1379,19 +1379,19 @@ async function showDeals(
   );
 }
 
-/** Search games and offers by name — the bot's /search. */
+/** Search products and offers by name — the bot's /search. */
 async function searchCatalogText(
   supabase: ReturnType<typeof createClient>,
   locale: Locale,
   query: string,
-): Promise<{ games: { name: string; slug: string }[]; offers: { name: string; price: number; currency: string }[] }> {
+): Promise<{ products: { name: string; slug: string }[]; offers: { name: string; price: number; currency: string }[] }> {
   const token = query.trim().slice(0, 60);
 
   if (!token) {
-    return { games: [], offers: [] };
+    return { products: [], offers: [] };
   }
 
-  const [gamesResult, offersResult] = await Promise.all([
+  const [productsResult, offersResult] = await Promise.all([
     supabase
       .from("products")
       .select("name_ar, name_en, slug")
@@ -1407,9 +1407,9 @@ async function searchCatalogText(
   ]);
 
   return {
-    games: (gamesResult.data ?? []).map((game) => ({
-      name: locale === "ar" ? game.name_ar : game.name_en,
-      slug: game.slug,
+    products: (productsResult.data ?? []).map((product) => ({
+      name: locale === "ar" ? product.name_ar : product.name_en,
+      slug: product.slug,
     })),
     offers: (offersResult.data ?? []).map((offer) => ({
       name: locale === "ar" ? offer.name_ar : offer.name_en,
@@ -1427,18 +1427,18 @@ async function showSearchResults(
   query: string,
   messageId?: number,
 ): Promise<void> {
-  const { games, offers } = await searchCatalogText(supabase, locale, query);
+  const { products, offers } = await searchCatalogText(supabase, locale, query);
 
-  if (games.length === 0 && offers.length === 0) {
+  if (products.length === 0 && offers.length === 0) {
     await reply(botToken, chatId, t(locale, "searchEmpty"), undefined, messageId);
     return;
   }
 
   const lines: string[] = [];
 
-  if (games.length > 0) {
+  if (products.length > 0) {
     lines.push(t(locale, "games"));
-    lines.push(...games.map((game) => `🎮 ${game.name} — https://gh-store.me/${locale}/games/${game.slug}`));
+    lines.push(...products.map((product) => `🛍 ${product.name} — https://gh-store.me/${locale}/games/${product.slug}`));
   }
 
   if (offers.length > 0) {
@@ -2065,12 +2065,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
           if (data.startsWith("cat:")) {
             const categoryId = data.slice(4);
             if (categoryId) {
-              await showGames(supabase, botToken, chatId, locale, categoryId, mid);
+              await showProducts(supabase, botToken, chatId, locale, categoryId, mid);
             }
-          } else if (data.startsWith("game:")) {
-            const gameId = data.slice(5);
-            if (gameId) {
-              await showOffers(supabase, botToken, chatId, locale, gameId, mid);
+          } else if (data.startsWith("product:")) {
+            const productId = data.slice("product:".length);
+            if (productId) {
+              await showOffers(supabase, botToken, chatId, locale, productId, mid);
             }
           } else if (data.startsWith("buy:")) {
             const offerId = data.slice(4);
