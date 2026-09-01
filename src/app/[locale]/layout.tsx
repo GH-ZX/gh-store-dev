@@ -5,8 +5,8 @@ import { SupportFab } from "@/components/support/support-fab";
 import { getLocaleDirection, isLocale, type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { BRAND, buildBrandName } from "@/lib/brand";
-import { getG2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
 import { getHeaderWalletPanel } from "@/lib/services/header-wallets.service";
+import { getShamCashWalletSnapshot } from "@/lib/services/shamcash-wallet.service";
 import { getUnreadNotificationCount } from "@/lib/services/notification.service";
 import { getSessionSummary } from "@/lib/services/session.service";
 import { getPublicStoreSettings } from "@/lib/services/settings.service";
@@ -30,14 +30,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
   const search = getMessages(locale, "search");
   const [settings, session] = await Promise.all([getPublicStoreSettings(), getSessionSummary()]);
   /*
-   * Only an administrator sees the supplier balance, so only their render pays
-   * for the provider call. The unread count is one indexed count and is needed
+   * Only an administrator sees the wallet balance, so only their render pays
+   * for reading it. The unread count is one indexed count and is needed
    * for every signed-in reader, so the two run together. The wallet panel for
    * the account menus rides along in the same breath: own balance for a
    * customer, every customer wallet for an administrator.
    */
   const [wallet, unreadCount, walletPanel] = await Promise.all([
-    session?.isAdmin ? getG2BulkWalletSnapshot() : Promise.resolve(null),
+    session?.isAdmin ? getShamCashWalletSnapshot() : Promise.resolve(null),
     getUnreadNotificationCount(session?.userId ?? null),
     session ? getHeaderWalletPanel(session) : Promise.resolve(null),
   ]);

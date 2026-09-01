@@ -9,7 +9,7 @@ import type { CommonMessages } from "@/i18n/messages";
 import { signOutAction } from "@/lib/auth/actions";
 import { formatPrice } from "@/lib/format/money";
 import type { SessionSummary } from "@/lib/services/session.service";
-import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
+import type { ShamCashWalletSnapshot } from "@/lib/services/shamcash-wallet.service";
 import type { HeaderWalletPanel } from "@/lib/wallet-panel";
 
 /**
@@ -22,14 +22,14 @@ import type { HeaderWalletPanel } from "@/lib/wallet-panel";
  * page without touching this element, so an open menu would otherwise sit on
  * top of wherever the click led.
  *
- * The supplier wallet pill is admin-only — it is operational information, and
+ * The ShamCash wallet pill is admin-only — it is operational information, and
  * fetching it for a visitor would call the provider for no reason.
  */
 export type AccountMenuProps = {
   locale: Locale;
   messages: CommonMessages;
   session: SessionSummary | null;
-  wallet: G2BulkWalletSnapshot | null;
+  wallet: ShamCashWalletSnapshot | null;
   /**
    * Wallet balances for the panel below the profile entry — the customer's own
    * balance, or every customer wallet for an administrator. Null when signed out.
@@ -61,14 +61,14 @@ export function AccountMenu({
     <div className="flex shrink-0 items-center gap-2">
       {session.isAdmin && wallet ? (
         <Link
-          href={`/${locale}/dashboard/providers`}
+          href={`/${locale}/dashboard`}
           title={`${messages.account.walletLabel} · ${wallet.username}`}
           className="hidden min-h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)] hover:text-[var(--ink)] md:flex"
         >
           <WalletIcon className="size-4 shrink-0 text-[var(--accent)]" />
           <span className="sr-only">{messages.account.walletLabel}</span>
           <span className="tabular-nums" dir="ltr">
-            {formatPrice(wallet.balance, "USD", locale)}
+            {formatPrice(wallet.balance, wallet.currency, locale)}
           </span>
         </Link>
       ) : null}
@@ -168,7 +168,7 @@ export function AccountMenu({
             <p className="rounded-[var(--radius-control)] bg-[var(--shell)] px-3 py-2 text-xs text-[var(--ink-muted)] md:hidden">
               {messages.account.walletLabel}:{" "}
               <span className="tabular-nums" dir="ltr">
-                {formatPrice(wallet.balance, "USD", locale)}
+                {formatPrice(wallet.balance, wallet.currency, locale)}
               </span>
             </p>
           ) : null}

@@ -14,7 +14,7 @@ import { SearchIcon, WalletIcon } from "@/components/ui/icons";
 import { getLocaleDirection, type Locale } from "@/i18n/config";
 import type { CommonMessages, SearchMessages } from "@/i18n/messages";
 import { signOutAction } from "@/lib/auth/actions";
-import type { G2BulkWalletSnapshot } from "@/lib/services/g2bulk-wallet.service";
+import type { ShamCashWalletSnapshot } from "@/lib/services/shamcash-wallet.service";
 import type { SessionSummary } from "@/lib/services/session.service";
 import {
   formatHeaderWalletAmount,
@@ -33,8 +33,8 @@ export type SiteHeaderProps = {
   messages: CommonMessages;
   searchMessages: SearchMessages;
   session: SessionSummary | null;
-  /** Supplier balance, shown to administrators only. */
-  wallet: G2BulkWalletSnapshot | null;
+  /** ShamCash balance, shown to administrators only. */
+  wallet: ShamCashWalletSnapshot | null;
   /**
    * Wallet balances for the account menus — own balance for a customer, every
    * customer wallet for an administrator. Null when signed out.
