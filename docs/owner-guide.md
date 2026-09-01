@@ -36,6 +36,54 @@ All listed areas are implemented. Before opening sales, verify the provider keys
 contact channels, payment methods, callback secrets, and visible catalog entries
 from the dashboard.
 
+## Catalog: Product Kind
+
+Every product is classified by a **kind** — what the customer receives. Kind is
+separate from the **category** a product appears under, and it is shown as a
+badge on product cards.
+
+### How it is set
+
+- On **provider import**, each product's kind is assigned automatically (see
+  defaults below).
+- You can always change it afterwards: **Dashboard -> Catalog** -> open the
+  product -> **Product kind** -> **Save product**.
+- Products you create by hand start as **Other**; set a kind from the editor.
+
+### Kinds
+
+| Kind | Meaning | Typical examples |
+|------|---------|------------------|
+| **Game top-up** | Balance/currency added to a game account | PUBG UC, diamond packs, game UID top-ups |
+| **Digital product** | A downloadable or delivered digital item | Redeem codes, gift cards, accounts, emails |
+| **Subscription** | Recurring access, sold per period | Premium app or service subscriptions |
+| **Service** | A performed service rather than a delivered item | Phone-number services, social services, support |
+| **Virtual currency** | Store-only or in-game currency used as payment | Wallet credits, platform points |
+| **Other** | None of the above / unset | — |
+
+### Import defaults per provider
+
+| Provider | Kind the import sets |
+|----------|----------------------|
+| G2Bulk (game top-ups) | **Game top-up** |
+| G2Bulk (gift cards / redeem codes) | **Digital product** |
+| MaxStore | **Digital product** |
+| BatStore | **Digital product** |
+| Manually created products | **Other** (until changed) |
+
+G2Bulk games are genuine game top-ups, so they import as **Game top-up**. MaxStore
+and BatStore each carry several product types (games, apps, accounts, services),
+so their imports default to **Digital product** — review the kind after importing
+and set anything that is clearly a subscription, service, or virtual currency.
+
+### Terminology note
+
+The storefront and dashboard now refer to the generic catalog item as a
+**product**, and **game** is simply one *kind* of product. Existing shared links
+and provider-specific concepts (regions, input fields, provider mappings) keep
+their historical "game" naming; only the public, generic wording changed to
+"product".
+
 ## Automation and Provider Monitoring
 
 - The Cloudflare Worker checks delayed orders every five minutes through the

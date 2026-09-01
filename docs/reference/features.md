@@ -18,6 +18,9 @@
 
 - Dashboard overview and operational statistics.
 - Game and offer CRUD through focused forms.
+- Product kind classification, set automatically on import and editable from the
+  product editor (game top-up, digital, subscription, service, virtual currency,
+  or other).
 - Markup, fixed price, charm pricing, promotions, and sale controls.
 - G2Bulk catalog sync, provider wallet, health, and fulfillment controls.
 - Manual recharge approval and Sam API configuration.
