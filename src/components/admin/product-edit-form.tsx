@@ -22,6 +22,7 @@ import {
   updateProductAction,
 } from "@/app/[locale]/dashboard/catalog/actions";
 import type { AdminCategory, AdminProduct } from "@/lib/services/admin-catalog.service";
+import { PRODUCT_KINDS } from "@/lib/services/admin-catalog.service";
 
 /**
  * Game editor.
@@ -93,6 +94,16 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
                 label: `${category.nameAr} / ${category.nameEn}`,
               })),
             ]}
+          />
+          <SelectField
+            label={messages.productKindLabel}
+            hint={messages.productKindHint}
+            name="productKind"
+            defaultValue={game.productKind}
+            options={PRODUCT_KINDS.map((kind) => ({
+              value: kind,
+              label: messages.productKinds[kind],
+            }))}
           />
         </div>
 

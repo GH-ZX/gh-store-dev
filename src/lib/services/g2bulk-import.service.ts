@@ -133,6 +133,7 @@ async function importOneGame(
         name_ar: providerName,
         name_en: providerName,
         image_url: imageUrl,
+        product_kind: "game",
         is_active: options.publish,
       })
       .select("id")

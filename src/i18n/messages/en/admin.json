@@ -601,6 +601,16 @@
       "categoryLabel": "Category",
       "categoryHint": "The category this product appears under in the store.",
       "categoryNone": "No category",
+      "productKindLabel": "Product kind",
+      "productKindHint": "What the customer receives. Shown as a badge on product cards.",
+      "productKinds": {
+        "game": "Game top-up",
+        "digital": "Digital product",
+        "subscription": "Subscription",
+        "service": "Service",
+        "virtual_currency": "Virtual currency",
+        "other": "Other"
+      },
       "slug": "URL slug",
       "slugHint": "Changing this changes the product's URL in the store.",
       "pointsNameAr": "Currency name in Arabic",

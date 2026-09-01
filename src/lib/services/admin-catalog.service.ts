@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/auth/guards";
 import { toSearchTokens } from "@/lib/catalog/search";
+import type { ProductKind } from "@/lib/catalog/product-kind-mapper";
 import { recordAudit } from "@/lib/services/admin-audit.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
@@ -23,6 +24,21 @@ import type { Database } from "@/types/database";
  */
 
 type Client = SupabaseClient<Database>;
+
+export const PRODUCT_KINDS = [
+  "game",
+  "digital",
+  "subscription",
+  "service",
+  "virtual_currency",
+  "other",
+] as const satisfies readonly ProductKind[];
+
+function toProductKindValue(value: string | null): ProductKind {
+  return value != null && (PRODUCT_KINDS as readonly string[]).includes(value)
+    ? (value as ProductKind)
+    : "other";
+}
 
 /** Raised when a slug an admin typed already belongs to another game. */
 export class SlugTakenError extends Error {
@@ -291,6 +307,7 @@ export async function listAdminProducts({
 /** The editable half of a game, shared by the read and the write. */
 export type AdminProductFields = {
   categoryId: string | null;
+  productKind: ProductKind;
   nameAr: string;
   nameEn: string;
   slug: string;
@@ -359,7 +376,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
   const { data: game, error } = await client
     .from("products")
     .select(
-      "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order, carousel_logo_tone, carousel_color",
+      "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order, carousel_logo_tone, carousel_color, product_kind",
     )
     .eq("id", gameId)
     .maybeSingle();
@@ -390,6 +407,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
     game: {
       id: game.id,
       categoryId: game.category_id,
+      productKind: toProductKindValue(game.product_kind),
       slug: game.slug,
       nameAr: game.name_ar,
       nameEn: game.name_en,
@@ -473,6 +491,7 @@ export async function updateAdminProduct(gameId: string, fields: AdminProductFie
     .from("products")
     .update({
       category_id: fields.categoryId,
+      product_kind: fields.productKind,
       name_ar: fields.nameAr,
       name_en: fields.nameEn,
       slug: fields.slug,
@@ -802,6 +821,7 @@ export async function createAdminProduct(input: {
   nameAr: string;
   nameEn: string;
   slug: string;
+  productKind: ProductKind;
 }): Promise<string> {
   await requireAdmin();
 
@@ -812,6 +832,7 @@ export async function createAdminProduct(input: {
       name_ar: input.nameAr,
       name_en: input.nameEn,
       slug: input.slug,
+      product_kind: input.productKind,
       is_active: false,
     })
     .select("id")

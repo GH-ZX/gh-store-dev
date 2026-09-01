@@ -601,6 +601,16 @@
       "categoryLabel": "القسم",
       "categoryHint": "القسم الذي يظهر فيه المنتج في المتجر.",
       "categoryNone": "بدون قسم",
+      "productKindLabel": "نوع المنتج",
+      "productKindHint": "ما يستلمه العميل. يظهر كشارة على بطاقات المنتجات.",
+      "productKinds": {
+        "game": "شحن لعبة",
+        "digital": "منتج رقمي",
+        "subscription": "اشتراك",
+        "service": "خدمة",
+        "virtual_currency": "عملة افتراضية",
+        "other": "أخرى"
+      },
       "slug": "المعرّف في الرابط (slug)",
       "slugHint": "تغييره يغيّر رابط المنتج في المتجر.",
       "pointsNameAr": "اسم العملة بالعربية",

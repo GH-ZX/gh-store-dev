@@ -16,6 +16,7 @@ import {
   OfferNotFoundError,
   OfferSlugTakenError,
   PRICING_MODES,
+  PRODUCT_KINDS,
   ProviderLinkInvalidError,
   setAdminProductProviderLink,
   SlugTakenError,
@@ -63,6 +64,7 @@ const optionalNumber = (max: number) =>
 const gameSchema = z.object({
   gameId: z.uuid(),
   categoryId: z.union([z.literal(""), z.uuid()]),
+  productKind: z.enum(PRODUCT_KINDS),
   nameAr: z.string().trim().min(1).max(160),
   nameEn: z.string().trim().min(1).max(160),
   slug: z.string().trim().min(1).max(80).regex(SLUG_PATTERN),
@@ -153,6 +155,7 @@ export async function updateProductAction(
   const parsed = gameSchema.safeParse({
     gameId: formText(formData, "gameId"),
     categoryId: formText(formData, "categoryId") ?? "",
+    productKind: formText(formData, "productKind") ?? "other",
     nameAr: formText(formData, "nameAr"),
     nameEn: formText(formData, "nameEn"),
     slug: formText(formData, "slug"),
@@ -335,7 +338,7 @@ export async function createProductAction(
   let gameId: string;
 
   try {
-    gameId = await createAdminProduct(parsed.data);
+    gameId = await createAdminProduct({ ...parsed.data, productKind: "other" });
   } catch (error) {
     return failed(errorKey(error));
   }

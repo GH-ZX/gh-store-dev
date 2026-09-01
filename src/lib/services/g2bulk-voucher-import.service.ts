@@ -353,6 +353,7 @@ async function importOneCategory(
         description_ar: category.description?.trim() || null,
         description_en: category.description?.trim() || null,
         image_url: imageUrl,
+        product_kind: "digital",
         // A container with nothing sellable in it is never published, whatever the
         // admin asked for: the storefront would show an empty group.
         is_active: options.publish && group.hasStock,

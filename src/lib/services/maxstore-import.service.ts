@@ -532,6 +532,7 @@ async function importOneCategory(
         name_ar: category.title,
         name_en: category.title,
         ...(productImage ? { image_url: productImage } : {}),
+        product_kind: "digital",
         is_active: options.publish,
       })
       .select("id")

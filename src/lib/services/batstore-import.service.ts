@@ -221,6 +221,7 @@ async function importOneProduct(
         name_en: product.name,
         category_id: selection.categoryId,
         ...(product.imageUrl ? { image_url: product.imageUrl } : {}),
+        product_kind: "digital",
         is_active: options.publish,
       })
       .select("id")
