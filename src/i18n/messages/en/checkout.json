@@ -8,7 +8,7 @@
   "summary": {
     "title": "Order summary",
     "offerLabel": "Package",
-    "gameLabel": "Game",
+    "gameLabel": "Product",
     "unitPriceLabel": "Unit price",
     "quantityLabel": "Quantity",
     "totalLabel": "Total",

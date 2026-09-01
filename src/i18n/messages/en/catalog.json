@@ -13,7 +13,7 @@
     "chooseOffer": "Pick the package you need, then complete your top-up details securely.",
     "offersHeading": "Available packages",
     "emptyTitle": "No packages available",
-    "emptyDescription": "No packages are available for this game right now. Try another game or check back later.",
+    "emptyDescription": "No packages are available for this product right now. Try another product or check back later.",
     "backToGames": "All games",
     "howItWorksHeading": "How delivery works",
     "howItWorksSteps": [
@@ -35,7 +35,7 @@
     "regionLabel": "Region",
     "typeLabel": "Type",
     "priceLabel": "Price",
-    "relatedHeading": "Other packages for this game",
+    "relatedHeading": "Other packages for this product",
     "notFoundTitle": "This package is unavailable",
     "notFoundDescription": "It may have been changed or disabled. Browse the remaining packages instead."
   },

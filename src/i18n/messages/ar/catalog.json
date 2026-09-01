@@ -13,7 +13,7 @@
     "chooseOffer": "اختر الباقة المناسبة ثم أكمل تفاصيل الشحن بأمان.",
     "offersHeading": "الباقات المتاحة",
     "emptyTitle": "لا توجد باقات متاحة",
-    "emptyDescription": "لا توجد باقات متاحة لهذه اللعبة الآن. جرّب لعبة أخرى أو عُد لاحقًا.",
+    "emptyDescription": "لا توجد باقات متاحة لهذا المنتج الآن. جرّب منتجًا آخر أو عُد لاحقًا.",
     "backToGames": "كل الألعاب",
     "howItWorksHeading": "كيف يتم التسليم",
     "howItWorksSteps": [
@@ -35,7 +35,7 @@
     "regionLabel": "المنطقة",
     "typeLabel": "النوع",
     "priceLabel": "السعر",
-    "relatedHeading": "باقات أخرى لنفس اللعبة",
+    "relatedHeading": "باقات أخرى لنفس المنتج",
     "notFoundTitle": "الباقة غير متوفرة",
     "notFoundDescription": "ربما تم تعديل الباقة أو إيقافها. تصفح باقي الباقات المتاحة."
   },

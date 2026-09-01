@@ -644,7 +644,7 @@
         "notConfigured": "Connect IGDB on the Providers page first.",
         "failed": "The search failed. Check the IGDB connection on Providers, then try again.",
         "emptyTitle": "Nothing found",
-        "emptyDescription": "No game by that name on IGDB. The URL fields still accept any link."
+        "emptyDescription": "No product by that name on IGDB. The URL fields still accept any link."
       }
     },
     "offers": {
@@ -672,17 +672,17 @@
       "saveAction": "Save packages",
       "saved": "Packages saved.",
       "emptyTitle": "No packages",
-      "emptyDescription": "Import this game from the provider again to fetch its packages.",
+      "emptyDescription": "Import this product from the provider again to fetch its packages.",
       "deliveryKindDirect": "Instant",
       "deliveryKindAccount": "Account"
     },
     "errors": {
       "invalid_input": "Check the values you entered, then try again.",
-      "slug_taken": "That slug already belongs to another game.",
-      "not_found": "We could not find that game.",
+      "slug_taken": "That slug already belongs to another product.",
+      "not_found": "We could not find that product.",
       "provider_link_invalid": "The supplier link must start with http:// or https://.",
       "unknown": "We could not save. Please try again.",
-      "offer_slug_taken": "Another package of this game already uses that address.",
+      "offer_slug_taken": "Another package of this product already uses that address.",
       "offer_not_found": "That package no longer exists."
     },
     "create": {
@@ -694,7 +694,7 @@
       "nameArLabel": "Name (Arabic)",
       "nameEnLabel": "Name (English)",
       "slugLabel": "Address",
-      "slugHint": "Appears in the game's URL. Letters, numbers, and dashes.",
+      "slugHint": "Appears in the product's URL. Letters, numbers, and dashes.",
       "submitAction": "Create and continue",
       "draftNote": "Created unpublished. Publish it from the editor once it has packages."
     },
@@ -706,7 +706,7 @@
       "descriptionArLabel": "Usage instructions (Arabic)",
       "descriptionEnLabel": "Usage instructions (English)",
       "slugLabel": "Address",
-      "slugHint": "Unique within this game.",
+      "slugHint": "Unique within this product.",
       "priceLabel": "Price (USD)",
       "typeLabel": "Kind",
       "manualNote": "A hand-added package has no supplier behind it, so nothing can deliver it automatically. It is created unpublished — publish it only once you are ready to fulfil it yourself.",

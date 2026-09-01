@@ -798,6 +798,7 @@ async function readOffers(
   productId: string,
 ): Promise<
   {
+    id: string;
     slug: string;
     name: string;
     price: number;
@@ -808,7 +809,7 @@ async function readOffers(
 > {
   const { data } = await supabase
     .from("offers")
-    .select("slug, name_ar, name_en, price, currency, original_price, products!inner (slug)")
+    .select("id, slug, name_ar, name_en, price, currency, original_price, products!inner (slug)")
     .eq("product_id", productId)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
@@ -819,6 +820,7 @@ async function readOffers(
     const product = Array.isArray(row.products) ? row.products[0] : row.products;
 
     return {
+      id: row.id,
       slug: row.slug,
       name: locale === "ar" ? row.name_ar : row.name_en,
       price: row.price,
