@@ -221,6 +221,27 @@ export function GameEditForm({ locale, messages, errors, categories, game }: Gam
             dir="ltr"
             className="tabular-nums"
           />
+          <SelectField
+            label={messages.carouselLogoTone}
+            hint={messages.carouselLogoToneHint}
+            name="carouselLogoTone"
+            defaultValue={game.carouselLogoTone ?? ""}
+            options={[
+              { value: "", label: messages.carouselLogoToneNone },
+              { value: "light", label: messages.carouselLogoToneLight },
+              { value: "dark", label: messages.carouselLogoToneDark },
+            ]}
+          />
+          <TextField
+            label={messages.carouselColor}
+            hint={messages.carouselColorHint}
+            name="carouselColor"
+            defaultValue={game.carouselColor ?? ""}
+            maxLength={9}
+            dir="ltr"
+            spellCheck={false}
+            type="text"
+          />
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">

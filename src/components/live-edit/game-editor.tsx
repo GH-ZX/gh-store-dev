@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { CheckboxField, TextAreaField, TextField } from "@/components/admin/admin-form";
+import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/admin/admin-form";
 import { EditPanel, EditResult, EditTrigger } from "@/components/live-edit/edit-panel";
 import { useLiveEdit } from "@/components/live-edit/live-edit-mode";
 import { Button } from "@/components/ui/button";
@@ -182,6 +182,28 @@ export function GameEditor({
               defaultValue={game.carouselBadgeEn}
               maxLength={160}
               dir="ltr"
+            />
+
+            <SelectField
+              label={messages.carouselLogoTone}
+              hint={messages.carouselLogoToneHint}
+              name="carousel_logo_tone"
+              defaultValue={game.carouselLogoTone}
+              options={[
+                { value: "", label: messages.carouselLogoToneNone },
+                { value: "light", label: messages.carouselLogoToneLight },
+                { value: "dark", label: messages.carouselLogoToneDark },
+              ]}
+            />
+
+            <TextField
+              label={messages.carouselColor}
+              hint={messages.carouselColorHint}
+              name="carousel_color"
+              defaultValue={game.carouselColor}
+              maxLength={9}
+              dir="ltr"
+              spellCheck={false}
             />
 
             <CheckboxField

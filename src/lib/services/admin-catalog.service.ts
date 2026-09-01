@@ -57,6 +57,14 @@ export function toPricingMode(value: string | null | undefined): PricingMode {
   return PRICING_MODES.includes(value as PricingMode) ? (value as PricingMode) : "default";
 }
 
+export const LOGO_TONES = ["light", "dark"] as const;
+
+export type LogoTone = (typeof LOGO_TONES)[number];
+
+export function toLogoTone(value: string | null | undefined): LogoTone | null {
+  return LOGO_TONES.includes(value as LogoTone) ? (value as LogoTone) : null;
+}
+
 export type AdminGameListItem = {
   id: string;
   slug: string;
@@ -299,6 +307,8 @@ export type AdminGameFields = {
   isFeatured: boolean;
   showInCarousel: boolean;
   carouselOrder: number | null;
+  carouselLogoTone: LogoTone | null;
+  carouselColor: string | null;
 };
 
 export type AdminGame = AdminGameFields & {
@@ -349,7 +359,7 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
   const { data: game, error } = await client
     .from("products")
     .select(
-      "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order",
+      "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order, carousel_logo_tone, carousel_color",
     )
     .eq("id", gameId)
     .maybeSingle();
@@ -396,6 +406,8 @@ export async function getAdminGame(gameId: string): Promise<AdminGameDetail | nu
       isFeatured: game.is_featured,
       showInCarousel: game.show_in_carousel,
       carouselOrder: game.carousel_order,
+      carouselLogoTone: toLogoTone(game.carousel_logo_tone),
+      carouselColor: game.carousel_color,
       providerName: providerInfo.get(gameId)?.providerName ?? null,
       providerCode: providerInfo.get(gameId)?.providerCode ?? null,
       providerUrl: providerInfo.get(gameId)?.externalUrl ?? null,
@@ -477,6 +489,8 @@ export async function updateAdminGame(gameId: string, fields: AdminGameFields): 
       is_featured: fields.isFeatured,
       show_in_carousel: fields.showInCarousel,
       carousel_order: fields.carouselOrder,
+      carousel_logo_tone: fields.carouselLogoTone,
+      carousel_color: fields.carouselColor,
       updated_at: new Date().toISOString(),
     })
     .eq("id", gameId)

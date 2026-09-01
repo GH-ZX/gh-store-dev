@@ -274,22 +274,22 @@ export function HeroCarousel({
        */
       aria-live={rotating && !paused ? "off" : "polite"}
     >
-      <div className="relative overflow-hidden rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-1.5 shadow-[var(--elevation-2)] backdrop-blur-xl">
-        {/*
-          * The viewport clips; the container is the flex track Embla moves.
-           * Tall on a phone, wide on a desktop — one product should never be
-          * several screens tall on a laptop or a letterbox on a phone.
-          */}
-        <div
-          ref={emblaRef}
-          className={cn(
-            "gh-sheen relative overflow-hidden rounded-[var(--radius-inner)] border border-[var(--line)] bg-[var(--surface-inset)]",
-            imageAspect === "16:9" && "aspect-video",
-            imageAspect === "4:3" && "aspect-[4/3]",
-            imageAspect === "1:1" && "aspect-square",
-            imageAspect === "auto" && "aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.4/1]",
-          )}
-        >
+      <div className="relative overflow-hidden rounded-[var(--radius-shell)] bg-[var(--shell)]">
+      {/*
+        * The viewport clips; the container is the flex track Embla moves.
+         * Tall on a phone, wide on a desktop — one product should never be
+        * several screens tall on a laptop or a letterbox on a phone.
+        */}
+      <div
+        ref={emblaRef}
+        className={cn(
+          "gh-sheen relative overflow-hidden rounded-[var(--radius-inner)] border border-[var(--line)] bg-[var(--surface-inset)]",
+          imageAspect === "16:9" && "aspect-video",
+          imageAspect === "4:3" && "aspect-[4/3]",
+          imageAspect === "1:1" && "aspect-square",
+          imageAspect === "auto" && "aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.4/1]",
+        )}
+      >
           {/* `touch-action` keeps a vertical scroll the page's, not the carousel's. */}
           <div className="flex h-full touch-pan-y">
             {products.map((product, slideIndex) => {
@@ -374,7 +374,7 @@ export function HeroCarousel({
                           {product.pointsName ? <Badge tone="neutral">{product.pointsName}</Badge> : null}
                         </div>
 
-                        <h3 className="mt-4 max-w-[18ch] text-[clamp(2rem,4.5vw,4.25rem)] leading-[1.04] font-semibold tracking-[-0.04em] text-[var(--ink)] [text-shadow:0_2px_18px_rgba(0,0,0,0.45)]">
+                        <h3 dir="ltr" className="mt-4 max-w-[18ch] text-[clamp(2rem,4.5vw,4.25rem)] leading-[1.04] font-semibold tracking-[-0.04em] text-[var(--ink)] [text-shadow:0_2px_18px_rgba(0,0,0,0.45)]">
                           {product.name}
                         </h3>
 
@@ -391,7 +391,7 @@ export function HeroCarousel({
                           * shape because that is what says "this is pressable" at
                           * a glance, and it reacts to hover on the whole slide.
                           */}
-                        <span className="mt-6 inline-flex min-h-13 items-center gap-2 rounded-[var(--radius-pill)] bg-white/15 backdrop-blur-lg ps-6 pe-1.5 text-sm font-semibold text-white shadow-[var(--elevation-1)] transition-colors duration-[var(--duration)] hover:bg-white/25 sm:min-h-11">
+                        <span className="mt-6 inline-flex min-h-13 items-center gap-2 rounded-[var(--radius-pill)] border border-white/40 bg-black/45 ps-6 pe-1.5 text-sm font-semibold text-white shadow-[var(--elevation-2)] backdrop-blur-2xl transition-colors duration-[var(--duration)] hover:bg-black/60 sm:min-h-11">
                           {labels.details}
                           <span className="grid size-9 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent-ink)_14%,transparent)] transition-transform duration-[var(--duration)] ease-[var(--ease-spring)] group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">
                             <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
@@ -424,8 +424,124 @@ export function HeroCarousel({
           </div>
         </div>
 
+        {total > 1 ? (
+          <div className="relative flex items-stretch gap-5 border-t border-[color-mix(in_srgb,var(--line)_60%,transparent)] bg-[color-mix(in_srgb,var(--shell)_35%,transparent)] px-4 backdrop-blur-md sm:gap-6 sm:px-6">
+            <div
+              className="flex flex-1 items-end gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-6"
+              role="group"
+              aria-label={labels.regionLabel}
+            >
+              {products.map((product, slideIndex) => {
+                const isActive = slideIndex === selected;
+                const thumbSrc = product.logoUrl || product.imageUrl;
+
+                return (
+                  <div key={product.id} className="relative shrink-0">
+                    <div className="flex flex-col items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => emblaApi?.scrollTo(slideIndex)}
+                        aria-label={formatMessage(labels.goToProduct, { name: product.name }, locale)}
+                        aria-current={isActive ? "true" : undefined}
+                        className={cn(
+                          "group/thumb grid size-14 place-items-center cursor-pointer overflow-hidden rounded-xl transition-all duration-[var(--duration)] sm:size-16",
+                          isActive ? "shadow-[var(--elevation-1)]" : "opacity-60 hover:opacity-90",
+                        )}
+                      >
+                        {thumbSrc ? (
+                          <img
+                            src={thumbSrc}
+                            alt=""
+                            className="size-9 rounded object-contain sm:size-10"
+                            style={
+                              product.carouselLogoTone === "light"
+                                ? { filter: "brightness(0) invert(1)" }
+                                : product.carouselLogoTone === "dark"
+                                  ? { filter: "brightness(0)" }
+                                  : undefined
+                            }
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <div className="size-9 rounded bg-[var(--surface-inset)] sm:size-10" />
+                        )}
+                      </button>
+
+                      {reorderMode ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={slideIndex === 0}
+                            onClick={() => moveGame(slideIndex, "left")}
+                            aria-label="Move left"
+                            className="grid size-5 place-items-center rounded bg-[var(--surface)] text-[var(--ink-soft)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] disabled:opacity-20"
+                          >
+                            <ChevronIcon direction="start" className="size-3" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={slideIndex === total - 1}
+                            onClick={() => moveGame(slideIndex, "right")}
+                            aria-label="Move right"
+                            className="grid size-5 place-items-center rounded bg-[var(--surface)] text-[var(--ink-soft)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] disabled:opacity-20"
+                          >
+                            <ChevronIcon direction="end" className="size-3" />
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {/*
+                        * Active divider — a thin coloured line at the bottom
+                        * edge of the carousel, only as wide as the logo, shown
+                        * on the logo in view. Colour from the product.
+                        */}
+                      <span
+                        className={cn(
+                          "pointer-events-none absolute inset-x-0 bottom-0 h-1 transition-opacity duration-500",
+                          isActive ? "opacity-100" : "opacity-0",
+                        )}
+                        style={{ backgroundColor: product.carouselColor || "var(--accent)" }}
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+
+              {liveEdit ? (
+                <button
+                  type="button"
+                  onClick={() => setReorderMode((prev) => !prev)}
+                  aria-label={reorderMode ? "Done reordering" : "Reorder carousel"}
+                  aria-pressed={reorderMode}
+                  className={cn(
+                    "grid size-8 shrink-0 place-items-center rounded-full shadow-[var(--elevation-1)] transition-all duration-[var(--duration)]",
+                    reorderMode
+                      ? "border-2 border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                      : "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]",
+                  )}
+                >
+                  {reorderMode ? <CloseIcon className="size-3.5" /> : <PencilIcon className="size-3.5" />}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+        {rotating ? (
+          <button
+            type="button"
+            onClick={toggleRotation}
+            aria-label={paused ? labels.play : labels.pause}
+            aria-pressed={paused}
+            className="pointer-events-auto absolute start-3.5 top-3.5 z-10 grid size-6 place-items-center rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--shell)_78%,transparent)] text-[var(--ink-soft)] shadow-[var(--elevation-1)] backdrop-blur-md transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+          >
+            {paused ? <PlayIcon className="size-3" /> : <PauseIcon className="size-3" />}
+          </button>
+        ) : null}
+
         {/*
-          * Editorial counter in the corner of the frame, and the arrows for a
+          * Editorial counter in the corner of the carousel, and the arrows for a
           * pointer and only for a pointer. A phone drags the slide and has no
           * room to spare; a mouse has no drag habit and nothing else to click.
           * `pointer:fine` is the honest test for that — a narrow window on a
@@ -467,132 +583,6 @@ export function HeroCarousel({
               </button>
             </div>
           </>
-        ) : null}
-
-        {/*
-           * Thumbnail strip — one logo per product, keyboard-reachable.
-          * Sits inside the carousel frame, directly below the image.
-          */}
-        {total > 1 ? (
-          <div className="flex items-center gap-4 bg-black/20 backdrop-blur-md px-4 py-3 sm:gap-5 sm:px-6">
-            {rotating ? (
-              <button
-                type="button"
-                onClick={toggleRotation}
-                aria-label={paused ? labels.play : labels.pause}
-                aria-pressed={paused}
-                className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] shadow-[var(--elevation-1)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
-              >
-                {paused ? <PlayIcon className="size-3" /> : <PauseIcon className="size-3" />}
-              </button>
-            ) : null}
-
-            <div
-              className="flex flex-1 items-end gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-5"
-              role="group"
-              aria-label={labels.regionLabel}
-            >
-              {products.map((product, slideIndex) => {
-                const isActive = slideIndex === selected;
-                const thumbSrc = product.logoUrl || product.imageUrl;
-                const color = product.carouselColor;
-
-                return (
-                  <div key={product.id} className="relative shrink-0">
-                    <div className="flex flex-col items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => emblaApi?.scrollTo(slideIndex)}
-                        aria-label={formatMessage(labels.goToProduct, { name: product.name }, locale)}
-                        aria-current={isActive ? "true" : undefined}
-                        className={cn(
-                          "group/thumb relative h-11 w-11 cursor-pointer overflow-hidden rounded-lg border-2 transition-all duration-[var(--duration)] sm:h-13 sm:w-13",
-                          isActive
-                            ? "border-[var(--accent)] shadow-[var(--elevation-1)]"
-                            : "border-transparent opacity-60 hover:opacity-90",
-                        )}
-                      >
-                        {thumbSrc ? (
-                          <img
-                            src={thumbSrc}
-                            alt=""
-                            className="size-full object-cover"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <div className="size-full bg-[var(--surface-inset)]" />
-                        )}
-                      </button>
-
-                      {/*
-                        * Coloured accent line below the thumbnail.
-                        * Only visible on the active slide.
-                        */}
-                      <span
-                        className={cn(
-                          "h-0.5 w-full rounded-full transition-all duration-500",
-                          isActive ? "opacity-100" : "opacity-0",
-                        )}
-                        style={{ backgroundColor: color || "var(--accent)" }}
-                        aria-hidden="true"
-                      />
-
-                      {/*
-                        * Admin reorder arrows — visible only in reorder mode,
-                        * horizontal left/right below the coloured line.
-                        */}
-                      {reorderMode ? (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            disabled={slideIndex === 0}
-                            onClick={() => moveGame(slideIndex, "left")}
-                            aria-label="Move left"
-                            className="grid size-5 place-items-center rounded bg-[var(--surface)] text-[var(--ink-soft)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] disabled:opacity-20"
-                          >
-                            <ChevronIcon direction="start" className="size-3" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={slideIndex === total - 1}
-                            onClick={() => moveGame(slideIndex, "right")}
-                            aria-label="Move right"
-                            className="grid size-5 place-items-center rounded bg-[var(--surface)] text-[var(--ink-soft)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] disabled:opacity-20"
-                          >
-                            <ChevronIcon direction="end" className="size-3" />
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {counter}
-
-            {/*
-              * Reorder toggle pen — visible only in edit mode.
-              * Toggles reorder mode to show up/down arrows on thumbnails.
-              */}
-            {liveEdit ? (
-              <button
-                type="button"
-                onClick={() => setReorderMode((prev) => !prev)}
-                aria-label={reorderMode ? "Done reordering" : "Reorder carousel"}
-                aria-pressed={reorderMode}
-                className={cn(
-                  "grid size-8 shrink-0 place-items-center rounded-full shadow-[var(--elevation-1)] transition-all duration-[var(--duration)]",
-                  reorderMode
-                    ? "border-2 border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
-                    : "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]",
-                )}
-              >
-                {reorderMode ? <CloseIcon className="size-3.5" /> : <PencilIcon className="size-3.5" />}
-              </button>
-            ) : null}
-          </div>
         ) : null}
       </div>
     </section>

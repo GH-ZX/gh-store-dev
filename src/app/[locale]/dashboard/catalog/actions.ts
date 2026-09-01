@@ -79,6 +79,8 @@ const gameSchema = z.object({
   isFeatured: z.boolean(),
   showInCarousel: z.boolean(),
   carouselOrder: optionalNumber(100000),
+  carouselLogoTone: z.union([z.null(), z.literal("light"), z.literal("dark")]),
+  carouselColor: optionalText(9),
 });
 
 const offerRowSchema = z.object({
@@ -167,6 +169,8 @@ export async function updateGameAction(
     isFeatured: formFlag(formData, "isFeatured"),
     showInCarousel: formFlag(formData, "showInCarousel"),
     carouselOrder: formText(formData, "carouselOrder") ?? null,
+    carouselLogoTone: formText(formData, "carouselLogoTone") ?? null,
+    carouselColor: formText(formData, "carouselColor") ?? null,
   });
 
   if (!parsed.success) {

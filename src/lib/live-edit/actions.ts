@@ -136,6 +136,8 @@ export type GamePresentation = {
   carouselBadgeEn: string;
   isFeatured: boolean;
   showInCarousel: boolean;
+  carouselLogoTone: string;
+  carouselColor: string;
 };
 
 export type LoadGamePresentationResult =
@@ -171,6 +173,8 @@ export async function loadGamePresentationAction(
         carouselBadgeEn: game.carouselBadgeEn ?? "",
         isFeatured: game.isFeatured,
         showInCarousel: game.showInCarousel,
+        carouselLogoTone: game.carouselLogoTone ?? "",
+        carouselColor: game.carouselColor ?? "",
       },
     };
   } catch (error) {
@@ -196,6 +200,8 @@ const gamePresentationSchema = z.object({
   carousel_badge_en: localizedText,
   is_featured: z.boolean(),
   show_in_carousel: z.boolean(),
+  carousel_logo_tone: z.union([z.literal(""), z.literal("light"), z.literal("dark")]),
+  carousel_color: localizedText,
 });
 
 /**
@@ -224,6 +230,8 @@ export async function saveGamePresentationAction(
     carousel_badge_en: formText(formData, "carousel_badge_en"),
     is_featured: formFlag(formData, "is_featured"),
     show_in_carousel: formFlag(formData, "show_in_carousel"),
+    carousel_logo_tone: formText(formData, "carousel_logo_tone") ?? "",
+    carousel_color: formText(formData, "carousel_color") ?? "",
   });
 
   if (!parsed.success) {
@@ -254,6 +262,9 @@ export async function saveGamePresentationAction(
       carouselBadgeEn: input.carousel_badge_en ?? null,
       isFeatured: input.is_featured,
       showInCarousel: input.show_in_carousel,
+      carouselLogoTone:
+        input.carousel_logo_tone === "" ? null : input.carousel_logo_tone,
+      carouselColor: input.carousel_color ? input.carousel_color : null,
     });
   } catch (error) {
     if (error instanceof GameNotFoundError) {

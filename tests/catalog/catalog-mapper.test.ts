@@ -35,6 +35,7 @@ describe("catalog product mapper", () => {
       carouselBadge: "الأكثر طلبًا",
       carouselFocus: { x: 30, y: 20 },
       carouselColor: null,
+      carouselLogoTone: null,
     });
   });
 
@@ -60,5 +61,15 @@ describe("catalog product mapper", () => {
 
   it("treats a missing badge as no badge", () => {
     expect(toStoreProduct({ ...row, carousel_badge_en: null }, "en").carouselBadge).toBeNull();
+  });
+
+  it("maps a valid logo tone and ignores an invalid one", () => {
+    expect(toStoreProduct({ ...row, carousel_logo_tone: "light" }, "en").carouselLogoTone).toBe(
+      "light",
+    );
+    expect(toStoreProduct({ ...row, carousel_logo_tone: "dark" }, "en").carouselLogoTone).toBe(
+      "dark",
+    );
+    expect(toStoreProduct({ ...row, carousel_logo_tone: "#' weird" }, "en").carouselLogoTone).toBeNull();
   });
 });
