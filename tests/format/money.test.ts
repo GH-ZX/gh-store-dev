@@ -13,8 +13,12 @@ describe("price formatting", () => {
     expect(formatPrice(12.5, "USD", "en")).toBe("$12.50");
   });
 
-  it("puts the symbol after the amount in Arabic, where that reads naturally", () => {
-    expect(formatPrice(12.5, "USD", "ar")).toBe("12.50 $");
+  it("puts the symbol after the amount in Arabic, tight for a single-character symbol", () => {
+    expect(formatPrice(12.5, "USD", "ar")).toBe("12.50$");
+  });
+
+  it("trails multi-character currency codes with a space in Arabic", () => {
+    expect(formatPrice(12.5, "AED", "ar")).toBe("12.50 AED");
   });
 
   it("falls back to the currency code for an unknown currency", () => {
