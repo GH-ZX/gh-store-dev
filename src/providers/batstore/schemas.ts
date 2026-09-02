@@ -101,9 +101,18 @@ export type BatStoreAccount = {
  *
  * The create response may carry the order directly or wrapped in an `order`
  * key; both are accepted because only a live call can tell which it is.
+ *
+ * `id` is required here on purpose. A union returns the *first* branch that
+ * parses, and with `id` optional this branch matched the real wrapped response
+ * (`{ success, order: {...} }`) because zod strips the unknown `order` key and
+ * every remaining field is optional. The nested order — its id, its status, its
+ * delivered items — then vanished, so the fulfilment attempt recorded no
+ * supplier order number and the reconciliation sweep could never find the
+ * delivery. Requiring `id` makes this branch refuse a wrapper, pushing it to
+ * `orderWrapperSchema` where the nested order survives.
  */
 const orderBodySchema = z.object({
-  id: id.nullish(),
+  id: id,
   status: z.string().nullish(),
   product_id: id.nullish(),
   product_name: z.string().nullish(),

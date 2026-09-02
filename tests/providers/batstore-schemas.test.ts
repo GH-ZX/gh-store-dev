@@ -9,6 +9,7 @@ import {
 } from "@/providers/batstore/mapping";
 import {
   classifyOrderStatus,
+  orderSchema,
   productSchema,
   productsSchema,
   toBatStoreOrder,
@@ -153,5 +154,66 @@ describe("batstore order classification", () => {
 
     expect(wrapped.id).toBe("9");
     expect(classifyOrderStatus(wrapped)).toBe("pending");
+  });
+
+  // Regression for a live outage: the create (and get) response is
+  // `{ success, order: {...} }`. When the bare-order branch could parse it with
+  // an absent `id`, the union picked that branch first, stripped the nested
+  // `order`, and the attempt recorded no supplier order number even though the
+  // order was placed and paid. The schema must hand the wrapped order through
+  // intact.
+  it("keeps the wrapped order intact when parsed through the schema", () => {
+    const parsed = orderSchema.safeParse({
+      success: true,
+      status: "ok",
+      idempotent: true,
+      order: {
+        id: 31868,
+        status: "COMPLETED",
+        product_id: 21,
+        product_name: "Nord Vpn 3months and 6 months and 1 year",
+        quantity: 1,
+        amount_usd: 2.5,
+        delivery_type: "stock",
+        customer_reference: "GS-D8E0E9BB44",
+        idempotency_key: "58087366-cb36-48c6-a18e-5cbcaedab8d6",
+        items: [{ id: 51427, account_data: "ryuxDiGWAkDVJP6UNQ6qTc3Nr" }],
+      },
+    });
+
+    expect(parsed.success).toBe(true);
+
+    if (parsed.success) {
+      const order = toBatStoreOrder(parsed.data);
+
+      expect(order.id).toBe("31868");
+      expect(order.status).toBe("COMPLETED");
+      expect(order.items).toHaveLength(1);
+      expect(classifyOrderStatus(order)).toBe("completed");
+    }
+  });
+
+  it("still parses a bare order body with an id", () => {
+    const parsed = orderSchema.safeParse({
+      id: 12,
+      status: "PAID_PENDING_DELIVERY",
+      items: [],
+    });
+
+    expect(parsed.success).toBe(true);
+
+    if (parsed.success) {
+      expect(toBatStoreOrder(parsed.data).id).toBe("12");
+    }
+  });
+
+  it("refuses a wrapped response with a null order instead of dropping it", () => {
+    const parsed = orderSchema.safeParse({ success: true, order: null });
+
+    expect(parsed.success).toBe(true);
+
+    if (parsed.success) {
+      expect(toBatStoreOrder(parsed.data).id).toBe("");
+    }
   });
 });
