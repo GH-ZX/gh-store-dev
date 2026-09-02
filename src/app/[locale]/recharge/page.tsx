@@ -164,7 +164,17 @@ export default async function RechargePage({ params }: PageProps<"/[locale]/rech
                         {messages.invoice.viewInvoice}
                       </ButtonLink>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="mt-3">
+                      <ButtonLink
+                        href={`/${locale}/recharge/${request.id}`}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        {messages.request.trackAction}
+                      </ButtonLink>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

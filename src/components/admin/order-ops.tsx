@@ -13,6 +13,7 @@ import {
 import {
   markDeliveredAction,
   refundOrderAction,
+  resendDeliveryNotificationAction,
   retryFulfillmentAction,
 } from "@/app/[locale]/dashboard/orders/actions";
 
@@ -30,6 +31,8 @@ export type OrderOpsProps = {
   orderId: string;
   /** True once the order is completed, refunded, or cancelled. */
   settled: boolean;
+  /** True when the order was delivered (completed): the notification can be resent. */
+  delivered: boolean;
 };
 
 /**
@@ -39,11 +42,13 @@ export type OrderOpsProps = {
  * submit a retry, and each keeps its own result banner — after pressing one, the
  * operator should not have to work out which of the two the message belongs to.
  *
- * A settled order shows the panel with an explanation and no buttons. The server
- * refuses these operations on a settled order regardless; hiding the controls
- * means the refusal is read before the click rather than after it.
+ * A settled order shows an explanation and (when delivered) the one thing still
+ * useful: resending the delivery notification a settlement recorded outside the
+ * dashboard never produced. The server refuses the moving operations on a
+ * settled order regardless; hiding the controls means the refusal is read before
+ * the click rather than after it.
  */
-export function OrderOps({ locale, messages, orderId, settled }: OrderOpsProps) {
+export function OrderOps({ locale, messages, orderId, settled, delivered }: OrderOpsProps) {
   const [retryState, retry, retrying] = useActionState<OrderOpState, FormData>(
     retryFulfillmentAction,
     INITIAL_ORDER_OP_STATE,
@@ -54,6 +59,10 @@ export function OrderOps({ locale, messages, orderId, settled }: OrderOpsProps) 
   );
   const [refundState, refund, refunding] = useActionState<OrderOpState, FormData>(
     refundOrderAction,
+    INITIAL_ORDER_OP_STATE,
+  );
+  const [resendState, resend, resending] = useActionState<OrderOpState, FormData>(
+    resendDeliveryNotificationAction,
     INITIAL_ORDER_OP_STATE,
   );
 
@@ -74,13 +83,42 @@ export function OrderOps({ locale, messages, orderId, settled }: OrderOpsProps) 
   return (
     <AdminCard title={messages.opsTitle} description={messages.opsDescription}>
       {settled ? (
-        <p
-          className="flex items-start gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm leading-6 text-[var(--ink-muted)]"
-          role="note"
-        >
-          <AlertIcon className="mt-0.5 size-4 shrink-0 text-[var(--ink-faint)]" />
-          {messages.opsSettled}
-        </p>
+        <div className="grid gap-4">
+          <p
+            className="flex items-start gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm leading-6 text-[var(--ink-muted)]"
+            role="note"
+          >
+            <AlertIcon className="mt-0.5 size-4 shrink-0 text-[var(--ink-faint)]" />
+            {messages.opsSettled}
+          </p>
+
+          {delivered ? (
+            <form action={resend} className="grid gap-3 border-t border-[var(--line)] pt-4">
+              <input type="hidden" name="locale" value={locale} />
+              <input type="hidden" name="orderId" value={orderId} />
+
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--ink)]">{messages.resendTitle}</h3>
+                <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+                  {messages.resendDescription}
+                </p>
+              </div>
+
+              <div>
+                <Button type="submit" variant="secondary" disabled={resending || busy}>
+                  {messages.resendAction}
+                </Button>
+              </div>
+
+              <FormResult
+                error={resolveError(messages, resendState.error)}
+                notice={
+                  resendState.notice === "delivery_notification_sent" ? messages.resendSent : null
+                }
+              />
+            </form>
+          ) : null}
+        </div>
       ) : (
         <div className="grid gap-6">
           <form action={retry} className="grid gap-3">

@@ -6,6 +6,7 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { ForbiddenError, requireAdmin } from "@/lib/auth/guards";
 import { formText } from "@/lib/forms/form-data";
 import { logFailure } from "@/lib/logging/logger";
+import { parseRechargeMethodsInput } from "@/lib/settings/recharge-settings";
 import {
   approveRecharge,
   RechargeForbiddenError,
@@ -37,7 +38,9 @@ function resolveLocale(value: string | undefined): Locale {
 
 function refresh(locale: Locale): void {
   revalidatePath(`/${locale}/dashboard/recharges`);
-  // A credit changes a balance the storefront chrome shows.
+  // A credit changes a balance the storefront chrome shows; the manual methods
+  // editor lives on the APIs page, so a methods save refreshes both.
+  revalidatePath(`/${locale}/dashboard/providers`);
   revalidatePath("/", "layout");
 }
 
@@ -150,4 +153,32 @@ export async function saveRechargeSettingsAction(
   refresh(resolveLocale(parsed.data.locale));
 
   return { error: null, notice: "auto_saved" };
+}
+
+export async function saveRechargeMethodsAction(
+  _state: AdminRechargeState,
+  formData: FormData,
+): Promise<AdminRechargeState> {
+  await requireAdmin();
+
+  // The editor submits its whole list as one JSON field, so the entire list is
+  // validated as a unit: one malformed row fails the save, and no partial list
+  // can ever be written.
+  const parsed = parseRechargeMethodsInput(formText(formData, "methods") ?? "");
+
+  if (!parsed.ok) {
+    return { error: "invalid_input", notice: null };
+  }
+
+  try {
+    await saveRechargeSettings({ methods: parsed.methods });
+  } catch (error) {
+    logFailure("admin.recharge", "recharge_methods_save_failed", error);
+
+    return { error: "unknown", notice: null };
+  }
+
+  refresh(resolveLocale(formText(formData, "locale")));
+
+  return { error: null, notice: "methods_saved" };
 }

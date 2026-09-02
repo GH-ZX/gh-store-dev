@@ -7,6 +7,7 @@ import { G2BulkSettingsForm } from "@/components/admin/g2bulk-settings-form";
 import { IgdbSettingsForm } from "@/components/admin/igdb-settings-form";
 import { MaxStoreSettingsForm } from "@/components/admin/maxstore-settings-form";
 import { ProviderGroup, ProviderSection } from "@/components/admin/provider-section";
+import { RechargeMethodsForm } from "@/components/admin/recharge-review";
 import { SamSettingsForm } from "@/components/admin/sam-settings-form";
 import { TelegramSettingsForm } from "@/components/admin/telegram-settings-form";
 import { WalletCards } from "@/components/admin/wallet-cards";
@@ -31,6 +32,7 @@ import {
   getSamStatus,
   getTelegramStatus,
 } from "@/lib/services/admin-settings.service";
+import { getRechargeQueues } from "@/lib/services/admin-recharge.service";
 import { G2BULK_PROVIDER_NAME } from "@/providers/g2bulk/mapping";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -59,6 +61,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
   const telegram = messages.providers.telegram;
   const igdb = messages.providers.igdb;
   const fulfillmentPolicy = messages.providers.fulfillmentPolicy;
+  const recharge = messages.recharges;
   const groups = messages.providers.groups;
   const secrets = messages.providers.secrets;
   const walletLabels = {
@@ -70,7 +73,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
     neverSynced: messages.overview.wallets.neverSynced,
     failed: messages.overview.wallets.unreachable,
   };
-  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings, telegramStatus, igdbStatus, walletCards] =
+  const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings, telegramStatus, igdbStatus, walletCards, rechargeQueues] =
     await Promise.all([
       getG2BulkStatus(),
       getG2BulkCallback(),
@@ -87,6 +90,7 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
       getTelegramStatus(),
       getIgdbStatus(),
       getWalletCards(),
+      getRechargeQueues(),
     ]);
 
   return (
@@ -263,6 +267,12 @@ export default async function ProvidersPage({ params }: PageProps<"/[locale]/das
             secrets={secrets}
           />
         </ProviderSection>
+
+        <RechargeMethodsForm
+          locale={locale}
+          messages={recharge}
+          methods={rechargeQueues.config.methods}
+        />
 
         <ProviderSection
           anchorId="binance"

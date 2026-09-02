@@ -31,6 +31,22 @@
   "creditedLabel": "Amount credited",
   "noteLabel": "Admin note",
   "backToWallet": "Back to the wallet",
+  "request": {
+    "title": "Recharge request",
+    "waitingTitle": "Waiting for review",
+    "waitingDescription": "The store will add the balance once it confirms your transfer. Keep the reference — that is how your payment is matched to your account.",
+    "updatesAutomatically": "This page refreshes on its own. When the review finishes, the result appears here.",
+    "checkNow": "Check now",
+    "stillPending": "Still waiting. We will confirm as soon as the transfer is reviewed.",
+    "creditedTitle": "Balance added",
+    "creditedDescription": "The amount is in your wallet and ready to spend.",
+    "balanceNowLabel": "Your balance now",
+    "viewInvoice": "View the invoice",
+    "rejectedTitle": "Not confirmed",
+    "rejectedDescription": "The store could not confirm this transfer. If you did pay, contact support with the reference and the transfer details.",
+    "closedDescription": "This request was not completed.",
+    "trackAction": "Track this request"
+  },
   "invoice": {
     "title": "Wallet recharge invoice",
     "backToRecharge": "Back to top up",

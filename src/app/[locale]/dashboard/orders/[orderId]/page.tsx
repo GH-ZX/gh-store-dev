@@ -215,6 +215,7 @@ export default async function OrderDetailPage({
             messages={messages}
             orderId={order.id}
             settled={isSettledOrderStatus(order.status)}
+            delivered={order.status === "completed"}
           />
         </div>
 

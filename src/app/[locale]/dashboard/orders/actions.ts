@@ -9,6 +9,7 @@ import {
   markDelivered,
   OrderOpError,
   refundOrderManually,
+  resendDeliveryNotification,
   retryFulfillment,
 } from "@/lib/services/admin-order-ops.service";
 import {
@@ -117,6 +118,39 @@ export async function markDeliveredAction(
     refresh(resolveLocale(parsed.data.locale), parsed.data.orderId);
 
     return { error: null, notice: "marked_delivered", outcome: null };
+  } catch (error) {
+    return toError(error);
+  }
+}
+
+/**
+ * Re-send the standard delivery notification to the customer.
+ *
+ * For a delivery recorded outside the dashboard (so no notification was ever
+ * produced), on an order the other operators have nothing left to do. The
+ * service only allows this on a completed order and only ever writes a
+ * notification — no state, goods, or wallet.
+ */
+export async function resendDeliveryNotificationAction(
+  _state: OrderOpState,
+  formData: FormData,
+): Promise<OrderOpState> {
+  await requireAdmin();
+
+  const parsed = retrySchema.safeParse({
+    orderId: formText(formData, "orderId"),
+    locale: formText(formData, "locale"),
+  });
+
+  if (!parsed.success) {
+    return { ...INITIAL_ORDER_OP_STATE, error: "invalid_input" };
+  }
+
+  try {
+    await resendDeliveryNotification(parsed.data.orderId);
+    refresh(resolveLocale(parsed.data.locale), parsed.data.orderId);
+
+    return { error: null, notice: "delivery_notification_sent", outcome: null };
   } catch (error) {
     return toError(error);
   }

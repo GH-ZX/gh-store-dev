@@ -28,6 +28,7 @@ export class OrderOpError extends Error {
   readonly reason:
     | "not_found"
     | "already_delivered"
+    | "not_delivered"
     | "refunded"
     | "not_refundable"
     | "not_configured"
@@ -279,5 +280,49 @@ export async function markDelivered(
     href: `/orders/${orderId}`,
     entityType: "order",
     entityId: orderId,
+  });
+}
+
+/**
+ * Send the standard delivery notification to the customer again.
+ *
+ * Notifications are created by the code that settles an order, never by the
+ * database — a status change in SQL produces no notification. That is exactly
+ * the gap this fills: a delivery recorded outside the dashboard (a raw update,
+ * a catch-up after the automatic path gave up) leaves the customer without the
+ * "your order is ready" they are owed, and there is no state left for "mark
+ * delivered" to act on.
+ *
+ * So this only tells them, at last. It changes no state, hands over nothing
+ * further, and never touches the wallet — the order is already settled, and its
+ * only job is to produce the `order_delivered` notification a normal settlement
+ * would have produced in the first place.
+ */
+export async function resendDeliveryNotification(orderId: string): Promise<void> {
+  const admin = await requireAdmin();
+  const order = await loadOrder(orderId);
+
+  if (order.status !== "completed") {
+    throw new OrderOpError(
+      "not_delivered",
+      "Only a delivered order has a delivery notification to resend.",
+    );
+  }
+
+  await notify({
+    userId: order.user_id,
+    type: "order_delivered",
+    titleAr: "تم تنفيذ طلبك",
+    titleEn: "Your order is delivered",
+    bodyAr: `طلب ${order.order_number} جاهز. افتح الطلب لعرض التفاصيل.`,
+    bodyEn: `Order ${order.order_number} is ready. Open it to see the details.`,
+    href: `/orders/${orderId}`,
+    entityType: "order",
+    entityId: orderId,
+  });
+
+  await audit(admin.id, "order.notification_resend", orderId, {
+    order_number: order.order_number,
+    type: "order_delivered",
   });
 }

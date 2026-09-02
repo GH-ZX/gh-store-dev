@@ -40,7 +40,7 @@ export async function submitRechargeAction(
   });
 
   if (!parsed.success) {
-    return { error: "invalid_input", notice: null, reference: null, credited: false };
+    return { error: "invalid_input", notice: null, reference: null, requestId: null, credited: false };
   }
 
   const locale = resolveLocale(parsed.data.locale);
@@ -50,7 +50,7 @@ export async function submitRechargeAction(
   });
 
   if (!result.ok) {
-    return { error: result.reason, notice: null, reference: null, credited: false };
+    return { error: result.reason, notice: null, reference: null, requestId: null, credited: false };
   }
 
   revalidatePath(`/${locale}/recharge`);
@@ -61,6 +61,7 @@ export async function submitRechargeAction(
     error: null,
     notice: "submitted",
     reference: result.reference,
+    requestId: result.requestId,
     credited: result.credited,
   };
 }
@@ -75,18 +76,18 @@ export async function markPaidAction(
   });
 
   if (!parsed.success) {
-    return { error: "invalid_input", notice: null, reference: null, credited: false };
+    return { error: "invalid_input", notice: null, reference: null, requestId: null, credited: false };
   }
 
   const done = await markRechargePaid(parsed.data.requestId);
 
   if (!done) {
-    return { error: "not_found", notice: null, reference: null, credited: false };
+    return { error: "not_found", notice: null, reference: null, requestId: null, credited: false };
   }
 
   revalidatePath(`/${resolveLocale(parsed.data.locale)}/recharge`);
 
-  return { error: null, notice: "marked_paid", reference: null, credited: false };
+  return { error: null, notice: "marked_paid", reference: null, requestId: null, credited: false };
 }
 
 /**

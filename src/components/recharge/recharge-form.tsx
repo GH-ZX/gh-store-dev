@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { FormResult, SelectField, TextField } from "@/components/admin/admin-form";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { CheckIcon, InfoIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import { formatMessage } from "@/i18n/format";
@@ -74,6 +74,12 @@ export function RechargeForm({ locale, messages, config }: RechargeFormProps) {
             </p>
           )}
         </div>
+
+        {state.requestId ? (
+          <ButtonLink href={`/${locale}/recharge/${state.requestId}`} variant="primary">
+            {messages.request.trackAction}
+          </ButtonLink>
+        ) : null}
       </div>
     );
   }

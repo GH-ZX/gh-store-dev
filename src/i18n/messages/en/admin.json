@@ -54,7 +54,7 @@
       "customers": "Customers",
       "support": "Support",
       "reviews": "Reviews",
-      "providers": "Providers and API",
+      "providers": "APIs",
       "website": "Website",
     "appearance": "Appearance",
       "operations": "Logs"
@@ -98,7 +98,7 @@
     },
     "wallets": {
       "title": "Supplier wallets",
-      "manage": "Manage providers",
+      "manage": "Manage APIs",
       "supplierBalance": "Available balance",
       "unreachable": "Unreachable",
       "none": "No provider with a wallet is enabled yet.",
@@ -131,11 +131,11 @@
     },
     "emptyCatalogTitle": "The catalog is empty",
     "emptyCatalogDescription": "Connect a provider and import products so they appear in the store.",
-    "goToProviders": "Set up providers"
+    "goToProviders": "Set up APIs"
   },
   "providers": {
-    "eyebrow": "Providers",
-    "title": "Providers and APIs",
+    "eyebrow": "APIs",
+    "title": "APIs",
     "description": "Connect digital product suppliers and control pricing and syncing.",
     "g2bulk": {
       "name": "G2Bulk",
@@ -539,7 +539,7 @@
     "syncing": "Syncing…",
     "configured": "Configured",
     "notConfigured": "Not configured",
-    "configureHint": "Add the API key on the Providers page first.",
+    "configureHint": "Add the API key on the APIs page first.",
     "noProducts": "No products available",
     "importedCount": "{count} imported",
     "availableCount": "{count} available",
@@ -651,8 +651,8 @@
         "useAsArtwork": "Use as artwork",
         "pickHint": "Clicking a tile fills the cover field.",
         "emptyQuery": "Type a product name first.",
-        "notConfigured": "Connect IGDB on the Providers page first.",
-        "failed": "The search failed. Check the IGDB connection on Providers, then try again.",
+        "notConfigured": "Connect IGDB on the APIs page first.",
+        "failed": "The search failed. Check the IGDB connection on the APIs page, then try again.",
         "emptyTitle": "Nothing found",
         "emptyDescription": "No product by that name on IGDB. The URL fields still accept any link."
       }
@@ -1103,6 +1103,10 @@
     "deliverNoteHint": "The note is kept in the audit log and reaches the customer with the notification.",
     "deliverAction": "Mark delivered",
     "markedDelivered": "The order is marked delivered and the customer has been notified.",
+    "resendTitle": "Resend the delivery notification",
+    "resendDescription": "For deliveries recorded outside the dashboard, which never produced the customer's notification. Sends the standard delivered notification to the customer's account.",
+    "resendAction": "Resend delivery notification",
+    "resendSent": "Delivery notification sent to the customer.",
     "retryOutcomes": {
       "completed": "Delivered.",
       "processing": "The supplier is working on it. Refresh to follow the status.",
@@ -1113,6 +1117,7 @@
       "invalid_input": "Check the values you entered, then try again.",
       "note_required": "Write a note explaining what you did, at least three characters.",
       "already_delivered": "This order is already delivered.",
+      "not_delivered": "Only a delivered order has a delivery notification to resend.",
       "refunded": "This order was refunded, so delivering it now would give the goods away.",
       "not_refundable": "Only a paid wallet order can be refunded from this dashboard.",
       "not_found": "We could not find that order.",
@@ -1225,6 +1230,7 @@
     "methodInstructionsEn": "Instructions in English",
     "methodEnabled": "Enabled",
     "addMethod": "Add a method",
+    "addBybit": "Add Bybit (USDT)",
     "removeMethod": "Remove",
     "minAmount": "Minimum",
     "maxAmount": "Maximum",
@@ -1363,7 +1369,7 @@
     "pagerPosition": "Page {page} of {pages}",
     "pagerPositionUnknown": "Page {page}",
     "eventsErrors": {
-      "not_configured": "No logging destination yet. Add your Axiom token on the Providers and API page and events will appear here.",
+      "not_configured": "No logging destination yet. Add your Axiom token on the APIs page and events will appear here.",
       "forbidden": "The Axiom token can write logs but not read them back. In Axiom, give this token query (read) permission on the dataset — or create one with both — and this list will fill in.",
       "unavailable": "Axiom did not answer. The store is unaffected; only this list is missing.",
       "contract": "Axiom answered in a shape this page did not expect, so nothing is shown rather than a list that might be wrong. Read the events in Axiom directly."
