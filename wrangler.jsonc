@@ -46,6 +46,9 @@
 		"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_gtOxP1au24qFXwzVppy0vw_oFWaSIH2",
 		"NEXT_PUBLIC_APP_URL": "https://gh-store.me"
 	},
+	// Keep the workers.dev URL alive as a test address; declaring custom
+	// domains switches it off otherwise.
+	"workers_dev": true,
 	"routes": [
 		{ "pattern": "gh-store.me", "custom_domain": true },
 		{ "pattern": "www.gh-store.me", "custom_domain": true }

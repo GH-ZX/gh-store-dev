@@ -178,8 +178,53 @@ async function cachedPublicHtml(
   return cacheable;
 }
 
+/**
+ * Proxied artwork, answered from the colo cache before the Next runtime loads.
+ *
+ * The route itself streams and asks Cloudflare to cache the upstream fetch,
+ * but a hit still meant booting the whole server bundle for one image. Here
+ * the lookup costs a few microseconds, and a page with forty images no longer
+ * spins up forty full renders. A zone Cache Rule would do the same without any
+ * code; this needs no dashboard permission.
+ */
+async function cachedMedia(
+  request: Request,
+  env: Record<string, unknown>,
+  ctx: WorkerContext,
+): Promise<Response> {
+  const cache = (globalThis as typeof globalThis & { caches?: { default: Cache } }).caches?.default;
+
+  if (!cache) {
+    return handler.fetch(request, env, ctx);
+  }
+
+  const cached = await cache.match(request).catch(() => undefined);
+
+  if (cached) {
+    const response = new Response(cached.body, cached);
+    response.headers.set("x-gh-store-cache", "HIT");
+    return response;
+  }
+
+  const response = await handler.fetch(request, env, ctx);
+
+  if (response.status !== 200 || !(response.headers.get("content-type") ?? "").startsWith("image/")) {
+    return response;
+  }
+
+  const headers = new Headers(response.headers);
+  headers.set("x-gh-store-cache", "MISS");
+  const cacheable = new Response(response.body, { status: 200, headers });
+  ctx.waitUntil(cache.put(request, cacheable.clone()).catch(() => undefined));
+  return cacheable;
+}
+
 const worker = {
   async fetch(request: Request, env: Record<string, unknown>, ctx: WorkerContext) {
+    if (request.method === "GET" && new URL(request.url).pathname === "/api/media-proxy") {
+      return cachedMedia(request, env, ctx);
+    }
+
     return cachedPublicHtml(request, env, ctx);
   },
 
