@@ -20,9 +20,7 @@
 	 * response and the queries become local. Cached responses are unaffected —
 	 * those are answered at the edge before placement matters.
 	 */
-	"placement": {
-		"mode": "smart"
-	},
+	// "placement": { "mode": "smart" },
 	/*
 	 * Deployed settings had observability off while this file said nothing about
 	 * it, which the dashboard reports as configuration drift and which left the
