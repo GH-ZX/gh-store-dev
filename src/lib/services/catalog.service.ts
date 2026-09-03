@@ -681,7 +681,11 @@ async function scanTrendingOfferIds(limit: number): Promise<string[]> {
     .from("order_items")
     .select("offer_id, quantity, orders!inner(payment_status)")
     .eq("orders.payment_status", "paid")
-    .gte("created_at", cutoff);
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: false })
+    // Bounded: the whole window used to be pulled into isolate memory and
+    // counted per render. The newest few thousand items rank the same offers.
+    .limit(2000);
 
   if (error || !data) {
     throw new CatalogReadError();

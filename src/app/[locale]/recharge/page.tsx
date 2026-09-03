@@ -17,13 +17,23 @@ import { getMyRechargeRequests, getRechargeConfig } from "@/lib/services/recharg
 import { getBinancePaymentOptions } from "@/lib/services/binance-recharge.service";
 import { getSamPaymentOptions } from "@/lib/services/sam-recharge.service";
 import { getSessionSummary } from "@/lib/services/session.service";
+import { getMethodLabel } from "@/lib/settings/recharge-settings";
+import type { SamMethod } from "@/lib/settings/sam-settings";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 const OPEN_STATUSES = new Set(["pending", "payment_sent", "processing"]);
 
-export default async function RechargePage({ params }: PageProps<"/[locale]/recharge">) {
+type MethodCard = {
+  id: string;
+  label: string;
+  hint: string;
+};
+
+export default async function RechargePage({ params, searchParams }: PageProps<"/[locale]/recharge">) {
   const locale = await resolveLocaleParam(params);
+  const query = await searchParams;
+  const chosen = typeof query.method === "string" ? query.method : "";
   const messages = getMessages(locale, "recharge");
   const account = getMessages(locale, "account");
   const session = await getSessionSummary();
@@ -43,7 +53,32 @@ export default async function RechargePage({ params }: PageProps<"/[locale]/rech
     getSamPaymentOptions(),
     getBinancePaymentOptions(),
   ]);
-  const hasMethods = config.methods.some((method) => method.enabled);
+  const manualMethods = config.methods.filter((method) => method.enabled);
+
+  /*
+   * One method per screen. The old page stacked every form at once, which read
+   * as three different stores; now the customer picks a method first and only
+   * then sees the amount field and the instructions for that one method.
+   */
+  const cards: MethodCard[] = [
+    ...(sam.enabled
+      ? sam.methods.map((method) => ({
+          id: method,
+          label: method === "shamcash" ? messages.sam.methodShamcash : messages.sam.methodSyriatel,
+          hint: messages.instantHint,
+        }))
+      : []),
+    ...(binance.enabled ? [{ id: "binance", label: messages.methodBinance, hint: messages.cryptoHint }] : []),
+    ...manualMethods.map((method) => ({
+      id: `manual:${method.id}`,
+      label: getMethodLabel(method, locale),
+      hint: messages.manualHint,
+    })),
+  ];
+  const selected = cards.find((card) => card.id === chosen) ?? null;
+  const selectedManual = selected?.id.startsWith("manual:")
+    ? manualMethods.find((method) => `manual:${method.id}` === selected.id) ?? null
+    : null;
 
   return (
     <Section spacing="page" mesh>
@@ -67,50 +102,81 @@ export default async function RechargePage({ params }: PageProps<"/[locale]/rech
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
         <div className="grid gap-6">
-          {/*
-            * Instant first: it is the only route where a payment credits without
-            * waiting for the owner, so burying it under a manual form would push
-            * customers towards the slower path.
-            */}
-          {sam.enabled ? (
-            <AdminCard title={messages.sam.title} description={messages.sam.description}>
-              <SamTopUpForm
-                locale={locale}
-                messages={messages}
-                methods={sam.methods}
-                minAmount={config.minAmount}
-                maxAmount={config.maxAmount}
-                currency={config.currency}
-              />
-            </AdminCard>
-          ) : null}
-
-          {binance.enabled ? (
+          {selected ? (
             <AdminCard
-              title={messages.binance.title}
-              description={messages.binance.description}
+              title={selected.label}
+              description={
+                selectedManual
+                  ? undefined
+                  : selected.id === "binance"
+                    ? messages.binance.description
+                    : messages.sam.description
+              }
             >
-              <BinanceTopUpForm
-                locale={locale}
-                messages={messages}
-                currency={binance.currency}
-                minAmount={config.minAmount}
-                maxAmount={config.maxAmount}
-              />
-            </AdminCard>
-          ) : null}
+              <Link
+                href={`/${locale}/recharge`}
+                className="mb-4 inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
+              >
+                <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
+                {messages.backToMethods}
+              </Link>
 
-          {hasMethods ? (
-            <AdminCard title={messages.title}>
-              <RechargeForm locale={locale} messages={messages} config={config} />
+              {selectedManual ? (
+                <RechargeForm
+                  locale={locale}
+                  messages={messages}
+                  config={{ ...config, methods: [selectedManual] }}
+                />
+              ) : selected.id === "binance" ? (
+                <BinanceTopUpForm
+                  locale={locale}
+                  messages={messages}
+                  currency={binance.currency}
+                  minAmount={config.minAmount}
+                  maxAmount={config.maxAmount}
+                />
+              ) : (
+                <SamTopUpForm
+                  locale={locale}
+                  messages={messages}
+                  methods={[selected.id as SamMethod]}
+                  minAmount={config.minAmount}
+                  maxAmount={config.maxAmount}
+                  currency={config.currency}
+                />
+              )}
             </AdminCard>
-          ) : sam.enabled ? null : (
+          ) : cards.length === 0 ? (
             <AdminCard title={messages.title}>
               <EmptyState
                 icon={<WalletIcon />}
                 title={messages.noMethodsTitle}
                 description={messages.noMethodsDescription}
               />
+            </AdminCard>
+          ) : (
+            <AdminCard title={messages.chooseTitle} description={messages.chooseDescription}>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {cards.map((card) => (
+                  <li key={card.id}>
+                    <Link
+                      href={`/${locale}/recharge?method=${encodeURIComponent(card.id)}`}
+                      className="group flex min-h-20 items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 transition-colors duration-[var(--duration)] hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-[var(--ink)]">{card.label}</span>
+                        <span className="mt-1 block text-xs text-[var(--ink-muted)]">{card.hint}</span>
+                      </span>
+                      <span
+                        className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
+                        aria-hidden="true"
+                      >
+                        <ChevronIcon direction="end" className="size-3.5 rtl:rotate-180" />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </AdminCard>
           )}
         </div>

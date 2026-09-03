@@ -187,3 +187,30 @@ export const BYBIT_METHOD_TEMPLATE: RechargeMethodInput = {
     "4. 1 USDT ≈ 1 USD. After sending, message us so we confirm the payment within minutes.",
   enabled: false,
 };
+
+/**
+ * A customer-facing name for any recharge method id.
+ *
+ * Instant wallets and Binance write fixed ids (`shamcash`, `syriatel`,
+ * `binance`) that are not in the owner's manual list, so a receipt used to
+ * print the raw slug. Manual methods keep the owner's own labels.
+ */
+export function getPaymentMethodLabel(
+  id: string,
+  locale: "ar" | "en",
+  manualMethods: RechargeMethod[] = [],
+): string {
+  switch (id) {
+    case "shamcash":
+      return locale === "ar" ? "شام كاش" : "ShamCash";
+    case "syriatel":
+      return locale === "ar" ? "سيريتل كاش" : "Syriatel Cash";
+    case "binance":
+      return locale === "ar" ? "USDT · بينانس باي" : "USDT · Binance Pay";
+    default: {
+      const method = manualMethods.find((candidate) => candidate.id === id);
+
+      return method ? getMethodLabel(method, locale) : id;
+    }
+  }
+}

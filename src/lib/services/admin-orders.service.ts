@@ -134,6 +134,9 @@ export type OrderListFilter = {
   status?: string;
   /** Matched against the order number and against the customer who placed it. */
   search?: string;
+  /** Only orders placed by this customer. */
+  userId?: string;
+  limit?: number;
 };
 
 /**
@@ -162,7 +165,11 @@ export async function getOrders(filter: OrderListFilter = {}): Promise<AdminOrde
        order_items (id, name_ar_snapshot, name_en_snapshot, fulfillment_attempts (status))`,
     )
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(filter.limit ?? 100);
+
+  if (filter.userId) {
+    query = query.eq("user_id", filter.userId);
+  }
 
   if (filter.status === ATTENTION_FILTER) {
     query = query.in("status", ATTENTION_STATUSES);

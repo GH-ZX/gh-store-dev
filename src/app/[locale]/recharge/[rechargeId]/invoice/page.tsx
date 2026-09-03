@@ -13,7 +13,7 @@ import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getRechargeInvoice } from "@/lib/services/invoice.service";
 import { getRechargeConfig } from "@/lib/services/recharge.service";
 import { getPublicStoreSettings } from "@/lib/services/settings.service";
-import { getMethodLabel } from "@/lib/settings/recharge-settings";
+import { getPaymentMethodLabel } from "@/lib/settings/recharge-settings";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -50,8 +50,7 @@ export default async function RechargeInvoicePage({
   const issued = invoice.issuedAt.slice(0, 10);
   const requestedAt = invoice.requestedAt.slice(0, 10);
   const resolvedAt = invoice.resolvedAt ? invoice.resolvedAt.slice(0, 10) : null;
-  const method = config.methods.find((method) => method.id === invoice.paymentMethod);
-  const methodLabel = method ? getMethodLabel(method, locale) : invoice.paymentMethod;
+  const methodLabel = getPaymentMethodLabel(invoice.paymentMethod, locale, config.methods);
   const statusLabel =
     (recharge.statuses as Record<string, string>)[invoice.status] ?? invoice.status;
 

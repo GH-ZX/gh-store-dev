@@ -1,4 +1,6 @@
 import "server-only";
+import { getOrders, type AdminOrderRow } from "@/lib/services/admin-orders.service";
+import { listCustomerRecharges, type AdminRechargeRequest } from "@/lib/services/admin-recharge.service";
 
 import { refuseActiveChange, refuseRoleChange } from "@/lib/auth/admin-changes";
 import { requireAdmin } from "@/lib/auth/guards";
@@ -290,6 +292,8 @@ export async function setCustomerActive(userId: string, nextActive: boolean): Pr
 export type AdminCustomerDetail = {
   customer: AdminCustomer;
   transactions: WalletTransaction[];
+  orders: AdminOrderRow[];
+  recharges: AdminRechargeRequest[];
 };
 
 export async function getAdminCustomer(userId: string): Promise<AdminCustomerDetail | null> {
@@ -302,24 +306,28 @@ export async function getAdminCustomer(userId: string): Promise<AdminCustomerDet
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, username, role, is_active, created_at, wallets (balance, currency)")
-    .eq("id", userId)
-    .maybeSingle();
+  // Four independent reads, one round trip's worth of waiting instead of four.
+  const [{ data, error }, { data: transactions }, orders, recharges] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, username, role, is_active, created_at, wallets (balance, currency)")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase
+      .from("wallet_transactions")
+      .select("id, type, amount, balance_after, description, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    getOrders({ userId, limit: 25 }),
+    listCustomerRecharges(userId, 20),
+  ]);
 
   if (error || !data) {
     return null;
   }
 
   const wallet = Array.isArray(data.wallets) ? data.wallets[0] : data.wallets;
-
-  const { data: transactions } = await supabase
-    .from("wallet_transactions")
-    .select("id, type, amount, balance_after, description, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(20);
 
   return {
     customer: {
@@ -333,6 +341,8 @@ export async function getAdminCustomer(userId: string): Promise<AdminCustomerDet
       balance: wallet?.balance ?? 0,
       currency: wallet?.currency ?? "USD",
     },
+    orders,
+    recharges,
     transactions: (transactions ?? []).map((row) => ({
       id: row.id,
       type: row.type as WalletTransactionType,

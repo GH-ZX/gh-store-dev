@@ -56,7 +56,7 @@
       "reviews": "Reviews",
       "providers": "APIs",
       "website": "Website",
-    "appearance": "Appearance",
+      "appearance": "Appearance",
       "operations": "Logs"
     },
     "comingSoon": "In progress"
@@ -365,7 +365,7 @@
         "unknown": "Something unexpected went wrong."
       }
     },
-"groups": {
+    "groups": {
       "suppliers": "Suppliers",
       "suppliersDescription": "Who the store buys what it sells from.",
       "payments": "Payments",
@@ -499,7 +499,6 @@
     }
   },
   "import": {
-
     "eyebrow": "Import",
     "title": "Import from G2Bulk",
     "description": "Choose the products to add. Importing again refreshes prices instead of duplicating.",
@@ -879,17 +878,17 @@
         "ember": "Ember",
         "crimson": "Crimson",
         "graphite": "Graphite",
-      "ocean": "Ocean",
-      "cyber": "Cyber",
-      "steel": "Steel",
-      "forest": "Forest",
-      "teal": "Teal",
-      "royal": "Royal purple",
-      "orchid": "Orchid",
-      "magenta": "Magenta",
-      "raspberry": "Raspberry",
-      "volcano": "Volcano",
-      "bronze": "Bronze"
+        "ocean": "Ocean",
+        "cyber": "Cyber",
+        "steel": "Steel",
+        "forest": "Forest",
+        "teal": "Teal",
+        "royal": "Royal purple",
+        "orchid": "Orchid",
+        "magenta": "Magenta",
+        "raspberry": "Raspberry",
+        "volcano": "Volcano",
+        "bronze": "Bronze"
       },
       "accentLabel": "Accent colour",
       "accentHint": "Buttons, links, and highlights. Leave empty for the built-in colour.",
@@ -1192,7 +1191,13 @@
       "invalid_input": "Write a subject and a message before sending.",
       "not_found": "This account no longer exists.",
       "unknown": "Something went wrong. Nothing was sent — please try again."
-    }
+    },
+    "ordersTitle": "Orders",
+    "ordersEmpty": "This customer has not placed an order yet.",
+    "viewAllOrders": "Open in orders",
+    "rechargesTitle": "Recharge requests",
+    "rechargesEmpty": "No recharge requests yet.",
+    "viewAllRecharges": "Open recharges"
   },
   "recharges": {
     "eyebrow": "Recharges",

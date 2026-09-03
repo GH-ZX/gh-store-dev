@@ -32,7 +32,7 @@ function toDisplayName(fullName: string | null, username: string | null, email: 
   return email?.split("@")[0] ?? "";
 }
 
-export async function getSessionSummary(): Promise<SessionSummary | null> {
+export const getSessionSummary = cache(async (): Promise<SessionSummary | null> => {
   const supabase = await createSupabaseServerClient();
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
@@ -59,7 +59,7 @@ export async function getSessionSummary(): Promise<SessionSummary | null> {
     avatarUrl: profile?.avatar_url?.trim() || null,
     isAdmin: isAdminProfile(profile ?? null),
   };
-}
+});
 
 /**
  * Whether the requesting user is an active admin, as a boolean.

@@ -39,45 +39,41 @@ async function loadSyncProviders(locale: Locale): Promise<SyncProviderLane[]> {
     (g2bulkMappings.data ?? []).map((row) => row.external_game_code),
   );
 
-  let g2bulkAvailable = 0;
-  if (g2bulkKey.apiKey) {
-    try {
-      const games = await new G2BulkClient({ apiKey: g2bulkKey.apiKey }).listGames();
-      g2bulkAvailable = games.length;
-    } catch {
-      // Provider unavailable
-    }
-  }
-
-  let maxstoreAvailable = 0;
-  let maxstoreImported = 0;
-  if (maxstoreCreds.apiToken) {
-    try {
-      const { categories: msCategories } = await loadMaxStoreCatalogue(
-        supabase,
-        maxstoreCreds.apiToken,
-      );
-      maxstoreAvailable = msCategories.reduce((sum, cat) => sum + cat.productCount, 0);
-      maxstoreImported = msCategories.reduce(
-        (sum, cat) => sum + cat.products.filter((p) => p.alreadyImported).length,
-        0,
-      );
-    } catch {
-      // Provider unavailable
-    }
-  }
-
-  let batstoreAvailable = 0;
-  let batstoreImported = 0;
-  if (batstoreCreds.apiToken) {
-    try {
-      const products = await loadBatStoreCatalogue(supabase, batstoreCreds.apiToken);
-      batstoreAvailable = products.length;
-      batstoreImported = products.filter((p) => p.alreadyImported).length;
-    } catch {
-      // Provider unavailable
-    }
-  }
+  /*
+   * Three live provider catalogues, fetched together: serially, a slow
+   * supplier made the page wait for the next one before it even started.
+   */
+  const [g2bulkAvailable, maxstore, batstore] = await Promise.all([
+    g2bulkKey.apiKey
+      ? new G2BulkClient({ apiKey: g2bulkKey.apiKey })
+          .listGames()
+          .then((games) => games.length)
+          .catch(() => 0)
+      : Promise.resolve(0),
+    maxstoreCreds.apiToken
+      ? loadMaxStoreCatalogue(supabase, maxstoreCreds.apiToken)
+          .then(({ categories: msCategories }) => ({
+            available: msCategories.reduce((sum, cat) => sum + cat.productCount, 0),
+            imported: msCategories.reduce(
+              (sum, cat) => sum + cat.products.filter((p) => p.alreadyImported).length,
+              0,
+            ),
+          }))
+          .catch(() => ({ available: 0, imported: 0 }))
+      : Promise.resolve({ available: 0, imported: 0 }),
+    batstoreCreds.apiToken
+      ? loadBatStoreCatalogue(supabase, batstoreCreds.apiToken)
+          .then((products) => ({
+            available: products.length,
+            imported: products.filter((p) => p.alreadyImported).length,
+          }))
+          .catch(() => ({ available: 0, imported: 0 }))
+      : Promise.resolve({ available: 0, imported: 0 }),
+  ]);
+  const maxstoreAvailable = maxstore.available;
+  const maxstoreImported = maxstore.imported;
+  const batstoreAvailable = batstore.available;
+  const batstoreImported = batstore.imported;
 
   return [
     {

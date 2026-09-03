@@ -1,4 +1,5 @@
 import "server-only";
+import { isolateCached } from "@/lib/cache/read-through";
 
 import { requireAuth } from "@/lib/auth/guards";
 import { log, logOutcome } from "@/lib/logging/logger";
@@ -76,7 +77,9 @@ function webhookUrl(): string | null {
  * Only the switch and the coin come back, so a page that renders this cannot
  * leak anything even by accident.
  */
-export async function getBinancePaymentOptions(): Promise<{ enabled: boolean; currency: string }> {
+export const getBinancePaymentOptions = isolateCached(readBinancePaymentOptions, 60_000);
+
+async function readBinancePaymentOptions(): Promise<{ enabled: boolean; currency: string }> {
   const credentials = await readCredentials();
 
   return { enabled: credentials.enabled, currency: credentials.currency };

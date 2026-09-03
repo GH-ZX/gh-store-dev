@@ -1,7 +1,6 @@
 import "server-only";
 
-import { toHeaderWalletRows, type HeaderWalletPanel } from "@/lib/wallet-panel";
-import { listTopWallets } from "@/lib/services/admin-customers.service";
+import type { HeaderWalletPanel } from "@/lib/wallet-panel";
 import { getMyWallet } from "@/lib/services/wallet.service";
 import type { SessionSummary } from "@/lib/services/session.service";
 
@@ -29,8 +28,13 @@ export async function getHeaderWalletPanel(
     return null;
   }
 
+  /*
+   * An administrator has no wallet of their own and should not be shown one in
+   * the chrome — customer balances live on the customers page, not the header.
+   * Returning null also drops the 25-wallet query from every admin page load.
+   */
   if (session.isAdmin) {
-    return { kind: "admin", rows: toHeaderWalletRows(await listTopWallets()) };
+    return null;
   }
 
   const wallet = await getMyWallet();

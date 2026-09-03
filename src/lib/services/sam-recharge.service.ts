@@ -1,8 +1,9 @@
 import "server-only";
+import { isolateCached } from "@/lib/cache/read-through";
 
 import { requireAuth } from "@/lib/auth/guards";
 import { log, logOutcome } from "@/lib/logging/logger";
-import { notify } from "@/lib/services/notification.service";
+import { notify, notifyAdmins } from "@/lib/services/notification.service";
 import {
   readSamCredentials,
   type SamCredentials,
@@ -111,7 +112,9 @@ export function resolveSamPaidAmount(reported: SamReportedAmounts): number | nul
 }
 
 /** Presentation-safe options, via the RPC that cannot see the API key. */
-export async function getSamPaymentOptions(): Promise<SamPaymentOptions> {
+export const getSamPaymentOptions = isolateCached(readSamPaymentOptions, 60_000);
+
+async function readSamPaymentOptions(): Promise<SamPaymentOptions> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("get_sam_payment_options");
 
@@ -477,9 +480,13 @@ async function attemptSettle(input: {
       return { ok: false, reason: error.message.includes("not found") ? "not_found" : "unknown" };
     }
 
-    return data?.status === "credited"
-      ? { ok: true, status: "credited", credited: 0, balance: 0 }
-      : { ok: true, status: "awaiting_review" };
+    if (data?.status === "credited") {
+      return { ok: true, status: "credited", credited: 0, balance: 0 };
+    }
+
+    await announceHeldForReview(input.samInvoiceId);
+
+    return { ok: true, status: "awaiting_review" };
   }
 
   const { data, error } = await service
@@ -586,6 +593,31 @@ async function announceCredit(samInvoiceId: string, credited: number): Promise<v
     entityType: "recharge",
     entityId: data.recharge_request_id ?? null,
   });
+
+  // The owner hears about money that arrived, not only about requests opened.
+  await notifyAdmins({
+    type: "admin_recharge_paid",
+    titleAr: "وصلت دفعة شحن",
+    titleEn: "Recharge payment received",
+    bodyAr: reference ? `${reference} — ${amount} دولار أُضيفت تلقائيًا.` : `${amount} دولار أُضيفت تلقائيًا.`,
+    bodyEn: reference ? `${reference} — ${amount} USD credited automatically.` : `${amount} USD credited automatically.`,
+    href: "/dashboard/recharges",
+    entityType: "recharge",
+    entityId: data.recharge_request_id ?? null,
+  });
+}
+
+/** A confirmed transfer parked for the owner's approval must not sit unseen. */
+async function announceHeldForReview(samInvoiceId: string): Promise<void> {
+  await notifyAdmins({
+    type: "admin_recharge_paid",
+    titleAr: "دفعة شحن بانتظار موافقتك",
+    titleEn: "Recharge payment awaiting your approval",
+    bodyAr: `وصل التحويل للفاتورة ${samInvoiceId} وينتظر المراجعة.`,
+    bodyEn: `The transfer for invoice ${samInvoiceId} arrived and is waiting for review.`,
+    href: "/dashboard/recharges",
+    entityType: "sam_invoice",
+  });
 }
 
 /** Close an invoice Sam will not settle. */
@@ -635,6 +667,7 @@ async function holdSamInvoiceForReview(samInvoiceId: string, payload?: Json): Pr
   }
 
   log.info("recharge", "sam_payment_held_for_review", { samInvoiceId });
+  await announceHeldForReview(samInvoiceId);
 
   return { ok: true, status: "awaiting_review" };
 }

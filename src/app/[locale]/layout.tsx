@@ -6,7 +6,6 @@ import { getLocaleDirection, isLocale, type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { BRAND, buildBrandName } from "@/lib/brand";
 import { getHeaderWalletPanel } from "@/lib/services/header-wallets.service";
-import { getShamCashWalletSnapshot } from "@/lib/services/shamcash-wallet.service";
 import { getUnreadNotificationCount } from "@/lib/services/notification.service";
 import { getSessionSummary } from "@/lib/services/session.service";
 import { getPublicStoreSettings } from "@/lib/services/settings.service";
@@ -36,11 +35,13 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
    * the account menus rides along in the same breath: own balance for a
    * customer, every customer wallet for an administrator.
    */
-  const [wallet, unreadCount, walletPanel] = await Promise.all([
-    session?.isAdmin ? getShamCashWalletSnapshot() : Promise.resolve(null),
+  const [unreadCount, walletPanel] = await Promise.all([
     getUnreadNotificationCount(session?.userId ?? null),
     session ? getHeaderWalletPanel(session) : Promise.resolve(null),
   ]);
+  // The supplier balance is operational data; it lives on the providers page,
+  // not in the storefront chrome, so an administrator carries no balance pill.
+  const wallet = null;
 
   /*
    * The chrome name. The homepage tab always uses the configured name, but the

@@ -4,14 +4,16 @@ import { notFound } from "next/navigation";
 import { CustomerAccessForm } from "@/components/admin/customer-access-form";
 import { CustomerMessageForm } from "@/components/admin/customer-message-form";
 import { WalletAdjustForm } from "@/components/admin/wallet-adjust-form";
+import { FulfillmentBadge, OrderStatusBadge } from "@/components/admin/order-badges";
 import { Badge } from "@/components/ui/badge";
-import { ChevronIcon } from "@/components/ui/icons";
+import { ArrowIcon, ChevronIcon } from "@/components/ui/icons";
 import { SectionHeader } from "@/components/ui/section";
 import { getMessages } from "@/i18n/messages";
 import { formatPrice } from "@/lib/format/money";
 import { resolveLocaleParam } from "@/lib/routing/locale-params";
 import { getAdminCustomer } from "@/lib/services/admin-customers.service";
 import { getSessionSummary } from "@/lib/services/session.service";
+import { getPaymentMethodLabel } from "@/lib/settings/recharge-settings";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -22,6 +24,8 @@ export default async function CustomerDetailPage({
   const { userId } = await params;
   const messages = getMessages(locale, "admin").customers;
   const account = getMessages(locale, "account");
+  const checkout = getMessages(locale, "checkout");
+  const rechargeMessages = getMessages(locale, "recharge");
   // Needed to refuse the one change an administrator must not make to their own
   // account: the page that would undo it is the one it takes away.
   const [detail, viewer] = await Promise.all([getAdminCustomer(userId), getSessionSummary()]);
@@ -30,7 +34,7 @@ export default async function CustomerDetailPage({
     notFound();
   }
 
-  const { customer, transactions } = detail;
+  const { customer, transactions, orders, recharges } = detail;
 
   return (
     <div className="grid gap-8">
@@ -78,6 +82,122 @@ export default async function CustomerDetailPage({
             isAdmin={customer.role === "admin"}
             isActive={customer.isActive}
           />
+
+          <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-[var(--ink)]">{messages.ordersTitle}</h2>
+              <Link
+                href={`/${locale}/dashboard/orders?q=${encodeURIComponent(customer.email ?? "")}`}
+                className="text-xs font-medium text-[var(--accent)] underline-offset-4 hover:underline"
+              >
+                {messages.viewAllOrders}
+              </Link>
+            </div>
+
+            {orders.length === 0 ? (
+              <p className="mt-3 text-sm text-[var(--ink-muted)]">{messages.ordersEmpty}</p>
+            ) : (
+              <ul className="mt-4 grid gap-2">
+                {orders.map((order) => (
+                  <li key={order.id}>
+                    <Link
+                      href={`/${locale}/dashboard/orders/${order.id}`}
+                      className="group flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 transition-colors duration-[var(--duration)] hover:border-[color-mix(in_srgb,var(--accent)_45%,transparent)]"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-sm font-semibold text-[var(--ink)]" dir="ltr">
+                            {order.orderNumber}
+                          </span>
+                          <OrderStatusBadge messages={checkout} status={order.status} />
+                          {order.fulfillmentState && order.fulfillmentState !== order.status ? (
+                            <FulfillmentBadge messages={checkout} state={order.fulfillmentState} />
+                          ) : null}
+                        </div>
+                        {order.itemNames.length > 0 ? (
+                          <p className="mt-1 truncate text-xs text-[var(--ink-faint)]">
+                            {order.itemNames.join(" · ")}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-end" dir="ltr">
+                          <p className="text-sm font-semibold text-[var(--ink)] tabular-nums">
+                            {formatPrice(order.total, order.currency, locale)}
+                          </p>
+                          <p className="mt-0.5 text-xs text-[var(--ink-faint)] tabular-nums">
+                            {order.createdAt.slice(0, 16).replace("T", " ")}
+                          </p>
+                        </div>
+                        <span
+                          className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
+                          aria-hidden="true"
+                        >
+                          <ArrowIcon direction="end" className="size-3.5 rtl:rotate-180" />
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-[var(--ink)]">{messages.rechargesTitle}</h2>
+              <Link
+                href={`/${locale}/dashboard/recharges`}
+                className="text-xs font-medium text-[var(--accent)] underline-offset-4 hover:underline"
+              >
+                {messages.viewAllRecharges}
+              </Link>
+            </div>
+
+            {recharges.length === 0 ? (
+              <p className="mt-3 text-sm text-[var(--ink-muted)]">{messages.rechargesEmpty}</p>
+            ) : (
+              <ul className="mt-4 grid gap-2">
+                {recharges.map((request) => (
+                  <li
+                    key={request.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs text-[var(--ink-muted)]" dir="ltr">
+                          {request.reference}
+                        </span>
+                        <Badge
+                          tone={
+                            request.status === "approved"
+                              ? "success"
+                              : request.status === "rejected"
+                                ? "danger"
+                                : "warning"
+                          }
+                        >
+                          {rechargeMessages.statuses[request.status] ?? request.status}
+                        </Badge>
+                        <span className="text-xs text-[var(--ink-faint)]">{getPaymentMethodLabel(request.paymentMethod, locale)}</span>
+                      </div>
+                      {request.adminNote ? (
+                        <p className="mt-1 truncate text-xs text-[var(--ink-muted)]">{request.adminNote}</p>
+                      ) : null}
+                    </div>
+                    <div className="text-end" dir="ltr">
+                      <p className="text-sm font-semibold text-[var(--ink)] tabular-nums">
+                        {formatPrice(request.creditedAmount ?? request.requestedAmount, request.currency, locale)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--ink-faint)] tabular-nums">
+                        {request.createdAt.slice(0, 16).replace("T", " ")}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
           <section className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-5 sm:p-6">
             <h2 className="text-base font-semibold text-[var(--ink)]">

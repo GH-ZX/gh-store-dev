@@ -29,7 +29,19 @@ export type NotificationType =
   | "support_reply"
   | "wallet_adjusted"
   /** The one an owner writes themselves, rather than one the store derives. */
-  | "admin_message";
+  | "admin_message"
+  | AdminNotificationType;
+
+/** Owner-facing events, mirrored into the bell of every active administrator. */
+export type AdminNotificationType =
+  | "admin_order_placed"
+  | "admin_recharge_request"
+  | "admin_recharge_paid"
+  | "admin_support_message"
+  | "admin_low_wallet"
+  | "admin_low_stock"
+  | "admin_new_customer"
+  | "admin_sweep_stalled";
 export type CustomerNotification = {
   id: string;
   type: string;
@@ -84,6 +96,52 @@ export async function notify(input: NotifyInput): Promise<boolean> {
     logFailure("notifications", "insert_threw", error, { userId: input.userId, type: input.type });
     // Never rethrow: see the note above about not breaking the money path.
     return false;
+  }
+}
+
+/**
+ * One notification row per active administrator.
+ *
+ * The bell was customer-only: every owner-facing event went to Telegram and
+ * nowhere else, so an owner without the bot linked learned about an order by
+ * opening the dashboard. Errors are swallowed for the same reason as `notify`.
+ */
+export async function notifyAdmins(input: Omit<NotifyInput, "userId">): Promise<void> {
+  if (!hasServiceRoleKey()) {
+    return;
+  }
+
+  try {
+    const service = createSupabaseServiceClient();
+    const { data: admins } = await service
+      .from("profiles")
+      .select("id")
+      .eq("role", "admin")
+      .eq("is_active", true);
+
+    if (!admins || admins.length === 0) {
+      return;
+    }
+
+    const { error } = await service.from("notifications").insert(
+      admins.map((admin) => ({
+        user_id: admin.id,
+        notification_type: input.type,
+        title_ar: input.titleAr,
+        title_en: input.titleEn,
+        body_ar: input.bodyAr,
+        body_en: input.bodyEn,
+        href: input.href ?? null,
+        entity_type: input.entityType ?? null,
+        entity_id: input.entityId ?? null,
+      })),
+    );
+
+    if (error) {
+      logFailure("notifications", "admin_insert_failed", error, { type: input.type });
+    }
+  } catch (error) {
+    logFailure("notifications", "admin_insert_threw", error, { type: input.type });
   }
 }
 

@@ -82,6 +82,23 @@ export type RechargeQueues = {
   config: RechargeConfig;
 };
 
+const REQUEST_SELECT =
+  "id, reference, requested_amount, wallet_credit_amount, requested_currency, payment_method, status, admin_note, created_at, reviewed_at, user_id, profiles!recharge_requests_user_id_fkey (id, email, full_name, username)";
+
+/** Every recharge request one customer made, newest first. */
+export async function listCustomerRecharges(userId: string, limit = 20): Promise<AdminRechargeRequest[]> {
+  await requireAdmin();
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("recharge_requests")
+    .select(REQUEST_SELECT)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data ?? []).map((row) => toRequest(row as unknown as RequestRow));
+}
+
 export async function getRechargeQueues(): Promise<RechargeQueues> {
   await requireAdmin();
   const supabase = await createSupabaseServerClient();
