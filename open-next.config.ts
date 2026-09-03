@@ -1,6 +1,7 @@
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
-// import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
-// import memoryQueue from "@opennextjs/cloudflare/overrides/queue/memory-queue";
+import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
+import memoryQueue from "@opennextjs/cloudflare/overrides/queue/memory-queue";
+import d1NextTagCache from "@opennextjs/cloudflare/overrides/tag-cache/d1-next-tag-cache";
 
 /*
  * Incremental cache: prepared, not yet armed.
@@ -38,7 +39,10 @@ import { defineCloudflareConfig } from "@opennextjs/cloudflare";
  * D1 database id only exists once someone creates the database — a placeholder
  * would fail the deploy. See the note beside the R2 binding in wrangler.jsonc.
  */
+// Armed: bucket `gh-store-inc-cache` and D1 `gh-store-tag-cache` exist on the
+// deploying account and are bound in wrangler.jsonc.
 export default defineCloudflareConfig({
-	// incrementalCache: r2IncrementalCache,
-	// queue: memoryQueue,
+	incrementalCache: r2IncrementalCache,
+	queue: memoryQueue,
+	tagCache: d1NextTagCache,
 });

@@ -2,7 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"main": "./worker.ts",
 	"name": "gh-store",
-	"account_id": "5c885c3c858ff52e420d04dfb76e9377",
+	"account_id": "d068278103f7547ed926499dcd9b653d",
 	"compatibility_date": "2026-08-11",
 	"preview_urls": false,
 	"compatibility_flags": [
@@ -86,12 +86,26 @@
 	 * `revalidations` table itself. Left out for the same reason: a database id
 	 * cannot be written down before the database exists.
 	 */
-	// "r2_buckets": [
-	// 	{
-	// 		"binding": "NEXT_INC_CACHE_R2_BUCKET",
-	// 		"bucket_name": "gh-store-inc-cache"
-	// 	}
-	// ],
+	"r2_buckets": [
+		{
+			"binding": "NEXT_INC_CACHE_R2_BUCKET",
+			"bucket_name": "gh-store-inc-cache"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "NEXT_TAG_CACHE_D1",
+			"database_name": "gh-store-tag-cache",
+			"database_id": "4f7335d5-05db-4e8c-a4b7-686e7b8aaa27"
+		}
+	],
+	/*
+	 * Paid plan: a render that goes long should finish, not die as error 1102.
+	 * Wall-clock waits on the database do not count; this is pure CPU.
+	 */
+	"limits": {
+		"cpu_ms": 60000
+	},
 	"images": {
 		// Enable image optimization
 		// see https://opennext.js.org/cloudflare/howtos/image
