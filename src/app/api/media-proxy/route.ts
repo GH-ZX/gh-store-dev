@@ -26,6 +26,75 @@ type CfRequestInit = RequestInit & {
   cf?: { cacheEverything?: boolean; cacheTtl?: number };
 };
 
+const MAX_REDIRECTS = 3;
+
+/**
+ * Refuse anything that is not a public host.
+ *
+ * Defence in depth: the worker runs with the `global_fetch_strictly_public`
+ * compatibility flag, so the runtime itself refuses private and internal
+ * addresses. This check exists so the proxy fails loudly and cheaply on its own
+ * too. A Worker has no DNS API, so names are judged by shape and literal
+ * addresses by range.
+ */
+function isPublicHost(rawHost: string): boolean {
+  const host = rawHost.replace(/^\[|\]$/g, "").toLowerCase();
+
+  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) {
+    return false;
+  }
+
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    const [a, b] = host.split(".").map(Number);
+
+    return !(
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      a >= 224
+    );
+  }
+
+  if (host.includes(":")) {
+    // Loopback, unspecified, unique-local, link-local, and v4-mapped forms.
+    return !(host === "::1" || host === "::" || /^(f[cd]|fe[89ab])/.test(host) || host.startsWith("::ffff:"));
+  }
+
+  return host.includes(".");
+}
+
+/** Follow redirects by hand so every hop is checked, not only the first. */
+async function fetchPublic(url: URL, init: CfRequestInit): Promise<Response> {
+  let current = url;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    const response = await fetch(current.toString(), { ...init, redirect: "manual" });
+
+    if (response.status < 300 || response.status >= 400) {
+      return response;
+    }
+
+    const location = response.headers.get("location");
+    await response.body?.cancel();
+
+    if (!location) {
+      return new Response(null, { status: 502 });
+    }
+
+    current = new URL(location, current);
+
+    if (!ALLOWED_PROTOCOLS.has(current.protocol) || !isPublicHost(current.hostname)) {
+      return new Response(null, { status: 403 });
+    }
+  }
+
+  return new Response(null, { status: 508 });
+}
+
 export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url);
   const rawUrl = searchParams.get("url");
@@ -45,13 +114,7 @@ export async function GET(request: Request): Promise<Response> {
     return new NextResponse("Forbidden protocol", { status: 403 });
   }
 
-  // Never let the proxy be pointed back at itself or at private ranges.
-  const host = targetUrl.hostname;
-  if (
-    host === "localhost" ||
-    host.endsWith(".local") ||
-    /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.|\[?::1)/.test(host)
-  ) {
+  if (!isPublicHost(targetUrl.hostname)) {
     return new NextResponse("Forbidden host", { status: 403 });
   }
 
@@ -64,7 +127,7 @@ export async function GET(request: Request): Promise<Response> {
       },
       cf: { cacheEverything: true, cacheTtl: ONE_MONTH },
     };
-    const upstreamRes = await fetch(targetUrl.toString(), init);
+    const upstreamRes = await fetchPublic(targetUrl, init);
 
     if (!upstreamRes.ok || !upstreamRes.body) {
       return new NextResponse(`Upstream failed with status ${upstreamRes.status}`, {
