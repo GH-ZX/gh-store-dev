@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
+import { Suspense } from "react";
 import { SupportFab } from "@/components/support/support-fab";
 import { getLocaleDirection, isLocale, type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
@@ -67,6 +69,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
           aria-hidden="true"
         />
       )}
+
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
 
       <a
         href="#main"

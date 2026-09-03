@@ -422,3 +422,16 @@ html:not([data-theme="light"]) .gh-only-light {
     background: #ffffff;
   }
 }
+
+/* Navigation progress bar: fills most of the width, then waits for the page. */
+@keyframes gh-progress {
+  0% {
+    transform: scaleX(0);
+  }
+  60% {
+    transform: scaleX(0.7);
+  }
+  100% {
+    transform: scaleX(0.92);
+  }
+}
