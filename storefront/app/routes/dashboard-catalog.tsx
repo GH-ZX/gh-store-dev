@@ -1,197 +1,263 @@
-import { data, Form, Link, redirect, useActionData, useLoaderData } from "react-router";
+import { Link } from "react-router";
 import { z } from "zod";
-import { isLocale } from "@/i18n/config";
-import { getMessages } from "@/i18n/messages";
-import { getCloudflareContext } from "@/lib/cloudflare-context";
-import { buildPageMeta } from "@/lib/seo";
+import { TextField } from "@/components/admin/admin-form";
+import { EmptyState } from "@/components/shared/states";
+import { StoreImage } from "@/components/store/store-image";
+import { Badge } from "@/components/ui/badge";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { ChevronIcon, GamepadIcon, LinkIcon, SearchIcon } from "@/components/ui/icons";
+import { SectionHeader } from "@/components/ui/section";
+import type { Locale } from "@/i18n/config";
+import { formatMessage, getMessages } from "@/i18n/messages";
+import { cn } from "@/lib/cn";
 import {
-  createAdminProduct,
-  listAdminCategories,
   listAdminProducts,
   listAdminProviderCategories,
-  SlugTakenError,
-  type AdminCategory,
-  type AdminProductListItem,
-  type AdminProviderCategory,
-} from "@server/lib/services/admin-catalog.service";
-import { PRODUCT_KINDS } from "@/lib/product-kind";
-import { getSessionSummary } from "@server/lib/services/session.service";
-import { createSessionClient, getSessionUserId, redirectToLogin, sessionCookieHeaders, withSessionCookies } from "@server/session";
-import type { Route } from "./+types/dashboard-catalog";
+} from "@server/legacy/lib/services/admin-catalog.service";
 
-const CreateSchema = z.object({
-  nameAr: z.string().trim().min(1).max(160),
-  nameEn: z.string().trim().min(1).max(160),
-  slug: z.string().trim().min(1).max(80),
-  productKind: z.enum(PRODUCT_KINDS),
+
+/**
+ * Catalog list.
+ *
+ * Search and the published filter live in the URL, not in component state: an
+ * operator can bookmark "unpublished imports I still have to price", and the
+ * whole page stays a Server Component with no client bundle at all.
+ */
+
+const MAX_QUERY_LENGTH = 80;
+
+const filtersSchema = z.object({
+  q: z.string().max(400).optional(),
+  published: z.string().max(8).optional(),
+  category: z.string().max(120).optional(),
 });
 
-export async function loader({ params, request, context }: Route.LoaderArgs) {
-  const locale = params.locale ?? "";
-  if (!isLocale(locale)) {
-    throw new Response("Not Found", { status: 404 });
-  }
-  const { env } = getCloudflareContext(context);
-  const { supabase, jar, isProduction } = createSessionClient(request, env);
-  const userId = await getSessionUserId(supabase);
-  if (!userId) {
-    return withSessionCookies(
-      redirectToLogin(request, locale, `/${locale}/dashboard/catalog`),
-      jar,
-      isProduction,
-    );
-  }
-  const session = await getSessionSummary(supabase, userId);
-  if (!session?.isAdmin) {
-    throw new Response("Forbidden", { status: 403 });
-  }
-  const url = new URL(request.url);
-  const query = url.searchParams.get("q") ?? "";
-  const category = url.searchParams.get("category") ?? "";
-  const publishedOnly = url.searchParams.get("published") === "1";
-  const [products, categories, providerCategories] = await Promise.all([
-    listAdminProducts(supabase, true, {
-      query,
-      publishedOnly,
-      category: category || undefined,
-    }),
-    listAdminCategories(supabase, true),
-    listAdminProviderCategories(supabase, true),
-  ]);
-  return data(
-    { locale, query, category, publishedOnly, products, categories, providerCategories },
-    { headers: sessionCookieHeaders(jar, isProduction) },
-  );
-}
+type CatalogFilters = { query: string; publishedOnly: boolean; category: string };
 
-export async function action({ params, request, context }: Route.ActionArgs) {
-  const locale = params.locale ?? "";
-  if (!isLocale(locale)) {
-    throw new Response("Not Found", { status: 404 });
-  }
-  const { env } = getCloudflareContext(context);
-  const { supabase, jar, isProduction } = createSessionClient(request, env);
-  const userId = await getSessionUserId(supabase);
-  if (!userId) {
-    return withSessionCookies(
-      redirectToLogin(request, locale, `/${locale}/dashboard/catalog`),
-      jar,
-      isProduction,
-    );
-  }
-  const session = await getSessionSummary(supabase, userId);
-  if (!session?.isAdmin) {
-    throw new Response("Forbidden", { status: 403 });
-  }
-  const form = await request.formData();
-  const parsed = CreateSchema.safeParse({
-    nameAr: form.get("nameAr"),
-    nameEn: form.get("nameEn"),
-    slug: form.get("slug"),
-    productKind: form.get("productKind"),
-  });
+/** A malformed query string degrades to the unfiltered list rather than an error page. */
+function parseFilters(input: unknown): CatalogFilters {
+  const parsed = filtersSchema.safeParse(input ?? {});
+
   if (!parsed.success) {
-    return data(
-      { ok: false as const, error: "invalid_input" },
-      { status: 400, headers: sessionCookieHeaders(jar, isProduction) },
-    );
+    return { query: "", publishedOnly: false, category: "" };
   }
-  try {
-    const id = await createAdminProduct(supabase, true, parsed.data);
-    return withSessionCookies(redirect(`/${locale}/dashboard/catalog/${id}`), jar, isProduction);
-  } catch (error) {
-    const key = error instanceof SlugTakenError ? "slug_taken" : "unknown";
-    return data(
-      { ok: false as const, error: key },
-      { status: 400, headers: sessionCookieHeaders(jar, isProduction) },
-    );
-  }
+
+  return {
+    query: (parsed.data.q ?? "").trim().slice(0, MAX_QUERY_LENGTH),
+    publishedOnly: parsed.data.published === "1",
+    category: (parsed.data.category ?? "").trim().slice(0, 120),
+  };
 }
 
-export function meta({ params }: Route.MetaArgs) {
-  const locale = params.locale && isLocale(params.locale) ? params.locale : "ar";
-  return buildPageMeta({ locale, path: "/dashboard/catalog", title: "Catalog", description: "", noIndex: true });
+function catalogPath(locale: Locale, filters: CatalogFilters): string {
+  const search = new URLSearchParams();
+
+  if (filters.query) {
+    search.set("q", filters.query);
+  }
+
+  if (filters.publishedOnly) {
+    search.set("published", "1");
+  }
+
+  if (filters.category) {
+    search.set("category", filters.category);
+  }
+
+  const queryString = search.toString();
+
+  return queryString
+    ? `/${locale}/dashboard/catalog?${queryString}`
+    : `/${locale}/dashboard/catalog`;
 }
 
-export default function DashboardCatalog() {
-  const { locale, query, category, publishedOnly, products, categories, providerCategories } =
-    useLoaderData<typeof loader>() as unknown as {
-      locale: "ar" | "en";
-      query: string;
-      category: string;
-      publishedOnly: boolean;
-      products: AdminProductListItem[];
-      categories: AdminCategory[];
-      providerCategories: AdminProviderCategory[];
-    };
-  const actionResult = useActionData<typeof action>() as { ok: boolean; error?: string } | undefined;
-  const catalog = getMessages(locale, "admin").catalog;
+const FILTER_LINK_CLASSES =
+  "inline-flex min-h-11 items-center rounded-[var(--radius-pill)] border px-4 text-sm font-semibold transition-colors duration-[var(--duration)]";
 
+
+import { useLoaderData, type LoaderFunctionArgs } from "react-router";
+import { isLocale } from "@/i18n/config";
+function requireLocale(value: string | undefined) { if (!value || !isLocale(value)) throw new Response("Not Found", { status: 404 }); return value; }
+import { requireAdmin } from "@server/lib/auth/guards";
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  await requireAdmin();
+  const locale = requireLocale(params.locale);
+  const filters = parseFilters(Object.fromEntries(new URL(request.url).searchParams));
+  const [games, providerCategories] = await Promise.all([
+    listAdminProducts({
+      query: filters.query,
+      publishedOnly: filters.publishedOnly,
+      category: filters.category,
+    }),
+    listAdminProviderCategories(),
+  ]);
+
+  return { locale, filters, games, providerCategories };
+}
+
+export default function Page() {
+ const { locale, filters, games, providerCategories } = useLoaderData<typeof loader>();
+const messages = getMessages(locale, "admin").catalog;
   return (
-    <>
-      <h1 className="text-2xl font-bold">{catalog.title}</h1>
-      <p className="opacity-70">{catalog.description}</p>
-      <Form method="get" className="mt-4 flex flex-wrap gap-2">
-        <input
-          name="q"
-          defaultValue={query}
-          placeholder={catalog.searchPlaceholder}
-          className="rounded border p-2"
+    <div className="grid gap-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <SectionHeader
+          as="h1"
+          eyebrow={messages.eyebrow}
+          title={messages.title}
+          subtitle={messages.description}
         />
-        <select name="category" defaultValue={category} className="rounded border p-2">
-          <option value="">{catalog.allCategories}</option>
-          {providerCategories.map((entry) => (
-            <option key={entry.id} value={entry.id}>
-              {entry.title} ({entry.count})
-            </option>
-          ))}
-        </select>
-        <label className="flex items-center gap-1 text-sm">
-          <input type="checkbox" name="published" value="1" defaultChecked={publishedOnly} />
-          {catalog.publishedFilter}
-        </label>
-        <button type="submit" className="rounded border px-3 py-1.5">
-          {catalog.searchLabel}
-        </button>
-      </Form>
-      {products.length === 0 ? (
-        <p className="mt-6 opacity-70">{catalog.emptyDescription}</p>
+
+        {/* Beside the list, not inside it: creating is a different errand. */}
+        <ButtonLink href={`/${locale}/dashboard/catalog/new`} variant="secondary">
+          {messages.create.action}
+        </ButtonLink>
+      </div>
+
+      <div className="grid gap-4 rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-5 sm:p-6">
+        <form method="get" action={`/${locale}/dashboard/catalog`} className="flex flex-wrap items-end gap-3">
+          {filters.publishedOnly ? <input type="hidden" name="published" value="1" /> : null}
+
+          <label className="grid min-w-48 gap-1.5">
+            <span className="text-xs font-semibold text-[var(--ink-soft)]">{messages.categoryFilterLabel}</span>
+            <select
+              name="category"
+              defaultValue={filters.category}
+              className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+            >
+              <option value="">{messages.allCategories}</option>
+              {providerCategories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.title} ({category.count})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <TextField
+            label={messages.searchLabel}
+            name="q"
+            type="search"
+            defaultValue={filters.query}
+            placeholder={messages.searchPlaceholder}
+            maxLength={MAX_QUERY_LENGTH}
+            fieldClassName="min-w-0 flex-1 basis-64"
+          />
+
+          <Button type="submit" variant="secondary" leadingIcon={<SearchIcon />}>
+            {messages.searchLabel}
+          </Button>
+        </form>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { label: messages.allFilter, publishedOnly: false },
+            { label: messages.publishedFilter, publishedOnly: true },
+          ].map((option) => {
+            const active = option.publishedOnly === filters.publishedOnly;
+
+            return (
+              <Link
+                key={option.label}
+                to={catalogPath(locale, {
+                  query: filters.query,
+                  publishedOnly: option.publishedOnly,
+                  category: filters.category,
+                })}
+                aria-current={active ? "true" : undefined}
+                className={cn(
+                  FILTER_LINK_CLASSES,
+                  active
+                    ? "border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-[var(--accent-strong)]"
+                    : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]",
+                )}
+              >
+                {option.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      <p className="text-sm text-[var(--ink-muted)] tabular-nums">
+        {formatMessage(messages.countLabel, { count: games.length }, locale)}
+      </p>
+
+      {games.length === 0 ? (
+        <EmptyState
+          icon={<GamepadIcon />}
+          title={messages.emptyTitle}
+          description={messages.emptyDescription}
+          action={{
+            href: `/${locale}/dashboard/providers/g2bulk/import`,
+            label: messages.goToImport,
+          }}
+        />
       ) : (
-        <ul className="mt-6 flex flex-col gap-2">
-          {products.map((product) => (
-            <li key={product.id} className="flex items-center justify-between gap-2 rounded border p-2 text-sm">
-              <span>
-                <strong>{product.nameEn}</strong> <span className="opacity-60">{product.nameAr}</span> —{" "}
-                {product.offerCount} offers — {product.isActive ? catalog.published : catalog.unpublished}
-              </span>
-              <Link to={`/${locale}/dashboard/catalog/${product.id}`} className="rounded border px-2 py-1">
-                {catalog.editAction}
+        <ul className="grid gap-2">
+          {games.map((game) => (
+            <li key={game.id}>
+              <Link
+                to={`/${locale}/dashboard/catalog/${game.id}`}
+                className="flex min-h-11 flex-wrap items-center gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--shell)] p-3 transition-colors duration-[var(--duration)] ease-[var(--ease-spring)] hover:border-[var(--line-strong)] hover:bg-[var(--surface)] sm:p-4"
+              >
+                <div className="size-14 shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line)]">
+                  <StoreImage src={game.imageUrl} alt="" sizes="56px" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-[var(--ink)]">{game.nameAr}</p>
+                  <p className="truncate text-xs text-[var(--ink-soft)]" dir="ltr">
+                    {game.nameEn}
+                  </p>
+                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--ink-faint)]">
+                    <span dir="ltr" className="font-mono">
+                      {game.slug}
+                    </span>
+                    <span className="text-[var(--ink-muted)] tabular-nums">
+                      {formatMessage(messages.offersCount, { count: game.offerCount }, locale)}
+                    </span>
+                    {game.providerCode ? (
+                      <span>
+                        {messages.providerLabel}: <span dir="ltr">{game.providerCode}</span>
+                      </span>
+                    ) : null}
+                    {game.providerUrl ? (
+                      <a
+                        href={game.providerUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="inline-flex items-center gap-1 text-[var(--accent-strong)] underline-offset-4 transition-colors duration-[var(--duration)] hover:underline"
+                      >
+                        <LinkIcon className="size-3" />
+                        <span dir="ltr">{messages.supplierLinkTitle}</span>
+                      </a>
+                    ) : null}
+                    {game.providerCategoryTitle ? (
+                      <span>
+                        {messages.providerCategoryLabel}: {game.providerCategoryTitle}
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Badge tone={game.isActive ? "success" : "neutral"}>
+                    {game.isActive ? messages.published : messages.unpublished}
+                  </Badge>
+                  {game.isFeatured ? <Badge tone="accent">{messages.featured}</Badge> : null}
+                  {game.showInCarousel ? <Badge tone="sale">{messages.inCarousel}</Badge> : null}
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-soft)]">
+                    {messages.editAction}
+                    <ChevronIcon direction="end" className="size-4 rtl:rotate-180" />
+                  </span>
+                </div>
               </Link>
             </li>
           ))}
         </ul>
       )}
-      <h2 className="mt-8 text-lg font-bold">{catalog.create.formTitle}</h2>
-      <Form method="post" className="mt-2 flex max-w-lg flex-col gap-2">
-        <input name="nameAr" required maxLength={160} placeholder={catalog.game.nameAr} className="rounded border p-2" />
-        <input name="nameEn" required maxLength={160} placeholder={catalog.game.nameEn} className="rounded border p-2" />
-        <input name="slug" required maxLength={80} placeholder={catalog.game.slug} className="rounded border p-2" dir="ltr" />
-        <select name="productKind" className="rounded border p-2">
-          {PRODUCT_KINDS.map((kind) => (
-            <option key={kind} value={kind}>
-              {kind}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="rounded border px-4 py-2 font-bold">
-          {catalog.create.submitAction}
-        </button>
-        {actionResult && !actionResult.ok ? (
-          <p role="alert" className="text-red-600">
-            {catalog.errors[actionResult.error as keyof typeof catalog.errors] ?? actionResult.error}
-          </p>
-        ) : null}
-      </Form>
-    </>
+    </div>
   );
 }

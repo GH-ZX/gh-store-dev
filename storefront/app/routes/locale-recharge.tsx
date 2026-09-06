@@ -1,5 +1,20 @@
-import { data, Form, Link, redirect, useActionData, useLoaderData } from "react-router";
-import { z } from "zod";
+import { AccountNavigation } from "@/components/account-ui";
+import { getSessionSummary } from "@server/lib/services/session.service";
+import { RechargeForm } from "@/components/recharge/recharge-form";
+import { SamTopUpForm } from "@/components/recharge/sam-topup-form";
+import { BinanceTopUpForm } from "@/components/recharge/binance-top-up-form";
+import { EmptyState } from "@/components/shared/states";
+import { AdminCard } from "@/components/admin/admin-form";
+import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
+import { ChevronIcon, WalletIcon } from "@/components/ui/icons";
+import { Section, SectionHeader } from "@/components/commerce/commerce-page";
+import { formatPrice } from "@/lib/format/money";
+import { getMethodLabel } from "@/lib/recharge-settings";
+import type { SamMethod } from "@server/lib/settings/sam-settings";
+import { getSamPaymentOptions, startSamTopUp } from "@server/lib/services/sam-recharge.service";
+import { getBinancePaymentOptions, startBinanceTopUp } from "@server/lib/services/binance-recharge.service";
+import { data, Link, redirect, useLoaderData } from "react-router";
 import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
@@ -8,16 +23,9 @@ import {
   getMyRechargeRequests,
   getRechargeConfig,
   submitRechargeRequest,
-  type MyRechargeRequest,
-  type SubmitResult,
 } from "@server/lib/services/recharge.service";
 import { createSessionClient, getSessionUserId, redirectToLogin, sessionCookieHeaders, withSessionCookies } from "@server/session";
 import type { Route } from "./+types/locale-recharge";
-
-const SubmitSchema = z.object({
-  amount: z.coerce.number().positive(),
-  method: z.string().min(1).max(120),
-});
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const locale = params.locale ?? "";
@@ -30,11 +38,15 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!userId) {
     return withSessionCookies(redirectToLogin(request, locale, `/${locale}/recharge`), jar, isProduction);
   }
-  const [config, requests] = await Promise.all([
+  const session = await getSessionSummary(supabase, userId);
+  if (session?.isAdmin) return withSessionCookies(redirect(`/${locale}/dashboard`), jar, isProduction);
+  const [config, requests, sam, binance] = await Promise.all([
     getRechargeConfig(supabase),
     getMyRechargeRequests(supabase, userId),
+    getSamPaymentOptions(supabase),
+    getBinancePaymentOptions(),
   ]);
-  return data({ locale, config, requests }, { headers: sessionCookieHeaders(jar, isProduction) });
+  return data({ locale, config, requests, sam, binance, chosen: new URL(request.url).searchParams.get("method") ?? "" }, { headers: sessionCookieHeaders(jar, isProduction) });
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
@@ -49,19 +61,27 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     return withSessionCookies(redirectToLogin(request, locale, `/${locale}/recharge`), jar, isProduction);
   }
   const form = await request.formData();
-  const parsed = SubmitSchema.safeParse({ amount: form.get("amount"), method: form.get("method") });
-  if (!parsed.success) {
-    return data({ ok: false as const, reason: "invalid_input" } satisfies SubmitResult, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
+  const amount = Number(form.get("amount"));
+  const method = String(form.get("method") ?? "");
+  const intent = String(form.get("intent") ?? "submitRechargeAction");
+  const headers = sessionCookieHeaders(jar, isProduction);
+  const initial = { error: null, notice: null, detail: null, status: "idle", reference: null, requestId: null, credited: false, invoiceId: null, checkoutUrl: null };
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 100000) return data({ ...initial, error: "invalid_input" }, { status: 400, headers });
+  if (intent === "startSamTopUpAction") {
+    if (method !== "shamcash" && method !== "syriatel") return data({ ...initial, error: "invalid_input" }, { status: 400, headers });
+    const result = await startSamTopUp(supabase, { amount, method });
+    if (!result.ok) return data({ ...initial, error: result.reason }, { status: 400, headers });
+    return withSessionCookies(redirect(`/${locale}/recharge/pay/${encodeURIComponent(result.invoice.samInvoiceId)}`), jar, isProduction);
   }
-  const result = await submitRechargeRequest(supabase, parsed.data);
-  if (result.ok) {
-    return withSessionCookies(
-      redirect(`/${locale}/recharge/${result.requestId}`),
-      jar,
-      isProduction,
-    );
+  if (intent === "startBinanceTopUpAction") {
+    const result = await startBinanceTopUp(supabase, { amount, locale });
+    if (!result.ok) return data({ ...initial, error: result.reason }, { status: 400, headers });
+    return withSessionCookies(redirect(`/${locale}/recharge/pay/${encodeURIComponent(result.invoiceId)}`), jar, isProduction);
   }
-  return data(result, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
+  if (intent !== "submitRechargeAction") return data({ ...initial, error: "invalid_input" }, { status: 400, headers });
+  const result = await submitRechargeRequest(supabase, { amount, method });
+  if (!result.ok) return data({ ...initial, error: result.reason }, { status: 400, headers });
+  return withSessionCookies(redirect(`/${locale}/recharge/${result.requestId}`), jar, isProduction);
 }
 
 export function meta({ params }: Route.MetaArgs) {
@@ -76,71 +96,209 @@ export function meta({ params }: Route.MetaArgs) {
   });
 }
 
-export default function LocaleRecharge() {
-  const { locale, config, requests } = useLoaderData<typeof loader>() as unknown as {
-    locale: "ar" | "en";
-    config: { currency: string; minAmount: number; maxAmount: number; methods: { id: string; enabled: boolean }[] };
-    requests: MyRechargeRequest[];
-  };
-  const actionResult = useActionData<typeof action>() as SubmitResult | undefined;
+const OPEN_STATUSES = new Set(["pending", "payment_sent", "processing"]);
+type MethodCard = { id: string; label: string; hint: string };
+export default function Page() {
+  const { locale, config, requests, sam, binance, chosen } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "recharge");
-  const methods = config.methods.filter((method) => method.enabled);
+  const account = getMessages(locale, "account");
+  const manualMethods = config.methods.filter((method) => method.enabled);
+
+  /*
+   * One method per screen. The old page stacked every form at once, which read
+   * as three different stores; now the customer picks a method first and only
+   * then sees the amount field and the instructions for that one method.
+   */
+  const cards: MethodCard[] = [
+    ...(sam.enabled
+      ? sam.methods.map((method) => ({
+          id: method,
+          label: method === "shamcash" ? messages.sam.methodShamcash : messages.sam.methodSyriatel,
+          hint: messages.instantHint,
+        }))
+      : []),
+    ...(binance.enabled ? [{ id: "binance", label: messages.methodBinance, hint: messages.cryptoHint }] : []),
+    ...manualMethods.map((method) => ({
+      id: `manual:${method.id}`,
+      label: getMethodLabel(method, locale),
+      hint: messages.manualHint,
+    })),
+  ];
+  const selected = cards.find((card) => card.id === chosen) ?? null;
+  const selectedManual = selected?.id.startsWith("manual:")
+    ? manualMethods.find((method) => `manual:${method.id}` === selected.id) ?? null
+    : null;
+
 
   return (
-    <>
-      <h1 className="text-2xl font-bold">{messages.title}</h1>
-      <p className="opacity-70">{messages.description}</p>
-      {methods.length === 0 ? (
-        <p className="mt-4">{messages.noMethodsDescription}</p>
-      ) : (
-        <Form method="post" className="mt-4 flex max-w-md flex-col gap-3">
-          <label>
-            {messages.amountLabel}
-            <input
-              name="amount"
-              type="number"
-              min={config.minAmount}
-              max={config.maxAmount}
-              step="any"
-              required
-              className="mt-1 w-full rounded border p-2"
-            />
-          </label>
-          <label>
-            {messages.methodLabel}
-            <select name="method" required className="mt-1 w-full rounded border p-2">
-              {methods.map((method) => (
-                <option key={method.id} value={method.id}>
-                  {method.id}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="rounded border px-4 py-2 font-bold">
-            {messages.submitAction}
-          </button>
-          {actionResult && !actionResult.ok ? (
-            <p role="alert" className="text-red-600">
-              {messages.errors[actionResult.reason as keyof typeof messages.errors] ?? actionResult.reason}
-            </p>
-          ) : null}
-        </Form>
-      )}
-      <h2 className="mt-8 text-lg font-bold">{messages.requestsTitle}</h2>
-      {requests.length === 0 ? (
-        <p className="opacity-70">{messages.emptyDescription}</p>
-      ) : (
-        <ul className="mt-2 flex flex-col gap-2">
-          {requests.map((entry) => (
-            <li key={entry.id} className="rounded border p-2 text-sm">
-              <Link to={`/${locale}/recharge/${entry.id}`}>
-                {entry.reference} — {entry.requestedAmount} {entry.currency} —{" "}
-                {messages.statuses[entry.status as keyof typeof messages.statuses] ?? entry.status}
+    <Section spacing="page" className="sf-recharge">
+      <nav aria-label={account.wallet.title}>
+        <Link
+          to={`/${locale}/wallet`}
+          className="inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
+        >
+          <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
+          {messages.backToWallet}
+        </Link>
+      </nav>
+
+      <SectionHeader
+        as="h1"
+        title={messages.title}
+        subtitle={messages.description}
+        className="mt-5"
+      />
+
+      <AccountNavigation locale={locale} messages={getMessages(locale, "account")} />
+
+      <div className="sf-commerce-columns sf-recharge-columns">
+        <div className="grid gap-6">
+          {selected ? (
+            <AdminCard
+              className="sf-commerce-panel sf-recharge-method"
+              title={selected.label}
+              description={
+                selectedManual
+                  ? undefined
+                  : selected.id === "binance"
+                    ? messages.binance.description
+                    : messages.sam.description
+              }
+            >
+              <Link
+                to={`/${locale}/recharge`}
+                className="mb-4 inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
+              >
+                <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
+                {messages.backToMethods}
               </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
+
+              {selectedManual ? (
+                <RechargeForm
+                  locale={locale}
+                  messages={messages}
+                  config={{ ...config, methods: [selectedManual] }}
+                />
+              ) : selected.id === "binance" ? (
+                <BinanceTopUpForm
+                  locale={locale}
+                  messages={messages}
+                  currency={binance.currency}
+                  minAmount={config.minAmount}
+                  maxAmount={config.maxAmount}
+                />
+              ) : (
+                <SamTopUpForm
+                  locale={locale}
+                  messages={messages}
+                  methods={[selected.id as SamMethod]}
+                  minAmount={config.minAmount}
+                  maxAmount={config.maxAmount}
+                  currency={config.currency}
+                />
+              )}
+            </AdminCard>
+          ) : cards.length === 0 ? (
+            <AdminCard className="sf-commerce-panel" title={messages.title}>
+              <EmptyState
+                icon={<WalletIcon />}
+                title={messages.noMethodsTitle}
+                description={messages.noMethodsDescription}
+              />
+            </AdminCard>
+          ) : (
+            <AdminCard className="sf-commerce-panel" title={messages.chooseTitle} description={messages.chooseDescription}>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {cards.map((card) => (
+                  <li key={card.id}>
+                    <Link
+                      to={`/${locale}/recharge?method=${encodeURIComponent(card.id)}`}
+                      className="sf-payment-method group"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-[var(--ink)]">{card.label}</span>
+                        <span className="mt-1 block text-xs text-[var(--ink-muted)]">{card.hint}</span>
+                      </span>
+                      <span
+                        className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
+                        aria-hidden="true"
+                      >
+                        <ChevronIcon direction="end" className="size-3.5 rtl:rotate-180" />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </AdminCard>
+          )}
+        </div>
+
+        <AdminCard className="sf-commerce-panel" title={messages.requestsTitle} description={messages.requestsDescription}>
+          {requests.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">{messages.emptyDescription}</p>
+          ) : (
+            <ul className="grid gap-2">
+              {requests.map((request) => (
+                <li
+                  key={request.id}
+                  className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-mono text-xs text-[var(--ink-muted)]" dir="ltr">
+                      {request.reference}
+                    </span>
+                    <Badge
+                      tone={
+                        request.status === "approved"
+                          ? "success"
+                          : request.status === "rejected"
+                            ? "danger"
+                            : OPEN_STATUSES.has(request.status)
+                              ? "warning"
+                              : "neutral"
+                      }
+                    >
+                      {messages.statuses[request.status]}
+                    </Badge>
+                  </div>
+
+                  <p className="mt-2 text-sm font-semibold text-[var(--ink)] tabular-nums" dir="ltr">
+                    {formatPrice(request.creditedAmount ?? request.requestedAmount, request.currency, locale)}
+                  </p>
+
+                  {request.adminNote ? (
+                    <p className="mt-1.5 text-xs leading-5 text-[var(--ink-muted)]">
+                      {messages.noteLabel}: {request.adminNote}
+                    </p>
+                  ) : null}
+
+                  {request.status === "approved" ? (
+                    <div className="mt-3">
+                      <ButtonLink
+                        href={`/${locale}/recharge/${request.id}/invoice`}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        {messages.invoice.viewInvoice}
+                      </ButtonLink>
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <ButtonLink
+                        href={`/${locale}/recharge/${request.id}`}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        {messages.request.trackAction}
+                      </ButtonLink>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </AdminCard>
+      </div>
+    </Section>
   );
 }

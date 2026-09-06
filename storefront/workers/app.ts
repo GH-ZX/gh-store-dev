@@ -1,6 +1,9 @@
 import { createRequestHandler, RouterContextProvider } from "react-router";
 import { initRuntimeEnv } from "../app/.server/runtime-env";
 import { cloudflareContext } from "../app/lib/cloudflare-context";
+import { withRequestContext } from "../app/.server/request-context";
+import { isCacheableHtml, isCrossOriginMutation, isPublicHtmlRequest, legacyProductRedirect } from "./request-policy";
+import { applySecurityHeaders } from "./response-headers";
 
 const requestHandler = createRequestHandler(
   () => import("virtual:react-router/server-build"),
@@ -18,7 +21,11 @@ async function handleRequest(
 ): Promise<Response> {
   const loadContext = new RouterContextProvider();
   loadContext.set(cloudflareContext, contextValue);
-  return requestHandler(request, loadContext);
+  const response = await withRequestContext(request, contextValue.env, () => requestHandler(request, loadContext));
+  const secured = new Response(response.body, response);
+  applySecurityHeaders(secured.headers);
+  if (request.headers.has("cookie")) secured.headers.set("Cache-Control", "private, no-store");
+  return secured;
 }
 
 /** Anonymous pages are identical for every visitor: cacheable for 30 seconds. */
@@ -26,6 +33,13 @@ const ANONYMOUS_CACHE_TTL = 30;
 
 export default {
   async fetch(request, env, ctx) {
+    if (isCrossOriginMutation(request)) return new Response("Forbidden", { status: 403 });
+    const legacy = legacyProductRedirect(request);
+    if (legacy) {
+      const response = new Response(null, { status: 308, headers: { Location: legacy.toString() } });
+      applySecurityHeaders(response.headers);
+      return response;
+    }
     // Deployment-static bindings for deep service code (secrets, base URLs).
     // First write wins per isolate; values are identical across requests.
     initRuntimeEnv(env as unknown as Record<string, string | undefined>);
@@ -40,23 +54,18 @@ export default {
     // dominate cold renders. Signed-in traffic always bypasses (Cookie), and a
     // response that sets a cookie is never stored — a session must not leak
     // into a shared entry, in either direction.
-    if (request.method === "GET" && !request.headers.has("cookie")) {
+    if (!import.meta.env.DEV && isPublicHtmlRequest(request)) {
       const url = new URL(request.url);
       if (!url.pathname.startsWith("/api/") && !url.pathname.startsWith("/auth/")) {
-        const cache = caches.default;
-        const cached = await cache.match(request);
+        const cache = (caches as unknown as { default: Cache }).default;
+        const cached = await cache.match(request).catch(() => undefined);
         if (cached) {
           const hit = new Response(cached.body, cached);
           hit.headers.set("X-Edge-Cache", "HIT");
           return hit;
         }
         const response = await handleRequest(request, contextValue);
-        const contentType = response.headers.get("content-type") ?? "";
-        if (
-          response.status === 200 &&
-          contentType.includes("text/html") &&
-          !response.headers.has("set-cookie")
-        ) {
+        if (isCacheableHtml(response)) {
           // Clone first: the visitor's body must stay untouched. Sharing the
           // stream serves empty pages and throws 1101 in production.
           const stored = response.clone();
@@ -66,7 +75,7 @@ export default {
           );
           stored.headers.set("X-Edge-Cache", "MISS");
           ctx.waitUntil(
-            cache.put(request, stored).catch((error) => {
+            cache.put(request, stored).catch((error: unknown) => {
               console.log(
                 JSON.stringify({ level: "warn", area: "edge-cache", event: "put_failed", error: String(error) }),
               );
@@ -79,15 +88,54 @@ export default {
     return handleRequest(request, contextValue);
   },
   async scheduled(event, env, ctx) {
-    // Placeholder tick until the fulfilment sweep is ported: proves the cron
-    // fires and the worker is alive, without touching money movement.
-    console.log(
-      JSON.stringify({
-        level: "warn",
-        area: "fulfilment",
-        event: "reconcile_not_ported",
-        cron: event.cron,
-      }),
+    const botEnv = env as unknown as import("./telegram-bot").BotEnv;
+    if (botEnv.SUPABASE_SERVICE_ROLE_KEY) {
+      ctx.waitUntil((async () => {
+        const { checkSweepHeartbeat, runTelegramScheduled } = await import("./telegram-bot");
+        await checkSweepHeartbeat(botEnv);
+        await runTelegramScheduled(botEnv);
+      })().catch((error: unknown) => {
+        console.error(JSON.stringify({ area: "telegram", event: "scheduled_failed", error: String(error) }));
+      }));
+    }
+    // The fulfilment sweep: settles orders the supplier never finished in
+    // front of the customer, and expires dead payment bookkeeping. Poll-only
+    // by construction — reconcileOrder has no purchase path — so a runaway
+    // schedule can repeat questions but never move money on its own.
+    initRuntimeEnv(env as unknown as Record<string, string | undefined>);
+    const { createServiceClient } = await import("../app/.server/session");
+    const { reconcileStuckOrders } = await import("../app/.server/lib/services/reconciliation.service");
+    const { recordSweepFailure, recordSweepSuccess } = await import(
+      "../app/.server/lib/services/sweep-heartbeat.service"
     );
+    const service = createServiceClient(env as unknown as import("../app/.server/env").StoreEnvVars);
+    try {
+      const run = await reconcileStuckOrders(service);
+      await recordSweepSuccess(service);
+      console.log(
+        JSON.stringify({
+          level: "info",
+          area: "fulfilment",
+          event: "reconciliation_run",
+          cron: event.cron,
+          checked: run.checked,
+          completed: run.completed,
+          refunded: run.refunded,
+          escalated: run.escalated,
+          waiting: run.waiting,
+        }),
+      );
+    } catch (error) {
+      await recordSweepFailure(service, error);
+      console.log(
+        JSON.stringify({
+          level: "error",
+          area: "fulfilment",
+          event: "reconcile_failed",
+          cron: event.cron,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
   },
 } satisfies ExportedHandler<Env>;

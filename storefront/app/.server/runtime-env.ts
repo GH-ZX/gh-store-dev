@@ -12,7 +12,10 @@ let current: Record<string, string | undefined> | null = null;
 
 export function initRuntimeEnv(env: Record<string, string | undefined>): void {
   if (!current) {
-    current = { ...env };
+    current = Object.fromEntries(Object.entries(env).filter(([, value]) => typeof value === "string"));
+    current.SUPABASE_URL ??= current.NEXT_PUBLIC_SUPABASE_URL;
+    current.SUPABASE_PUBLISHABLE_KEY ??= current.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    current.APP_URL ??= current.NEXT_PUBLIC_APP_URL;
   }
 }
 

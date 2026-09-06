@@ -1,3 +1,4 @@
+import "@/styles/storefront-commerce.css";
 import { data, Link, useLoaderData } from "react-router";
 import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
@@ -62,7 +63,7 @@ export default function LocaleRechargeInvoice() {
   const statuses = getMessages(locale, "recharge").statuses as Record<string, string>;
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="sf-invoice mx-auto w-full max-w-3xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link to={`/${locale}/recharge`}>← {messages.backToRecharge}</Link>
         <div className="flex flex-wrap items-center gap-2">

@@ -1,10 +1,14 @@
-import { Link, useLoaderData } from "react-router";
+import { CatalogPage, CatalogHeading, CatalogNavigation, CatalogToolbar, CatalogPager } from "@/components/store/catalog-page";
+import { buildStorePageMeta } from "@/lib/store-seo";
+export { CatalogErrorBoundary as ErrorBoundary } from "@/components/store/catalog-error-boundary";
+import { ProductGrid } from "@/components/store/collections";
+import { EmptyState } from "@/components/shared/states";
+import { getProductCardLabels } from "@/lib/catalog/labels";
+import { redirect, useLoaderData } from "react-router";
 import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
-import { resolveImageSource } from "@/lib/images";
-import { createPublicClient, getAllProductsPage, type ProductsPage } from "@/lib/catalog-queries";
-import { buildPageMeta } from "@/lib/seo";
+import { createPublicClient, getAllProductsPage } from "@/lib/catalog-queries";
 import type { Route } from "./+types/locale-products";
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
@@ -15,64 +19,51 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const { env } = getCloudflareContext(context);
   const client = createPublicClient(env);
   const page = Number(new URL(request.url).searchParams.get("page") ?? "1");
-  const catalog = await getAllProductsPage(client, locale, page);
-  return { locale, catalog };
+  const [catalog, categoriesResult] = await Promise.all([
+    getAllProductsPage(client, locale, page),
+    client
+      .from("categories")
+      .select("id,slug,name_ar,name_en")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+  ]);
+  const categories = (categoriesResult.data ?? []).map((category) => ({
+    id: String(category.id),
+    slug: String(category.slug),
+    name: String(locale === "ar" ? category.name_ar : category.name_en),
+  }));
+  if (catalog.page > Math.max(1, Math.ceil(catalog.total / catalog.pageSize)))
+    throw redirect(`/${locale}/products`);
+  return { locale, catalog, categories };
 }
 
-export function meta({ params }: Route.MetaArgs) {
-  const locale = params.locale && isLocale(params.locale) ? params.locale : "ar";
+export function meta({ params, matches }: Route.MetaArgs) {
+  const locale =
+    params.locale && isLocale(params.locale) ? params.locale : "ar";
   const catalog = getMessages(locale, "catalog");
-  return buildPageMeta({
-    locale,
-    path: "/products",
-    title: catalog.products.title,
-    description: catalog.products.description,
-  });
+  return buildStorePageMeta(
+    {
+      locale,
+      path: "/products",
+      title: catalog.products.title,
+      description: catalog.products.description,
+    },
+    matches,
+  );
 }
 
 export default function LocaleProducts() {
-  const { locale, catalog } = useLoaderData<typeof loader>() as unknown as {
-    locale: "ar" | "en";
-    catalog: ProductsPage;
-  };
-  const copy = getMessages(locale, "catalog").products;
-  const pages = Math.max(1, Math.ceil(catalog.total / catalog.pageSize));
-
-  return (
-    <>
-      <h1 className="text-2xl font-bold">{copy.title}</h1>
-      <p className="opacity-70">{copy.description}</p>
-      <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {catalog.products.map((product) => (
-          <li key={product.id} className="rounded-lg border p-3">
-            <Link to={`/${locale}/${product.categorySlug}/${product.slug}`}>
-              {product.imageUrl ? (
-                <img
-                  src={resolveImageSource(product.imageUrl, 640) ?? undefined}
-                  alt={product.name}
-                  loading="lazy"
-                  className="aspect-square w-full rounded object-cover"
-                />
-              ) : null}
-              <span className="mt-2 block text-sm font-medium">{product.name}</span>
-              {product.priceFrom != null ? (
-                <span className="text-sm opacity-70">{product.priceFrom}</span>
-              ) : null}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      {pages > 1 ? (
-        <nav aria-label="pagination" className="mt-6 flex gap-2">
-          {catalog.page > 1 ? <Link to={`/${locale}/products?page=${catalog.page - 1}`}>←</Link> : null}
-          <span>
-            {catalog.page} / {pages}
-          </span>
-          {catalog.page < pages ? (
-            <Link to={`/${locale}/products?page=${catalog.page + 1}`}>→</Link>
-          ) : null}
-        </nav>
-      ) : null}
-    </>
-  );
+  const loaded = useLoaderData<typeof loader>();
+  const { locale } = loaded;
+  const { products, total, page, pageSize } = loaded.catalog;
+  const common = getMessages(locale, "common");
+  const catalog = getMessages(locale, "catalog");
+  const copy = catalog.products;
+  return <CatalogPage>
+    <CatalogHeading locale={locale} title={copy.title} description={copy.description} total={total} />
+    <CatalogNavigation locale={locale} active="products" />
+    <CatalogToolbar locale={locale} categories={loaded.categories} />
+    {products.length ? <ProductGrid className="storefront-catalog-grid" games={products} locale={locale} labels={getProductCardLabels(common, catalog)} priorityCount={5} /> : <EmptyState title={common.states.emptyTitle} description={common.states.emptyDescription} />}
+    <CatalogPager locale={locale} path="products" page={page} pageSize={pageSize} total={total} />
+  </CatalogPage>;
 }

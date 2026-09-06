@@ -1,0 +1,128 @@
+/* Customer transaction surfaces. The dashboard shares primitives, never this scope. */
+[data-storefront-shell] .sf-commerce,
+[data-storefront-shell].sf-commerce {
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+[data-storefront-shell] section.sf-commerce { padding-block: 32px 48px; }
+[data-storefront-shell] .sf-commerce h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -.025em;
+  font-weight: 700;
+}
+[data-storefront-shell] .sf-commerce h2 { font-size: 1.125rem; line-height: 1.4; font-weight: 650; }
+[data-storefront-shell] .sf-commerce h1 + p { margin-top: 10px; max-width: 64ch; font-size: .9375rem; line-height: 1.65; color: var(--ink-muted); }
+[data-storefront-shell] .sf-commerce nav { font-size: .875rem; color: var(--ink-muted); }
+[data-storefront-shell] .sf-commerce :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea) {
+  min-height: 46px;
+  border: 1px solid var(--line-strong, var(--line));
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: .9375rem;
+  padding-inline: 12px;
+  box-shadow: none;
+}
+[data-storefront-shell] .sf-commerce :is(input, select, textarea)::placeholder { color: var(--ink-faint); opacity: 1; }
+[data-storefront-shell] .sf-commerce label > span:first-child { font-size: .875rem; font-weight: 550; color: var(--ink); }
+[data-storefront-shell] .sf-commerce :is(button, a, input, select, textarea):focus-visible,
+[data-storefront-shell].sf-commerce :is(button, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+[data-storefront-shell] .sf-commerce button,
+[data-storefront-shell].sf-commerce button { min-height: 44px; border-radius: 8px; box-shadow: none; font-size: .9375rem; }
+[data-storefront-shell] .sf-commerce button.sf-commerce-submit { background: var(--sf-button, var(--accent)); color: var(--accent-ink); }
+[data-storefront-shell] .sf-commerce-columns { display: grid; gap: 24px; align-items: start; margin-top: 28px; }
+[data-storefront-shell] .sf-commerce-panel {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: none;
+}
+[data-storefront-shell] .sf-commerce-panel > h2 { margin: 0; }
+[data-storefront-shell] .sf-commerce-panel > h2 + p { margin-top: 8px; }
+[data-storefront-shell] .sf-commerce-price { color: var(--sf-price, var(--success)); font-weight: 700; font-size: 1.125rem; white-space: nowrap; }
+[data-storefront-shell] .sf-checkout-preview, [data-storefront-shell] .sf-checkout-wallet-heading { display: none; }
+[data-storefront-shell] .sf-checkout-product { display: flex; align-items: center; gap: 16px; margin-top: 18px; min-width: 0; }
+[data-storefront-shell] .sf-checkout-art { position: relative; width: 72px; height: 72px; overflow: hidden; border-radius: 8px; flex: 0 0 auto; background: var(--surface-inset); }
+[data-storefront-shell] .sf-checkout-product-copy { min-width: 0; flex: 1; }
+[data-storefront-shell] .sf-checkout-product-copy p { font-size: 1rem; font-weight: 650; line-height: 1.45; overflow-wrap: anywhere; }
+[data-storefront-shell] .sf-checkout-product-copy span { display: block; margin-top: 5px; color: var(--ink-muted); font-size: .875rem; }
+[data-storefront-shell] .sf-checkout-line-items { margin-top: 18px; }
+[data-storefront-shell] .sf-checkout-line-items > div { padding-block: 10px; }
+[data-storefront-shell] .sf-checkout-line-items dt { font-size: .875rem; }
+[data-storefront-shell] .sf-checkout-total { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-top: 16px; padding-top: 18px; border-top: 1px solid var(--line); }
+[data-storefront-shell] .sf-checkout-total > p:first-child { font-size: 1rem; font-weight: 650; color: var(--ink); }
+[data-storefront-shell] .sf-checkout-total > :nth-child(2) { margin-top: 0; color: var(--sf-price, var(--success)); }
+[data-storefront-shell] .sf-checkout-total > p:last-child { flex-basis: 100%; margin-top: 0; }
+[data-storefront-shell] .sf-checkout-balance { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 16px 0; margin-top: 16px; border-top: 1px solid var(--line); }
+[data-storefront-shell] .sf-checkout-balance > p:first-child { font-size: .875rem; }
+[data-storefront-shell] .sf-checkout-balance > p:last-child { color: var(--sf-price, var(--success)); }
+[data-storefront-shell] .sf-order-list, [data-storefront-shell] .sf-transaction-list { display: grid; gap: 12px; }
+[data-storefront-shell] .sf-order-list { margin-top: 28px; }
+[data-storefront-shell] .sf-order-row, [data-storefront-shell] .sf-transaction-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-order-row { transition: border-color 160ms ease, background-color 160ms ease; }
+[data-storefront-shell] .sf-order-row:hover { border-color: var(--accent); background: var(--surface-strong, var(--surface)); }
+[data-storefront-shell] .sf-wallet-layout { display: grid; gap: 28px; margin-top: 28px; }
+[data-storefront-shell] .sf-wallet-balance { padding: 28px; }
+[data-storefront-shell] .sf-wallet-balance p.tabular-nums { color: var(--sf-price, var(--success)); }
+[data-storefront-shell] .sf-payment-method { display: flex; min-height: 88px; align-items: center; justify-content: space-between; gap: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); transition: border-color 160ms ease; }
+[data-storefront-shell] .sf-payment-method:hover { border-color: var(--accent); }
+[data-storefront-shell] .sf-payment-content { width: 100%; max-width: 640px; margin-top: 28px; }
+[data-storefront-shell] .sf-payment-content > .sf-commerce-panel { padding: 24px; }
+[data-storefront-shell] .sf-invoice { padding: 32px 16px 48px; }
+[data-storefront-shell].sf-checkout-paybar {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 16px #00000008;
+}
+[data-storefront-shell].sf-checkout-paybar > div { max-width: 1280px; margin-inline: auto; }
+[data-storefront-shell].sf-checkout-paybar button { min-height: 48px; flex: 1; max-width: 320px; background: var(--sf-button, var(--accent)); color: var(--accent-ink); }
+[data-storefront-shell].sf-checkout-paybar .text-base { font-size: 1.25rem; font-weight: 700; }
+@media (min-width: 1024px) {
+  [data-storefront-shell] .sf-commerce-columns { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); }
+  [data-storefront-shell] .sf-checkout-summary { position: sticky; top: 148px; }
+  [data-storefront-shell] .sf-recharge-columns { grid-template-columns: minmax(0, 1fr) minmax(280px, 350px); }
+}
+@media (max-width: 1023px) {
+  [data-storefront-shell] .sf-checkout-preview { display: block; }
+  [data-storefront-shell] .sf-checkout-product-desktop, [data-storefront-shell] .sf-checkout-desktop-heading { display: none; }
+  [data-storefront-shell] .sf-checkout-wallet-heading { display: block; }
+  [data-storefront-shell] .sf-checkout-summary { position: static; }
+}
+@media (max-width: 639px) {
+  [data-storefront-shell] section.sf-commerce { padding-block: 24px 32px; }
+  [data-storefront-shell] .sf-commerce-panel { padding: 18px; }
+  [data-storefront-shell] .sf-commerce-columns { gap: 16px; margin-top: 20px; }
+  [data-storefront-shell] .sf-commerce h2 { font-size: 1.0625rem; }
+  [data-storefront-shell] .sf-checkout-product { gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  [data-storefront-shell] .sf-checkout-art { width: 64px; height: 64px; }
+  [data-storefront-shell] .sf-checkout-product-copy { flex-basis: calc(100% - 80px); }
+  [data-storefront-shell] .sf-checkout-preview .sf-commerce-price { margin-inline-start: 76px; margin-top: -8px; }
+  [data-storefront-shell] .sf-order-row, [data-storefront-shell] .sf-transaction-row { padding: 16px; }
+  [data-storefront-shell] .sf-wallet-balance { padding: 20px; }
+  [data-storefront-shell] .sf-payment-content { margin-top: 20px; }
+  [data-storefront-shell] .sf-invoice { padding-top: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-storefront-shell] .sf-order-row, [data-storefront-shell] .sf-payment-method { transition: none; }
+}
+@media print {
+  [data-storefront-shell] .sf-invoice { padding: 0; }
+}

@@ -1,3 +1,5 @@
+import { ChevronIcon } from "@/components/ui/icons";
+import { Section, SectionHeader } from "@/components/commerce/commerce-page";
 import { data, Link, useLoaderData } from "react-router";
 import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
@@ -8,7 +10,6 @@ import {
   getMyRechargeRequest,
   getRechargeConfig,
   markRechargePaid,
-  type MyRechargeRequestDetail,
 } from "@server/lib/services/recharge.service";
 import { getMyWallet } from "@server/lib/services/wallet.service";
 import { createSessionClient, getSessionUserId, redirectToLogin, sessionCookieHeaders, withSessionCookies } from "@server/session";
@@ -68,7 +69,8 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       isProduction,
     );
   }
-  await markRechargePaid(supabase, requestId);
+  const marked = await markRechargePaid(supabase, requestId);
+  if (!marked) return data({ error: "not_found" }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
   const [detail, wallet, config] = await Promise.all([
     getMyRechargeRequest(supabase, userId, requestId),
     getMyWallet(supabase, userId),
@@ -96,32 +98,40 @@ export function meta({ params }: Route.MetaArgs) {
   });
 }
 
-export default function LocaleRechargeDetail() {
-  const { locale, detail, balance, currency, methodLabel } = useLoaderData<typeof loader>() as unknown as {
-    locale: "ar" | "en";
-    detail: MyRechargeRequestDetail;
-    balance: number;
-    currency: string;
-    methodLabel: string;
-  };
-  const messages = getMessages(locale, "recharge");
-
+export default function RechargeDetail() {
+  const { locale, detail: request, balance, currency, methodLabel } = useLoaderData<typeof loader>();
+  const recharge = getMessages(locale, "recharge");
+  const open = OPEN_STATUSES.has(request.status);
   return (
-    <>
-      <Link to={`/${locale}/recharge`}>← {messages.invoice.backToRecharge}</Link>
-      <h1 className="mt-5 text-2xl font-bold">{messages.request.title}</h1>
-      <div className="mx-auto mt-8 w-full max-w-2xl">
+    <Section spacing="page" className="sf-recharge-detail">
+      <nav>
+        <Link
+          to={`/${locale}/recharge`}
+          className="inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
+        >
+          <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
+          {recharge.invoice.backToRecharge}
+        </Link>
+      </nav>
+
+      <SectionHeader
+        as="h1"
+        title={recharge.request.title}
+        className="mt-5"
+      />
+
+      <div className="sf-payment-content">
         <RechargeRequestPanel
           locale={locale}
-          messages={messages as unknown as Record<string, any>}
-          request={detail}
-          open={OPEN_STATUSES.has(detail.status)}
-          approved={detail.status === "approved"}
+          messages={recharge}
+          request={request}
+          open={open}
+          approved={request.status === "approved"}
           balance={balance}
           currency={currency}
           methodLabel={methodLabel}
         />
       </div>
-    </>
+    </Section>
   );
 }

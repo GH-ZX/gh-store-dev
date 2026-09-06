@@ -1,79 +1,31 @@
-# Welcome to React Router!
+# GH Store — React Router
 
-A modern, production-ready template for building full-stack React applications using React Router.
+The active storefront and administration application runs React Router framework
+mode with server rendering on Cloudflare Workers. The previous Next.js source
+in `../src/` is retained as a behavior reference.
 
-## Features
-
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
-
-## Getting Started
-
-### Installation
-
-Install the dependencies:
-
-```bash
-npm install
-```
-
-### Development
-
-Start the development server with HMR:
-
-```bash
-npm run dev
-```
-
-Your application will be available at `http://localhost:5173`.
-
-## Previewing the Production Build
-
-Preview the production build locally:
-
-```bash
-npm run preview
-```
-
-## Building for Production
-
-Create a production build:
-
-```bash
-npm run build
-```
-
-## Deployment
-
-Deployment is done using the Wrangler CLI.
-
-To build and deploy directly to production:
+From the repository root:
 
 ```sh
-npm run deploy
+pnpm install
+pnpm --dir storefront install
+pnpm dev
+pnpm typecheck
+pnpm test
+pnpm build
 ```
 
-To deploy a preview URL:
+Development uses http://localhost:5173. Public Supabase bindings are defined in
+`wrangler.jsonc`. Server integration secrets can be provided locally in
+`.dev.vars` (see `.dev.vars.example`); production secrets belong in Cloudflare.
+Never commit `.dev.vars`, sessions, or account credentials.
 
-```sh
-npx wrangler versions upload
-```
+Route loaders/actions live in `app/routes/`; authenticated services live under
+`app/.server/`. Request context keeps sessions separate across concurrent
+requests. The `legacy` subdirectory contains ported domain services and actions
+with their original business contracts; it has no Next.js runtime dependency.
 
-You can then promote a version to production after verification or roll it out progressively.
-
-```sh
-npx wrangler versions deploy
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+`pnpm preview` builds and serves the production Worker locally. `pnpm deploy`
+builds and deploys to production; use it only after verifying the intended
+environment. The scheduled Worker reconciles pending fulfillment and drains
+Telegram alerts; local verification must mock these integrations.

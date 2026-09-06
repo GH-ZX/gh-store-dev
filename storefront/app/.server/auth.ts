@@ -11,7 +11,11 @@ import { safeRedirectTarget } from "@server/lib/auth/redirect-target";
 import { strongPasswordSchema } from "@server/lib/auth/password-policy";
 import { log } from "@server/lib/logging/logger";
 import { hashEmail } from "@server/lib/logging/redact";
-import { createSessionClient, getSessionUserId, redirectToLogin } from "@server/session";
+import {
+  createSessionClient,
+  getSessionUserId,
+  redirectToLogin,
+} from "@server/session";
 import type { StoreEnvVars } from "@server/env";
 
 /*
@@ -60,7 +64,13 @@ export async function signIn(
   request: Request,
   env: StoreEnvVars | undefined,
   formData: FormData,
-  setCookies: (cookies: { name: string; value: string; options?: Record<string, unknown> }[]) => void,
+  setCookies: (
+    cookies: {
+      name: string;
+      value: string;
+      options?: Record<string, unknown>;
+    }[],
+  ) => void,
 ): Promise<AuthResult> {
   const parsed = signInSchema.safeParse({
     email: formText(formData, "email"),
@@ -105,7 +115,13 @@ export async function signUp(
   request: Request,
   env: StoreEnvVars | undefined,
   formData: FormData,
-  setCookies: (cookies: { name: string; value: string; options?: Record<string, unknown> }[]) => void,
+  setCookies: (
+    cookies: {
+      name: string;
+      value: string;
+      options?: Record<string, unknown>;
+    }[],
+  ) => void,
 ): Promise<AuthResult> {
   const parsed = signUpSchema.safeParse({
     email: formText(formData, "email"),
@@ -115,8 +131,14 @@ export async function signUp(
   });
 
   if (!parsed.success) {
-    const passwordFailed = parsed.error.issues.some((issue) => issue.path[0] === "password");
-    return { ok: false, error: passwordFailed ? "weak_password" : "invalid_input", notice: null };
+    const passwordFailed = parsed.error.issues.some(
+      (issue) => issue.path[0] === "password",
+    );
+    return {
+      ok: false,
+      error: passwordFailed ? "weak_password" : "invalid_input",
+      notice: null,
+    };
   }
 
   const locale = resolveLocale(parsed.data.locale);
@@ -124,6 +146,12 @@ export async function signUp(
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
+    options: {
+      emailRedirectTo: new URL(
+        `/auth/callback?locale=${locale}&next=${encodeURIComponent(safeRedirect(parsed.data.redirectTo, locale))}`,
+        request.url,
+      ).toString(),
+    },
   });
   setCookies(jar.cookies);
 
@@ -159,7 +187,13 @@ export async function signOut(
   request: Request,
   env: StoreEnvVars | undefined,
   locale: Locale,
-  setCookies: (cookies: { name: string; value: string; options?: Record<string, unknown> }[]) => void,
+  setCookies: (
+    cookies: {
+      name: string;
+      value: string;
+      options?: Record<string, unknown>;
+    }[],
+  ) => void,
 ): Promise<string> {
   const { supabase, jar } = createSessionClient(request, env);
   await supabase.auth.signOut();

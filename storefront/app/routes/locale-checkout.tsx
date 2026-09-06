@@ -1,12 +1,22 @@
-import { data, Form, Link, useActionData, useLoaderData, useNavigation } from "react-router";
+import { StoreImage } from "@/components/store/store-image";
+import { formatPrice } from "@/lib/format/money";
+import { CheckoutForm } from "@/components/checkout/checkout-form";
+import { OrderSummary } from "@/components/checkout/order-summary";
+import { ErrorState, NoticePanel } from "@/components/shared/states";
+import { DescriptionText } from "@/components/store/description-text";
+import { ChevronIcon } from "@/components/ui/icons";
+import { Section, SectionHeader } from "@/components/commerce/commerce-page";
+import { getMyWallet } from "@server/lib/services/wallet.service";
+import { getSessionSummary } from "@server/lib/services/session.service";
+import { prefillGiftFieldsAction } from "@server/gift-prefill";
+import { data, redirect, Link, useLoaderData } from "react-router";
 import { z } from "zod";
-import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
+import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import {
   createPublicClient,
   getOfferDetail,
-  type CheckoutPageData,
 } from "@/lib/catalog-queries";
 import { resolveQuantityMax } from "@/lib/catalog/checkout-fields";
 import { buildPageMeta } from "@/lib/seo";
@@ -61,10 +71,6 @@ function fieldSchema(field: {
   return field.isRequired ? text : text.optional();
 }
 
-function resolveLocale(value: string | undefined): Locale {
-  return value && isLocale(value) ? value : DEFAULT_LOCALE;
-}
-
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const locale = params.locale ?? "";
   const gameSlug = params.gameSlug ?? "";
@@ -86,7 +92,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!detail) {
     throw new Response("Not Found", { status: 404 });
   }
+  const [wallet, session, profileResult] = await Promise.all([
+    getMyWallet(supabase, userId), getSessionSummary(supabase, userId),
+    supabase.from("profiles").select("is_active").eq("id", userId).maybeSingle(),
+  ]);
   return data({
+      locale, balance: wallet?.balance ?? 0, isGift: session?.isAdmin ?? false, suspended: profileResult.data?.is_active === false,
       category: detail.product.categorySlug,
       userId,
       idempotencyKey: crypto.randomUUID(),
@@ -107,6 +118,10 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   }
 
   const formData = await request.formData();
+  if (formData.get("intent") === "prefillGiftFields") {
+    const result = await prefillGiftFieldsAction(supabase, String(formData.get("recipientEmail") ?? ""), params.gameSlug, params.offerSlug);
+    return data(result, { headers: sessionCookieHeaders(jar, isProduction) });
+  }
   const parsed = checkoutSchema.safeParse({
     gameSlug: formText(formData, "gameSlug"),
     offerSlug: formText(formData, "offerSlug"),
@@ -179,7 +194,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     return data({ error: result.reason }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
   }
   return withSessionCookies(
-    Response.redirect(`/${locale}/orders/${result.orderId}`, 302),
+    redirect(`/${locale}/orders/${result.orderId}`, 302),
     jar,
     isProduction,
   );
@@ -196,88 +211,111 @@ export function meta({ params }: Route.MetaArgs) {
   });
 }
 
-export default function LocaleCheckout() {
-  const { locale, category, idempotencyKey, offer, product, inputFields } =
-    useLoaderData<typeof loader>() as unknown as CheckoutPageData;
-  const actionData = useActionData<typeof action>() as { error?: string } | undefined;
-  const navigation = useNavigation();
-  const busy = navigation.state !== "idle";
-  const checkout = getMessages(locale, "checkout");
+export default function CheckoutPage() {
+  const { locale, product, offer, inputFields, balance, isGift, suspended, idempotencyKey } = useLoaderData<typeof loader>();
+  const messages = getMessages(locale, "checkout");
+  const account = getMessages(locale, "account");
+  const common = getMessages(locale, "common");
+  const quantity = 1;
   const total = offer.price;
-
+  const insufficient = !isGift && balance < total;
+  const gameSlug = product.slug;
+  const offerSlug = offer.slug;
+  if (suspended) return <Section spacing="page"><ErrorState title={account.banned.title} description={account.banned.description} action={{ href: `/${locale}/contact`, label: common.links.contact }} /></Section>;
   return (
-    <>
-      <h1 className="text-2xl font-bold">{checkout.title}</h1>
-      <p className="opacity-70">{checkout.offerPromise}</p>
-      {actionData?.error ? (
-        <p role="alert" className="mt-4 text-red-600">
-          {checkout.errors[actionData.error as keyof typeof checkout.errors] ?? actionData.error}
-        </p>
-      ) : null}
-      <section className="mt-6 rounded-lg border p-4">
-        <h2 className="font-bold">{checkout.summary.title}</h2>
-        <dl className="mt-2 text-sm">
-          <div className="flex justify-between">
-            <dt>{checkout.summary.gameLabel}</dt>
-            <dd>
-              <Link to={`/${locale}/${category}/${product.slug}`}>{product.name}</Link>
-            </dd>
+    <Section spacing="page" className="sf-checkout">
+      <nav aria-label={offer.name}>
+        <Link
+          to={`/${locale}/${product.categorySlug}/${product.slug}/${offer.slug}`}
+          className="inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
+        >
+          <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
+          {offer.name}
+        </Link>
+      </nav>
+
+      <SectionHeader
+        as="h1"
+        title={messages.title}
+        subtitle={isGift ? messages.giftDescription : messages.description}
+        className="mt-5"
+      />
+
+      <div className="sf-commerce-columns sf-checkout-columns">
+        <section className="sf-commerce-panel sf-checkout-preview">
+          <h2>{messages.summary.title}</h2>
+          <div className="sf-checkout-product">
+            <div className="sf-checkout-art"><StoreImage src={product.imageUrl} alt={product.name} sizes="88px" /></div>
+            <div className="sf-checkout-product-copy"><p>{product.name}</p><span>{offer.name}</span></div>
+            <bdi className="sf-commerce-price">{formatPrice(total, offer.currency, locale)}</bdi>
           </div>
-          <div className="flex justify-between">
-            <dt>{checkout.summary.offerLabel}</dt>
-            <dd>{offer.name}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt>{checkout.summary.totalLabel}</dt>
-            <dd>
-              {total} {offer.currency}
-            </dd>
-          </div>
-        </dl>
-      </section>
-      <Form method="post" className="mt-6 flex max-w-md flex-col gap-4">
-        <input type="hidden" name="gameSlug" value={product.slug} />
-        <input type="hidden" name="offerSlug" value={offer.slug} />
-        <input type="hidden" name="quantity" value="1" />
-        <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
-        {inputFields.map((field) =>
-          field.options.length > 0 ? (
-            <label key={field.id} className="flex flex-col gap-1">
-              {field.label}
-              {field.isRequired ? null : ` (${checkout.fields.optionalMark})`}
-              <select
-                name={`${CHECKOUT_FIELD_PREFIX}${field.fieldKey}`}
-                required={field.isRequired}
-                defaultValue=""
-                className="rounded border p-2"
-              >
-                <option value="" disabled>
-                  {checkout.fields.selectPlaceholder}
-                </option>
-                {field.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <label key={field.id} className="flex flex-col gap-1">
-              {field.label}
-              {field.isRequired ? null : ` (${checkout.fields.optionalMark})`}
-              <input
-                name={`${CHECKOUT_FIELD_PREFIX}${field.fieldKey}`}
-                required={field.isRequired}
-                placeholder={field.placeholder ?? ""}
-                className="rounded border p-2"
+        </section>
+        <div className="sf-checkout-details grid gap-5">
+          <section className="sf-commerce-panel">
+            <h2 className="text-base font-semibold text-[var(--ink)]">
+              {inputFields.length > 0 ? messages.fields.title : messages.fields.noFieldsTitle}
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+              {inputFields.length > 0
+                ? messages.fields.description
+                : messages.fields.noFieldsDescription}
+            </p>
+
+            <div className="mt-5">
+              <CheckoutForm
+                idempotencyKey={idempotencyKey}
+                locale={locale}
+                messages={messages}
+                gameSlug={product.slug}
+                offerSlug={offer.slug}
+                fields={inputFields}
+                disabled={insufficient}
+                total={total}
+                currency={offer.currency}
+                balanceAfter={isGift ? null : balance - total}
+                gift={isGift}
               />
-            </label>
-          ),
-        )}
-        <button type="submit" disabled={busy} className="rounded border px-4 py-2">
-          {busy ? checkout.fields.submitPending : checkout.fields.submitAction}
-        </button>
-      </Form>
-    </>
+            </div>
+
+            <NoticePanel
+              className="mt-5"
+              description={isGift ? messages.fields.giftNotice : messages.fields.lockedNotice}
+            />
+          </section>
+
+          {offer.description ? (
+            <section className="sf-commerce-panel">
+              <h2 className="text-base font-semibold text-[var(--ink)]">
+                {messages.instructionsHeading}
+              </h2>
+              <DescriptionText text={offer.description} className="mt-3" />
+            </section>
+          ) : null}
+        </div>
+
+        <OrderSummary
+          locale={locale}
+          messages={messages}
+          offerName={offer.name}
+          productName={product.name}
+          productImage={product.imageUrl}
+          unitPrice={offer.price}
+          quantity={quantity}
+          total={total}
+          currency={offer.currency}
+          balance={balance}
+          insufficient={insufficient}
+          shortfall={total - balance}
+          walletHref={`/${locale}/recharge?amount=${encodeURIComponent((total - balance).toFixed(2))}&returnTo=${encodeURIComponent(`/${locale}/checkout/${gameSlug}/${offerSlug}`)}`}
+          gift={isGift}
+        />
+      </div>
+
+      {/*
+        * The sticky pay bar overlays the viewport bottom on a phone, so the
+        * document ends with room to scroll the footer clear of it.
+        */}
+      <div aria-hidden="true" className="h-24 lg:hidden" />
+    </Section>
   );
 }

@@ -1,12 +1,13 @@
 import { SUPPORTED_LOCALES } from "@/lib/app-config";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
-import { createPublicClient, getSitemapSlugs } from "@/lib/catalog-queries";
+import { createPublicClient, getSitemapSlugs, getSitemapCategories } from "@/lib/catalog-queries";
 import { buildAbsoluteUrl, getSiteUrl } from "@/lib/seo";
 import type { Route } from "./+types/sitemap-xml";
 
 const STATIC_PATHS = [
   "",
-  "/games",
+  "/products",
+  "/best-sellers",
   "/gift-cards",
   "/sale",
   "/how",
@@ -18,6 +19,10 @@ const STATIC_PATHS = [
   "/privacy",
   "/terms",
 ];
+
+function escapeXml(value: string): string {
+  return value.replace(/[<>&"']/g, (character) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[character]!);
+}
 
 type Alternate = { hreflang: string; href: string };
 
@@ -32,10 +37,10 @@ function entry(url: string, alternates: Alternate[], changefreq: string, priorit
   const links = alternates
     .map(
       ({ hreflang, href }) =>
-        `    <xhtml:link rel="alternate" hreflang="${hreflang}" href="${href}" />`,
+        `    <xhtml:link rel="alternate" hreflang="${escapeXml(hreflang)}" href="${escapeXml(href)}" />`,
     )
     .join("\n");
-  return `  <url>\n    <loc>${url}</loc>\n${links}\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
+  return `  <url>\n    <loc>${escapeXml(url)}</loc>\n${links}\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
 }
 
 /**
@@ -46,27 +51,22 @@ export async function loader({ context }: Route.LoaderArgs) {
   const { env } = getCloudflareContext(context);
   const siteUrl = getSiteUrl(env);
 
-  let slugs: string[] = [];
-  try {
-    slugs = await getSitemapSlugs(createPublicClient(env));
-  } catch {
-    slugs = [];
+  const client = createPublicClient(env);
+  const [productsResult, categoriesResult] = await Promise.allSettled([
+    getSitemapSlugs(client),
+    getSitemapCategories(client),
+  ]);
+  const products = productsResult.status === "fulfilled" ? productsResult.value : [];
+  const categories = categoriesResult.status === "fulfilled" ? categoriesResult.value : [];
+  const paths = new Map(STATIC_PATHS.map((path) => [path, { frequency: "daily", priority: path === "" ? 1 : 0.5 }]));
+  for (const slug of categories) paths.set(`/${encodeURIComponent(slug)}`, { frequency: "daily", priority: 0.5 });
+  for (const product of products) {
+    paths.set(`/${encodeURIComponent(product.categorySlug)}/${encodeURIComponent(product.slug)}`, { frequency: "weekly", priority: 0.7 });
   }
-
   const urls: string[] = [];
-  for (const path of STATIC_PATHS) {
+  for (const [path, { frequency, priority }] of paths) {
     for (const locale of SUPPORTED_LOCALES) {
-      urls.push(
-        entry(buildAbsoluteUrl(locale, path, siteUrl), alternatesFor(path, siteUrl), "daily", path === "" ? 1 : 0.5),
-      );
-    }
-  }
-  for (const slug of slugs) {
-    const path = `/games/${slug}`;
-    for (const locale of SUPPORTED_LOCALES) {
-      urls.push(
-        entry(buildAbsoluteUrl(locale, path, siteUrl), alternatesFor(path, siteUrl), "weekly", 0.7),
-      );
+      urls.push(entry(buildAbsoluteUrl(locale, path, siteUrl), alternatesFor(path, siteUrl), frequency, priority));
     }
   }
 

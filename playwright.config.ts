@@ -22,16 +22,16 @@ import path from "node:path";
  * `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` are set, so a machine or CI
  * without an account still runs the anonymous suite untouched.
  *
- * `webServer` starts `next dev` when nothing is already listening, and reuses a
+ * `webServer` starts the React Router dev server when nothing is already listening, and reuses a
  * server that is. Development builds are what these assert against deliberately:
  * they run while the change is being made, not only after a production build.
  */
 
 /*
- * Playwright does not read `.env.local`, and Next.js — the process this config
- * starts and asserts against — does. Loading it here keeps both seeing the same
- * variables; `loadEnvFile` leaves anything already in the environment alone, so
- * a shell that exports a value still wins. Absent on CI, hence the guard.
+ * Load local test credentials and Playwright options from `.env.local`.
+ * Worker application bindings belong in `storefront/.dev.vars`; loading this
+ * file does not override Wrangler's bindings. `loadEnvFile` preserves exported
+ * environment values. The file is absent on CI, hence the guard.
  */
 try {
   process.loadEnvFile(".env.local");
@@ -39,7 +39,7 @@ try {
   // No local env file; the anonymous suite needs nothing from it.
 }
 
-const PORT = Number(process.env.E2E_PORT ?? 3000);
+const PORT = Number(process.env.E2E_PORT ?? 5173);
 const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 
 const hasAdminCredentials = Boolean(process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD);
@@ -53,6 +53,7 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: true,
+  workers: 2,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
@@ -88,7 +89,7 @@ export default defineConfig({
             dependencies: ["setup-admin"],
             use: {
               ...devices["Desktop Chrome"],
-              channel: "chrome",
+              channel: BROWSER_CHANNEL,
               storageState: ADMIN_STATE,
             },
           },
@@ -97,9 +98,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: `pnpm dev --port ${PORT}`,
+    command: `pnpm dev --host 127.0.0.1 --port ${PORT}`,
     url: BASE_URL,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
 });

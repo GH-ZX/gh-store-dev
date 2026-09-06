@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getRequestState, memoizeRequest } from "@server/request-context";
 
 export class UnauthorizedError extends Error {
   constructor() {
@@ -56,4 +57,12 @@ export async function requireAdminId(supabase: SupabaseClient): Promise<Authenti
   }
 
   return user;
+}
+
+export function requireAuth(): Promise<AuthenticatedUser> {
+  return memoizeRequest("auth", () => requireUserId(getRequestState().supabase));
+}
+
+export function requireAdmin(): Promise<AuthenticatedUser> {
+  return memoizeRequest("admin", () => requireAdminId(getRequestState().supabase));
 }

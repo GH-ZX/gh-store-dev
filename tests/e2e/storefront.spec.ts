@@ -123,7 +123,7 @@ test.describe("hero carousel", () => {
     }
   });
 
-  test("a logo button jumps to its game, and the artwork opens it", async ({ page }) => {
+  test("a logo button selects a product, and the artwork opens it", async ({ page }) => {
     await openHome(page, "ar");
 
     const markers = page.getByRole("button", { name: /انتقل إلى/ });
@@ -155,6 +155,8 @@ test.describe("hero carousel", () => {
     }, undefined, { polling: 250 });
 
     const slide = page.locator('[aria-roledescription="slide"][aria-hidden="false"] a').first();
+    const destination = await slide.getAttribute("href");
+    expect(destination).toMatch(/^\/ar\/[^/]+\/[^/]+$/);
     const box = await slide.boundingBox();
 
     expect(box).not.toBeNull();
@@ -162,7 +164,7 @@ test.describe("hero carousel", () => {
     // The artwork, well away from the details pill at the bottom.
     await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height * 0.25);
 
-    await expect(page).toHaveURL(/\/ar\/games\/[^/]+$/);
+    await expect(page).toHaveURL(new URL(destination!, page.url()).href);
   });
 });
 
@@ -197,19 +199,18 @@ test.describe("navigation", () => {
     await expect(menu).toHaveAccessibleName("القائمة");
 
     /*
-     * And now the header still works. The overlay covers the whole viewport and
-     * only stops taking pointer events when it is closed; when it did not, this
-     * shortcut sat underneath doing nothing, which reads as a dead button
-     * rather than as something invisible on top of it. Tested after the drawer
-     * has been opened and closed, because that is the state it broke in.
-     *
-     * Exact, because the footer has a "البحث" link that a loose match also
-     * finds — and the footer one is not under the overlay.
+     * And now the header still works. The redesigned mobile header exposes the
+     * search input directly instead of a search shortcut. Click and type after
+     * closing the drawer to prove its overlay no longer intercepts touches.
      */
-    const search = page.getByRole("link", { name: "بحث", exact: true });
+    const search = page.locator('header [role="combobox"]:visible');
 
     await search.click();
-    await expect(page).toHaveURL(/\/ar\/search$/);
+    await expect(search).toBeFocused();
+    await search.fill("steam");
+    await search.press("Enter");
+    await expect(page).toHaveURL(/\/ar\/search\?/);
+    expect(new URL(page.url()).searchParams.get("q")).toBe("steam");
   });
 
   test("a game page answers, and a missing one answers 404", async ({ page }) => {

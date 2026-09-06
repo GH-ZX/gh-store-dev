@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 /*
  * `new URL("./src", import.meta.url).pathname` produces `/C:/…` on Windows,
@@ -11,6 +11,7 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   test: {
     environment: "node",
+    exclude: [...configDefaults.exclude, "tests/storefront/**"],
     include: ["tests/**/*.test.ts", "src/**/*.test.ts"],
   },
   resolve: {

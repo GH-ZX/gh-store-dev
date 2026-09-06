@@ -1,3 +1,4 @@
+import { normalizeHomeLayout, type HomeSection } from "@/lib/home/layout";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cached } from "@server/lib/cache";
 import {
@@ -24,4 +25,10 @@ export async function getPublicStoreSettings(
     }
     return normalizePublicSettings(data);
   });
+}
+
+/** Public layout configuration; never expose the store settings table. */
+export async function getHomeLayout(supabase: SupabaseClient): Promise<HomeSection[]> {
+  const { data, error } = await supabase.rpc("get_home_layout");
+  return normalizeHomeLayout(error ? null : data);
 }

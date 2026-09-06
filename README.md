@@ -1,8 +1,7 @@
 # GH Store
 
-GH Store is a localized digital gaming store built with Next.js 16, Supabase,
-and Cloudflare Workers through OpenNext. Customers can browse games and gift
-cards, create accounts, recharge their wallet, purchase offers, track delivery,
+GH Store is a localized digital product store built with React Router, React,
+Supabase, and Cloudflare Workers. Customers can browse products and offers, create accounts, recharge their wallet, purchase offers, track delivery,
 open support tickets, and download invoices. Administrators manage catalog,
 providers, payments, fulfillment, customers, reviews, support, website content,
 and audit logs from the dashboard.
@@ -25,21 +24,22 @@ verified with the release checklist before enabling real customer payments.
 
 ```bash
 pnpm install
-cp .env.example .env.local
+pnpm --dir storefront install
+# Optional: copy storefront/.dev.vars.example to storefront/.dev.vars for server integrations.
 pnpm dev
 ```
 
-Open <http://localhost:3000>. The local environment can use the development
+Open <http://localhost:5173>. The local environment can use the development
 Supabase fallback, but production always requires explicit Supabase variables.
 
 ## Environment variables
 
 Public application settings:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `NEXT_PUBLIC_APP_URL`
-- `NEXT_PUBLIC_DEFAULT_LOCALE`
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `APP_URL`
+- Arabic is the default locale; routes also support English.
 
 Server-only integration settings:
 
@@ -72,10 +72,13 @@ pnpm test:e2e
 
 A nightly workflow (`.github/workflows/nightly.yml`) applies every migration to
 a fresh local database, runs the `supabase/tests/rls/` pgTAP suites against the
-result, and runs the browser suite against staging when the repository secrets
-(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) name a
-project. It can also be triggered by hand from the Actions tab before a
-release.
+result, and runs the browser suite against staging when repository secrets
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` name a
+project (`SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are accepted as fallbacks).
+The job installs both dependency sets and writes these values into an ephemeral
+`storefront/.dev.vars`, so staging bindings override the checked-in Worker vars.
+It uses bundled Chromium on port 5173 and removes the bindings file after the run.
+It can also be triggered by hand from the Actions tab before a release.
 
 Administrator browser tests additionally use `E2E_ADMIN_EMAIL` and
 `E2E_ADMIN_PASSWORD`. Credentials remain local environment variables and are
@@ -93,7 +96,7 @@ The project reference is `njlzgfddfnnqujaodbta`; database migrations remain an
 explicit release step and are not pushed automatically by this workflow.
 
 The Cloudflare Worker remains the only reconciliation scheduler. It runs every
-five minutes and calls the protected `POST /api/reconcile` endpoint; do not add a
+five minutes and calls the reconciliation service directly; do not add a
 second cron for the same work.
 
 ## Cloudflare preview and deployment
@@ -112,9 +115,9 @@ authenticated locally (`pnpm exec wrangler login`). See the launch checklist
 for arming the R2 incremental cache and the incident runbook for when to
 rollback.
 
-The Worker cron invokes `POST /api/reconcile` every five minutes. It requires
-both `NEXT_PUBLIC_APP_URL` and `RECONCILE_CRON_SECRET`; missing or failed
-configuration is reported in Worker logs rather than silently ignored. This is
+The Worker cron invokes reconciliation directly every five minutes. The protected
+`POST /api/reconcile` endpoint remains available for authorized operational runs
+using `RECONCILE_CRON_SECRET`. Missing or failed configuration is reported in Worker logs. This is
 the only order-reconciliation scheduler; Supabase callbacks are event receivers,
 not competing cron jobs.
 
@@ -126,3 +129,15 @@ be set as Worker secrets for alerts to be delivered. See
 Before production launch, verify the domain, Auth redirect URLs, payment and
 provider callbacks, Worker secrets, reconciliation logs, smoke tests, and
 rollback procedure using the release checklist in `ROADMAP.md`.
+
+## Framework migration
+
+The active application is `storefront/`. Root `dev`, `build`, `typecheck`,
+`preview`, and deployment commands target React Router. The original Next.js
+source remains in `src/` as a behavior reference; `dev:legacy`, `build:legacy`,
+and `typecheck:legacy` are explicit reference commands.
+
+`pnpm test` runs both the original domain regression suite and migrated runtime
+tests. Browser tests use the React Router server; set `E2E_BASE_URL` for an
+already running instance and `PLAYWRIGHT_BROWSER_CHANNEL=chrome` for installed
+Chrome. Keep account credentials in local environment variables.

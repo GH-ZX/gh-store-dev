@@ -1,5 +1,7 @@
-import { data, Link, Outlet, useLoaderData } from "react-router";
+import { data, Outlet, useLoaderData, useRevalidator } from "react-router";
+import { useEffect } from "react";
 import { isLocale } from "@/i18n/config";
+import { DashboardNav } from "@/components/admin/dashboard-nav";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { buildPageMeta } from "@/lib/seo";
@@ -37,32 +39,19 @@ export function meta({ params }: Route.MetaArgs) {
   return buildPageMeta({ locale, path: "/dashboard", title: "Dashboard", description: "", noIndex: true });
 }
 
-const SECTIONS = ["catalog", "orders", "recharges", "customers", "providers", "website", "reviews", "support"] as const;
-
 export default function DashboardLayout() {
-  const { locale, displayName } = useLoaderData<typeof loader>() as unknown as {
-    locale: "ar" | "en";
-    displayName: string;
-  };
-  const admin = getMessages(locale, "admin");
-  const shell = admin.shell as { nav: Record<string, string>; backToStore: string };
-
+  const { locale } = useLoaderData<typeof loader>();
+  const messages = getMessages(locale, "admin");
+  const { revalidate } = useRevalidator();
+  useEffect(() => {
+    const refresh = () => { void revalidate(); };
+    window.addEventListener("admin-action-complete", refresh);
+    return () => window.removeEventListener("admin-action-complete", refresh);
+  }, [revalidate]);
   return (
-    <div className="mx-auto w-full max-w-6xl p-4">
-      <nav aria-label="dashboard" className="flex flex-wrap items-center gap-2 border-b pb-3">
-        <strong>{displayName}</strong>
-        {SECTIONS.map((section) => (
-          <Link key={section} to={`/${locale}/dashboard/${section}`} className="rounded border px-2 py-1 text-sm">
-            {shell.nav[section] ?? section}
-          </Link>
-        ))}
-        <Link to={`/${locale}`} className="ms-auto text-sm underline">
-          {shell.backToStore}
-        </Link>
-      </nav>
-      <div className="mt-4">
-        <Outlet />
-      </div>
+    <div data-dashboard-shell className="gh-page py-6 sm:py-8">
+      <DashboardNav locale={locale} messages={messages.shell} />
+      <div className="mt-6"><Outlet /></div>
     </div>
   );
 }

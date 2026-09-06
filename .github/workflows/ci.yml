@@ -34,7 +34,9 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir storefront install --frozen-lockfile
 
       - name: Approve dependency build scripts
         run: pnpm approve-builds --all
@@ -49,4 +51,4 @@ jobs:
         run: pnpm check
 
       - name: Build Cloudflare Worker
-        run: pnpm exec opennextjs-cloudflare build
+        run: pnpm build

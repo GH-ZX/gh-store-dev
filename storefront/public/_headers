@@ -1,0 +1,34 @@
+# https://developers.cloudflare.com/workers/static-assets/headers
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/assets/*
+  Cache-Control: public,max-age=31536000,immutable
+
+# Brand artwork, served on every page in the header and again in the footer.
+#
+# Falling through to the default meant a conditional request per navigation for
+# a logo that changes maybe once a year — a round trip to be told nothing had
+# happened, on the critical path of the chrome. Not `immutable`, which is only
+# honest for the content-hashed filenames under /assets: these names are
+# stable across deploys, so an owner replacing the artwork would otherwise have
+# to rename the file to be seen at all. A day of freshness followed by a month
+# of stale-while-revalidate removes the blocking revalidation without removing
+# the ability to change the picture — after the first day the cached copy is
+# painted immediately and refreshed in the background.
+#
+# The mark is the 128px file the header and footer actually draw; the full-size
+# PNG stays for the favicon and Apple touch icon, which the root layout declares
+# in its metadata and the browser fetches by name.
+/gh-store-logo-mark.png
+  Cache-Control: public,max-age=86400,stale-while-revalidate=2592000
+
+/gh-store-logo.png
+  Cache-Control: public,max-age=86400,stale-while-revalidate=2592000
+
+/shamcash-logo.svg
+  Cache-Control: public,max-age=86400,stale-while-revalidate=2592000

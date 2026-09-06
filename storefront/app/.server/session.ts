@@ -15,20 +15,14 @@ export type SessionCookie = {
   options?: Record<string, unknown>;
 };
 
-function serializeCookie(cookie: SessionCookie, isProduction: boolean): string {
-  const attributes: Record<string, string | boolean> = {
-    ...(cookie.options ?? {}),
-    HttpOnly: true,
-    SameSite: "Lax",
-    Secure: isProduction,
-    Path: "/",
-  };
-  let serialized = `${cookie.name}=${cookie.value}`;
-  for (const [key, value] of Object.entries(attributes)) {
-    if (value === false || value === undefined || value === null) continue;
-    serialized += value === true ? `; ${key}` : `; ${key}=${String(value)}`;
-  }
-  return serialized;
+export function serializeCookie(cookie: SessionCookie, isProduction: boolean): string {
+  const options = cookie.options ?? {};
+  const attributes = [`${cookie.name}=${encodeURIComponent(cookie.value)}`, "Path=/", "HttpOnly", "SameSite=Lax"];
+  if (isProduction) attributes.push("Secure");
+  if (typeof options.maxAge === "number") attributes.push(`Max-Age=${Math.floor(options.maxAge)}`);
+  if (options.expires instanceof Date) attributes.push(`Expires=${options.expires.toUTCString()}`);
+  if (typeof options.domain === "string") attributes.push(`Domain=${options.domain}`);
+  return attributes.join("; ");
 }
 
 export type CookieJar = {
@@ -45,21 +39,23 @@ export function createSessionClient(request: Request, env?: StoreEnvVars) {
   const resolved = getStoreEnv(env);
   const jar: CookieJar = { cookies: [] };
   const incoming = request.headers.get("cookie") ?? "";
+  const currentCookies = new Map(incoming.split(";").flatMap((part) => {
+    const index = part.indexOf("=");
+    if (index < 0) return [];
+    const name = part.slice(0, index).trim();
+    const value = part.slice(index + 1).trim();
+    try { return [[name, decodeURIComponent(value)]] as [string, string][]; }
+    catch { return [[name, value]] as [string, string][]; }
+  }));
 
   const supabase = createServerClient(resolved.url, resolved.publishableKey, {
     cookies: {
       getAll() {
-        return incoming
-          .split(";")
-          .map((part) => part.trim())
-          .filter((part) => part.includes("="))
-          .map((part) => {
-            const index = part.indexOf("=");
-            return { name: part.slice(0, index).trim(), value: part.slice(index + 1).trim() };
-          });
+        return Array.from(currentCookies, ([name, value]) => ({ name, value }));
       },
       setAll(cookiesToSet) {
         for (const cookie of cookiesToSet) {
+          currentCookies.set(cookie.name, cookie.value);
           jar.cookies.push({
             name: cookie.name,
             value: cookie.value,
@@ -70,7 +66,7 @@ export function createSessionClient(request: Request, env?: StoreEnvVars) {
     },
   });
 
-  return { supabase, jar, isProduction: resolved.isProduction };
+  return { supabase, jar, isProduction: new URL(request.url).protocol === "https:" };
 }
 
 /**
@@ -103,6 +99,8 @@ export async function getSessionUserId(
 
 /** Attach collected session cookies to an outgoing Response. */
 export function withSessionCookies(response: Response, jar: CookieJar, isProduction: boolean): Response {
+  if (!jar.cookies.length) return response;
+  response = new Response(response.body, response);
   for (const [name, value] of sessionCookieHeaders(jar, isProduction)) {
     response.headers.append(name, value);
   }

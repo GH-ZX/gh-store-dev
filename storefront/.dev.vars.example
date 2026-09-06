@@ -1,0 +1,7 @@
+# Optional local integration secrets. Public bindings are in wrangler.jsonc.
+# Copy this file to .dev.vars. Never commit the populated file.
+# Use a test environment for payments and fulfillment verification.
+SUPABASE_SERVICE_ROLE_KEY=
+RECONCILE_CRON_SECRET=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=

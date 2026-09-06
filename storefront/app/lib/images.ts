@@ -21,7 +21,7 @@ export function resolveImageSource(
     if (url.pathname.includes("/storage/v1/object/public/")) {
       return src;
     }
-    const target = `/api/media-proxy?url=${encodeURIComponent(src)}`;
+    const target = `/api/media-proxy?url=${encodeURIComponent(src)}&v=2`;
     return width && width > 0 ? `${target}&width=${Math.min(1920, Math.floor(width))}` : target;
   } catch {
     return src;

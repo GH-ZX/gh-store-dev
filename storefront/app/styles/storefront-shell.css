@@ -1,0 +1,496 @@
+/* The customer storefront is an isolated theme. Dashboard defaults stay intact. */
+[data-storefront-shell] {
+  --canvas: #101218;
+  --canvas-raised: #191c25;
+  --surface: #191c25;
+  --surface-strong: #222632;
+  --surface-inset: #14171f;
+  --surface-muted: var(--surface-inset);
+  --shell: #191c25;
+  --ink: #f3f4fa;
+  --ink-soft: #c8cdd9;
+  --ink-muted: #a0a7b8;
+  --ink-faint: #a0a7b8;
+  --line: #2a2e3a;
+  --line-strong: #414756;
+  --accent: var(--sf-dark-accent, #7576ff);
+  --accent-strong: color-mix(in srgb, var(--accent) 72%, white);
+  --accent-ink: var(--sf-dark-button-ink, #ffffff);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 35%, transparent);
+  --accent-2: var(--accent);
+  --sf-button: var(--sf-dark-button, #5354ee);
+  --sf-price: #74d69a;
+  --success: #74d69a;
+  --warning: #efc16c;
+  --danger: #ff8e97;
+  --danger-surface: #342028;
+  --focus: var(--accent-strong);
+  --radius-shell: 12px;
+  --radius-card: 12px;
+  --radius-inner: 8px;
+  --radius-control: 8px;
+  --radius-pill: 8px;
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 8%);
+  --elevation-2: 0 2px 8px rgb(0 0 0 / 9%);
+  --elevation-3: 0 10px 30px rgb(0 0 0 / 18%);
+  --shadow-soft: var(--elevation-1);
+  --sheen: none;
+  --glow-1: transparent;
+  --glow-2: transparent;
+  --glow-3: transparent;
+  --glow-accent: none;
+  --page-max: 1280px;
+  --page-gutter: 16px;
+  --font-display: var(--font-geist-sans);
+  color-scheme: dark;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), "Noto Sans Arabic", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+[data-theme="light"] [data-storefront-shell] {
+  --canvas: #f5f6f8;
+  --canvas-raised: #ffffff;
+  --surface: #ffffff;
+  --surface-strong: #f0f2f6;
+  --surface-inset: #f0f2f6;
+  --shell: #ffffff;
+  --ink: #171a24;
+  --ink-soft: #404758;
+  --ink-muted: #697080;
+  --ink-faint: #697080;
+  --line: #e5e7ed;
+  --line-strong: #cdd1dc;
+  --accent: var(--sf-light-accent, #5354ee);
+  --accent-strong: color-mix(in srgb, var(--accent) 88%, black);
+  --accent-ink: var(--sf-light-button-ink, #ffffff);
+  --sf-button: var(--sf-light-button, #5354ee);
+  --sf-price: #177641;
+  --success: #177641;
+  --warning: #815300;
+  --danger: #bc3545;
+  --danger-surface: #fff0f1;
+  --elevation-1: 0 1px 2px rgb(20 25 45 / 4%);
+  --elevation-2: 0 2px 8px rgb(20 25 45 / 5%);
+  --elevation-3: 0 10px 30px rgb(20 25 45 / 10%);
+  color-scheme: light;
+}
+[data-storefront-shell] .gh-page {
+  max-width: var(--page-max);
+  padding-inline: var(--page-gutter);
+}
+[data-storefront-shell] :where(.gh-mesh, .gh-backdrop) {
+  display: none;
+}
+[data-storefront-shell] :where(h1, h2, h3, h4) {
+  font-family: var(--font-geist-sans), "Noto Sans Arabic", sans-serif;
+  letter-spacing: -0.025em;
+}
+[data-storefront-shell] :where(main > section) {
+  padding-block: 24px;
+}
+[data-storefront-shell] :where(main > section:first-child) {
+  padding-top: 32px;
+}
+[data-storefront-shell] :where(main h1) {
+  font-size: 24px;
+  line-height: 1.3;
+  font-weight: 650;
+}
+[data-storefront-shell] :where(main h2) {
+  font-size: 22px;
+  line-height: 1.35;
+  font-weight: 650;
+}
+[data-storefront-shell] :where(main section > .gh-page > div:first-child p) {
+  margin-top: 8px;
+}
+[data-storefront-shell]
+  :where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+[data-storefront-shell] input::placeholder {
+  color: var(--ink-faint);
+}
+[data-storefront-shell] .sf-site-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 40;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+[data-storefront-shell] .sf-header-main {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 16px;
+}
+[data-storefront-shell] .sf-brand-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+[data-storefront-shell] .sf-brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--ink);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+[data-storefront-shell] .sf-brand > span:first-child {
+  color: var(--accent);
+}
+[data-storefront-shell] .sf-header-search {
+  display: none;
+}
+[data-storefront-shell] .sf-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+[data-storefront-shell] .sf-control {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 650;
+  transition:
+    background-color 150ms,
+    border-color 150ms;
+}
+[data-storefront-shell] .sf-control:hover {
+  background: var(--surface-inset);
+  border-color: var(--line-strong);
+}
+[data-storefront-shell] .sf-control > svg {
+  width: 20px;
+  height: 20px;
+}
+[data-storefront-shell] .sf-control img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+[data-storefront-shell] .sf-wallet-control {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding-inline: 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+[data-storefront-shell] .sf-wallet-control svg {
+  width: 20px;
+  height: 20px;
+}
+[data-storefront-shell] .sf-sign-in {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 22px;
+  border-radius: 8px;
+  color: var(--accent-ink);
+  background: var(--sf-button);
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+[data-storefront-shell] .sf-sign-in:hover {
+  filter: brightness(1.08);
+}
+[data-storefront-shell] .sf-desktop-account {
+  display: none;
+}
+[data-storefront-shell] .sf-mobile-search-shortcut {
+  display: none;
+}
+[data-storefront-shell] .sf-mobile-search {
+  padding-bottom: 12px;
+}
+[data-storefront-shell] .sf-search form {
+  min-height: 44px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-search input {
+  background: transparent;
+  min-height: 42px;
+  padding-block: 8px;
+}
+[data-storefront-shell] .sf-search button {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+[data-storefront-shell] .sf-search button[type="submit"] {
+  background: var(--sf-button);
+}
+[data-storefront-shell] .sf-search [role="listbox"] {
+  border-radius: 8px;
+  box-shadow: var(--elevation-3);
+  max-height: min(420px, 60dvh);
+  overflow-y: auto;
+}
+[data-storefront-shell] .sf-search [role="option"] button {
+  width: 100%;
+  height: auto;
+}
+[data-storefront-shell] .sf-category-bar {
+  border-top: 1px solid var(--line);
+}
+[data-storefront-shell] .sf-category-nav {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+[data-storefront-shell] .sf-category-nav::-webkit-scrollbar {
+  display: none;
+}
+[data-storefront-shell] .sf-category-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+[data-storefront-shell] .sf-category-link svg {
+  width: 17px;
+  height: 17px;
+}
+[data-storefront-shell] .sf-category-link:hover,
+[data-storefront-shell] .sf-category-link.is-active {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+}
+[data-storefront-shell].sf-account-popover {
+  position: fixed;
+  z-index: 60;
+  width: 260px;
+  max-height: calc(100dvh - 90px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--surface);
+  box-shadow: var(--elevation-3);
+  font-size: 14px;
+}
+[data-storefront-shell] .sf-mobile-drawer {
+  margin: 0;
+  margin-inline-start: auto;
+  width: min(360px, 92vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  overflow-y: auto;
+  border-inline-start: 1px solid var(--line);
+  padding: 20px;
+  background: var(--surface);
+  color: var(--ink);
+}
+[data-storefront-shell] .sf-mobile-drawer::backdrop {
+  background: rgb(8 12 24 / 55%);
+}
+body:has(.sf-mobile-drawer[open]) {
+  overflow: hidden;
+}
+[data-storefront-shell] .sf-navigation-progress {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-start: 0;
+  height: 2px;
+  background: var(--accent);
+  animation: sf-navigation-pulse 800ms ease-in-out infinite alternate;
+}
+@keyframes sf-navigation-pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+[data-storefront-shell] .sf-site-footer {
+  margin-top: 40px;
+  padding-block: 36px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-footer-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px 20px;
+}
+[data-storefront-shell] .sf-footer-brand {
+  grid-column: 1 / -1;
+  max-width: 340px;
+}
+[data-storefront-shell] .sf-footer-brand p {
+  margin-top: 12px;
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+[data-storefront-shell] .sf-footer-columns h2 {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+[data-storefront-shell] .sf-footer-columns ul {
+  display: grid;
+  gap: 7px;
+}
+[data-storefront-shell] .sf-footer-columns li a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+[data-storefront-shell] .sf-footer-columns li a:hover {
+  color: var(--accent-strong);
+}
+[data-storefront-shell] .sf-footer-social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+[data-storefront-shell] .sf-footer-social a {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink-muted);
+}
+[data-storefront-shell] .sf-footer-social svg {
+  width: 17px;
+  height: 17px;
+}
+[data-storefront-shell] .sf-footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+@media (min-width: 640px) {
+  [data-storefront-shell] {
+    --page-gutter: 32px;
+  }
+  [data-storefront-shell] :where(main > section) {
+    padding-block: 24px;
+  }
+  [data-storefront-shell] :where(main h1) {
+    font-size: 32px;
+  }
+  [data-storefront-shell] :where(main h2) {
+    font-size: 24px;
+  }
+  [data-storefront-shell] .sf-wallet-control {
+    display: inline-flex;
+  }
+  [data-storefront-shell] .sf-footer-columns {
+    grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
+    gap: 32px;
+  }
+  [data-storefront-shell] .sf-footer-brand {
+    grid-column: auto;
+  }
+}
+@media (min-width: 1024px) {
+  [data-storefront-shell] .sf-header-main {
+    min-height: 76px;
+    gap: 28px;
+  }
+  [data-storefront-shell] .sf-brand {
+    font-size: 25px;
+  }
+  [data-storefront-shell] .sf-header-search {
+    display: block;
+    flex: 1;
+    min-width: 180px;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+  [data-storefront-shell] .sf-header-actions {
+    margin-inline-start: 0;
+  }
+  [data-storefront-shell] .sf-desktop-account {
+    display: block;
+  }
+  [data-storefront-shell] .sf-mobile-search,
+  [data-storefront-shell] .sf-menu-trigger {
+    display: none;
+  }
+  [data-storefront-shell] .sf-category-nav {
+    gap: 40px;
+  }
+  [data-storefront-shell] .sf-category-link {
+    min-height: 48px;
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-storefront-shell] .sf-navigation-progress {
+    animation: none;
+  }
+}
+@media print {
+  [data-storefront-shell] {
+    --canvas: #fff;
+    --surface: #fff;
+    --ink: #111827;
+    --ink-soft: #1f2937;
+    --ink-muted: #4b5563;
+    background: #fff;
+    color: #111827;
+  }
+}
+
+/* Keep support available above the checkout payment bar. */
+[data-storefront-shell][data-storefront-checkout] > a.fixed {
+  bottom: calc(110px + env(safe-area-inset-bottom));
+}
+/* Existing primary controls use the darker action fill for readable button text. */
+[data-storefront-shell] :is(a, button)[class~="bg-[var(--accent)]"] {
+  background-color: var(--sf-button);
+}

@@ -1,15 +1,443 @@
 @import "tailwindcss" source(".");
+@import "./styles/tokens.css";
 
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-canvas-raised: var(--canvas-raised);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-inset: var(--surface-inset);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink);
+
+  /*
+   * Radii and easings are used directly as `var(--radius-card)` /
+   * `var(--ease-spring)` in class values. They are deliberately not aliased
+   * here: a `@theme` entry with the same name as the token it reads would be a
+   * circular reference.
+   */
+  --shadow-e1: var(--elevation-1);
+  --shadow-e2: var(--elevation-2);
+  --shadow-e3: var(--elevation-3);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-brand: var(--font-tektur);
 }
 
-html,
-body {
-  @apply bg-white dark:bg-gray-950;
+* {
+  box-sizing: border-box;
+  min-width: 0;
+}
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv01";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Text wrapping as typography.
+ *
+ * Balanced headings break so no line is left holding one orphan word — the
+ * difference between a title that reads set and one that reads typed. `pretty`
+ * does the quieter job for running text, avoiding the single-word last line.
+ * Both are progressive: a browser without them wraps exactly as before, and
+ * neither affects Arabic joining (the guard below handles what does).
+ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+  font-family: var(--font-display, var(--font-geist-sans)), system-ui, sans-serif;
+}
+
+p,
+li,
+dd,
+figcaption,
+blockquote {
+  text-wrap: pretty;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+/*
+ * Arabic typography guard.
+ *
+ * Letter-spacing breaks Arabic glyph joining and the script has no uppercase
+ * form, so tracking and text-transform utilities are neutralised inside Arabic
+ * subtrees. This lives outside `@layer`, so it wins over Tailwind utilities
+ * regardless of specificity — a component can keep `uppercase tracking-[…]`
+ * for English without special-casing the locale.
+ */
+[lang="ar"] :where(*) {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+[lang="ar"] :where(h1, h2, h3) {
+  line-height: 1.3;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@utility gh-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--page-max);
+  padding-inline: var(--page-gutter);
+}
+
+/*
+ * Horizontal rails: scroll-snap without a visible scrollbar.
+ *
+ * The scrollbar is hidden, so an overflowing rail needs another way to say
+ * "there is more off the edge". The fade is not part of the utility: which
+ * side hides content is measured by the Rail component (`data-edge`), so a
+ * short row that fits is hard-edged on both sides exactly like a grid, and a
+ * scrolled-to-end rail stops hinting at content that is no longer there.
+ */
+@utility gh-rail {
+  display: grid;
+  grid-auto-flow: column;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  scroll-padding-inline: var(--page-gutter);
+}
+
+/* Content hides past the reading-direction end (right in LTR, left in RTL). */
+.gh-rail[data-edge="end"] {
+  mask-image: linear-gradient(to right, black calc(100% - 1.25rem), transparent);
+}
+
+[dir="rtl"] .gh-rail[data-edge="end"] {
+  mask-image: linear-gradient(to left, black calc(100% - 1.25rem), transparent);
+}
+
+/* Content hides past the reading-direction start (left in LTR, right in RTL). */
+.gh-rail[data-edge="start"] {
+  mask-image: linear-gradient(to right, transparent, black 1.25rem);
+}
+
+[dir="rtl"] .gh-rail[data-edge="start"] {
+  mask-image: linear-gradient(to left, transparent, black 1.25rem);
+}
+
+/* Overflowing on both sides — one symmetric gradient serves both directions. */
+.gh-rail[data-edge="both"] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 1.25rem,
+    black calc(100% - 1.25rem),
+    transparent
+  );
+}
+
+@utility gh-rail-item {
+  scroll-snap-align: start;
+}
+
+.gh-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Ambient mesh backdrop. Purely decorative, so it is never announced.
+ *
+ * The mask fades the layer out before the element's bottom edge. Without it the
+ * gradients are clipped by the section box and leave a visible horizontal seam
+ * where the tint stops — obvious in the light theme.
+ */
+@utility gh-mesh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 48% at 18% 0%, var(--glow-1), transparent 68%),
+    radial-gradient(46% 44% at 88% 8%, var(--glow-2), transparent 66%),
+    radial-gradient(40% 38% at 50% 100%, var(--glow-3), transparent 70%);
+  mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
+}
+
+/* Hairline top highlight that makes glass panels read as physical. */
+@utility gh-sheen {
+  box-shadow: var(--sheen);
+}
+
+/*
+ * Ambient page backdrop, chosen by the owner in the dashboard.
+ *
+ * One fixed element that never scrolls, never animates and never repaints: the
+ * whole effect is a background on a single box, so the browser can hand it to
+ * the compositor once and forget about it. `none` renders no element at all.
+ *
+ * Everything is drawn from the glow and line tokens, so each option follows the
+ * owner's accent and flips with the light theme without a second rule.
+ */
+.gh-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* A horizon: light gathered at the top of the viewport, gone by the fold. */
+.gh-backdrop[data-backdrop="aurora"] {
+  background:
+    radial-gradient(70% 42% at 22% -6%, var(--glow-1), transparent 70%),
+    radial-gradient(56% 38% at 82% -10%, var(--glow-2), transparent 72%);
+}
+
+/* The section mesh, at the size of the window rather than of a panel. */
+.gh-backdrop[data-backdrop="mesh"] {
+  background:
+    radial-gradient(48% 38% at 12% 8%, var(--glow-1), transparent 68%),
+    radial-gradient(42% 34% at 88% 22%, var(--glow-2), transparent 66%),
+    radial-gradient(46% 36% at 50% 96%, var(--glow-3), transparent 70%);
+}
+
+/*
+ * Engineering paper. The dots are drawn from the hairline token, so they are the
+ * same weight as every border in the store, and the mask keeps them out of the
+ * footer where they would fight with the columns.
+ */
+.gh-backdrop[data-backdrop="grid"] {
+  background-image: radial-gradient(circle at center, var(--line-strong) 1px, transparent 1px);
+  background-size: 30px 30px;
+  mask-image: radial-gradient(120% 80% at 50% 0%, black 0%, transparent 72%);
+}
+
+/*
+ * Not behind the dashboard. It is a working surface — tables, forms, log rows —
+ * and an ambient wash under dense text is decoration charged to the person who
+ * has to read it. The storefront is where the store gets to have a mood.
+ */
+body:has([data-dashboard-shell]) .gh-backdrop {
+  display: none;
+}
+
+/*
+ * The owner's volume knob for the backdrop, applied as plain opacity so the
+ * gradients underneath never need to know about it.
+ */
+.gh-backdrop[data-intensity="subtle"] {
+  opacity: 0.4;
+}
+
+.gh-backdrop[data-intensity="standard"] {
+  opacity: 0.75;
+}
+
+.gh-backdrop[data-intensity="rich"] {
+  opacity: 1;
+}
+
+/*
+ * Theme-conditional content.
+ *
+ * `data-theme` is absent for the dark default and set to "light" only when a
+ * visitor opts in, so the dark rule must also match "no attribute at all". This
+ * lets a control reflect the active theme with no client state.
+ */
+[data-theme="light"] .gh-only-dark {
+  display: none;
+}
+
+html:not([data-theme="light"]) .gh-only-light {
+  display: none;
+}
+
+/*
+ * The logo is drawn for the dark canvas — a pale mark on a dark field — so on
+ * the light theme it would vanish into the paper. Inverting the bitmap turns
+ * the silhouettes dark while the transparent field stays untouched, and the
+ * `hue-rotate` keeps the tint from shifting as far as a naive inversion would
+ * push it. Rendered only while the light theme is active; the dark canvas is
+ * the one the artwork was made for, so it is left exactly as delivered.
+ */
+[data-theme="light"] .gh-logo-theme {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+@keyframes gh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
+
+@keyframes gh-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility gh-rise {
+  animation: gh-rise var(--duration-slow) var(--ease-out-expo) both;
+}
+
+@utility gh-fade {
+  animation: gh-fade var(--duration) var(--ease-out-expo) both;
+}
+
+/*
+ * The page entrance.
+ *
+ * Every navigation mounts a fresh template (Next remounts `template.tsx` where
+ * it would reuse a layout), so this animation plays once per arrival: the page
+ * rises a short distance, unblurring as it comes — fast, simple, and gone
+ * before it could ever be in the way. All three of its qualities are tokens,
+ * which is what lets the owner's motion level retune it from CSS alone.
+ *
+ * Visitors with reduced motion never see any of it: the global reduce rule
+ * clamps every animation to 1 ms.
+ */
+@keyframes gh-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--enter-rise, 22px));
+    filter: blur(var(--enter-blur, 14px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@utility gh-enter {
+  animation: gh-page-in var(--enter-duration, 520ms) var(--ease-out-expo) both;
+}
+
+/*
+ * The carousel's progress rail: the active segment fills itself over the
+ * interval the slide stays up, as a countdown written in the brand accent
+ * rather than dots. The duration is set inline by the carousel from its
+ * configured interval, so only the neutral longer default lives here.
+ */
+@keyframes gh-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@utility gh-progress {
+  animation: gh-progress 6s linear both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Printing.
+ *
+ * The invoice is saved with the browser's own print-to-PDF rather than a
+ * rasteriser shipped to every visitor, so the page has to survive being put on
+ * paper: navigation, buttons, and the decorative shell come off, and the
+ * document keeps ink-on-white regardless of the theme the reader chose. A dark
+ * invoice is a cartridge nobody asked to spend.
+ */
+@media print {
+  .gh-no-print,
+  header[data-site-header],
+  footer[data-site-footer] {
+    display: none !important;
+  }
+
+  :root {
+    --canvas: #ffffff;
+    --shell: #ffffff;
+    --surface: #ffffff;
+    --ink: #111827;
+    --ink-soft: #1f2937;
+    --ink-muted: #4b5563;
+    --ink-faint: #6b7280;
+    --line: #d1d5db;
+  }
+
+  body {
+    background: #ffffff;
+  }
+}
+
+/* Navigation progress bar: fills most of the width, then waits for the page. */
+@keyframes gh-progress {
+  0% {
+    transform: scaleX(0);
+  }
+  60% {
+    transform: scaleX(0.7);
+  }
+  100% {
+    transform: scaleX(0.92);
+  }
+}
+
+:root { --font-geist-sans: "Geist", "Noto Sans Arabic", sans-serif; --font-geist-mono: "Geist Mono", monospace; --font-tektur: "Tektur", sans-serif; --font-space-grotesk: "Space Grotesk", sans-serif; --font-sora: "Sora", sans-serif; }
+@layer base { *, ::before, ::after { border-color: var(--line); } input:not([type="checkbox"]):not([type="radio"]), select, textarea { background-color: var(--surface-inset); color: var(--ink); } button, a, summary { -webkit-tap-highlight-color: transparent; } button:not(:disabled), summary { cursor: pointer; } }
+
+body:has(.gh-drawer[open]) { overflow: hidden; }
+.gh-drawer[open] { overflow-y: auto; }

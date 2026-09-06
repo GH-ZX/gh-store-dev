@@ -24,10 +24,19 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    files: ["storefront/**/*.{ts,tsx}"],
+    rules: { "@next/next/no-img-element": "off" },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    "storefront/node_modules/**",
+    "storefront/build/**",
+    "storefront/.react-router/**",
+    "storefront/.wrangler/**",
+    "storefront/worker-configuration.d.ts",
     "out/**",
     "build/**",
     ".open-next/**",

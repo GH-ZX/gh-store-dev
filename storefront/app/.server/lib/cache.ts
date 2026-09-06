@@ -10,6 +10,8 @@
  */
 const store = new Map<string, { expiresAt: number; value: unknown; pending: Promise<unknown> | null }>();
 
+export function clearCache(): void { store.clear(); }
+
 export async function cached<T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> {
   const now = Date.now();
   const entry = store.get(key);
@@ -18,7 +20,7 @@ export async function cached<T>(key: string, ttlMs: number, load: () => Promise<
     return structuredClone(entry.value) as T;
   }
   if (entry?.pending) {
-    return (await entry.pending) as T;
+    return structuredClone(await entry.pending) as T;
   }
 
   const slot = { expiresAt: 0, value: undefined as unknown, pending: null as Promise<unknown> | null };

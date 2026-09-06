@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toPng } from "html-to-image";
 
@@ -87,30 +88,30 @@ export function InvoiceDownloadActions({ orderNumber, messages }: InvoiceDownloa
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
+      <Button
         type="button"
         disabled={busy !== null}
         onClick={() => void download("png")}
-        className="rounded border px-3 py-1.5 text-sm"
+        variant="secondary" size="sm"
       >
         {busy === "png" ? messages.downloading : messages.downloadPng}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
         disabled={busy !== null}
         onClick={() => void download("pdf")}
-        className="rounded border px-3 py-1.5 text-sm"
+        variant="secondary" size="sm"
       >
         {busy === "pdf" ? messages.downloading : messages.downloadPdf}
-      </button>
+      </Button>
     </div>
   );
 }
 
 export function InvoicePrintButton({ label }: { label: string }) {
   return (
-    <button type="button" onClick={() => window.print()} className="rounded border px-3 py-1.5 text-sm">
+    <Button type="button" onClick={() => window.print()} variant="secondary" size="sm">
       {label}
-    </button>
+    </Button>
   );
 }

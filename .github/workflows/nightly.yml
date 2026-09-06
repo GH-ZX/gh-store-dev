@@ -16,7 +16,8 @@
 #    blocking anyone's push.
 #
 # The browser job runs only when repository secrets provide a staging project
-# (`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`); with
+# (`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), with
+# `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` accepted as fallback names. With
 # no secrets the job skips with a notice instead of failing. Admin cases join
 # automatically when `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` are also set —
 # the Playwright config owns that switch.
@@ -115,9 +116,14 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            storefront/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir storefront install --frozen-lockfile
 
       - name: Approve dependency build scripts
         run: pnpm approve-builds --all
@@ -130,8 +136,8 @@ jobs:
       - name: Check staging secrets
         id: staging
         env:
-          STAGING_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          STAGING_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          STAGING_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}
+          STAGING_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           if [ -n "$STAGING_URL" ] && [ -n "$STAGING_KEY" ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
@@ -143,11 +149,30 @@ jobs:
       - name: Run browser suite
         if: steps.staging.outputs.present == 'true'
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          STAGING_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}
+          STAGING_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }}
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
-        run: pnpm test:e2e
+          E2E_PORT: "5173"
+        run: |
+          # Worker bindings come from Wrangler, not the test process environment.
+          # .dev.vars overrides checked-in production vars in local development.
+          node <<'NODE'
+          const { writeFileSync } = require("node:fs");
+          function quoted(value) {
+            if (!value || /['\r\n\0]/.test(value)) throw new Error("Invalid staging binding format");
+            return `'${value}'`;
+          }
+          const bindings = {
+            SUPABASE_URL: process.env.STAGING_URL,
+            SUPABASE_PUBLISHABLE_KEY: process.env.STAGING_KEY,
+            APP_URL: `http://127.0.0.1:${process.env.E2E_PORT}`,
+          };
+          const contents = Object.entries(bindings).map(([key, value]) => `${key}=${quoted(value)}`).join("\n") + "\n";
+          writeFileSync("storefront/.dev.vars", contents, { mode: 0o600, flag: "wx" });
+          NODE
+          trap 'rm -f storefront/.dev.vars' EXIT
+          pnpm test:e2e
 
       - name: Upload failure report
         if: failure() && steps.staging.outputs.present == 'true'

@@ -1,12 +1,30 @@
-import { Link, useLoaderData } from "react-router";
+import { withAdminHomeCosts } from "@server/lib/services/catalog-admin-costs.service";
+import { buildStorePageMeta } from "@/lib/store-seo";
+export { CatalogErrorBoundary as ErrorBoundary } from "@/components/store/catalog-error-boundary";
+import type { ChromeData } from "@/components/site-chrome";
+import { LiveEditMode } from "@/components/live-edit/live-edit-mode";
+import { useLoaderData, useRouteLoaderData } from "react-router";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
-import { resolveImageSource } from "@/lib/images";
 import { DEFAULT_LOCALE, isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { APP_NAME } from "@/lib/app-config";
-import { createPublicClient, getHomeData } from "@/lib/catalog-queries";
-import { buildOrganizationJsonLd, buildPageMeta, getSiteUrl } from "@/lib/seo";
-import { cached } from "@server/lib/cache";
+import { createPublicClient } from "@/lib/catalog-queries";
+import { buildOrganizationJsonLd, getSiteUrl } from "@/lib/seo";
+import {
+  getHomeLayout,
+  getPublicStoreSettings,
+} from "@server/lib/services/settings.service";
+import {
+  getHomeCarousel,
+  resolveHomeSections,
+} from "@server/lib/services/home.service";
+import { StorefrontCampaign } from "@/components/home/storefront-campaign";
+import { HeroCarousel } from "@/components/home/hero-carousel";
+import {
+  HomeSections,
+  HomeFallbackLinks,
+} from "@/components/home/home-sections";
+import { Section } from "@/components/ui/section";
 import type { Route } from "./+types/locale-home";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
@@ -17,87 +35,114 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = getCloudflareContext(context);
   const siteUrl = getSiteUrl(env);
   const client = createPublicClient(env);
-  // Homepage catalog changes only when the owner edits it; 15s per isolate.
-  const data = await cached(`home-data:${locale}`, 15_000, () => getHomeData(client, locale));
-  return { locale, siteUrl, ...data };
+  const [layout, settings] = await Promise.all([
+    getHomeLayout(client),
+    getPublicStoreSettings(client),
+  ]);
+  const [carousel, sections] = await Promise.all([
+    getHomeCarousel(client, locale, layout),
+    resolveHomeSections(client, locale, layout, {
+      hasSocialLinks: settings.socialLinks.length > 0,
+    }),
+  ]);
+  return {
+    locale,
+    siteUrl,
+    carousel,
+    sections: await withAdminHomeCosts(sections),
+    settings,
+    heroImage: carousel.products[0]?.imageUrl ?? null,
+  };
 }
 
 export function meta({ params, matches }: Route.MetaArgs) {
-  const locale = params.locale && isLocale(params.locale) ? params.locale : DEFAULT_LOCALE;
+  const locale =
+    params.locale && isLocale(params.locale) ? params.locale : DEFAULT_LOCALE;
   const content = getMessages(locale, "content");
-  const homeMatch = matches.find((match) => match?.id === "routes/locale-home") as
+  const homeMatch = matches.find(
+    (match) => match?.id === "routes/locale-home",
+  ) as
     | { loaderData?: { heroImage?: string | null; siteUrl?: string } }
     | undefined;
   const homeData = homeMatch?.loaderData;
-  return buildPageMeta({
-    locale,
-    title: APP_NAME,
-    description: content.about.description,
-    imageUrl: homeData?.heroImage ?? null,
-    siteUrl: homeData?.siteUrl ?? getSiteUrl(),
-  });
+  return buildStorePageMeta(
+    {
+      locale,
+      title: APP_NAME,
+      description: content.about.description,
+      imageUrl: homeData?.heroImage ?? null,
+      siteUrl: homeData?.siteUrl ?? getSiteUrl(),
+    },
+    matches,
+  );
 }
 
 export default function LocaleHome() {
-  const { locale, siteUrl, carousel, grid } = useLoaderData<typeof loader>();
-  const content = getMessages(locale, "content");
+  const { locale, siteUrl, carousel, sections, settings } =
+    useLoaderData<typeof loader>();
+  const chrome = useRouteLoaderData("routes/locale-layout") as
+    ChromeData | undefined;
+  const liveEdit = chrome?.session?.isAdmin
+    ? getMessages(locale, "admin").liveEdit
+    : null;
+  const common = getMessages(locale, "common");
   const home = getMessages(locale, "home");
   const catalog = getMessages(locale, "catalog");
-
-  return (
+  const page = (
     <>
-      <h1 className="sr-only">{content.about.title}</h1>
-      <p className="sr-only">{content.about.description}</p>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(buildOrganizationJsonLd(siteUrl)),
+          __html: JSON.stringify(buildOrganizationJsonLd(siteUrl)).replace(
+            /</g,
+            "\\u003c",
+          ),
         }}
       />
-      <section aria-roledescription="carousel" aria-label={home.carousel.regionLabel}>
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {carousel.map((product) => (
-            <li key={product.id}>
-              <Link to={`/${locale}/${product.categorySlug}/${product.slug}`}>
-                {product.imageUrl ? (
-                  <img
-                    src={resolveImageSource(product.imageUrl, product === carousel[0] ? 1200 : 640) ?? undefined}
-                    alt={product.name}
-                    loading={product === carousel[0] ? "eager" : "lazy"}
-                    fetchPriority={product === carousel[0] ? "high" : "auto"}
-                    className="aspect-video w-full rounded-lg object-cover"
-                  />
-                ) : null}
-                <span className="mt-2 block font-semibold">{product.name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="mt-10">
-        <h2 className="text-xl font-bold">{catalog.games.title}</h2>
-        <p className="opacity-70">{home.sections.gamesSubtitle}</p>
-        <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {grid.map((product) => (
-            <li key={product.id} className="rounded-lg border p-3">
-              <Link to={`/${locale}/${product.categorySlug}/${product.slug}`}>
-                {product.imageUrl ? (
-                  <img
-                    src={resolveImageSource(product.imageUrl, product === carousel[0] ? 1200 : 640) ?? undefined}
-                    alt={product.name}
-                    loading="lazy"
-                    className="aspect-square w-full rounded object-cover"
-                  />
-                ) : null}
-                <span className="mt-2 block text-sm font-medium">{product.name}</span>
-                {product.priceFrom != null ? (
-                  <span className="text-sm opacity-70">{product.priceFrom}</span>
-                ) : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Section spacing="page" className="sf-home-opening">
+        <StorefrontCampaign locale={locale} />
+        {carousel.products.length > 0 ? (
+          <HeroCarousel
+            liveEdit={liveEdit}
+            products={carousel.products}
+            locale={locale}
+            intervalSeconds={carousel.section?.intervalSeconds ?? 6}
+            loop={carousel.section?.loop ?? true}
+            align={carousel.section?.align ?? "center"}
+            imageFit={carousel.section?.imageFit ?? "cover"}
+            imageAspect={carousel.section?.imageAspect ?? "auto"}
+            imagePositionX={carousel.section?.imagePositionX ?? 50}
+            imagePositionY={carousel.section?.imagePositionY ?? 50}
+            labels={{
+              ...home.carousel,
+              details: common.actions.details,
+              featured: common.badges.featured,
+            }}
+          />
+        ) : null}
+      </Section>
+      {sections.length ? (
+        <HomeSections
+          liveEdit={liveEdit}
+          locale={locale}
+          sections={sections}
+          common={common}
+          catalog={catalog}
+          home={home}
+          socialLinks={settings.socialLinks}
+        />
+      ) : (
+        <Section>
+          <HomeFallbackLinks locale={locale} common={common} />
+        </Section>
+      )}
     </>
+  );
+  return liveEdit ? (
+    <LiveEditMode messages={liveEdit} locale={locale}>
+      {page}
+    </LiveEditMode>
+  ) : (
+    page
   );
 }

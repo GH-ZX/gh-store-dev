@@ -36,7 +36,13 @@ const MAX_REDIRECTS = 3;
 function isPublicHost(rawHost: string): boolean {
   const host = rawHost.replace(/^\[|\]$/g, "").toLowerCase();
 
-  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) {
+  if (
+    !host ||
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal")
+  ) {
     return false;
   }
 
@@ -57,7 +63,12 @@ function isPublicHost(rawHost: string): boolean {
 
   if (host.includes(":")) {
     // Loopback, unspecified, unique-local, link-local, and v4-mapped forms.
-    return !(host === "::1" || host === "::" || /^(f[cd]|fe[89ab])/.test(host) || host.startsWith("::ffff:"));
+    return !(
+      host === "::1" ||
+      host === "::" ||
+      /^(f[cd]|fe[89ab])/.test(host) ||
+      host.startsWith("::ffff:")
+    );
   }
 
   return host.includes(".");
@@ -68,7 +79,10 @@ async function fetchPublic(url: URL, init: CfRequestInit): Promise<Response> {
   let current = url;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    const response = await fetch(current.toString(), { ...init, redirect: "manual" });
+    const response = await fetch(current.toString(), {
+      ...init,
+      redirect: "manual",
+    });
 
     if (response.status < 300 || response.status >= 400) {
       return response;
@@ -83,7 +97,10 @@ async function fetchPublic(url: URL, init: CfRequestInit): Promise<Response> {
 
     current = new URL(location, current);
 
-    if (!ALLOWED_PROTOCOLS.has(current.protocol) || !isPublicHost(current.hostname)) {
+    if (
+      !ALLOWED_PROTOCOLS.has(current.protocol) ||
+      !isPublicHost(current.hostname)
+    ) {
       return new Response(null, { status: 403 });
     }
   }
@@ -91,7 +108,11 @@ async function fetchPublic(url: URL, init: CfRequestInit): Promise<Response> {
   return new Response(null, { status: 508 });
 }
 
-export async function loader({ request }: { request: Request }): Promise<Response> {
+export async function loader({
+  request,
+}: {
+  request: Request;
+}): Promise<Response> {
   const { searchParams } = new URL(request.url);
   const rawUrl = searchParams.get("url");
 
@@ -117,17 +138,21 @@ export async function loader({ request }: { request: Request }): Promise<Respons
   // Optional edge resize: `?width=640` serves a variants-sized webp instead of
   // the supplier's full upload. Cloudflare applies `cf.image` before the
   // response is cached, so every size is resized once and served from cache.
-  const width = Math.min(
-    1920,
-    Math.max(16, Number(new URL(request.url).searchParams.get("width") ?? "0") || 0),
-  );
+  const requestedWidth = Number(searchParams.get("width"));
+  const width =
+    Number.isFinite(requestedWidth) && requestedWidth > 0
+      ? Math.min(1920, Math.max(16, Math.floor(requestedWidth)))
+      : 0;
 
   try {
-    const init: CfRequestInit & { cf?: { image?: Record<string, string | number> } } = {
+    const init: CfRequestInit & {
+      cf?: { image?: Record<string, string | number> };
+    } = {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*;q=0.8",
+        Accept:
+          "image/avif,image/webp,image/apng,image/svg+xml,image/*,*;q=0.8",
       },
       cf: {
         cacheEverything: true,
@@ -146,9 +171,14 @@ export async function loader({ request }: { request: Request }): Promise<Respons
     const contentType = upstreamRes.headers.get("content-type") || "image/jpeg";
     const length = Number(upstreamRes.headers.get("content-length") ?? "0");
 
+    if (!contentType.toLowerCase().startsWith("image/") || length > MAX_BYTES) {
+      await upstreamRes.body.cancel();
+      return new Response("Invalid upstream image", { status: 502 });
+    }
+
     const resized = width > 0;
     const headers = new Headers({
-      "Content-Type": resized ? "image/webp" : contentType,
+      "Content-Type": contentType,
       "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
       "Access-Control-Allow-Origin": "*",
       "X-Content-Type-Options": "nosniff",

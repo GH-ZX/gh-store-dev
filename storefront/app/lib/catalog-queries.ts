@@ -100,12 +100,11 @@ export async function getHomeData(
 
   const ids = [...new Set([...carousel, ...grid].map((p) => p.id))];
   if (ids.length > 0) {
-    const { data: prices, error } = await client
+    const { data: prices } = await client
       .from("offers")
       .select("product_id, price")
       .in("product_id", ids)
       .eq("is_active", true);
-    if (error) throw error;
     const cheapest = new Map<string, number>();
     for (const row of (prices ?? []) as PriceRow[]) {
       const current = cheapest.get(row.product_id);
@@ -182,12 +181,7 @@ export async function getProductDetail(
 
 const PAGE_SIZE = 24;
 
-/**
- * Active catalog page with cheapest prices attached via one offers query.
- * No category pre-lookup: the products table carries category_id, but the
- * storefront grid shows the whole active catalog ordered like the legacy
- * games page (sort_order, name_en).
- */
+/** The games category, with active offers supplying each product's starting price. */
 export async function getCatalogPage(
   client: SupabaseClient,
   locale: Locale,
@@ -198,8 +192,10 @@ export async function getCatalogPage(
 
   const { data, error, count } = await client
     .from("products")
-    .select(PRODUCT_SUMMARY_SELECT, { count: "exact" })
+    .select(PRODUCT_SUMMARY_SELECT.replace("categories!products_category_id_fkey(", "categories!products_category_id_fkey!inner("), { count: "exact" })
     .eq("is_active", true)
+    .eq("categories.slug", "games")
+    .eq("categories.is_active", true)
     .order("sort_order", { ascending: true })
     .order("name_en", { ascending: true })
     .range(from, from + PAGE_SIZE - 1);
@@ -212,12 +208,11 @@ export async function getCatalogPage(
 
   const ids = products.map((p) => p.id);
   if (ids.length > 0) {
-    const { data: prices, error: priceError } = await client
+    const { data: prices } = await client
       .from("offers")
       .select("product_id, price")
       .in("product_id", ids)
       .eq("is_active", true);
-    if (priceError) throw priceError;
     const cheapest = new Map<string, number>();
     for (const row of (prices ?? []) as PriceRow[]) {
       const current = cheapest.get(row.product_id);
@@ -271,16 +266,28 @@ export async function searchProducts(
   };
 }
 
-/** Every active product slug for the sitemap, oldest identity first. */
-export async function getSitemapSlugs(client: SupabaseClient): Promise<string[]> {
+/** Active product identities with their canonical category paths. */
+export async function getSitemapSlugs(client: SupabaseClient): Promise<{ slug: string; categorySlug: string }[]> {
   const { data, error } = await client
     .from("products")
-    .select("slug")
+    .select("slug, categories!inner(slug, is_active)")
     .eq("is_active", true)
+    .eq("categories.is_active", true)
     .order("slug", { ascending: true });
 
   if (error) throw error;
-  return ((data ?? []) as unknown as { slug: string }[]).map((row) => row.slug);
+  return (data ?? []).flatMap((row) => {
+    const raw = row as unknown as { slug: string; categories: { slug: string } | { slug: string }[] | null };
+    const category = Array.isArray(raw.categories) ? raw.categories[0] : raw.categories;
+    return category?.slug ? [{ slug: raw.slug, categorySlug: category.slug }] : [];
+  });
+}
+
+/** Published category landing pages, including categories with no current products. */
+export async function getSitemapCategories(client: SupabaseClient): Promise<string[]> {
+  const { data, error } = await client.from("categories").select("slug").eq("is_active", true);
+  if (error) throw error;
+  return (data ?? []).map((row) => row.slug as string);
 }
 
 export type InputField = {
@@ -312,8 +319,6 @@ export type CheckoutPageData = {
   product: StoreProduct;
   inputFields: InputField[];
 };
-
-type RawOption = { value?: unknown; label_ar?: unknown; label_en?: unknown };
 
 function toFieldOptions(options: unknown, locale: Locale): { value: string; label: string }[] {
   if (!Array.isArray(options)) return [];
@@ -502,7 +507,7 @@ export async function getCategoryPage(
       .maybeSingle(),
     client
       .from("products")
-      .select(PRODUCT_SUMMARY_SELECT, { count: "exact" })
+      .select(PRODUCT_SUMMARY_SELECT.replace("categories!products_category_id_fkey(", "categories!products_category_id_fkey!inner("), { count: "exact" })
       .eq("is_active", true)
       .eq("categories.slug", categorySlug)
       .order("sort_order", { ascending: true })
@@ -526,12 +531,11 @@ export async function getCategoryPage(
 
   const ids = products.map((product) => product.id);
   if (ids.length > 0) {
-    const { data: prices, error: priceError } = await client
+    const { data: prices } = await client
       .from("offers")
       .select("product_id, price")
       .in("product_id", ids)
       .eq("is_active", true);
-    if (priceError) throw priceError;
     const cheapest = new Map<string, number>();
     for (const row of (prices ?? []) as PriceRow[]) {
       const current = cheapest.get(row.product_id);
@@ -585,12 +589,11 @@ export async function getAllProductsPage(
 
   const ids = products.map((product) => product.id);
   if (ids.length > 0) {
-    const { data: prices, error: priceError } = await client
+    const { data: prices } = await client
       .from("offers")
       .select("product_id, price")
       .in("product_id", ids)
       .eq("is_active", true);
-    if (priceError) throw priceError;
     const cheapest = new Map<string, number>();
     for (const row of (prices ?? []) as PriceRow[]) {
       const current = cheapest.get(row.product_id);

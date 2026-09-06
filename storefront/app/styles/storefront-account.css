@@ -1,0 +1,458 @@
+/* Customer account and help surfaces. Dashboard styling remains untouched. */
+[data-storefront-shell] .sf-account-page,
+[data-storefront-shell] .sf-content-page {
+  width: min(1280px, calc(100% - 64px));
+  margin-inline: auto;
+  padding-block: 36px 48px;
+}
+[data-storefront-shell] .sf-account-heading {
+  margin-bottom: 24px;
+}
+[data-storefront-shell] .sf-account-eyebrow {
+  margin-bottom: 8px;
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+[data-storefront-shell] .sf-account-title {
+  color: var(--ink);
+  font-size: clamp(24px, 2.5vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+[data-storefront-shell] .sf-account-description {
+  max-width: 680px;
+  margin-top: 10px;
+  color: var(--ink-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+[data-storefront-shell] .sf-account-nav {
+  display: flex;
+  gap: 4px;
+  max-width: 100%;
+  margin-block: 0 24px;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  scrollbar-width: thin;
+}
+[data-storefront-shell] .sf-account-nav-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: var(--ink-muted);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+[data-storefront-shell] .sf-account-nav-link:hover {
+  background: var(--surface-inset);
+  color: var(--ink);
+}
+[data-storefront-shell] .sf-account-nav-link[aria-current="page"] {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--accent);
+}
+[data-storefront-shell] .sf-account-card,
+[data-storefront-shell] .sf-content-panel,
+[data-storefront-shell] .sf-content-aside {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-account-card-title {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+[data-storefront-shell] .sf-account-card-description {
+  margin-top: 6px;
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+[data-storefront-shell] .sf-account-card-body {
+  margin-top: 20px;
+}
+[data-storefront-shell] .sf-account-field {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+[data-storefront-shell] textarea.sf-account-field {
+  resize: vertical;
+}
+[data-storefront-shell] .sf-account-field::placeholder {
+  color: var(--ink-muted);
+}
+[data-storefront-shell] .sf-account-field:focus {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  outline-offset: 1px;
+}
+[data-storefront-shell] .sf-account-field:disabled {
+  background: var(--surface-inset);
+  color: var(--ink-muted);
+  cursor: not-allowed;
+}
+[data-storefront-shell] .sf-account-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--sf-button, var(--accent));
+  color: var(--accent-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease;
+}
+[data-storefront-shell] .sf-account-button:hover {
+  opacity: 0.9;
+}
+[data-storefront-shell] .sf-account-button--secondary {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+[data-storefront-shell] .sf-account-button--secondary:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-inset);
+  opacity: 1;
+}
+[data-storefront-shell] .sf-account-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+[data-storefront-shell] .sf-account-feedback {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+[data-storefront-shell] .sf-account-feedback--error {
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--line));
+  background: var(--danger-surface);
+  color: var(--danger);
+}
+[data-storefront-shell] .sf-account-feedback--success {
+  border-color: color-mix(in srgb, var(--success) 28%, var(--line));
+  background: color-mix(in srgb, var(--success) 6%, var(--surface));
+  color: var(--success);
+}
+[data-storefront-shell] .sf-account-feedback + .sf-account-feedback {
+  margin-top: 12px;
+}
+[data-storefront-shell] .sf-account-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 330px);
+  gap: 24px;
+  align-items: start;
+}
+[data-storefront-shell] .sf-account-connect-panel {
+  max-width: 560px;
+}
+[data-storefront-shell] .sf-auth-page {
+  width: min(460px, calc(100% - 32px));
+  margin: 48px auto 64px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-auth-page .sf-account-heading {
+  margin-bottom: 28px;
+}
+[data-storefront-shell] .sf-auth-page .sf-account-title {
+  font-size: 28px;
+}
+[data-storefront-shell] .sf-auth-page .sf-account-description {
+  font-size: 14px;
+}
+[data-storefront-shell] .sf-auth-body {
+  min-width: 0;
+}
+[data-storefront-shell] .sf-auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 22px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+[data-storefront-shell] .sf-auth-links a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+[data-storefront-shell] .sf-auth-links a:first-child {
+  color: var(--accent);
+  font-weight: 600;
+}
+[data-storefront-shell] .sf-notification-list {
+  display: grid;
+  gap: 12px;
+}
+[data-storefront-shell] .sf-notification-item {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-notification-item[data-unread] {
+  border-inline-start: 3px solid var(--accent);
+  padding-inline-start: 18px;
+}
+[data-storefront-shell] .sf-notification-item h2 {
+  font-size: 16px;
+  line-height: 1.5;
+}
+[data-storefront-shell] .sf-account-empty {
+  padding: 40px 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: center;
+}
+[data-storefront-shell] .sf-support-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 290px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+[data-storefront-shell] .sf-support-sidebar {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+[data-storefront-shell] .sf-support-thread-link {
+  display: block;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-support-thread-link[aria-current="page"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+[data-storefront-shell] .sf-support-message {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-support-message[data-mine] {
+  background: var(--surface-inset);
+}
+[data-storefront-shell] .sf-content-page {
+  max-width: 1120px;
+}
+[data-storefront-shell] .sf-content-page--continuation {
+  padding-top: 0;
+}
+[data-storefront-shell] .sf-content-page a:focus-visible,
+[data-storefront-shell] .sf-account-page a:focus-visible,
+[data-storefront-shell] .sf-auth-page a:focus-visible,
+[data-storefront-shell] .sf-account-button:focus-visible,
+[data-storefront-shell] .sf-content-faq-question:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+[data-storefront-shell] .sf-content-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 24px;
+  align-items: start;
+}
+[data-storefront-shell] .sf-content-prose-panel {
+  max-width: 800px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-content-prose {
+  display: grid;
+  gap: 28px;
+}
+[data-storefront-shell] .sf-content-prose-body {
+  margin-top: 10px;
+  color: var(--ink-muted);
+  font-size: 16px;
+  line-height: 1.75;
+}
+[data-storefront-shell] .sf-content-faq {
+  display: grid;
+  gap: 12px;
+}
+[data-storefront-shell] .sf-content-faq-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-content-faq-question {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  list-style: none;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  text-align: start;
+  cursor: pointer;
+}
+[data-storefront-shell] .sf-content-faq-question::-webkit-details-marker {
+  display: none;
+}
+[data-storefront-shell] .sf-content-faq-answer {
+  padding: 0 20px 20px;
+  color: var(--ink-muted);
+  font-size: 15px;
+  line-height: 1.75;
+}
+[data-storefront-shell] .sf-content-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+[data-storefront-shell] .sf-content-step {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+[data-storefront-shell] .sf-content-social-list {
+  display: grid;
+  max-width: 600px;
+  gap: 12px;
+}
+[data-storefront-shell] .sf-content-social-link {
+  display: flex;
+  min-height: 60px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+[data-storefront-shell] .sf-content-social-link:hover {
+  border-color: var(--accent);
+}
+@media (max-width: 900px) {
+  [data-storefront-shell] .sf-account-profile-grid,
+  [data-storefront-shell] .sf-content-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-storefront-shell] .sf-content-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  [data-storefront-shell] .sf-account-page,
+  [data-storefront-shell] .sf-content-page {
+    width: calc(100% - 32px);
+    padding-block: 24px 36px;
+  }
+  [data-storefront-shell] .sf-content-page--continuation {
+    padding-top: 0;
+  }
+  [data-storefront-shell] .sf-account-description {
+    font-size: 14px;
+  }
+  [data-storefront-shell] .sf-account-card,
+  [data-storefront-shell] .sf-content-panel,
+  [data-storefront-shell] .sf-content-aside,
+  [data-storefront-shell] .sf-content-prose-panel {
+    padding: 20px;
+  }
+  [data-storefront-shell] .sf-account-nav {
+    margin-bottom: 20px;
+  }
+  [data-storefront-shell] .sf-account-nav-link {
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+  [data-storefront-shell] .sf-auth-page {
+    margin-block: 24px 40px;
+    padding: 24px 20px;
+  }
+  [data-storefront-shell] .sf-auth-page .sf-account-title {
+    font-size: 24px;
+  }
+  [data-storefront-shell] .sf-support-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-storefront-shell] .sf-content-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-storefront-shell] .sf-content-faq-question {
+    padding: 16px;
+  }
+  [data-storefront-shell] .sf-content-faq-answer {
+    padding: 0 16px 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-storefront-shell] .sf-account-nav-link,
+  [data-storefront-shell] .sf-account-field,
+  [data-storefront-shell] .sf-account-button {
+    transition: none;
+  }
+}
+
+[data-storefront-shell] .sf-auth-body > a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+[data-storefront-shell] .sf-auth-links a:hover { color: var(--accent); }

@@ -1,8 +1,8 @@
+import "@/styles/storefront-commerce.css";
 import { data, Link, useLoaderData } from "react-router";
 import { isLocale } from "@/i18n/config";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
-import { buildPageMeta } from "@/lib/seo";
 import { APP_NAME } from "@/lib/app-config";
 import { buildBrandName } from "@/lib/brand";
 import { formatPrice } from "@/lib/format-money";
@@ -55,7 +55,7 @@ export default function LocaleOrderInvoice() {
   const hasFields = invoice.lines.some((line) => line.fields.length > 0);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="sf-invoice mx-auto w-full max-w-3xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link to={`/${locale}/orders/${orderId}`}>← {messages.backToOrder}</Link>
         <div className="flex flex-wrap items-center gap-2">

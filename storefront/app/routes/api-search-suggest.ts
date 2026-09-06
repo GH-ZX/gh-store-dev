@@ -1,6 +1,7 @@
 import { isLocale } from "@/i18n/config";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
-import { createPublicClient, searchProducts } from "@/lib/catalog-queries";
+import { createPublicClient } from "@/lib/catalog-queries";
+import { searchCatalog } from "@server/lib/services/catalog.service";
 import type { Route } from "./+types/api-search-suggest";
 
 const CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=300";
@@ -23,10 +24,29 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     );
   }
 
-  const { products } = await searchProducts(createPublicClient(env), locale, q);
+  const { games: products, offers } = await searchCatalog(
+    createPublicClient(env),
+    locale,
+    q,
+    "all",
+  );
   return Response.json(
     {
-      products: products.slice(0, 8).map((product) => ({
+      offers: offers
+        .slice(0, 5)
+        .flatMap((offer) =>
+          offer.game
+            ? [
+                {
+                  gameSlug: offer.game.slug,
+                  categorySlug: offer.game.categorySlug,
+                  offerSlug: offer.slug,
+                  name: offer.name,
+                },
+              ]
+            : [],
+        ),
+      products: products.slice(0, 5).map((product) => ({
         slug: product.slug,
         categorySlug: product.categorySlug,
         name: product.name,
