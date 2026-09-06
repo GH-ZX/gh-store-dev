@@ -1,0 +1,233 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Locale } from "@/i18n/config";
+import { createSupabaseServiceClient, hasServiceRoleKey } from "@server/lib/supabase/service";
+import { logFailure } from "@server/lib/logging/logger";
+
+/**
+ * Customer notifications.
+ *
+ * Writing and reading are deliberately asymmetric. A customer reads and marks
+ * their own — their session is the gate, through RLS. Writing goes through the
+ * service client, because a notification is the store telling the customer
+ * something, and a customer must not be able to invent one for themselves or for
+ * anybody else.
+ *
+ * The one rule that matters here: **notifying must never break the thing it
+ * reports on.** A failed insert cannot be allowed to turn a successful delivery
+ * into a failed order, so {@link notify} swallows its errors and returns whether
+ * it worked. Callers on the money path ignore the result.
+ */
+
+export type NotificationType =
+  | "order_delivered"
+  | "order_failed"
+  | "recharge_approved"
+  | "recharge_rejected"
+  | "support_reply"
+  | "wallet_adjusted"
+  /** The one an owner writes themselves, rather than one the store derives. */
+  | "admin_message"
+  | AdminNotificationType;
+
+/** Owner-facing events, mirrored into the bell of every active administrator. */
+export type AdminNotificationType =
+  | "admin_order_placed"
+  | "admin_recharge_request"
+  | "admin_recharge_paid"
+  | "admin_support_message"
+  | "admin_low_wallet"
+  | "admin_low_stock"
+  | "admin_new_customer"
+  | "admin_sweep_stalled";
+export type CustomerNotification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  href: string | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
+export type NotifyInput = {
+  userId: string;
+  type: NotificationType;
+  titleAr: string;
+  titleEn: string;
+  bodyAr: string;
+  bodyEn: string;
+  /** Where the notification leads; locale-prefixed by the caller. */
+  href?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
+};
+
+export async function notify(input: NotifyInput): Promise<boolean> {
+  if (!hasServiceRoleKey()) {
+    return false;
+  }
+
+  try {
+    const service = createSupabaseServiceClient();
+    const { error } = await service.from("notifications").insert({
+      user_id: input.userId,
+      notification_type: input.type,
+      title_ar: input.titleAr,
+      title_en: input.titleEn,
+      body_ar: input.bodyAr,
+      body_en: input.bodyEn,
+      href: input.href ?? null,
+      entity_type: input.entityType ?? null,
+      entity_id: input.entityId ?? null,
+    });
+
+    if (error) {
+      logFailure("notifications", "insert_failed", error, {
+        userId: input.userId,
+        type: input.type,
+      });
+    }
+
+    return !error;
+  } catch (error) {
+    logFailure("notifications", "insert_threw", error, { userId: input.userId, type: input.type });
+    // Never rethrow: see the note above about not breaking the money path.
+    return false;
+  }
+}
+
+/**
+ * One notification row per active administrator.
+ *
+ * The bell was customer-only: every owner-facing event went to Telegram and
+ * nowhere else, so an owner without the bot linked learned about an order by
+ * opening the dashboard. Errors are swallowed for the same reason as `notify`.
+ */
+export async function notifyAdmins(input: Omit<NotifyInput, "userId">): Promise<void> {
+  if (!hasServiceRoleKey()) {
+    return;
+  }
+
+  try {
+    const service = createSupabaseServiceClient();
+    const { data: admins } = await service
+      .from("profiles")
+      .select("id")
+      .eq("role", "admin")
+      .eq("is_active", true);
+
+    if (!admins || admins.length === 0) {
+      return;
+    }
+
+    const { error } = await service.from("notifications").insert(
+      admins.map((admin) => ({
+        user_id: admin.id,
+        notification_type: input.type,
+        title_ar: input.titleAr,
+        title_en: input.titleEn,
+        body_ar: input.bodyAr,
+        body_en: input.bodyEn,
+        href: input.href ?? null,
+        entity_type: input.entityType ?? null,
+        entity_id: input.entityId ?? null,
+      })),
+    );
+
+    if (error) {
+      logFailure("notifications", "admin_insert_failed", error, { type: input.type });
+    }
+  } catch (error) {
+    logFailure("notifications", "admin_insert_threw", error, { type: input.type });
+  }
+}
+
+type NotificationRow = {
+  id: string;
+  notification_type: string;
+  title_ar: string;
+  title_en: string;
+  body_ar: string;
+  body_en: string;
+  href: string | null;
+  is_read: boolean;
+  created_at: string;
+};
+
+export async function getMyNotifications(
+  supabase: SupabaseClient,
+  userId: string,
+  locale: Locale,
+  limit = 50,
+): Promise<CustomerNotification[]> {
+  const { data } = await supabase
+    .from("notifications")
+    .select("id, notification_type, title_ar, title_en, body_ar, body_en, href, is_read, created_at")
+    .eq("user_id", userId)
+    .eq("is_visible", true)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return ((data ?? []) as unknown as NotificationRow[]).map((row) => ({
+    id: row.id,
+    type: row.notification_type,
+    title: locale === "ar" ? row.title_ar : row.title_en,
+    body: locale === "ar" ? row.body_ar : row.body_en,
+    href: row.href,
+    isRead: row.is_read,
+    createdAt: row.created_at,
+  }));
+}
+
+/**
+ * How many unread, for the header badge.
+ *
+ * Returns 0 rather than throwing when nobody is signed in, because the header
+ * renders on every page including public ones.
+ */
+export async function getUnreadNotificationCount(
+  supabase: SupabaseClient,
+  userId: string | null,
+): Promise<number> {
+  if (!userId) {
+    return 0;
+  }
+
+  const { count } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("is_visible", true)
+    .eq("is_read", false);
+
+  return count ?? 0;
+}
+
+export async function markAllNotificationsRead(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("user_id", userId)
+    .eq("is_read", false);
+
+  return !error;
+}
+
+export async function markNotificationRead(
+  supabase: SupabaseClient,
+  userId: string,
+  id: string,
+): Promise<boolean> {
+  // Scoped by user as well as id: the RLS policy already does this, and saying it
+  // here means a policy change cannot silently widen the statement.
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  return !error;
+}

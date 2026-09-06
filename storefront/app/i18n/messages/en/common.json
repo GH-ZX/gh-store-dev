@@ -1,0 +1,95 @@
+{
+  "navigation": {
+    "home": "Home",
+    "games": "Games",
+    "giftCards": "Gift cards",
+    "products": "Products",
+    "offers": "Offers",
+    "menu": "Menu",
+    "close": "Close",
+    "primaryLabel": "Primary navigation",
+    "mobileLabel": "Navigation menu",
+    "skipToContent": "Skip to content"
+  },
+  "actions": {
+    "search": "Search",
+    "searchPlaceholder": "Search products…",
+    "clear": "Clear",
+    "viewAll": "View all",
+    "browse": "Browse the store",
+    "buyNow": "Buy now",
+    "addToCart": "Add to cart",
+    "details": "Details",
+    "retry": "Try again",
+    "next": "Next",
+    "previous": "Previous"
+  },
+  "pagination": {
+    "previous": "Previous page",
+    "next": "Next page",
+    "position": "Page {page} of {pages}",
+    "positionUnknown": "Page {page}",
+    "navLabel": "Pagination"
+  },
+  "states": {
+    "loading": "Loading…",
+    "emptyTitle": "Nothing to show yet",
+    "emptyDescription": "We are still filling this section. Browse the rest of the store in the meantime.",
+    "errorTitle": "We could not load this",
+    "errorDescription": "Please refresh the page in a moment."
+  },
+  "locale": {
+    "switchLabel": "Change language"
+  },
+  "theme": {
+    "toggleLabel": "Change appearance",
+    "dark": "Dark appearance",
+    "light": "Light appearance"
+  },
+  "footer": {
+    "tagline": "Digital products and clear delivery for players.",
+    "storeHeading": "Store",
+    "helpHeading": "Help",
+    "legalHeading": "Legal",
+    "followHeading": "Follow us",
+    "rights": "All rights reserved."
+  },
+  "links": {
+    "about": "About",
+    "faq": "FAQ",
+    "how": "How it works",
+    "contact": "Contact us",
+    "support": "Support requests",
+    "refunds": "Refund policy",
+    "privacy": "Privacy policy",
+    "terms": "Terms and conditions",
+    "social": "Social links",
+    "sale": "Offers",
+    "search": "Search"
+  },
+  "badges": {
+    "sale": "Sale",
+    "featured": "Featured",
+    "giftCard": "Gift card",
+    "redeemCode": "Code",
+    "topup": "Top-up"
+  },
+  "price": {
+    "from": "From",
+    "was": "Was",
+    "discount": "{percent}% off",
+    "capital": "Base price"
+  },
+  "account": {
+    "signIn": "Sign in",
+    "account": "My account",
+    "adminBadge": "Admin",
+    "dashboard": "Dashboard",
+    "walletLabel": "Balance",
+    "wallets": "Wallets",
+    "openWallet": "Open wallet",
+    "openCustomers": "All customer wallets",
+    "accountMenuLabel": "Account menu",
+    "signOut": "Sign out"
+  }
+}

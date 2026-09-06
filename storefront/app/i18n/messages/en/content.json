@@ -1,0 +1,188 @@
+{
+  "faq": {
+    "eyebrow": "Help",
+    "title": "Frequently asked questions.",
+    "description": "Quick answers about top-ups, delivery, and payment in GH Store.",
+    "items": [
+      {
+        "question": "How do I top up my game?",
+        "answer": "Pick the game, then the package, enter your in-game account details, and pay from your wallet balance. Fulfilment starts as soon as the order is confirmed."
+      },
+      {
+        "question": "How long does delivery take?",
+        "answer": "Most orders are fulfilled automatically within minutes. When the supplier is busy an order may move to processing, and the update appears on your order page without any action from you."
+      },
+      {
+        "question": "How do I add balance to my wallet?",
+        "answer": "Use the recharge page to add balance with the methods available in your country. Balance is credited once the payment is verified and appears in your transaction history."
+      },
+      {
+        "question": "I entered the wrong account ID. What now?",
+        "answer": "Contact support immediately with your order number. If the order has not been fulfilled yet the details can be corrected or the order cancelled; after fulfilment a top-up cannot be reversed."
+      },
+      {
+        "question": "Are codes ready to use right away?",
+        "answer": "Yes. Your redeem code appears on the order page after delivery, ready to copy and use on its platform."
+      },
+      {
+        "question": "Can I refund a completed order?",
+        "answer": "Digital products cannot be refunded once delivered. If fulfilment fails, the amount is returned to your wallet automatically."
+      }
+    ]
+  },
+  "how": {
+    "eyebrow": "How it works",
+    "title": "Four steps from choosing to delivery.",
+    "description": "GH Store keeps it simple: keep balance in your wallet, then buy without repeating payment steps.",
+    "steps": [
+      {
+        "title": "Create your account",
+        "description": "One account holds your orders, balance, and transaction history."
+      },
+      {
+        "title": "Recharge your wallet",
+        "description": "Add balance with the method available to you; it is credited once the payment is verified."
+      },
+      {
+        "title": "Choose a package",
+        "description": "Browse games and cards, then enter your in-game account details."
+      },
+      {
+        "title": "Receive your order",
+        "description": "The order is fulfilled automatically and your top-up or code appears on the order page."
+      }
+    ],
+    "assuranceHeading": "What every order guarantees",
+    "assurances": [
+      "Displayed prices are final and recalculated on the server before payment.",
+      "Your balance cannot be charged twice for the same order.",
+      "Every wallet movement is recorded and cannot be edited.",
+      "Your in-game account details are used only to fulfil your order."
+    ]
+  },
+  "contact": {
+    "eyebrow": "Contact",
+    "title": "We are here to help.",
+    "description": "Reach us on whichever channel suits you and we will get back to you shortly.",
+    "channelsHeading": "Contact channels",
+    "orderNote": "To speed things up, include your order number, the game, and your account ID.",
+    "emptyTitle": "Open a support request",
+    "emptyDescription": "Sign in to contact GH Store support and keep your conversation linked to your orders."
+  },
+  "privacy": {
+    "eyebrow": "Legal",
+    "title": "Privacy policy.",
+    "description": "What we collect, why we collect it, and how we protect it.",
+    "sections": [
+      {
+        "heading": "Data we collect",
+        "body": "We collect basic account data such as your email, order data such as your in-game account ID and region, and your wallet transaction history. We do not store your bank card details."
+      },
+      {
+        "heading": "Why we collect it",
+        "body": "We use this data to fulfil your orders, issue your invoices, prevent abuse, and answer support requests."
+      },
+      {
+        "heading": "Sharing",
+        "body": "We share the minimum order data with the fulfilment supplier and payment provider needed to complete the transaction. We never sell your data."
+      },
+      {
+        "heading": "Retention",
+        "body": "Order, wallet, and invoice records are kept for as long as accounting and dispute resolution require. That financial history is append-only and is not deleted — erasing it would also destroy the proof of your own transactions."
+      },
+      {
+        "heading": "Your rights",
+        "body": "You can ask for a copy of your data or have it corrected at any time. When you ask us to close your account we remove your personal details — name, email, and in-game account data — and keep the financial record without identity, for accounting reasons. Contact support to arrange it."
+      }
+    ]
+  },
+  "terms": {
+    "eyebrow": "Legal",
+    "title": "Terms and conditions.",
+    "description": "The rules for using GH Store and buying digital products from it.",
+    "sections": [
+      {
+        "heading": "Your account",
+        "body": "You are responsible for the accuracy of your account details and for keeping your password private. Creating multiple accounts to bypass limits is not allowed."
+      },
+      {
+        "heading": "Prices and payment",
+        "body": "Prices are shown in the store currency and recalculated on the server before an order is confirmed. The order amount is debited from your wallet balance."
+      },
+      {
+        "heading": "Delivery",
+        "body": "Products are digital and delivered to your in-game account or as a redeem code. You are responsible for the account ID and region you choose."
+      },
+      {
+        "heading": "Refunds",
+        "body": "A digital product cannot be refunded once successfully delivered. If fulfilment fails, the amount is returned to your wallet."
+      },
+      {
+        "heading": "Prohibited use",
+        "body": "Using the store for unlawful activity, fraud, or exploiting pricing errors is prohibited, and we may suspend an account on reasonable suspicion."
+      },
+      {
+        "heading": "Changes to these terms",
+        "body": "We may update these terms, and an update applies from the date it is published on this page."
+      }
+    ]
+  },
+  "refunds": {
+    "eyebrow": "Legal",
+    "title": "Refund policy.",
+    "description": "When an amount comes back, where it goes, and how long it takes.",
+    "sections": [
+      {
+        "heading": "The short version",
+        "body": "Everything GH Store sells is digital and fulfilled on the spot, so a package cannot be refunded once it has been delivered successfully. If fulfilment fails, the amount comes back to you without an argument."
+      },
+      {
+        "heading": "When fulfilment fails",
+        "body": "If your order cannot be delivered — a code that never arrives or a top-up that does not go through — the amount is returned automatically to your store wallet and a notification tells you so. Cases that need a human look are reviewed by the team, and the amount is credited once the check is done."
+      },
+      {
+        "heading": "Double charges and price mistakes",
+        "body": "A double charge for the same order, or a clear pricing error on a package, is corrected by returning the difference or the full amount to your wallet as soon as the records confirm it."
+      },
+      {
+        "heading": "Incorrect account details",
+        "body": "Top-ups are delivered to the account ID you type. An order fulfilled successfully against a wrong ID is not eligible for a refund, but contact us immediately — before fulfilment, or just after it, we may still be able to take it up with the supplier."
+      },
+      {
+        "heading": "Wallet balance",
+        "body": "Every refund lands in your in-store wallet and is ready to spend immediately. Returning money to the original payment method (a manual transfer or a digital payment) happens exceptionally and is agreed with you through support first."
+      },
+      {
+        "heading": "How to reach us",
+        "body": "Open the order from your orders page and send a support message from it, or use any of our contact channels with the order number. Every case is reviewed within one business day, and you hear the decision either way."
+      }
+    ]
+  },
+  "links": {
+    "eyebrow": "Our links",
+    "title": "Every channel in one place.",
+    "description": "Follow new offers and announcements on the channel you prefer.",
+    "emptyTitle": "No links yet",
+    "emptyDescription": "We are adding our channels soon. Check back to find them here."
+  },
+  "about": {
+    "eyebrow": "About the store",
+    "title": "GH Store — a digital services store.",
+    "description": "Email accounts, AI accounts, game top-ups, and digital cards at clear prices.",
+    "sections": [
+      {
+        "heading": "What is GH Store?",
+        "body": "GH Store is a digital services store that sells ready email accounts, AI accounts, game top-up packages, and digital cards and codes. Every product is delivered directly in the order page once payment is confirmed."
+      },
+      {
+        "heading": "Who is it for?",
+        "body": "It is for individuals who want to buy digital services without a bank card or international balance. You pay from your in-store wallet and receive your product instantly."
+      },
+      {
+        "heading": "Why do we ask for your data?",
+        "body": "We ask for basic data only — such as your email and your in-game account ID when topping up — to complete and deliver your order. We do not request permissions over your Google account, and we never access your mail, files, or calendar. Your data is used solely to fulfil your order and is never sold to any third party."
+      }
+    ],
+    "privacyLabel": "Privacy policy"
+  }
+}

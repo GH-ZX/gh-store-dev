@@ -1,0 +1,95 @@
+{
+  "navigation": {
+    "home": "الرئيسية",
+    "games": "الألعاب",
+    "giftCards": "البطاقات",
+    "products": "المنتجات",
+    "offers": "العروض",
+    "menu": "القائمة",
+    "close": "إغلاق",
+    "primaryLabel": "التنقل الرئيسي",
+    "mobileLabel": "قائمة التنقل",
+    "skipToContent": "تخطَّ إلى المحتوى"
+  },
+  "actions": {
+    "search": "بحث",
+    "searchPlaceholder": "ابحث عن منتج…",
+    "clear": "مسح",
+    "viewAll": "عرض الكل",
+    "browse": "تصفح المتجر",
+    "buyNow": "اشترِ الآن",
+    "addToCart": "أضف إلى السلة",
+    "details": "التفاصيل",
+    "retry": "أعد المحاولة",
+    "next": "التالي",
+    "previous": "السابق"
+  },
+  "pagination": {
+    "previous": "الصفحة السابقة",
+    "next": "الصفحة التالية",
+    "position": "الصفحة {page} من {pages}",
+    "positionUnknown": "الصفحة {page}",
+    "navLabel": "التنقل بين الصفحات"
+  },
+  "states": {
+    "loading": "جارٍ التحميل…",
+    "emptyTitle": "لا يوجد شيء لعرضه بعد",
+    "emptyDescription": "نجهّز هذا القسم حاليًا. تصفّح باقي أقسام المتجر في الوقت الحالي.",
+    "errorTitle": "تعذر تحميل البيانات",
+    "errorDescription": "حاول تحديث الصفحة بعد قليل."
+  },
+  "locale": {
+    "switchLabel": "تغيير اللغة"
+  },
+  "theme": {
+    "toggleLabel": "تغيير المظهر",
+    "dark": "المظهر الداكن",
+    "light": "المظهر الفاتح"
+  },
+  "footer": {
+    "tagline": "منتجات رقمية وتسليم واضح.",
+    "storeHeading": "المتجر",
+    "helpHeading": "المساعدة",
+    "legalHeading": "قانوني",
+    "followHeading": "تابعنا",
+    "rights": "جميع الحقوق محفوظة."
+  },
+  "links": {
+    "about": "عن المتجر",
+    "faq": "الأسئلة الشائعة",
+    "how": "كيف يعمل المتجر",
+    "contact": "اتصل بنا",
+    "support": "طلبات الدعم",
+    "refunds": "سياسة الاسترجاع",
+    "privacy": "سياسة الخصوصية",
+    "terms": "الشروط والأحكام",
+    "social": "روابط التواصل",
+    "sale": "العروض",
+    "search": "البحث"
+  },
+  "badges": {
+    "sale": "خصم",
+    "featured": "مميز",
+    "giftCard": "بطاقة",
+    "redeemCode": "كود",
+    "topup": "شحن"
+  },
+  "price": {
+    "from": "يبدأ من",
+    "was": "كان",
+    "discount": "خصم {percent}%",
+    "capital": "سعر الرأسمال"
+  },
+  "account": {
+    "signIn": "تسجيل الدخول",
+    "account": "حسابي",
+    "adminBadge": "مدير",
+    "dashboard": "لوحة الإدارة",
+    "walletLabel": "الرصيد",
+    "wallets": "المحافظ",
+    "openWallet": "فتح المحفظة",
+    "openCustomers": "كل محافظ العملاء",
+    "accountMenuLabel": "قائمة الحساب",
+    "signOut": "تسجيل الخروج"
+  }
+}
