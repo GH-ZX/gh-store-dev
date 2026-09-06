@@ -40,13 +40,13 @@
 		{ "pattern": "gh-store.me", "custom_domain": true },
 		{ "pattern": "www.gh-store.me", "custom_domain": true }
 	],
-	// Fires the scheduled handler in workers/app.ts. The fulfilment sweep
-	// itself is still being ported; until it lands the tick only stamps a
-	// heartbeat so a silent scheduler is told apart from a silent worker.
 	"triggers": {
 		"crons": ["*/5 * * * *"]
 	},
 	"limits": {
 		"cpu_ms": 60000
+	},
+	"images": {
+		"binding": "IMAGES"
 	}
 }

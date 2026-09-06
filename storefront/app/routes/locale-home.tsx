@@ -61,7 +61,7 @@ export default function LocaleHome() {
               <Link to={`/${locale}/${product.categorySlug}/${product.slug}`}>
                 {product.imageUrl ? (
                   <img
-                    src={resolveImageSource(product.imageUrl) ?? undefined}
+                    src={resolveImageSource(product.imageUrl, product === carousel[0] ? 1200 : 640) ?? undefined}
                     alt={product.name}
                     loading={product === carousel[0] ? "eager" : "lazy"}
                     fetchPriority={product === carousel[0] ? "high" : "auto"}
@@ -83,7 +83,7 @@ export default function LocaleHome() {
               <Link to={`/${locale}/${product.categorySlug}/${product.slug}`}>
                 {product.imageUrl ? (
                   <img
-                    src={resolveImageSource(product.imageUrl) ?? undefined}
+                    src={resolveImageSource(product.imageUrl, product === carousel[0] ? 1200 : 640) ?? undefined}
                     alt={product.name}
                     loading="lazy"
                     className="aspect-square w-full rounded object-cover"

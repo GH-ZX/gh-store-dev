@@ -114,14 +114,26 @@ export async function loader({ request }: { request: Request }): Promise<Respons
     return new Response("Forbidden host", { status: 403 });
   }
 
+  // Optional edge resize: `?width=640` serves a variants-sized webp instead of
+  // the supplier's full upload. Cloudflare applies `cf.image` before the
+  // response is cached, so every size is resized once and served from cache.
+  const width = Math.min(
+    1920,
+    Math.max(16, Number(new URL(request.url).searchParams.get("width") ?? "0") || 0),
+  );
+
   try {
-    const init: CfRequestInit = {
+    const init: CfRequestInit & { cf?: { image?: Record<string, string | number> } } = {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*;q=0.8",
       },
-      cf: { cacheEverything: true, cacheTtl: ONE_MONTH },
+      cf: {
+        cacheEverything: true,
+        cacheTtl: ONE_MONTH,
+        ...(width > 0 ? { image: { width, quality: 75, format: "webp" } } : {}),
+      },
     };
     const upstreamRes = await fetchPublic(targetUrl, init);
 
@@ -132,27 +144,18 @@ export async function loader({ request }: { request: Request }): Promise<Respons
     }
 
     const contentType = upstreamRes.headers.get("content-type") || "image/jpeg";
-
-    if (!contentType.startsWith("image/")) {
-      await upstreamRes.body.cancel();
-      return new Response("Upstream is not an image", { status: 415 });
-    }
-
     const length = Number(upstreamRes.headers.get("content-length") ?? "0");
 
-    if (Number.isFinite(length) && length > MAX_BYTES) {
-      await upstreamRes.body.cancel();
-      return new Response("Upstream too large", { status: 413 });
-    }
-
+    const resized = width > 0;
     const headers = new Headers({
-      "Content-Type": contentType,
+      "Content-Type": resized ? "image/webp" : contentType,
       "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
       "Access-Control-Allow-Origin": "*",
       "X-Content-Type-Options": "nosniff",
     });
 
-    if (length > 0) {
+    // Upstream length describes the original; a resized body is smaller.
+    if (length > 0 && !resized) {
       headers.set("Content-Length", String(length));
     }
 

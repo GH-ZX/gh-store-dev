@@ -186,7 +186,7 @@ function CategoryBody({
             <Link to={`/${locale}/${product.categorySlug}/${product.slug}`}>
               {product.imageUrl ? (
                 <img
-                  src={resolveImageSource(product.imageUrl) ?? undefined}
+                  src={resolveImageSource(product.imageUrl, 640) ?? undefined}
                   alt={product.name}
                   loading="lazy"
                   className="aspect-square w-full rounded object-cover"

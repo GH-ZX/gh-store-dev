@@ -60,7 +60,7 @@ export default function LocaleProduct() {
       <h1 className="mt-2 text-2xl font-bold">{product.name}</h1>
       {product.imageUrl ? (
         <img
-          src={resolveImageSource(product.imageUrl) ?? undefined}
+          src={resolveImageSource(product.imageUrl, 640) ?? undefined}
           alt={product.name}
           fetchPriority="high"
           className="mt-4 aspect-video w-full max-w-2xl rounded-lg object-cover"
