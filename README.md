@@ -101,6 +101,14 @@ second cron for the same work.
 
 ## Cloudflare preview and deployment
 
+Cloudflare Workers Builds uses repository root `/`, build command
+`pnpm --dir storefront install --frozen-lockfile && pnpm run build`, and deploy
+command `pnpm --dir storefront exec wrangler deploy`. Its automatic root install
+does not install the separate `storefront/` package. See
+[Workers Builds settings](docs/operations/domain-cloudflare.md#workers-builds-settings).
+
+After installing both dependency sets, local commands are:
+
 ```bash
 pnpm run preview
 pnpm run deploy
@@ -108,12 +116,13 @@ pnpm run deploy
 
 For riskier changes, `pnpm run upload` builds and uploads a new Worker version
 without shifting any traffic — promote it gradually from the Cloudflare
-dashboard or `pnpm exec wrangler versions deploy <version-id> --percentage 10`.
+dashboard or the interactive `pnpm --dir storefront exec wrangler versions deploy`
+command, selecting the new and existing versions and their traffic percentages.
 `pnpm run versions` lists what has been uploaded, and `pnpm run rollback`
 sends traffic back to the previous version in seconds. Both need `wrangler`
-authenticated locally (`pnpm exec wrangler login`). See the launch checklist
-for arming the R2 incremental cache and the incident runbook for when to
-rollback.
+authenticated locally (`pnpm --dir storefront exec wrangler login`). Direct
+Wrangler commands run from `storefront/`, where the current Worker configuration
+and generated deployment files live.
 
 The Worker cron invokes reconciliation directly every five minutes. The protected
 `POST /api/reconcile` endpoint remains available for authorized operational runs
