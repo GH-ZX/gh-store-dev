@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-const config = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8");
+const config = await readFile(new URL("../wrangler.jsonc.legacy-next", import.meta.url), "utf8");
 
 function required(name, pattern) {
   const match = config.match(pattern);

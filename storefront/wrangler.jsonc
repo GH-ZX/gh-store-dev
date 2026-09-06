@@ -1,36 +1,52 @@
 /**
- * For more details on how to configure Wrangler, refer to:
- * https://developers.cloudflare.com/workers/wrangler/configuration/
+ * Production worker: gh-store.
+ *
+ * Same worker name, routes, and account as the legacy Next/OpenNext deployment
+ * it replaces, so the cutover is a code change rather than an infrastructure
+ * change: custom domains, secrets, and the cron trigger all stay attached.
+ * Secrets (SUPABASE_SERVICE_ROLE_KEY, RECONCILE_CRON_SECRET) are set on the
+ * worker itself and must never be added to `vars` here.
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "storefront",
+	"name": "gh-store",
+	"account_id": "d068278103f7547ed926499dcd9b653d",
 	"compatibility_date": "2026-09-03",
 	"main": "./workers/app.ts",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"placement": { "mode": "smart" },
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"persist": true,
+			"invocation_logs": true
+		}
+	},
 	"vars": {
 		"SUPABASE_URL": "https://njlzgfddfnnqujaodbta.supabase.co",
 		"SUPABASE_PUBLISHABLE_KEY": "sb_publishable_gtOxP1au24qFXwzVppy0vw_oFWaSIH2",
 		"APP_URL": "https://gh-store.me"
 	},
-	"observability": {
-		"enabled": true
+	// Keep the workers.dev URL alive as a test address; declaring custom
+	// domains switches it off otherwise.
+	"workers_dev": true,
+	"routes": [
+		{ "pattern": "gh-store.me", "custom_domain": true },
+		{ "pattern": "www.gh-store.me", "custom_domain": true }
+	],
+	// Fires the scheduled handler in workers/app.ts. The fulfilment sweep
+	// itself is still being ported; until it lands the tick only stamps a
+	// heartbeat so a silent scheduler is told apart from a silent worker.
+	"triggers": {
+		"crons": ["*/5 * * * *"]
 	},
-	"upload_source_maps": true,
-	"placement": { "mode": "smart" },
-	/**
-	 * Bindings
-	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-	 * databases, object storage, AI inference, real-time communication and more.
-	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-	 */
-	/**
-	 * Static Assets
-	 * https://developers.cloudflare.com/workers/static-assets/binding/
-	 */
-	// "assets": {  "directory": "./public/",  "binding": "ASSETS" }
-	/**
-	 * Service Bindings (communicate between multiple Workers)
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-	 */
-	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+	"limits": {
+		"cpu_ms": 60000
+	}
 }

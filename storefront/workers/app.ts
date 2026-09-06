@@ -23,4 +23,16 @@ export default {
     });
     return requestHandler(request, loadContext);
   },
+  async scheduled(event, env, ctx) {
+    // Placeholder tick until the fulfilment sweep is ported: proves the cron
+    // fires and the worker is alive, without touching money movement.
+    console.log(
+      JSON.stringify({
+        level: "warn",
+        area: "fulfilment",
+        event: "reconcile_not_ported",
+        cron: event.cron,
+      }),
+    );
+  },
 } satisfies ExportedHandler<Env>;
