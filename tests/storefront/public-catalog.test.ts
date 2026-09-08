@@ -133,11 +133,10 @@ describe("restored public catalog data", () => {
     expect(queries[0].calls).toContainEqual(["eq", ["is_sale", true]]);
   });
 
-  it("serves the bestseller catalog fallback when sales ranking is unavailable", async () => {
+  it("does not relabel the active catalog as bestsellers when rankings are unavailable", async () => {
     const { client, queries } = mockClient([{ data: [], count: 96 }]);
-    expect(await getOfferRailPage(client, "en", "best-sellers", 2)).toEqual({ offers: [], total: 96, page: 2, pageSize: 12 });
-    expect(queries[0].calls).toContainEqual(["range", [12, 23]]);
-    expect(queries[0].calls).toContainEqual(["order", ["created_at", { ascending: false }]]);
+    expect(await getOfferRailPage(client, "en", "best-sellers", 2)).toEqual({ offers: [], total: 0, page: 2, pageSize: 12 });
+    expect(queries).toHaveLength(0);
   });
 
 

@@ -3,7 +3,7 @@ import {
   callbackEventId,
   classifyCallbackStatus,
   decideCallback,
-} from "../../../src/lib/orders/g2bulk-callback.ts";
+} from "../../../legacy-next-snapshot/lib/orders/g2bulk-callback.ts";
 
 /**
  * G2Bulk order callback.

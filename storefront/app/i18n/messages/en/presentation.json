@@ -1,0 +1,13 @@
+{
+  "viewProduct": "View product",
+  "viewOffer": "View offer",
+  "categoryLabel": "Category",
+  "regionLabel": "Region",
+  "imageUnavailable": "Image unavailable",
+  "breadcrumbLabel": "Breadcrumb",
+  "railPreviousProducts": "Previous products",
+  "railNextProducts": "Next products",
+  "railPreviousOffers": "Previous offers",
+  "railNextOffers": "Next offers",
+  "countItems": { "products": "products", "offers": "offers", "results": "results" }
+}

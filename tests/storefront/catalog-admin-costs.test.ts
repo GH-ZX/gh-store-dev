@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 
-const mocks = vi.hoisted(() => ({ createServerClient: vi.fn(), reads: [] as { user: string | undefined; table: string }[] }));
+const mocks = vi.hoisted(() => ({
+  createServerClient: vi.fn(), reads: [] as { user: string | undefined; table: string }[],
+  costRows: null as null | { offer_id: string; provider_name: string; supplier_cost_usd: number }[],
+}));
 vi.mock("@supabase/ssr", () => ({ createServerClient: mocks.createServerClient }));
 import { withRequestContext } from "@server/request-context";
 import { withAdminOfferCosts } from "@server/lib/services/catalog-admin-costs.service";
@@ -12,6 +15,7 @@ const publicOffers = [{ id: "offer-a", name: "Public offer", price: 10 }] as Sto
 
 beforeEach(() => {
   mocks.reads.length = 0;
+  mocks.costRows = null;
   mocks.createServerClient.mockImplementation((_url: string, _key: string, options: { cookies: { getAll(): { name: string; value: string }[] } }) => {
     const user = options.cookies.getAll().find((cookie) => cookie.name === "session")?.value;
     return {
@@ -23,7 +27,7 @@ beforeEach(() => {
           in() { return chain; },
           eq() { return chain; },
           maybeSingle: async () => ({ data: { role: user?.startsWith("admin") ? "admin" : "customer", is_active: user !== "admin-disabled" }, error: null }),
-          then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({ data: [{ offer_id: "offer-a", supplier_cost_usd: user === "admin-b" ? 4 : 3 }], error: user === "admin-denied" ? { message: "RLS denied" } : null })),
+          then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({ data: mocks.costRows ?? [{ offer_id: "offer-a", provider_name: "g2bulk", supplier_cost_usd: user === "admin-b" ? 4 : 3 }], error: user === "admin-denied" ? { message: "RLS denied" } : null })),
         };
         return chain;
       },
@@ -64,5 +68,20 @@ describe("administrator-only supplier cost annotations", () => {
     const result = await load("admin-denied");
     expect(result.offers).toEqual(publicOffers);
     expect(result.offers[0]).not.toHaveProperty("supplierCostUsd");
+  });
+  it("shows each supported supplier's actual cost only to the administrator", async () => {
+    mocks.costRows = ["g2bulk", "maxstore", "batstore"].map((provider_name, index) => ({ offer_id: `offer-${index}`, provider_name, supplier_cost_usd: index + 1 }));
+    const offers = mocks.costRows.map((row) => ({ ...publicOffers[0], id: row.offer_id }));
+    expect((await load("admin-a", offers)).offers.map((offer) => offer.supplierCostUsd)).toEqual([1, 2, 3]);
+    for (const offer of (await load("customer", offers)).offers) expect(offer).not.toHaveProperty("supplierCostUsd");
+  });
+  it("does not show arbitrary or negative costs for conflicting mappings", async () => {
+    mocks.costRows = [
+      { offer_id: "offer-a", provider_name: "g2bulk", supplier_cost_usd: 2 },
+      { offer_id: "offer-a", provider_name: "maxstore", supplier_cost_usd: 3 },
+    ];
+    expect((await load("admin-a")).offers[0].supplierCostUsd).toBeNull();
+    mocks.costRows = [{ offer_id: "offer-a", provider_name: "maxstore", supplier_cost_usd: -5 }];
+    expect((await load("admin-a")).offers[0].supplierCostUsd).toBeNull();
   });
 });

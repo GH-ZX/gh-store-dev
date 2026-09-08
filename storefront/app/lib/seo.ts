@@ -182,10 +182,11 @@ export function buildCatalogDescription({
 }): string {
   const content = offerDescription?.trim() || description?.trim();
   if (content) return content.replace(/\s+/g, " ");
-  if (offerName) {
+  if (offerName?.trim()) {
+    const sameName = offerName.trim() === productName.trim();
     return locale === "ar"
-      ? `${offerName} لـ ${productName} في GH Store. اطّلع على السعر ومتطلبات الطلب وتفاصيل التسليم.`
-      : `${offerName} for ${productName} at GH Store. View the price, order requirements, and delivery details.`;
+      ? `${sameName ? productName.trim() : `${offerName.trim()} لـ ${productName.trim()}`} في GH Store. اطّلع على السعر ومتطلبات الطلب وتفاصيل التسليم.`
+      : `${sameName ? productName.trim() : `${offerName.trim()} for ${productName.trim()}`} at GH Store. View the price, order requirements, and delivery details.`;
   }
   return locale === "ar"
     ? `تصفّح عروض ${productName} في GH Store. قارن الباقات والأسعار واختر العرض المناسب لك.`
@@ -250,7 +251,9 @@ export function buildOfferJsonLd({
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${url}#product`,
-    name: `${offer.name} — ${product.name}`,
+    name: offer.name.trim() === product.name.trim()
+      ? product.name.trim()
+      : `${offer.name.trim()} — ${product.name.trim()}`,
     description: buildCatalogDescription({
       locale,
       productName: product.name,

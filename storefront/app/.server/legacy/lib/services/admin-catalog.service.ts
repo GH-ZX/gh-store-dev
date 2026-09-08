@@ -9,6 +9,7 @@ import { createSupabaseServerClient } from "@server/lib/supabase/server";
 import { G2BULK_PROVIDER_NAME } from "@server/providers/g2bulk/mapping";
 import { MAXSTORE_PROVIDER_NAME } from "@server/providers/maxstore/mapping";
 import type { Database } from "@server/types/database";
+import { offerPricingMapping, supplierCost } from "@server/lib/offer-pricing";
 
 /**
  * Admin reads and writes of the catalog.
@@ -443,11 +444,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
       providerCategoryTitle: providerInfo.get(gameId)?.categoryTitle ?? null,
     },
     offers: offers.data.map((offer) => {
-      // The mapping is embedded as a collection because `offer_id` alone is not
-      // unique across providers; only the G2Bulk row carries our cost.
-      const mapping = offer.provider_offer_mappings.find(
-        (row) => row.provider_name === G2BULK_PROVIDER_NAME,
-      );
+      const mapping = offerPricingMapping(offer.provider_offer_mappings);
 
       return {
         id: offer.id,
@@ -463,7 +460,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
         isActive: offer.is_active,
         sortOrder: offer.sort_order,
         offerType: offer.offer_type,
-        supplierCostUsd: mapping?.supplier_cost_usd ?? null,
+        supplierCostUsd: supplierCost(mapping),
         pricingMode: toPricingMode(mapping?.pricing_mode),
         deliveryKind: offer.delivery_kind ?? null,
       };
@@ -591,8 +588,7 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
 
   const { data: mappings, error: mappingsError } = await client
     .from("provider_offer_mappings")
-    .select("offer_id")
-    .eq("provider_name", G2BULK_PROVIDER_NAME)
+    .select("offer_id, provider_name")
     .in(
       "offer_id",
       writable.map((row) => row.id),
@@ -602,7 +598,11 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
     throw new Error(`Reading offer mappings failed: ${mappingsError.message}`);
   }
 
-  const mapped = new Set(mappings.map((mapping) => mapping.offer_id));
+  const mapped = new Map<string, string>();
+  for (const mapping of mappings) {
+    if (mapped.has(mapping.offer_id)) throw new Error("A package has multiple supplier mappings. Resolve them before repricing.");
+    mapped.set(mapping.offer_id, mapping.provider_name);
+  }
   const updatedAt = new Date().toISOString();
 
   for (const row of writable) {
@@ -637,7 +637,7 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
       .from("provider_offer_mappings")
       .update({ pricing_mode: row.pricingMode, updated_at: updatedAt })
       .eq("offer_id", row.id)
-      .eq("provider_name", G2BULK_PROVIDER_NAME);
+      .eq("provider_name", mapped.get(row.id)!);
 
     if (mappingError) {
       throw new Error(`Saving a package's pricing mode failed: ${mappingError.message}`);

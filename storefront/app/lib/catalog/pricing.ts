@@ -29,9 +29,34 @@ export type RetailPriceInput = {
  * for here.
  */
 export function toRetailPrice({ supplierCostUsd, markupPercent }: RetailPriceInput): number {
+  if (!Number.isFinite(supplierCostUsd) || supplierCostUsd < 0 || !Number.isFinite(markupPercent)) {
+    throw new RangeError("Pricing requires a finite non-negative cost and a finite markup.");
+  }
   const safeMarkup = Math.min(MARKUP_LIMITS.max, Math.max(MARKUP_LIMITS.min, markupPercent));
-  const raw = supplierCostUsd * (1 + safeMarkup / 100);
-  const rounded = Math.ceil(raw * 100) / 100;
+  const cost = decimalRatio(supplierCostUsd);
+  const markup = decimalRatio(safeMarkup);
+  // Compute cents as exact decimal arithmetic before rounding upward. A binary
+  // product such as 25 * 1.12 is 28.000000000000004, which must still cost $28.
+  const numerator = cost.units * (100n * markup.scale + markup.units);
+  const denominator = cost.scale * markup.scale;
+  const cents = (numerator + denominator - 1n) / denominator;
+  if (cents > BigInt(Number.MAX_SAFE_INTEGER)) throw new RangeError("Retail price exceeds supported precision.");
+  return Number(cents) / 100;
+}
 
-  return Math.max(rounded, Math.ceil(supplierCostUsd * 100) / 100);
+/** Use the provider's decimal value, including scientific notation, without an epsilon that erases a real fraction of a cent. */
+function decimalRatio(value: number): { units: bigint; scale: bigint } {
+  const [coefficient, exponentText] = value.toString().split("e");
+  const [whole, fraction = ""] = coefficient.split(".");
+  const places = fraction.length - Number(exponentText ?? 0);
+  const units = BigInt(whole + fraction);
+  return places >= 0
+    ? { units, scale: 10n ** BigInt(places) }
+    : { units: units * 10n ** BigInt(-places), scale: 1n };
+}
+
+/** A USD supplier cost cannot be subtracted from another currency without an exchange rate. */
+export function supplierMarginUsd(price: number, currency: string, supplierCostUsd: number | null): number | null {
+  if (currency.trim().toUpperCase() !== "USD" || supplierCostUsd === null || !Number.isFinite(supplierCostUsd) || supplierCostUsd < 0 || !Number.isFinite(price) || price < 0) return null;
+  return price - supplierCostUsd;
 }

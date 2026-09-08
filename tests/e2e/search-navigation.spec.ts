@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 // Anonymous reads only. Controlled suggestions make focus/keyboard regression
 // checks independent of stock changes; the results page uses the real loader.

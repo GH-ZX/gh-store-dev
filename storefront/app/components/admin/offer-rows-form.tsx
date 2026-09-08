@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import {
   AdminCard,
   CheckboxField,
@@ -19,15 +19,16 @@ import {
   type CatalogActionState,
 } from "@/app/[locale]/dashboard/catalog/action-state";
 import { updateOffersAction } from "@/lib/admin-actions";
-import { cn } from "@/lib/cn";
+import { OfferPriceField } from "@/components/admin/offer-price-field";
+import type { SavedOfferPrice } from "@/lib/catalog/offer-price-draft";
 import { formatPrice } from "@/lib/format/money";
 import type { AdminProductOffer, PricingMode } from "@server/legacy/lib/services/admin-catalog.service";
 
 /**
  * Package price editor.
  *
- * Every package of one game is edited in a single form and saved in one action,
- * because repricing a game means comparing its denominations against each other,
+ * Every package of one product is edited in a single form and saved in one action,
+ * because repricing a product means comparing its packages against each other,
  * not saving them one at a time. Fields are named `offers.<index>.<field>` and
  * the hidden id list carries the row order, so the action can rebuild the rows.
  *
@@ -48,6 +49,7 @@ export type OfferRowsFormProps = {
 const PRICING_MODE_ORDER = ["default", "custom", "fixed"] as const satisfies readonly PricingMode[];
 
 const READ_ONLY_VALUE_CLASSES = "text-xs text-[var(--ink-soft)] tabular-nums";
+type OfferRowsState = CatalogActionState & { savedPrices: Record<string, SavedOfferPrice> };
 
 function resolveError(
   errors: AdminMessages["catalog"]["errors"],
@@ -68,9 +70,29 @@ export function OfferRowsForm({
   gameId,
   offers,
 }: OfferRowsFormProps) {
-  const [state, formAction, pending] = useActionState<CatalogActionState, FormData>(
-    updateOffersAction,
-    INITIAL_CATALOG_STATE,
+  const formRef = useRef<HTMLFormElement>(null);
+  const hasOffers = offers.length > 0;
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    // React suppresses synthetic events during its action-triggered reset. A
+    // native listener preserves edits made while the request was pending.
+    const preserveDrafts = (event: Event) => event.preventDefault();
+    form.addEventListener("reset", preserveDrafts);
+    return () => form.removeEventListener("reset", preserveDrafts);
+  }, [hasOffers]);
+  const [state, formAction, pending] = useActionState<OfferRowsState, FormData>(
+    async (previous, formData) => {
+      const serverPrices = new Map(offers.map((offer) => [offer.id, offer.price]));
+      const submittedPrices: Record<string, SavedOfferPrice> = {};
+      formData.getAll("offerIds").forEach((id, index) => {
+        if (typeof id !== "string" || !serverPrices.has(id)) return;
+        submittedPrices[id] = { price: Number(formData.get(`offers.${index}.price`)), previousServerPrice: serverPrices.get(id)! };
+      });
+      const result = await updateOffersAction({ error: previous.error, notice: previous.notice }, formData);
+      return { ...result, savedPrices: !result.error && result.notice === "saved" ? submittedPrices : previous.savedPrices };
+    },
+    { ...INITIAL_CATALOG_STATE, savedPrices: {} },
   );
 
   const pricingOptions = PRICING_MODE_ORDER.map((mode) => ({
@@ -88,14 +110,13 @@ export function OfferRowsForm({
 
   return (
     <AdminCard title={messages.title} description={messages.description}>
-      <form action={formAction} className="grid gap-5">
+      <form ref={formRef} action={formAction} className="grid gap-5">
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="gameId" value={gameId} />
 
         <ul className="grid gap-3">
           {offers.map((offer, index) => {
             const cost = offer.supplierCostUsd;
-            const margin = cost === null ? null : offer.price - cost;
 
             return (
               <li
@@ -121,19 +142,6 @@ export function OfferRowsForm({
                     {messages.cost}:{" "}
                     <span dir="ltr">
                       {cost === null ? "—" : formatPrice(cost, "USD", locale)}
-                    </span>
-                  </span>
-                  <span
-                    className={cn(
-                      READ_ONLY_VALUE_CLASSES,
-                      // Selling under cost is worth spotting, and the minus sign
-                      // carries the same meaning for anyone who cannot see the tint.
-                      margin !== null && margin < 0 && "text-[var(--danger)]",
-                    )}
-                  >
-                    {messages.margin}:{" "}
-                    <span dir="ltr">
-                      {margin === null ? "—" : formatPrice(margin, offer.currency, locale)}
                     </span>
                   </span>
                 </div>
@@ -171,16 +179,16 @@ export function OfferRowsForm({
                     rows={3}
                     dir="ltr"
                   />
-                  <TextField
-                    label={messages.price}
+                  <OfferPriceField
+                    offerId={offer.id}
+                    locale={locale}
+                    messages={messages}
                     name={`offers.${index}.price`}
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    defaultValue={offer.price}
-                    required
-                    dir="ltr"
-                    className="tabular-nums"
+                    price={offer.price}
+                    savedSubmission={state.savedPrices[offer.id]}
+                    pending={pending}
+                    currency={offer.currency}
+                    supplierCostUsd={cost}
                   />
                   <TextField
                     label={messages.originalPrice}

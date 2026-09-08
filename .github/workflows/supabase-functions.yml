@@ -6,7 +6,7 @@ on:
     paths:
       - "supabase/config.toml"
       - "supabase/functions/**"
-      - "src/lib/orders/g2bulk-callback.ts"
+      - "legacy-next-snapshot/lib/orders/g2bulk-callback.ts"
   workflow_dispatch:
 
 permissions:

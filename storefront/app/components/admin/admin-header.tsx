@@ -178,7 +178,7 @@ export function AdminHeader({
             rel="noopener noreferrer"
             aria-label={locale === "ar" ? "زيارة المتجر" : "View store"}
             title={locale === "ar" ? "زيارة المتجر" : "View store"}
-            className={`${control}`}
+            className={`${control} admin-header-store-link`}
           >
             <GlobeIcon className="size-5 text-[var(--accent)]" />
           </Link>

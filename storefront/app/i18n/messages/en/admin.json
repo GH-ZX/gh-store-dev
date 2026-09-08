@@ -63,12 +63,25 @@
   },
   "overview": {
     "title": "Overview",
-    "description": "The current state of the store, straight from the database.",
+    "description": "Handle pending work, complete your catalog, and follow the store’s activity.",
+    "refresh": "Refresh overview",
+    "refreshing": "Refreshing…",
+    "refreshingHint": "Checking the latest data. Your current view stays visible.",
+    "checkedAt": "Last checked:",
     "attention": {
       "title": "Needs your attention",
+      "description": "Start with delivery delays, top-ups, and customer requests.",
+      "incomplete": "Some checks are unavailable",
+      "unavailable": "Count unavailable. Open the queue or refresh to try again.",
+      "none": "Nothing waiting in this check.",
+      "ordersHint": "Review delayed orders and check fulfillment.",
+      "rechargesHint": "Check transfers and approve or reject top-ups.",
+      "paymentsHint": "Resolve invoice and wallet differences.",
+      "supportHint": "Read open and pending conversations.",
+      "reviewsHint": "Review customer feedback before publication.",
       "allClear": "All clear",
-      "totalHint": "{count} item(s) waiting",
-      "stuck": "Stuck orders — paid, not delivered",
+      "totalHint": "Waiting: {count}",
+      "stuck": "Paid orders awaiting delivery",
       "recharges": "Recharges to review",
       "payments": "Payment mismatches",
       "support": "Open support threads",
@@ -79,21 +92,28 @@
       "revenue7": "Revenue · 7 days",
       "vsPrev": "{percent}% vs previous week",
       "newCustomers": "New customers · 7 days",
-      "avgOrder": "Average order · 7 days"
+      "avgOrder": "Average order · 7 days",
+      "noOrders": "No paid orders in this period."
     },
     "chart": {
       "title": "Sales — last 14 days",
       "hint": "Paid orders per day",
-      "unavailable": "Could not read sales right now."
+      "unavailable": "Could not read sales right now.",
+      "empty": "No paid orders were recorded in this period.",
+      "viewData": "View daily figures",
+      "date": "Date",
+      "orders": "Paid orders",
+      "revenue": "Revenue"
     },
     "earnings": {
-      "title": "Earnings (أرباح)",
+      "title": "Earnings",
       "last7": "Last 7 days",
       "last30": "Last 30 days",
       "revenue": "Revenue",
       "cost": "Supplier cost",
       "profit": "Gross profit",
-      "unknownCost": "Not fully known*",
+      "margin": "Gross margin",
+      "unknownCost": "Not fully known",
       "unavailable": "Could not read earnings right now."
     },
     "wallets": {
@@ -101,6 +121,7 @@
       "manage": "Manage APIs",
       "supplierBalance": "Available balance",
       "unreachable": "Unreachable",
+      "unavailable": "Wallet information is unavailable. Refresh the overview to try again.",
       "none": "No provider with a wallet is enabled yet.",
       "syncAll": "Sync all wallets",
       "syncingAll": "Syncing…",
@@ -112,7 +133,25 @@
     "latest": {
       "title": "Latest orders",
       "viewAll": "All orders",
-      "empty": "No orders yet."
+      "empty": "No orders yet.",
+      "unavailable": "Recent orders are unavailable. Refresh the overview to try again."
+    },
+    "readiness": {
+      "title": "Finish your catalog",
+      "description": "Checks published products for an active offer, a category, and a configured cover image.",
+      "viewCatalog": "Open catalog",
+      "checked": "Published products checked",
+      "missingOffers": "Missing active offers",
+      "missingArtwork": "Missing cover image",
+      "missingCategory": "Missing category",
+      "nextProducts": "Products to complete",
+      "showing": "{shown} of {total} products shown",
+      "edit": "Edit product",
+      "complete": "Active offers, categories, and cover images are configured.",
+      "emptyTitle": "No published products yet",
+      "emptyDescription": "Publish a draft from the catalog, or add your first product.",
+      "addProduct": "Add a product",
+      "unavailable": "Catalog checks are unavailable. Refresh the overview to try again."
     },
     "actions": {
       "addGame": "Add a product",
@@ -670,6 +709,8 @@
       "originalPrice": "Price before discount",
       "cost": "Supplier cost",
       "margin": "Margin",
+      "marginUnavailable": "Unavailable",
+      "marginCurrencyHint": "Supplier cost is in USD. A margin cannot be calculated for another selling currency without an exchange rate.",
       "pricingMode": "Pricing mode",
       "pricingModes": {
         "default": "Automatic (markup)",

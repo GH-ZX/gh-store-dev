@@ -41,6 +41,8 @@ export type SearchFieldProps = {
   filter?: SearchFilter;
   size?: "sm" | "md";
   autoFocus?: boolean;
+  /** Connect an optional visible label to this field. */
+  inputId?: string;
   className?: string;
 };
 
@@ -68,6 +70,7 @@ export function SearchField({
   filter = "all",
   size = "md",
   autoFocus = false,
+  inputId,
   className,
 }: SearchFieldProps) {
   const navigate = useNavigate();
@@ -254,6 +257,7 @@ export function SearchField({
         )}
       >
         <input
+          id={inputId}
           ref={inputRef}
           type="search"
           name="q"

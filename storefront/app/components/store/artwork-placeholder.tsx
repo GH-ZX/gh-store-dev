@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { cn } from "@/lib/cn";
 
 export interface ArtworkPlaceholderProps {
@@ -59,41 +60,40 @@ function resolvePalette(category?: string, title?: string): Palette {
   return DEFAULT_PALETTES[index];
 }
 
-function toSvgSeed(category?: string, title?: string): string {
-  let hash = 0;
-  const str = `${category ?? ""}:${title ?? "gh"}`;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
-}
-
 export function ArtworkPlaceholder({
   title = "GH Store",
   category,
   className,
 }: ArtworkPlaceholderProps) {
-  const seedId = toSvgSeed(category, title);
+  // Repeated cards for one product still need separate SVG paint definitions.
+  const seedId = useId().replace(/:/g, "");
   const gradId = `g-${seedId}`;
   const radialId = `r-${seedId}`;
   const dotsId = `dots-${seedId}`;
   const palette = resolvePalette(category, title);
 
-  const cleanTitle = title.trim();
+  const cleanTitle = title.trim() || "GH Store";
+  const titleCharacters = Array.from(cleanTitle);
   const truncatedTitle =
-    cleanTitle.length > 26 ? `${cleanTitle.slice(0, 24)}…` : cleanTitle;
+    titleCharacters.length > 26 ? `${titleCharacters.slice(0, 24).join("")}…` : cleanTitle;
+  const firstLetter = cleanTitle.match(/\p{L}/u)?.[0] ?? "";
+  const titleDirection = /[\u0590-\u08ff]/.test(firstLetter) ? "rtl" : "ltr";
 
-  const fontSize =
-    cleanTitle.length <= 14 ? "46" : cleanTitle.length <= 20 ? "38" : "32";
+  const fontSize = Math.min(
+    titleCharacters.length <= 14 ? 46 : titleCharacters.length <= 20 ? 38 : 32,
+    660 / Array.from(truncatedTitle).length,
+  );
 
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 800 450"
-      preserveAspectRatio="xMidYMid slice"
-      className={cn("size-full select-none", className)}
+      preserveAspectRatio="xMidYMid meet"
+      className={cn("block size-full select-none", className)}
+      style={{ background: `linear-gradient(135deg, ${palette.start}, ${palette.end})` }}
+      direction="ltr"
       aria-hidden="true"
+      focusable="false"
     >
       <defs>
         {/* 1. Diagonal Linear Gradient Base */}
@@ -166,6 +166,9 @@ export function ArtworkPlaceholder({
       <text
         x="60"
         y="320"
+        direction={titleDirection}
+        textAnchor={titleDirection === "rtl" ? "end" : "start"}
+        unicodeBidi="isolate"
         fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         fontSize={fontSize}
         fontWeight="900"
@@ -177,6 +180,9 @@ export function ArtworkPlaceholder({
       <text
         x="62"
         y="360"
+        direction="ltr"
+        textAnchor="start"
+        unicodeBidi="isolate"
         fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         fontSize="18"
         letterSpacing="6"

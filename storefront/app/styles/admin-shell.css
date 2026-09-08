@@ -111,6 +111,13 @@
    Admin Workspace Layout Classes
    ========================================================================== */
 
+/* The drawer supplies the store shortcut on narrow phones. */
+@media (max-width: 479px) {
+  [data-admin-shell] .sf-header-actions .admin-header-store-link {
+    display: none;
+  }
+}
+
 .admin-layout {
   display: flex;
   min-height: 100vh;

@@ -9,6 +9,13 @@
     "giftTitle": "A gift for every platform",
     "shopGiftCards": "Shop gift cards"
   },
+  "discovery": {
+    "title": "Find your next digital essential",
+    "description": "Explore products by category.",
+    "allProducts": "All products",
+    "product": "product",
+    "products": "products"
+  },
   "carousel": {
     "regionLabel": "Featured products",
     "slideLabel": "Slide {index} of {total}",
@@ -19,6 +26,8 @@
     "play": "Resume rotation"
   },
   "sections": {
+    "productsSubtitle": "Explore products selected for you.",
+    "offersSubtitle": "Compare packages selected for you.",
     "gamesSubtitle": "Pick your game and start topping up.",
     "giftCardsSubtitle": "Cards and codes ready for delivery.",
     "saleSubtitle": "Discounts running right now.",

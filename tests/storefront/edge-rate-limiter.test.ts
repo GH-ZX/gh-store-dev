@@ -73,6 +73,21 @@ describe("edge rate limiter", () => {
       expect(resolveRateLimitTier(request)).toEqual(TIERS.RECHARGE);
     });
 
+    it.each(["ar", "en"])("classifies enhanced auth and recharge forms for %s under their sensitive tiers", (locale) => {
+      for (const action of ["login", "forgot-password", "reset-password"]) {
+        const request = new Request(`https://gh-store.me/${locale}/${action}.data?_routes=action`, { method: "POST" });
+        expect(resolveRateLimitTier(request), action).toEqual(TIERS.AUTH);
+      }
+      const recharge = new Request(`https://gh-store.me/${locale}/recharge.data`, { method: "POST" });
+      expect(resolveRateLimitTier(recharge)).toEqual(TIERS.RECHARGE);
+    });
+
+    it("normalizes only a terminal router data suffix", () => {
+      expect(resolveRateLimitTier(new Request("https://gh-store.me/en/login.data/other", { method: "POST" }))).toEqual(TIERS.GLOBAL);
+      expect(resolveRateLimitTier(new Request("https://gh-store.me/en/recharge.data-extra", { method: "POST" }))).toEqual(TIERS.GLOBAL);
+      expect(resolveRateLimitTier(new Request("https://gh-store.me/en/login.data"))).toEqual(TIERS.GLOBAL);
+    });
+
     it("classifies GET search suggest requests under SEARCH tier", () => {
       const request = new Request("https://gh-store.me/api/search/suggest?q=steam");
       expect(resolveRateLimitTier(request)).toEqual(TIERS.SEARCH);
@@ -84,9 +99,50 @@ describe("edge rate limiter", () => {
       expect(resolveRateLimitTier(home)).toEqual(TIERS.GLOBAL);
       expect(resolveRateLimitTier(catalog)).toEqual(TIERS.GLOBAL);
     });
+
+    it.each(["GET", "HEAD"])("gives exact image proxy %s requests a separate bounded media tier", (method) => {
+      expect(resolveRateLimitTier(new Request("https://gh-store.me/api/media-proxy?url=https%3A%2F%2Fimages.example%2Fitem.png", { method }))).toEqual(TIERS.MEDIA);
+    });
+
+    it("does not exempt other API requests or media mutations from existing limits", () => {
+      for (const path of ["/api/media-proxy/other", "/api/media-proxy.data", "/api/other"]) {
+        expect(resolveRateLimitTier(new Request(`https://gh-store.me${path}`))).toEqual(TIERS.GLOBAL);
+      }
+      expect(resolveRateLimitTier(new Request("https://gh-store.me/api/media-proxy", { method: "POST" }))).toEqual(TIERS.GLOBAL);
+      expect(TIERS.MEDIA.limit).toBe(300);
+      expect(TIERS.GLOBAL.limit).toBe(300);
+    });
   });
 
   describe("sliding window enforcement", () => {
+    it.each([
+      ["login", TIERS.AUTH], ["forgot-password", TIERS.AUTH],
+      ["reset-password", TIERS.AUTH], ["recharge", TIERS.RECHARGE],
+    ] as const)("shares the %s limit between document and enhanced form submissions", (action, tier) => {
+      const now = 1_700_000_000_000;
+      const document = new Request(`https://gh-store.me/ar/${action}`, { method: "POST" });
+      const data = new Request(`https://gh-store.me/en/${action}.data`, { method: "POST" });
+      for (let count = 0; count < tier.limit; count++) {
+        expect(checkRateLimit(count % 2 ? data : document, now).allowed).toBe(true);
+      }
+      expect(checkRateLimit(data, now)).toMatchObject({ allowed: false, tier: tier.name });
+      expect(checkRateLimit(document, now).allowed).toBe(false);
+    });
+
+    it("bounds media traffic without exhausting document, data, callback, or robots requests", () => {
+      const now = 1_700_000_000_000;
+      const media = new Request("https://gh-store.me/api/media-proxy?url=https%3A%2F%2Fimages.example%2Fitem.png");
+      for (let count = 0; count < TIERS.MEDIA.limit; count++) {
+        expect(checkRateLimit(media, now).allowed).toBe(true);
+      }
+      expect(checkRateLimit(media, now)).toMatchObject({ allowed: false, tier: "media" });
+      for (const path of ["/en/ai/assistant", "/en/products.data", "/auth/callback?code=sample", "/robots.txt"]) {
+        expect(checkRateLimit(new Request(`https://gh-store.me${path}`), now), path)
+          .toMatchObject({ allowed: true, tier: "global" });
+      }
+      expect(resolveRateLimitTier(new Request("https://gh-store.me/api/search/suggest?q=gift"))).toEqual(TIERS.SEARCH);
+    });
+
     it("allows requests below the limit and decreases remaining count", () => {
       const baseTime = 1_700_000_000_000;
       const request = new Request("https://gh-store.me/ar/checkout/test/item", {

@@ -19,6 +19,8 @@ import {
   resolveHomeSections,
 } from "@server/lib/services/home.service";
 import { StorefrontCampaign } from "@/components/home/storefront-campaign";
+import { HomeDiscovery } from "@/components/home/home-discovery";
+import { getHomeDiscoveryCategories } from "@server/lib/services/home-discovery.service";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import {
   HomeSections,
@@ -35,9 +37,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const { env } = getCloudflareContext(context);
   const siteUrl = getSiteUrl(env);
   const client = createPublicClient(env);
-  const [layout, settings] = await Promise.all([
+  const [layout, settings, categories] = await Promise.all([
     getHomeLayout(client),
     getPublicStoreSettings(client),
+    getHomeDiscoveryCategories(client, locale),
   ]);
   const [carousel, sections] = await Promise.all([
     getHomeCarousel(client, locale, layout),
@@ -49,6 +52,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     locale,
     siteUrl,
     carousel,
+    categories,
     sections: await withAdminHomeCosts(sections),
     settings,
     heroImage: carousel.products[0]?.imageUrl ?? null,
@@ -78,7 +82,7 @@ export function meta({ params, matches }: Route.MetaArgs) {
 }
 
 export default function LocaleHome() {
-  const { locale, siteUrl, carousel, sections, settings } =
+  const { locale, siteUrl, carousel, sections, settings, categories } =
     useLoaderData<typeof loader>();
   const chrome = useRouteLoaderData("routes/locale-layout") as
     ChromeData | undefined;
@@ -101,12 +105,14 @@ export default function LocaleHome() {
       />
       <Section spacing="page" className="sf-home-opening">
         <StorefrontCampaign locale={locale} />
+        <HomeDiscovery categories={categories} locale={locale} />
         {carousel.products.length > 0 ? (
           <HeroCarousel
             liveEdit={liveEdit}
             products={carousel.products}
             locale={locale}
             intervalSeconds={carousel.section?.intervalSeconds ?? 6}
+            autoplay={carousel.section?.autoplay ?? true}
             loop={carousel.section?.loop ?? true}
             align={carousel.section?.align ?? "center"}
             imageFit={carousel.section?.imageFit ?? "cover"}

@@ -12,4 +12,9 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  // Route modules are discovered virtually. Prebundle their client libraries
+  // before the first page loads to avoid invalidating React during hydration.
+  optimizeDeps: {
+    include: ["@supabase/supabase-js", "embla-carousel-react", "sonner", "zod"],
+  },
 });

@@ -122,6 +122,15 @@ describe("catalog structured data", () => {
     }
   });
 
+  it("avoids repeating identical imported product and offer names", () => {
+    const name = "Notion Business – 3 Months";
+    const data = buildOfferJsonLd({ locale: "en", product: { ...product, name }, offer: { ...offer, name: ` ${name} ` } });
+    expect(data.name).toBe(name);
+    expect(data.description).toBe(`${name} at GH Store. View the price, order requirements, and delivery details.`);
+    expect(buildCatalogDescription({ locale: "ar", productName: name, offerName: name }))
+      .toBe(`${name} في GH Store. اطّلع على السعر ومتطلبات الطلب وتفاصيل التسليم.`);
+  });
+
   it("publishes the visible breadcrumb hierarchy with localized URLs", () => {
     expect(buildBreadcrumbJsonLd({ locale: "en", items: [
       { name: "Home", path: "" }, { name: "Products", path: "/products" }, { name: "Gift card", path: "/products/gift-card" },

@@ -1,0 +1,20 @@
+/* Listing controls only; product and offer details keep their own composition. */
+[data-storefront-shell] .sf-catalog-toolbar { gap: 20px; padding: 20px; border-radius: var(--radius-card); }
+[data-storefront-shell] .sf-catalog-toolbar-search { flex: 1; min-width: 0; }
+[data-storefront-shell] .sf-catalog-toolbar-label,
+[data-storefront-shell] .sf-catalog-select-label > span { display: block; margin-block-end: 8px; color: var(--ink-soft); font-size: 13px; font-weight: 600; }
+[data-storefront-shell] .sf-catalog-toolbar .sf-search form { min-height: 48px; background: var(--surface-inset); }
+[data-storefront-shell] .sf-catalog-toolbar .sf-search input { font-size: 16px; }
+[data-storefront-shell] .sf-catalog-select-label { width: min(280px, 36%); }
+[data-storefront-shell] .sf-catalog-select-label select { min-height: 48px; padding-inline: 12px; font-size: 14px; }
+[data-storefront-shell] .sf-catalog-pager { gap: 12px; }
+[data-storefront-shell] .sf-catalog-pager a { gap: 8px; border-radius: var(--radius-control); }
+[data-storefront-shell] .sf-catalog-page-position { text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+[data-storefront-shell] .sf-catalog-pager-disabled { display: flex; align-items: center; min-height: 44px; padding-inline: 18px; color: var(--ink-muted); opacity: 0.65; }
+@media (max-width: 719px) {
+  [data-storefront-shell] .sf-catalog-toolbar { gap: 16px; padding: 16px; }
+  [data-storefront-shell] .sf-catalog-select-label { width: 100%; }
+  [data-storefront-shell] .sf-catalog-select-label select { font-size: 16px; }
+  [data-storefront-shell] .sf-catalog-pager a,
+  [data-storefront-shell] .sf-catalog-pager-disabled { padding-inline: 10px; font-size: 13px; }
+}

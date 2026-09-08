@@ -1,9 +1,10 @@
 import "@/styles/storefront-cards.css";
 import type { ReactNode } from "react";
-import { ProductCard } from "@/components/store/product-card";
+import { ProductCard, type ProductCardProps } from "@/components/store/product-card";
 import { OfferCard, type OfferCardLabels } from "@/components/store/offer-card";
 import { Rail, RailItem } from "@/components/ui/rail";
 import type { Locale } from "@/i18n/config";
+import { getMessages } from "@/i18n/messages";
 import { formatPrice } from "@/lib/format/money";
 import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
@@ -45,6 +46,7 @@ export type OfferCollectionProps = {
   layout?: CollectionLayout;
   /** Accessible name for a rail's scrollable region; required for `rail`. */
   railLabel?: string;
+  railControls?: boolean;
   gameSlug?: string;
   showGameName?: boolean;
   /** Compact rows without artwork, for a list inside a single product. */
@@ -58,14 +60,21 @@ export function OfferGrid({
   labels,
   layout = "grid",
   railLabel,
+  railControls = true,
   gameSlug,
   showGameName = true,
   compact = false,
   className,
 }: OfferCollectionProps) {
   if (layout === "rail" && railLabel) {
+    const presentation = getMessages(locale, "presentation");
     return (
-      <Rail label={railLabel} itemWidth="md" className={cn("sf-offer-rail", className)}>
+      <Rail
+        label={railLabel}
+        itemWidth="md"
+        className={cn("sf-offer-rail", className)}
+        controls={railControls ? { previous: presentation.railPreviousOffers, next: presentation.railNextOffers } : undefined}
+      >
         {offers.map((offer) => (
           <RailItem key={offer.id}>
             <OfferCard
@@ -103,9 +112,10 @@ export function OfferGrid({
 export type ProductCollectionProps = {
   games: StoreProduct[];
   locale: Locale;
-  labels: { featured: string; from?: string };
+  labels: ProductCardProps["labels"];
   layout?: CollectionLayout;
   railLabel?: string;
+  railControls?: boolean;
   /** How many leading tiles load eagerly, for above-the-fold rows. */
   priorityCount?: number;
   /**
@@ -125,13 +135,20 @@ export function ProductGrid({
   labels,
   layout = "grid",
   railLabel,
+  railControls = true,
   priorityCount = 0,
   renderOverlay,
   className,
 }: ProductCollectionProps) {
   if (layout === "rail" && railLabel) {
+    const presentation = getMessages(locale, "presentation");
     return (
-      <Rail label={railLabel} itemWidth="sm" className={cn("sf-product-rail", className)}>
+      <Rail
+        label={railLabel}
+        itemWidth="sm"
+        className={cn("sf-product-rail", className)}
+        controls={railControls ? { previous: presentation.railPreviousProducts, next: presentation.railNextProducts } : undefined}
+      >
         {games.map((product, index) => (
           <RailItem key={product.id}>
             <ProductCard

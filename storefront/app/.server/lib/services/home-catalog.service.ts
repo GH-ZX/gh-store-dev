@@ -9,7 +9,6 @@ export class CatalogReadError extends Error {
   constructor() { super("Unable to load the catalog."); this.name = "CatalogReadError"; }
 }
 const GIFT_CARD_OFFER_TYPES = ["gift_card", "redeem_code"];
-const BEST_SELLERS_PAD_THRESHOLD = 4;
 
 /** Only aggregate paid orders with service authority; resolve public offers through RLS. */
 async function rankedOfferIds(days: number, limit: number): Promise<string[]> {
@@ -273,52 +272,17 @@ export async function getOffersByIds(supabase: SupabaseClient, locale: Locale, i
 }
 
 
-async function getRandomActiveOffers(supabase: SupabaseClient, locale: Locale, limit: number): Promise<StoreOffer[]> {
-  const { data, error } = await supabase
-    .from("offers")
-    .select(OFFER_WITH_PRODUCT_SELECT)
-    .eq("is_active", true)
-    .eq("products.is_active", true)
-    .limit(200);
-
-  if (error || !data) {
-    throw new CatalogReadError();
-  }
-
-  const offers = data.map((offer) => toStoreOffer(offer as unknown as OfferRow, locale));
-  const pool = [...offers];
-
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-
-  return pool.slice(0, limit);
-}
-
-
+/** Only paid-order rankings qualify; sparse or unavailable rankings are never padded. */
 export async function getBestSellers(supabase: SupabaseClient, locale: Locale, limit: number): Promise<StoreOffer[]> {
-  const ranked = hasServiceRoleKey() ? await rankedOfferIds(7, limit) : [];
-
-  if (ranked.length === 0) {
-    return getRandomActiveOffers(supabase, locale, limit);
+  if (!hasServiceRoleKey()) return [];
+  try {
+    const ranked = await rankedOfferIds(7, limit);
+    // Public RLS still decides which ranked offers and products may be displayed.
+    return await getOffersByIds(supabase, locale, ranked);
+  } catch {
+    console.warn("Bestseller rankings are temporarily unavailable.");
+    return [];
   }
-
-  const offers = await getOffersByIds(supabase, locale, ranked);
-  const rank = new Map(ranked.map((id, index) => [id, index]));
-  const best = offers.sort(
-    (first, second) => (rank.get(first.id) ?? ranked.length) - (rank.get(second.id) ?? ranked.length),
-  );
-
-  if (best.length >= BEST_SELLERS_PAD_THRESHOLD) {
-    return best;
-  }
-
-  const realIds = new Set(best.map((offer) => offer.id));
-  const pad = (await getRandomActiveOffers(supabase, locale, limit)).filter((offer) => !realIds.has(offer.id));
-  const fill = pad.slice(0, limit - best.length);
-
-  return [...best, ...fill];
 }
 
 
@@ -339,12 +303,9 @@ export async function getOfferRailPage(
   const safePage = Number.isInteger(page) && page > 0 ? page : 1;
   const pageSize = 12;
   const from = (safePage - 1) * pageSize;
-  if (rail === "best-sellers" && hasServiceRoleKey()) {
-    const ranked = await rankedOfferIds(7, 96);
-    if (ranked.length > 0) {
-      const offers = await getOffersByIds(supabase, locale, ranked);
-      return { offers: offers.slice(from, from + pageSize), total: offers.length, page: safePage, pageSize };
-    }
+  if (rail === "best-sellers") {
+    const offers = await getBestSellers(supabase, locale, 96);
+    return { offers: offers.slice(from, from + pageSize), total: offers.length, page: safePage, pageSize };
   }
   let query = supabase.from("offers")
     .select(OFFER_WITH_PRODUCT_SELECT, { count: "exact" })
@@ -352,9 +313,7 @@ export async function getOfferRailPage(
     .eq("products.is_active", true);
   if (rail === "gift-cards") query = query.in("offer_type", GIFT_CARD_OFFER_TYPES);
   if (rail === "sale") query = query.eq("is_sale", true);
-  query = rail === "best-sellers"
-    ? query.order("created_at", { ascending: false })
-    : query.order("sort_order", { ascending: true }).order("price", { ascending: true });
+  query = query.order("sort_order", { ascending: true }).order("price", { ascending: true });
   const { data, error, count } = await query.range(from, from + pageSize - 1);
   if (error) throw new CatalogReadError();
   const offers = data.map((row) => toStoreOffer(row as unknown as OfferRow, locale));

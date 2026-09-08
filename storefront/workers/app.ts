@@ -23,6 +23,10 @@ type CloudflareContextValue = {
   ctx: { waitUntil(promise: Promise<unknown>): void; passThroughOnException(): void };
 };
 
+// Entries from the previous hour-long policy must be replaced on first access.
+const HTML_CACHE_VERSION = "catalog-30s-v1";
+const BROWSER_HTML_CACHE_CONTROL = "public, max-age=0, must-revalidate";
+
 async function handleRequest(
   request: Request,
   contextValue: CloudflareContextValue,
@@ -33,7 +37,9 @@ async function handleRequest(
   const secured = new Response(response.body, response);
   applySecurityHeaders(secured.headers);
   if (isPublicHtmlRequest(request)) applyEarlyHintHeaders(secured.headers);
-  if (request.headers.has("cookie")) secured.headers.set("Cache-Control", "private, no-store");
+  if (request.headers.has("cookie") || secured.headers.has("set-cookie")) {
+    secured.headers.set("Cache-Control", "private, no-store");
+  }
   return secured;
 }
 
@@ -78,11 +84,15 @@ export default {
       if (!url.pathname.startsWith("/api/") && !url.pathname.startsWith("/auth/")) {
         const cache = (caches as unknown as { default: Cache }).default;
         const cached = await cache.match(request).catch(() => undefined);
-        if (cached) {
+        if (cached?.headers.get("X-Storefront-Cache-Version") === HTML_CACHE_VERSION) {
           const hit = new Response(cached.body, cached);
+          hit.headers.set("Cache-Control", BROWSER_HTML_CACHE_CONTROL);
+          hit.headers.delete("X-Storefront-Cache-Version");
           hit.headers.set("X-Edge-Cache", "HIT");
           return hit;
         }
+        // Release an obsolete entry's response stream before rendering its replacement.
+        if (cached) void cached.body?.cancel().catch(() => undefined);
         const response = await handleRequest(request, contextValue);
         if (isCacheableHtml(response)) {
           // Clone first: the visitor's body must stay untouched. Sharing the
@@ -91,10 +101,12 @@ export default {
           const policy = resolveCachePolicy(request);
           stored.headers.set(
             "Cache-Control",
-            `public, max-age=${policy.ttlSeconds}, s-maxage=${policy.ttlSeconds}, stale-while-revalidate=86400`,
+            `public, max-age=${policy.ttlSeconds}, s-maxage=${policy.ttlSeconds}`,
           );
           stored.headers.set("Cache-Tag", policy.tags.join(", "));
-          stored.headers.set("X-Edge-Cache", "MISS");
+          stored.headers.set("X-Storefront-Cache-Version", HTML_CACHE_VERSION);
+          response.headers.set("Cache-Control", BROWSER_HTML_CACHE_CONTROL);
+          response.headers.set("X-Edge-Cache", "MISS");
           ctx.waitUntil(
             cache.put(request, stored).catch((error: unknown) => {
               console.log(

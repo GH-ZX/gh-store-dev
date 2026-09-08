@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 // Anonymous, read-only checks complement the in-app visual review. Use the
 // existing Playwright runner so both desktop and mobile execute every flow.

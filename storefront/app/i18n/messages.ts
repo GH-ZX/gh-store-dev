@@ -7,6 +7,7 @@ import arContent from "@/i18n/messages/ar/content.json";
 import arHome from "@/i18n/messages/ar/home.json";
 import arRecharge from "@/i18n/messages/ar/recharge.json";
 import arSearch from "@/i18n/messages/ar/search.json";
+import arPresentation from "@/i18n/messages/ar/presentation.json";
 import enAccount from "@/i18n/messages/en/account.json";
 import enAdmin from "@/i18n/messages/en/admin.json";
 import enCatalog from "@/i18n/messages/en/catalog.json";
@@ -16,6 +17,7 @@ import enContent from "@/i18n/messages/en/content.json";
 import enHome from "@/i18n/messages/en/home.json";
 import enRecharge from "@/i18n/messages/en/recharge.json";
 import enSearch from "@/i18n/messages/en/search.json";
+import enPresentation from "@/i18n/messages/en/presentation.json";
 import type { Locale } from "@/i18n/config";
 
 /**
@@ -35,6 +37,7 @@ const AR = {
   recharge: arRecharge,
   search: arSearch,
   content: arContent,
+  presentation: arPresentation,
 };
 
 type Dictionary = typeof AR;
@@ -49,6 +52,7 @@ const EN: Dictionary = {
   recharge: enRecharge,
   search: enSearch,
   content: enContent,
+  presentation: enPresentation,
 };
 
 const MESSAGES: Record<Locale, Dictionary> = {

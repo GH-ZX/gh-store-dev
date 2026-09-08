@@ -10,6 +10,7 @@
  * - Authentication mutations (login, registration, password resets)
  * - Financial recharges (fiat/crypto top-up submissions)
  * - Search autocomplete queries
+ * - Catalog image proxy requests, separately from page navigation
  * - Global rapid-fire DDoS / scraper protection
  */
 
@@ -24,6 +25,7 @@ export const TIERS = {
   AUTH: { name: "auth", limit: 15, windowMs: 60_000 },
   RECHARGE: { name: "recharge", limit: 15, windowMs: 60_000 },
   SEARCH: { name: "search", limit: 60, windowMs: 60_000 },
+  MEDIA: { name: "media", limit: 300, windowMs: 60_000 },
   GLOBAL: { name: "global", limit: 300, windowMs: 60_000 },
 } as const;
 
@@ -171,7 +173,8 @@ export function getClientIp(request: Request): string {
  */
 export function resolveRateLimitTier(request: Request): RateLimitTier {
   const url = new URL(request.url);
-  const path = url.pathname;
+  // Enhanced React Router forms submit to the same action through a .data URL.
+  const path = url.pathname.replace(/\.data$/, "");
   const method = request.method.toUpperCase();
 
   // 1. Checkout / Order Purchase mutations
@@ -197,7 +200,12 @@ export function resolveRateLimitTier(request: Request): RateLimitTier {
     return TIERS.SEARCH;
   }
 
-  // 5. Global baseline protection
+  // 5. Image-heavy catalogs must not consume the page/callback crawl allowance.
+  if ((method === "GET" || method === "HEAD") && url.pathname === "/api/media-proxy") {
+    return TIERS.MEDIA;
+  }
+
+  // 6. Global baseline protection
   return TIERS.GLOBAL;
 }
 

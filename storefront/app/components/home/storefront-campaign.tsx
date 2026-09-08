@@ -9,7 +9,7 @@ export function StorefrontCampaign({ locale }: { locale: Locale }) {
   return (
     <div className="sf-campaigns">
       <section className="sf-campaign-primary">
-        <img src="/storefront/digital-world-v1.webp" alt="" width={1600} height={800} fetchPriority="high" />
+        <img src="/storefront/digital-essentials-v2.webp" alt="" width={1600} height={900} fetchPriority="high" />
         <div className="sf-campaign-copy">
           <h1>{messages.title}<br />{messages.titleEnd}</h1>
           <p>{messages.description}</p>

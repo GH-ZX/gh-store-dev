@@ -50,12 +50,12 @@ export type CachePolicy = {
   tags: string[];
 };
 
-/** Resolve cache TTL and cache tags based on route tier. */
+/** Keep catalog copies short-lived until publish/price changes invalidate every entry. */
 export function resolveCachePolicy(request: Request): CachePolicy {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  // 1. Specific product page: /(ar|en)/:category/:slug -> 1 hour TTL
+  // Specific product pages retain tags for future coordinated invalidation.
   const productMatch = path.match(/^\/(?:ar|en)\/([^/]+)\/([^/]+)\/?$/);
   if (
     productMatch &&
@@ -66,26 +66,26 @@ export function resolveCachePolicy(request: Request): CachePolicy {
     const category = productMatch[1];
     const slug = productMatch[2];
     return {
-      ttlSeconds: 3600,
+      ttlSeconds: 30,
       tags: ["catalog", `category-${category}`, `product-${slug}`],
     };
   }
 
-  // 2. Category listing page: /(ar|en)/:category -> 5 minutes TTL
+  // Category listings also include mutable prices and product visibility.
   const categoryMatch = path.match(/^\/(?:ar|en)\/([^/]+)\/?$/);
   if (
     categoryMatch &&
     !["login", "dashboard", "wallet", "orders", "profile"].includes(categoryMatch[1])
   ) {
     return {
-      ttlSeconds: 300,
+      ttlSeconds: 30,
       tags: ["catalog", `category-${categoryMatch[1]}`],
     };
   }
 
-  // 3. Homepage and root -> 1 minute TTL
+  // Home and offer pages must refresh at the same short interval.
   return {
-    ttlSeconds: 60,
+    ttlSeconds: 30,
     tags: ["home", "catalog"],
   };
 }

@@ -46,13 +46,15 @@ export type HomeSectionsProps = {
 function fallbackSubtitle(section: HomeSection, home: HomeMessages): string | undefined {
   switch (section.type) {
     case "games":
-    case "product_picks":
       return home.sections.gamesSubtitle;
+    case "product_picks":
+      return home.sections.productsSubtitle;
     case "gift_cards":
       return home.sections.giftCardsSubtitle;
     case "sale_offers":
-    case "offer_picks":
       return home.sections.saleSubtitle;
+    case "offer_picks":
+      return home.sections.offersSubtitle;
     case "suggested_offers":
       return home.sections.suggestedSubtitle;
     case "trending_offers":

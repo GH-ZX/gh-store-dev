@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type HTMLAttributes } from "react";
+import { useEffect, useId, useRef, useState, type HTMLAttributes } from "react";
+import { ArrowIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/cn";
 
 /**
@@ -24,6 +25,8 @@ export type RailProps = HTMLAttributes<HTMLUListElement> & {
   /** Track width per item; `auto` lets items size themselves. */
   itemWidth?: "sm" | "md" | "lg";
   label: string;
+  /** Optional mouse controls; native touch and keyboard scrolling stay available. */
+  controls?: { previous: string; next: string };
 };
 
 const ITEM_WIDTH_CLASSES = {
@@ -37,9 +40,11 @@ type RailEdge = "none" | "start" | "end" | "both";
 
 const EDGE_EPSILON = 4;
 
-export function Rail({ className, itemWidth = "md", label, children, ...props }: RailProps) {
+export function Rail({ className, itemWidth = "md", label, children, controls, id, ...props }: RailProps) {
   const listRef = useRef<HTMLUListElement>(null);
   const [edge, setEdge] = useState<RailEdge>("none");
+  const generatedId = useId();
+  const listId = id ?? generatedId;
 
   useEffect(() => {
     const list = listRef.current;
@@ -67,9 +72,9 @@ export function Rail({ className, itemWidth = "md", label, children, ...props }:
        * `-hidden … 0` in RTL, so the magnitude works for both; the sign is
        * only a legacy-WebKit artefact.
        */
-      const position = Math.abs(list.scrollLeft);
+      const position = Math.min(hidden, Math.max(0, Math.abs(list.scrollLeft)));
       const atStart = position <= EDGE_EPSILON;
-      const atEnd = Math.abs(hidden - position) <= EDGE_EPSILON;
+      const atEnd = position >= hidden - EDGE_EPSILON;
 
       setEdge(atStart && atEnd ? "none" : atStart ? "end" : atEnd ? "start" : "both");
     }
@@ -80,15 +85,29 @@ export function Rail({ className, itemWidth = "md", label, children, ...props }:
     // A resize changes how much fits, so the overflow decision has to be remade.
     const observer = new ResizeObserver(measure);
     observer.observe(list);
+    for (const child of list.children) observer.observe(child);
 
     return () => {
       list.removeEventListener("scroll", measure);
       observer.disconnect();
     };
-  }, []);
+  }, [children]);
 
-  return (
+  function scrollPage(direction: -1 | 1) {
+    const list = listRef.current;
+    if (!list) return;
+
+    const hidden = Math.max(0, list.scrollWidth - list.clientWidth);
+    const current = Math.min(hidden, Math.abs(list.scrollLeft));
+    const target = Math.min(hidden, Math.max(0, current + direction * list.clientWidth * 0.85));
+    const isRtl = getComputedStyle(list).direction === "rtl";
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    list.scrollTo({ left: isRtl ? -target : target, behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  const list = (
     <ul
+      id={listId}
       ref={listRef}
       className={cn("gh-rail gap-4 pb-2", ITEM_WIDTH_CLASSES[itemWidth], className)}
       tabIndex={0}
@@ -99,6 +118,34 @@ export function Rail({ className, itemWidth = "md", label, children, ...props }:
     >
       {children}
     </ul>
+  );
+
+  if (!controls) return list;
+
+  return (
+    <div className="sf-rail-with-controls">
+      {list}
+      <div className="sf-rail-controls" hidden={edge === "none"}>
+        <button
+          type="button"
+          aria-label={controls.previous}
+          aria-controls={listId}
+          disabled={edge === "end" || edge === "none"}
+          onClick={() => scrollPage(-1)}
+        >
+          <ArrowIcon direction="start" className="size-5 rtl:rotate-180" />
+        </button>
+        <button
+          type="button"
+          aria-label={controls.next}
+          aria-controls={listId}
+          disabled={edge === "start" || edge === "none"}
+          onClick={() => scrollPage(1)}
+        >
+          <ArrowIcon direction="end" className="size-5 rtl:rotate-180" />
+        </button>
+      </div>
+    </div>
   );
 }
 

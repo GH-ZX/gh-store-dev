@@ -2,7 +2,7 @@ import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import type { ResolvedHomeSection } from "@server/lib/services/home.service";
 import { requireAdmin } from "@server/lib/auth/guards";
 import { getRequestState } from "@server/request-context";
-import { G2BULK_PROVIDER_NAME } from "@server/providers/g2bulk/mapping";
+import { offerPricingMapping, supplierCost, type ProviderOfferPricing } from "@server/lib/offer-pricing";
 
 /**
  * Enrich only the current active administrator's response. Public catalog reads
@@ -25,17 +25,16 @@ export async function withAdminOfferCosts(offers: StoreOffer[]): Promise<StoreOf
 
   const { data, error } = await supabase
     .from("provider_offer_mappings")
-    .select("offer_id, supplier_cost_usd")
-    .in("offer_id", [...new Set(publicOffers.map((offer) => offer.id))])
-    .eq("provider_name", G2BULK_PROVIDER_NAME);
+    .select("offer_id, provider_name, supplier_cost_usd")
+    .in("offer_id", [...new Set(publicOffers.map((offer) => offer.id))]);
   if (error) return publicOffers;
-  const costs = new Map<string, number | null>((data ?? []).map((row) => [
-    row.offer_id as string,
-    typeof row.supplier_cost_usd === "number" && Number.isFinite(row.supplier_cost_usd)
-      ? row.supplier_cost_usd
-      : null,
-  ]));
-  return publicOffers.map((offer) => ({ ...offer, supplierCostUsd: costs.get(offer.id) ?? null }));
+  const mappings = new Map<string, ProviderOfferPricing[]>();
+  for (const row of data ?? []) {
+    const group = mappings.get(row.offer_id) ?? [];
+    group.push(row);
+    mappings.set(row.offer_id, group);
+  }
+  return publicOffers.map((offer) => ({ ...offer, supplierCostUsd: supplierCost(offerPricingMapping(mappings.get(offer.id) ?? [])) }));
 }
 
 /** Batch all offer sections once, preserving the configured homepage order. */

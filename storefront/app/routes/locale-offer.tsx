@@ -1,18 +1,18 @@
-import { CatalogPage, PurchaseSummary } from "@/components/store/catalog-page";
+import { CatalogPage } from "@/components/store/catalog-page";
 import { withAdminOfferCosts } from "@server/lib/services/catalog-admin-costs.service";
 import { buildStorePageMeta } from "@/lib/store-seo";
 export { CatalogErrorBoundary as ErrorBoundary } from "@/components/store/catalog-error-boundary";
 import type { InputField } from "@/lib/catalog-queries";
 import { OfferGrid } from "@/components/store/collections";
-import { DescriptionText } from "@/components/store/description-text";
-import { StoreImage } from "@/components/store/store-image";
 import { getOfferCardLabels } from "@/lib/catalog/labels";
 import { Link, redirect, useLoaderData } from "react-router";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { DEFAULT_LOCALE, isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { createPublicClient, getOfferDetail } from "@/lib/catalog-queries";
-import { offerPath } from "@/lib/catalog/paths";
+import { offerPath, productPath } from "@/lib/catalog/paths";
+import { getRelatedProducts } from "@/lib/catalog/related-products";
+import { DetailPurchaseSummary, ProductDetailHeader, ProductInformation, RelatedProductDiscovery } from "@/components/store/product-detail";
 import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import { buildBreadcrumbJsonLd, buildCatalogDescription, buildOfferJsonLd, getSiteUrl } from "@/lib/seo";
@@ -27,8 +27,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     throw new Response("Not Found", { status: 404 });
   }
   const { env } = getCloudflareContext(context);
+  const client = createPublicClient(env);
   const detail = await getOfferDetail(
-    createPublicClient(env),
+    client,
     locale,
     null,
     productSlug,
@@ -40,9 +41,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (category !== detail.product.categorySlug) {
     throw redirect(`${offerPath(locale, detail.product, detail.offer)}${new URL(request.url).search}`, 301);
   }
-  const [offer, ...relatedOffers] = await withAdminOfferCosts([
-    detail.offer,
-    ...detail.relatedOffers,
+  const [[offer, ...relatedOffers], relatedProducts] = await Promise.all([
+    withAdminOfferCosts([detail.offer, ...detail.relatedOffers.slice(0, 6)]),
+    getRelatedProducts(client, locale, detail.product),
   ]);
   return {
     locale,
@@ -51,6 +52,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     ...detail,
     offer,
     relatedOffers,
+    relatedProducts,
   };
 }
 
@@ -96,6 +98,7 @@ export function meta({ params, matches }: Route.MetaArgs) {
     ...(product && offer ? [
       { "script:ld+json": buildBreadcrumbJsonLd({ locale, siteUrl, items: [
         { name: common.navigation.home, path: "" },
+        { name: product.categoryName ?? common.navigation.allProducts, path: `/${encodeURIComponent(product.categorySlug)}` },
         { name: product.name, path: productRoutePath },
         { name: offer.name, path },
       ] }) },
@@ -104,47 +107,41 @@ export function meta({ params, matches }: Route.MetaArgs) {
   ];
 }
 
-function FieldPreview({ field, labels }: { field: InputField; labels: { required: string; optional: string } }) {
+function FieldPreview({ field, labels }: { field: InputField; labels: { required: string; optional: string; allOptions: string } }) {
   return <li className="sf-offer-field">
-    <div><strong>{field.label}</strong><span>{field.isRequired ? labels.required : labels.optional}</span></div>
-    {field.placeholder ? <p>{field.placeholder}</p> : null}
+    <div><strong><bdi>{field.label}</bdi></strong><span>{field.isRequired ? labels.required : labels.optional}</span></div>
+    {field.placeholder ? <p><bdi>{field.placeholder}</bdi></p> : null}
     {field.options.length ? <ul>{field.options.slice(0, 6).map((option) => <li key={option.value}><bdi>{option.label}</bdi></li>)}</ul> : null}
+    {field.options.length > 6 ? <details className="sf-detail-field-options"><summary>{labels.allOptions}</summary><ul>{field.options.slice(6).map((option) => <li key={option.value}><bdi>{option.label}</bdi></li>)}</ul></details> : null}
   </li>;
 }
 
 export default function LocaleOffer() {
-  const { locale, product, offer, inputFields, relatedOffers } = useLoaderData<typeof loader>();
+  const { locale, product, offer, inputFields, deliveryKind, relatedOffers, relatedProducts } = useLoaderData<typeof loader>();
   const common = getMessages(locale, "common");
   const catalog = getMessages(locale, "catalog");
-  return <CatalogPage>
-    <nav className="sf-catalog-breadcrumb" aria-label={locale === "ar" ? "مسار التنقل" : "Breadcrumb"}>
+  const copy = catalog.productDetail;
+  return <CatalogPage><div className="sf-detail-page">
+    <nav className="sf-catalog-breadcrumb" aria-label={copy.breadcrumbLabel}>
       <Link to={`/${locale}`}>{common.navigation.home}</Link><span aria-hidden="true">/</span>
-      <Link to={`/${locale}/${product.categorySlug}/${product.slug}`}><bdi>{product.name}</bdi></Link><span aria-hidden="true">/</span><span aria-current="page"><bdi>{offer.name}</bdi></span>
+      <Link to={`/${locale}/${encodeURIComponent(product.categorySlug)}`}>{product.categoryName ?? common.navigation.allProducts}</Link><span aria-hidden="true">/</span>
+      <Link to={productPath(locale, product)}><bdi>{product.name}</bdi></Link><span aria-hidden="true">/</span><span aria-current="page"><bdi>{offer.name}</bdi></span>
     </nav>
-    <header className="sf-product-intro">
-      <div className="sf-product-art"><StoreImage src={offer.imageUrl ?? product.imageUrl} alt={offer.name} priority sizes="(max-width: 719px) 104px, 180px" /></div>
-      <div className="sf-product-intro-copy"><h1><bdi>{offer.name}</bdi></h1><p><Link to={`/${locale}/${product.categorySlug}/${product.slug}`}><bdi>{product.name}</bdi></Link></p>
-        <dl className="sf-product-facts">
-          <div><dt>{catalog.offerDetail.typeLabel}</dt><dd>{catalog.offerTypes[offer.offerType]}</dd></div>
-          {offer.regionCode ? <div><dt>{catalog.offerDetail.regionLabel}</dt><dd><bdi>{offer.regionCode}</bdi></dd></div> : null}
-        </dl>
-      </div>
-    </header>
-    <div className="sf-product-layout">
-      <section className="sf-offers-panel">
-        <h2>{inputFields.length ? catalog.offerDetail.fieldsHeading : catalog.offerDetail.noFieldsTitle}</h2>
-        <p className="sf-catalog-muted mt-3">{inputFields.length ? catalog.offerDetail.fieldsDescription : catalog.offerDetail.noFieldsDescription}</p>
-        {inputFields.length ? <ul className="sf-offer-field-list">{inputFields.map((field) => <FieldPreview key={field.id} field={field} labels={{ required: catalog.offerDetail.requiredField, optional: catalog.offerDetail.optionalField }} />)}</ul> : null}
+    <ProductDetailHeader locale={locale} product={product} offers={[offer]} offer={offer} />
+    <div className="sf-product-layout sf-detail-layout">
+      <section className="sf-offers-panel sf-detail-selection sf-detail-requirements" aria-labelledby="offer-requirements-heading">
+        <h2 id="offer-requirements-heading">{copy.beforeCheckout}</h2>
+        <p>{inputFields.length ? catalog.offerDetail.fieldsDescription : copy.noExtraDetails}</p>
+        {inputFields.length ? <ul className="sf-offer-field-list">{inputFields.map((field) => <FieldPreview key={field.id} field={field} labels={{ required: catalog.offerDetail.requiredField, optional: catalog.offerDetail.optionalField, allOptions: copy.allOptions }} />)}</ul> : null}
+        <div className="sf-detail-delivery"><h3>{copy.deliveryLabel}: {copy.deliveryKinds[deliveryKind]}</h3><p>{copy.deliveryNote}</p></div>
       </section>
-      <PurchaseSummary locale={locale} product={product} offer={offer} />
-      <div className="sf-product-details">
-        {offer.description || product.description ? <section><h2>{locale === "ar" ? "تفاصيل العرض" : "Offer details"}</h2><DescriptionText text={offer.description ?? product.description ?? ""} /></section> : null}
-        <section><h2>{catalog.gameDetail.howItWorksHeading}</h2><ol className="sf-product-steps">{catalog.gameDetail.howItWorksSteps.map((step, index) => <li key={step}><span className="sf-product-step-number" aria-hidden="true">{index + 1}</span>{step}</li>)}</ol></section>
-      </div>
+      <DetailPurchaseSummary locale={locale} product={product} offer={offer} />
     </div>
-    {relatedOffers.length ? <section className="sf-catalog-result-section">
-      <div className="sf-related-heading"><h2>{catalog.offerDetail.relatedHeading}</h2><Link to={`/${locale}/${product.categorySlug}/${product.slug}`}>{common.actions.viewAll}</Link></div>
-      <OfferGrid className="storefront-offer-grid" offers={relatedOffers} locale={locale} labels={getOfferCardLabels(common, catalog)} gameSlug={product.slug} showGameName={false} compact />
+    <ProductInformation locale={locale} product={product} offer={offer} />
+    {relatedOffers.length ? <section className="sf-detail-related" aria-labelledby="related-offers-heading">
+      <div className="sf-detail-section-heading"><div><h2 id="related-offers-heading">{catalog.offerDetail.relatedHeading}</h2><p>{copy.otherOffersDescription}</p></div><Link to={productPath(locale, product)}>{copy.allProductOffers}</Link></div>
+      <OfferGrid className="sf-detail-related-offers" offers={relatedOffers} locale={locale} labels={getOfferCardLabels(common, catalog)} gameSlug={product.slug} showGameName={false} compact />
     </section> : null}
-  </CatalogPage>;
+    <RelatedProductDiscovery locale={locale} product={product} related={relatedProducts} />
+  </div></CatalogPage>;
 }

@@ -144,8 +144,8 @@ const SECTION_DEFAULTS: Record<HomeSectionType, SectionDefaults> = {
   trust_strip: {
     titleAr: "لماذا GH Store؟",
     titleEn: "Why GH Store",
-    subtitleAr: "دفع محلي، تنفيذ فوري، ودعم حقيقي.",
-    subtitleEn: "Local payments, instant delivery, and real support.",
+    subtitleAr: "خيارات دفع، متابعة التسليم، ومساعدة عند الحاجة.",
+    subtitleEn: "Payment options, delivery updates, and help when you need it.",
     limit: 1,
   },
   how_it_works: {
@@ -326,16 +326,18 @@ export function getHomeSectionSubtitle(section: HomeSection, locale: Locale): st
 export function getHomeSectionPagePath(section: HomeSection): string | null {
   switch (section.type) {
     case "games":
-    case "product_picks":
       return "/games";
+    case "product_picks":
+      return "/products";
     // A "browse by category" section points at the whole catalog.
     case "category":
       return "/products";
     case "gift_cards":
       return "/gift-cards";
     case "sale_offers":
-    case "offer_picks":
       return "/sale";
+    case "offer_picks":
+      return "/products";
     // The bestsellers row links to its own ranking page.
     case "suggested_offers":
       return "/best-sellers";

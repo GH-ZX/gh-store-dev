@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 /**
  * The storefront as a visitor meets it.
@@ -72,6 +72,25 @@ test.describe("document direction", () => {
 });
 
 test.describe("hero carousel", () => {
+  test("manual arrows are ready with reduced motion", async ({ page, isMobile }) => {
+    test.skip(isMobile, "phones use the product tabs and swipe gestures");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    for (const locale of ["ar", "en"] as const) {
+      await openHome(page, locale);
+      const carousel = page.locator('[aria-roledescription="carousel"]');
+      const markers = carousel.getByRole("button", { name: /انتقل إلى|Go to/ });
+      if (await markers.count() < 2) test.skip(true, "fewer than two featured products");
+      const next = carousel.getByRole("button", { name: locale === "ar" ? "المنتج التالي" : "Next product", exact: true });
+      const previous = carousel.getByRole("button", { name: locale === "ar" ? "المنتج السابق" : "Previous product", exact: true });
+      await expect(next).toBeEnabled();
+      await next.click();
+      await expect(markers.nth(1)).toHaveAttribute("aria-current", "true");
+      await expect(previous).toBeEnabled();
+      await previous.click();
+      await expect(markers.first()).toHaveAttribute("aria-current", "true");
+    }
+  });
+
   test("keyboard browsing pauses rotation until the visitor resumes it", async ({ page }) => {
     for (const locale of ["ar", "en"] as const) {
       await openHome(page, locale);
@@ -109,6 +128,9 @@ test.describe("hero carousel", () => {
 
       const before = await selected();
       const viewport = page.locator('[aria-roledescription="carousel"] .gh-sheen');
+      // The discovery categories can place this below the first screen. A
+      // pointer gesture must start on the visible carousel, as a visitor's does.
+      await viewport.scrollIntoViewIfNeeded();
       const box = await viewport.boundingBox();
 
       expect(box).not.toBeNull();

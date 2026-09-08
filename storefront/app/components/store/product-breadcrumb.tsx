@@ -3,9 +3,11 @@
 import { Link, useNavigate } from "react-router";
 
 import { ChevronIcon } from "@/components/ui/icons";
+import type { Locale } from "@/i18n/config";
+import { getMessages } from "@/i18n/messages";
 
 type ProductBreadcrumbProps = {
-  locale: string;
+  locale: Locale;
   homeLabel: string;
   categorySlug: string;
   categoryName: string;
@@ -27,21 +29,22 @@ export function ProductBreadcrumb({
   productName,
 }: ProductBreadcrumbProps) {
   const navigate = useNavigate();
-  const categoryHref = `/${locale}/${categorySlug}`;
+  const copy = getMessages(locale, "catalog").productDetail;
+  const categoryHref = `/${locale}/${encodeURIComponent(categorySlug)}`;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={() => { if ((window.history.state?.idx ?? 0) > 0) navigate(-1); else navigate(categoryHref); }}
-        className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[var(--line)] px-3 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
-        aria-label={`${locale === "ar" ? "رجوع" : "Back"}: ${categoryName}`}
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--line)] px-3 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+        aria-label={`${copy.backLabel}: ${categoryName}`}
       >
         <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
         <span className="max-w-40 truncate">{categoryName}</span>
       </button>
 
-      <nav aria-label={homeLabel} className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
+      <nav aria-label={copy.breadcrumbLabel} className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
         <Link
           to={`/${locale}`}
           className="shrink-0 text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
@@ -56,7 +59,7 @@ export function ProductBreadcrumb({
           {categoryName}
         </Link>
         <ChevronIcon direction="end" className="size-3 shrink-0 text-[var(--ink-faint)] rtl:rotate-180" />
-        <span className="truncate text-[var(--ink)]">{productName}</span>
+        <span aria-current="page" className="truncate text-[var(--ink)]"><bdi>{productName}</bdi></span>
       </nav>
     </div>
   );

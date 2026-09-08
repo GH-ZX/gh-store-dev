@@ -1,0 +1,13 @@
+{
+  "viewProduct": "عرض المنتج",
+  "viewOffer": "عرض الباقة",
+  "categoryLabel": "الفئة",
+  "regionLabel": "المنطقة",
+  "imageUnavailable": "الصورة غير متاحة",
+  "breadcrumbLabel": "مسار التنقل",
+  "railPreviousProducts": "المنتجات السابقة",
+  "railNextProducts": "المنتجات التالية",
+  "railPreviousOffers": "الباقات السابقة",
+  "railNextOffers": "الباقات التالية",
+  "countItems": { "products": "منتج", "offers": "باقة", "results": "نتيجة" }
+}

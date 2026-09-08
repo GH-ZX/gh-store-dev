@@ -9,6 +9,13 @@
     "giftTitle": "هدية لكل منصة",
     "shopGiftCards": "تصفح البطاقات"
   },
+  "discovery": {
+    "title": "اكتشف ما تحتاجه لعالمك الرقمي",
+    "description": "تصفح المنتجات حسب الفئة.",
+    "allProducts": "جميع المنتجات",
+    "product": "منتج",
+    "products": "منتج"
+  },
   "carousel": {
     "regionLabel": "المنتجات المميزة",
     "slideLabel": "الشريحة {index} من {total}",
@@ -19,6 +26,8 @@
     "play": "استئناف التدوير"
   },
   "sections": {
+    "productsSubtitle": "تصفح منتجات مختارة لك.",
+    "offersSubtitle": "قارن بين باقات مختارة لك.",
     "gamesSubtitle": "اختر لعبتك وابدأ الشحن فورًا.",
     "giftCardsSubtitle": "بطاقات وأكواد جاهزة للتسليم.",
     "saleSubtitle": "خصومات فعّالة الآن.",

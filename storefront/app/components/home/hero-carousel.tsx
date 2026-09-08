@@ -15,15 +15,12 @@ import { cn } from "@/lib/cn";
 import { formatMessage } from "@/i18n/format";
 import { reorderCarouselProducts } from "@/lib/admin-actions";
 
-/** Combined Embla state to avoid three separate re-renders per slide change. */
-type EmblaState = { selected: number; canPrev: boolean; canNext: boolean };
-
 /** Configured featured products, with accessible rotation and RTL gestures. */
 export type HeroCarouselProps = {
   products: StoreProduct[];
   locale: Locale;
   intervalSeconds: number;
-  /** Rotation, always on for a strip with more than one slide. */
+  /** Admin-configured rotation; focus, hover and reduced motion can pause it. */
   autoplay?: boolean;
   loop?: boolean;
   align?: "start" | "center";
@@ -56,6 +53,11 @@ function subscribeReducedMotion(onChange: () => void): () => void {
   return () => media.removeEventListener("change", onChange);
 }
 
+function subscribeVisibility(onChange: () => void): () => void {
+  document.addEventListener("visibilitychange", onChange);
+  return () => document.removeEventListener("visibilitychange", onChange);
+}
+
 export function HeroCarousel({
   products,
   locale,
@@ -83,7 +85,28 @@ export function HeroCarousel({
     dragFree: false,
   });
 
-  const [emblaState, setEmblaState] = useState<EmblaState>({ selected: 0, canPrev: false, canNext: false });
+  const subscribeEmbla = useCallback((notify: () => void) => {
+    if (!emblaApi) return () => {};
+    emblaApi.on("init", notify);
+    emblaApi.on("select", notify);
+    emblaApi.on("reInit", notify);
+    return () => {
+      emblaApi.off("init", notify);
+      emblaApi.off("select", notify);
+      emblaApi.off("reInit", notify);
+    };
+  }, [emblaApi]);
+  // A primitive snapshot stays stable until Embla changes. Reading it when
+  // subscribing also handles initialization that predates React's effects.
+  const emblaSnapshot = useSyncExternalStore(
+    subscribeEmbla,
+    useCallback(() => `${emblaApi?.selectedScrollSnap() ?? 0}:${emblaApi?.canScrollPrev() ?? false}:${emblaApi?.canScrollNext() ?? false}`, [emblaApi]),
+    () => "0:false:false",
+  );
+  const [selectedValue, previousValue, nextValue] = emblaSnapshot.split(":");
+  const selected = Number(selectedValue);
+  const canPrev = previousValue === "true";
+  const canNext = nextValue === "true";
 
   /*
    * Rotation state, read reactively. `reducedMotion` comes through a store
@@ -99,23 +122,12 @@ export function HeroCarousel({
     () => false,
   );
   const [userPaused, setUserPaused] = useState<boolean | null>(null);
-  const [tabHidden, setTabHidden] = useState(false);
+  const tabHidden = useSyncExternalStore(subscribeVisibility, () => document.hidden, () => false);
   const [hovered, setHovered] = useState(false);
   const paused = userPaused ?? reducedMotion;
 
   /* Carousel reorder mode (admin only) — shows up/down arrows on thumbnails. */
   const [reorderMode, setReorderMode] = useState(false);
-
-  /*
-   * Watch tab visibility to pause rotation when document is hidden.
-   */
-  useEffect(() => {
-    function onVisibilityChange() {
-      setTabHidden(document.hidden);
-    }
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, []);
 
   /*
    * Native robust autoplay timer: advances the carousel without any embla plugin
@@ -143,45 +155,6 @@ export function HeroCarousel({
     setUserPaused(!paused);
   }, [paused]);
 
-  const onSelect = useCallback(() => {
-    if (emblaApi) {
-      setEmblaState({
-        selected: emblaApi.selectedScrollSnap(),
-        canPrev: emblaApi.canScrollPrev(),
-        canNext: emblaApi.canScrollNext(),
-      });
-    }
-  }, [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) {
-      return;
-    }
-
-    /*
-     * All three events, and `init` is the one that matters. Embla emits `init`
-     * when it first activates and `reInit` only when it is re-activated — a
-     * change of options, of plugins, or a media query it was given. Subscribing
-     * to `reInit` alone therefore seeds nothing on a normal page load, which is
-     * how the arrows came to be gated on a value that stayed empty forever and
-     * never rendered at all. `init` arrives on a `setTimeout(0)` scheduled
-     * while the library is being constructed, so this subscription is in place
-     * long before it fires.
-     *
-     * `reInit` still matters: the selected index can move when the slides or
-     * the options change under us.
-     */
-    emblaApi.on("init", onSelect);
-    emblaApi.on("select", onSelect);
-    emblaApi.on("reInit", onSelect);
-
-    return () => {
-      emblaApi.off("init", onSelect);
-      emblaApi.off("select", onSelect);
-      emblaApi.off("reInit", onSelect);
-    };
-  }, [emblaApi, onSelect]);
-
   /*
    * Reorder functions — swap two adjacent products in the carousel.
    * Calls the server action to persist the new order, then refreshes
@@ -207,12 +180,11 @@ export function HeroCarousel({
     return null;
   }
 
-  const { selected, canPrev, canNext } = emblaState;
-
   return (
     <section className={cn("sf-featured", className)} aria-roledescription="carousel"
       aria-label={labels.regionLabel} aria-live={rotating && !paused && !hovered && !tabHidden ? "off" : "polite"}
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      onPointerEnter={(event) => { if (event.pointerType === "mouse") setHovered(true); }}
+      onPointerLeave={() => setHovered(false)} onPointerCancel={() => setHovered(false)}
       onFocusCapture={(event) => {
         // Keep a focused product from rotating out of reach. The rotation
         // control remains an explicit choice to pause or resume.
@@ -251,7 +223,7 @@ export function HeroCarousel({
         </div>
         {total > 1 ? <div className="sf-featured-controls">
           <button type="button" onClick={()=>emblaApi?.scrollPrev()} disabled={!canPrev} aria-label={labels.previous}><ArrowIcon direction="start" className="size-4 rtl:rotate-180"/></button>
-          {rotating ? <button type="button" data-carousel-rotation onClick={toggleRotation} aria-label={paused?labels.play:labels.pause} aria-pressed={paused}>{paused?<PlayIcon className="size-4"/>:<PauseIcon className="size-4"/>}</button> : null}
+          {rotating ? <button type="button" data-carousel-rotation onClick={toggleRotation} aria-label={paused?labels.play:labels.pause} aria-pressed={paused}>{paused?<PlayIcon className="pointer-events-none size-4"/>:<PauseIcon className="pointer-events-none size-4"/>}</button> : null}
           <button type="button" onClick={()=>emblaApi?.scrollNext()} disabled={!canNext} aria-label={labels.next}><ArrowIcon direction="end" className="size-4 rtl:rotate-180"/></button>
         </div> : null}
       </div>

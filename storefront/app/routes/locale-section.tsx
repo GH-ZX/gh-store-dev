@@ -233,7 +233,7 @@ function RailBody({ locale, rail, offers, page, pageSize, total }: { locale: "ar
     <CatalogHeading locale={locale} title={copy.title} description={copy.description} total={total} item="offers" />
     <CatalogNavigation locale={locale} active={rail} />
     <CatalogToolbar locale={locale} filter={rail === "gift-cards" ? "gift_card" : "offers"} />
-    {offers.length ? <OfferGrid className="storefront-offer-grid" offers={offers} locale={locale} labels={getOfferCardLabels(common, catalog)} /> : <EmptyState title={common.states.emptyTitle} description={common.states.emptyDescription} />}
+    {offers.length ? <OfferGrid className="storefront-offer-grid" offers={offers} locale={locale} labels={getOfferCardLabels(common, catalog)} /> : rail === "best-sellers" ? <EmptyState title={catalog.bestSellers.emptyTitle} description={catalog.bestSellers.emptyDescription} action={{ href: `/${locale}/products`, label: catalog.bestSellers.browseAction }} /> : <EmptyState title={common.states.emptyTitle} description={common.states.emptyDescription} />}
     <CatalogPager locale={locale} path={rail} page={page} pageSize={pageSize} total={total} />
   </CatalogPage>;
 }
