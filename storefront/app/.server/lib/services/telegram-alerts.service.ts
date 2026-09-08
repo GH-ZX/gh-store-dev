@@ -165,15 +165,28 @@ function toAdminNotification(type: TelegramAlertType, payload: Json): Omit<Notif
         id,
       );
     }
-    case "low_wallet":
+    case "low_wallet": {
+      const orderId = field(payload, "order_id");
+      const orderNumber = field(payload, "order_number");
+      const provider = field(payload, "provider") || "G2Bulk";
+      const balance = field(payload, "balance");
+      const playerDetails = field(payload, "player_details");
+
       return make(
         "admin_low_wallet",
-        "رصيد المزوّد منخفض",
-        "Supplier balance is low",
-        `رصيد ${field(payload, "provider") || "المزوّد"} أصبح ${field(payload, "balance")}.`,
-        `${field(payload, "provider") || "Supplier"} balance is down to ${field(payload, "balance")}.`,
-        "/dashboard/providers",
+        orderNumber ? `طلب #${orderNumber} معلق (نقص رصيد المزوّد)` : "رصيد المزوّد منخفض",
+        orderNumber ? `Order #${orderNumber} waiting on supplier balance` : "Supplier balance is low",
+        orderNumber
+          ? `الطلب #${orderNumber} معلق لأن رصيد ${provider} غير كافٍ. بيانات اللاعب: ${playerDetails}`
+          : `رصيد ${provider} أصبح ${balance}.`,
+        orderNumber
+          ? `Order #${orderNumber} pending low ${provider} balance. Player info: ${playerDetails}`
+          : `${provider} balance is down to ${balance}.`,
+        orderId ? `/dashboard/orders/${orderId}` : "/dashboard/providers",
+        orderId ? "order" : undefined,
+        orderId || undefined,
       );
+    }
     case "low_stock":
       return make(
         "admin_low_stock",

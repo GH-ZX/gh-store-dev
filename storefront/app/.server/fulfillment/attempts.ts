@@ -80,12 +80,14 @@ export async function openAttempt(
     .maybeSingle();
 
   if (existing) {
-    if (existing.status === "pending" && existing.external_order_id === null) {
+    if (
+      (existing.status === "pending" || existing.status === "processing" || existing.status === "failed") &&
+      existing.external_order_id === null
+    ) {
       const { data: claimed } = await supabase
         .from("fulfillment_attempts")
         .update({ status: "processing", last_checked_at: new Date().toISOString() })
         .eq("id", existing.id)
-        .eq("status", "pending")
         .is("external_order_id", null)
         .select("id")
         .maybeSingle();

@@ -42,6 +42,29 @@ export function describe(error: unknown): { customer: string; code: string | nul
     code: error instanceof Error ? error.name : null,
   };
 }
+export function isLowBalanceError(error: unknown): boolean {
+  if (error instanceof G2BulkError || error instanceof MaxStoreError || error instanceof BatStoreError) {
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes("balance") ||
+      msg.includes("fund") ||
+      msg.includes("credit") ||
+      msg.includes("رصيد") ||
+      msg.includes("غير كاف")
+    );
+  }
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes("balance") ||
+      msg.includes("insufficient") ||
+      msg.includes("low_funds") ||
+      msg.includes("رصيد")
+    );
+  }
+  return false;
+}
+
 
 /**
  * A failed purchase request is not always a failed purchase. Network, server,
@@ -56,6 +79,34 @@ export async function handlePurchaseError(
   error: unknown,
 ): Promise<FulfillmentOutcome> {
   const detail = describe(error);
+
+  if (isLowBalanceError(error)) {
+    await recordAttempt(attemptId, {
+      status: "processing",
+      errorMessage: detail.customer,
+      errorCode: "insufficient_balance",
+    });
+    await setOrderStatus(context.orderId, "processing");
+
+    const playerDetails = Object.entries(context.dynamicFields)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+
+    await enqueueTelegramAlert({
+      type: "low_wallet",
+      payload: {
+        order_id: context.orderId,
+        order_number: context.orderNumber,
+        provider: context.providerName || (context.gameCode ? "g2bulk" : "supplier"),
+        product_name: context.catalogueName || context.gameCode || "Product",
+        player_details: playerDetails,
+        balance: "0.00",
+      },
+    });
+
+    return { state: "processing" };
+  }
+
   const explicitRejection =
     (error instanceof G2BulkError || error instanceof MaxStoreError || error instanceof BatStoreError) &&
     (error.kind === "request" || error.kind === "auth");

@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isAdminProfile } from "@server/lib/auth/guards";
-import { isG2BulkOfferAffordable } from "@server/lib/services/g2bulk-availability.service";
 import { enqueueTelegramAlert } from "@server/lib/services/telegram-alerts.service";
 import { fulfillOrder } from "@server/fulfillment";
 import { logFailure, logOutcome } from "@server/lib/logging/logger";
@@ -118,17 +117,8 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
     return { ok: false, reason: "unavailable" };
   }
 
-  const deliveryKind = (offer as { delivery_kind: string }).delivery_kind;
   const offerId = (offer as { id: string }).id;
 
-  if (
-    !isAdmin &&
-    deliveryKind !== "manual" &&
-    deliveryKind !== "stored" &&
-    !(await isG2BulkOfferAffordable(offerId, input.quantity))
-  ) {
-    return { ok: false, reason: "supplier_unavailable" };
-  }
 
   const { data, error } = await supabase
     .rpc(isAdmin ? "place_gift_order" : "place_wallet_order", {

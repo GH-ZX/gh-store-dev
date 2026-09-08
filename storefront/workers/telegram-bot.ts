@@ -284,13 +284,21 @@ function ownerAlertText(row: AlertRow): string {
         .filter((line) => line.length > 0)
         .join("\n");
 
-    case "low_wallet":
-      return [
-        "⚠️ <b>Supplier wallet is low</b>",
-        `Balance: <b>${money(p.balance)}</b>`,
-        `Required: ${money(p.required)}`,
-        `Checkout is refusing purchases until the G2Bulk wallet is topped up.`,
-      ].join("\n");
+    case "low_wallet": {
+      const orderNumber = p.order_number ? String(p.order_number) : null;
+      const playerDetails = p.player_details ? String(p.player_details) : null;
+      const lines = [
+        orderNumber ? `🚨 <b>Order #${escapeHtml(orderNumber)} waiting on supplier balance!</b>` : "⚠️ <b>Supplier wallet is low</b>",
+        p.balance !== undefined ? `Balance: <b>${money(p.balance)}</b>` : "",
+        p.required ? `Required: <b>${money(p.required)}</b>` : "",
+        p.product_name ? `Product: <b>${escapeHtml(String(p.product_name))}</b>` : "",
+        playerDetails ? `Player Details: <code>${escapeHtml(playerDetails)}</code>` : "",
+        orderNumber
+          ? `Order is saved in dashboard. Recharge supplier balance and click 'Retry' to deliver.`
+          : `Checkout is refusing purchases until the G2Bulk wallet is topped up.`,
+      ];
+      return lines.filter(Boolean).join("\n");
+    }
 
     case "low_stock":
       return [
@@ -355,7 +363,9 @@ function ownerAlertKeyboard(row: AlertRow): unknown | undefined {
     case "support_reply":
       return { inline_keyboard: [[{ text: "Open support", url: "https://gh-store.me/en/dashboard/support" }]] };
     case "low_wallet":
-      return { inline_keyboard: [[{ text: "Providers", url: "https://gh-store.me/en/dashboard/providers" }]] };
+      return p.order_id
+        ? { inline_keyboard: [[{ text: "Open Order", url: `https://gh-store.me/en/dashboard/orders/${encodeURIComponent(String(p.order_id))}` }]] }
+        : { inline_keyboard: [[{ text: "Providers", url: "https://gh-store.me/en/dashboard/providers" }]] };
     case "low_stock":
       return { inline_keyboard: [[{ text: "Catalog", url: "https://gh-store.me/en/dashboard/catalog" }]] };
     case "sweep_stalled":
