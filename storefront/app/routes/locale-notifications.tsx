@@ -8,6 +8,7 @@ import {
   type LoaderFunctionArgs,
 } from "react-router";
 import { toast } from "@/components/ui/toaster";
+import { BrowserNotificationBanner } from "@/components/shared/browser-notification-banner";
 import { getMessages } from "@/i18n/messages";
 import { accountContext } from "@server/account";
 import { sessionCookieHeaders } from "@server/session";
@@ -78,6 +79,9 @@ export default function Notifications() {
       />
       <AccountNavigation locale={locale} messages={account} />
       <AccountResult messages={account} error={result?.error} />
+      <div className="mb-6">
+        <BrowserNotificationBanner locale={locale} />
+      </div>
       {notifications.some((row) => !row.isRead) ? (
         <Form method="post" className="mb-6">
           <SubmitButton name="intent" value="all">

@@ -2,6 +2,7 @@ import { Form } from "react-router";
 import * as UI from "./operations-shared";
 import { SyncIcon } from "@/components/ui/icons";
 
+import { BrowserNotificationBanner } from "@/components/shared/browser-notification-banner";
 export function OrdersView({
   view,
 }: {
@@ -12,6 +13,7 @@ export function OrdersView({
 
   return (
     <div className="space-y-6">
+      <BrowserNotificationBanner locale={view.locale} />
       {/* Search & Filter Toolbar */}
       <UI.Filters
         q={view.q}

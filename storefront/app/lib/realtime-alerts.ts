@@ -1,6 +1,6 @@
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "@/components/ui/toaster";
-
+import { sendBrowserNotification } from "@/lib/browser-notifications";
 const FALLBACK_SUPABASE_URL = "https://njlzgfddfnnqujaodbta.supabase.co";
 const FALLBACK_PUBLISHABLE_KEY = "sb_publishable_gtOxP1au24qFXwzVppy0vw_oFWaSIH2";
 const CHANNEL_NAME = "gh-store-alerts";
@@ -64,6 +64,9 @@ export function subscribeToSiteAlerts(
           duration: payload.duration || 7000,
         });
 
+        sendBrowserNotification(payload.title, {
+          body: payload.message,
+        });
         if (onAlert) {
           onAlert(payload);
         }
