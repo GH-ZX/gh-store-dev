@@ -75,3 +75,13 @@ export function applySecurityHeaders(headers: Headers): void {
     headers.set(key, value);
   }
 }
+
+export const EARLY_HINT_PRELOADS: string = [
+  "<https://fonts.googleapis.com>; rel=preconnect; crossorigin",
+  "<https://fonts.gstatic.com>; rel=preconnect; crossorigin",
+  "</gh-store-logo-mark.png>; rel=preload; as=image",
+].join(", ");
+
+export function applyEarlyHintHeaders(headers: Headers): void {
+  headers.set("Link", EARLY_HINT_PRELOADS);
+}

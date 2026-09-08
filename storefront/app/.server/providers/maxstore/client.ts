@@ -15,6 +15,7 @@ import {
   profileSchema,
   readAvailable,
   readProductCategory,
+  readProductDescription,
   readProductImage,
   readStockCount,
   type MaxStoreProduct,
@@ -275,6 +276,7 @@ export class MaxStoreClient {
         paramsMeta: product.params_meta ?? null,
         stockCount: readStockCount(product),
         imageUrl: readProductImage(product),
+        description: readProductDescription(product),
       };
     });
   }

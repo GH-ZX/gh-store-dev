@@ -376,6 +376,7 @@ async function importCategoryOffers(
         .from("offers")
         .update({
           ...(refreshPrice ? { price } : {}),
+          ...(product.description ? { description_ar: product.description, description_en: product.description } : {}),
           // Availability is the provider's to decide; an operator's own
           // deactivation is not overridden into `true` by a sync.
           ...(product.available ? {} : { is_active: false }),
@@ -408,6 +409,8 @@ async function importCategoryOffers(
         slug,
         name_ar: product.name,
         name_en: product.name,
+        description_ar: product.description,
+        description_en: product.description,
         price,
         offer_type: toOfferType(product.productType),
         sort_order: index,
@@ -524,6 +527,8 @@ async function importOneCategory(
     ? ((mapping?.products as unknown[])[0] as { image_url: string | null } | undefined)
     : (mapping?.products as { image_url: string | null } | undefined);
 
+  const productDescription = products.find((p) => p.description)?.description ?? null;
+
   if (!gameId) {
     const { data: game, error } = await supabase
       .from("products")
@@ -531,6 +536,8 @@ async function importOneCategory(
         slug: uniqueSlug(toMaxStoreGameSlug({ id: category.id, title: category.title }), slugs),
         name_ar: category.title,
         name_en: category.title,
+        description_ar: productDescription,
+        description_en: productDescription,
         ...(productImage ? { image_url: productImage } : {}),
         product_kind: "digital",
         is_active: options.publish,
@@ -544,8 +551,16 @@ async function importOneCategory(
 
     gameId = game.id;
     status = "created";
-  } else if (!existingGame?.image_url && productImage) {
-    await supabase.from("products").update({ image_url: productImage }).eq("id", gameId);
+  } else if ((!existingGame?.image_url && productImage) || productDescription) {
+    await supabase
+      .from("products")
+      .update({
+        ...(!existingGame?.image_url && productImage ? { image_url: productImage } : {}),
+        ...(productDescription
+          ? { description_ar: productDescription, description_en: productDescription }
+          : {}),
+      })
+      .eq("id", gameId);
   }
 
   const counts = await importCategoryOffers(supabase, gameId, products, options, deactivateMissing);

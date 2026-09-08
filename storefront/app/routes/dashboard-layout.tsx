@@ -1,7 +1,9 @@
 import { data, Outlet, useLoaderData, useRevalidator } from "react-router";
-import { useEffect } from "react";
-import { isLocale } from "@/i18n/config";
-import { DashboardNav } from "@/components/admin/dashboard-nav";
+import { useEffect, useState } from "react";
+import { getLocaleDirection, isLocale } from "@/i18n/config";
+import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { AdminHeader } from "@/components/admin/admin-header";
+import { AdminMobileDrawer } from "@/components/admin/admin-mobile-drawer";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { buildPageMeta } from "@/lib/seo";
@@ -41,18 +43,54 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export default function DashboardLayout() {
-  const { locale } = useLoaderData<typeof loader>();
+  const { locale, displayName } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "admin");
   const { revalidate } = useRevalidator();
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
   useEffect(() => {
     const refresh = () => { void revalidate(); };
     window.addEventListener("admin-action-complete", refresh);
     return () => window.removeEventListener("admin-action-complete", refresh);
   }, [revalidate]);
+
   return (
-    <div data-dashboard-shell className="gh-page py-6 sm:py-8">
-      <DashboardNav locale={locale} messages={messages.shell} />
-      <div className="mt-6"><Outlet /></div>
+    <div
+      data-admin-shell=""
+      data-dashboard-shell=""
+      lang={locale}
+      dir={getLocaleDirection(locale)}
+      className="admin-layout"
+    >
+      {/* Desktop Persistent Sidebar */}
+      <AdminSidebar
+        locale={locale}
+        messages={messages.shell}
+        displayName={displayName}
+        className="hidden lg:flex"
+      />
+
+      {/* Mobile Drawer */}
+      <AdminMobileDrawer
+        isOpen={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        locale={locale}
+        messages={messages.shell}
+        displayName={displayName}
+      />
+
+      {/* Main Workspace Column */}
+      <div className="admin-main-wrapper">
+        <AdminHeader
+          locale={locale}
+          messages={messages.shell}
+          displayName={displayName}
+          onOpenMobile={() => setMobileDrawerOpen(true)}
+        />
+        <main id="admin-main" className="admin-content">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

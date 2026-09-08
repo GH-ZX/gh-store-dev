@@ -50,7 +50,7 @@ describe("telegram link codes", () => {
   });
 
   it("mints codes from the platform CSPRNG", () => {
-    const service = readFileSync("src/lib/services/telegram-link.service.ts", "utf8");
+    const service = readFileSync("legacy-next-snapshot/lib/services/telegram-link.service.ts", "utf8");
 
     expect(service).toContain("crypto.getRandomValues");
     expect(service).not.toContain("Math.random()");

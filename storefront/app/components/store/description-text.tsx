@@ -40,6 +40,12 @@ export function DescriptionText({
               .replace(/&/g, "&amp;")
               .replace(/</g, "&lt;")
               .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              // Safely auto-linkify web URLs
+              .replace(
+                /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g,
+                '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-[var(--accent)] underline hover:text-[var(--accent-strong)] break-all font-medium">$1</a>',
+              )
               .replace(/\n/g, "<br />"),
           }}
         />

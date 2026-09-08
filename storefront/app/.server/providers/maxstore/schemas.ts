@@ -176,7 +176,37 @@ export type MaxStoreProduct = {
   stockCount: number | null;
   /** Artwork when MaxStore sends one; the documentation does not promise it. */
   imageUrl: string | null;
+  description: string | null;
 };
+
+/** Read a description/instructions string from common MaxStore response variants. */
+export function readProductDescription(product: unknown): string | null {
+  if (!product || typeof product !== "object") {
+    return null;
+  }
+
+  const value = product as {
+    description?: unknown;
+    desc?: unknown;
+    details?: unknown;
+    instruction?: unknown;
+    instructions?: unknown;
+    note?: unknown;
+    notes?: unknown;
+    content?: unknown;
+  };
+  const raw =
+    value.description ??
+    value.desc ??
+    value.details ??
+    value.instruction ??
+    value.instructions ??
+    value.note ??
+    value.notes ??
+    value.content;
+
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
 
 /** Read an artwork URL from common MaxStore response variants. */
 export function readProductImage(product: unknown): string | null {

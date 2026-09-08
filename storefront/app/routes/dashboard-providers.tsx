@@ -13,8 +13,7 @@ import { TelegramSettingsForm } from "@/components/admin/telegram-settings-form"
 import { WalletCards } from "@/components/admin/wallet-cards";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { ArrowIcon } from "@/components/ui/icons";
-import { SectionHeader } from "@/components/ui/section";
+import { ArrowIcon, CableIcon } from "@/components/ui/icons";
 import { getMessages } from "@/i18n/messages";
 import { getSamOverview } from "@server/legacy/lib/services/admin-sam.service";
 import { getWalletCards } from "@server/lib/services/admin-overview.service";
@@ -105,13 +104,19 @@ export default function Page() {
   };
 
   return (
-    <div className="grid gap-10">
-      <SectionHeader
-        as="h1"
-        eyebrow={messages.providers.eyebrow}
-        title={messages.providers.title}
-        subtitle={messages.providers.description}
-      />
+    <div className="space-y-8">
+      <div>
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+          <CableIcon className="size-4 text-[var(--accent)]" />
+          <span>{messages.providers.eyebrow}</span>
+        </div>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">
+          {messages.providers.title}
+        </h1>
+        <p className="mt-1 text-sm text-[var(--ink-muted)]">
+          {messages.providers.description}
+        </p>
+      </div>
 
       <ProviderGroup title={groups.suppliers} description={groups.suppliersDescription}>
         <ProviderSection

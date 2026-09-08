@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "@/components/ui/toaster";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { CheckIcon } from "@/components/ui/icons";
@@ -111,11 +112,26 @@ export function OrderStatusPanel({
   const detail = messages.orderDetail;
   const state = presentation({ messages, status, fulfillmentState, isRefunded });
   const failed = state.tone === "danger" || state.tone === "warning";
+  const notifiedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const key = `${status}:${fulfillmentState}:${isRefunded}`;
+    if (notifiedRef.current === key) return;
+    notifiedRef.current = key;
+
+    if (state.tone === "success") {
+      toast.success(state.title, { description: state.description });
+    } else if (failed) {
+      toast.error(state.title, { description: failureMessage ?? state.description });
+    }
+  }, [state, failed, failureMessage, status, fulfillmentState, isRefunded]);
+
 
   async function copyCode(value: string) {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(value);
+      toast.success(detail.copiedLabel || "Code copied to clipboard!");
     } catch {
       // A blocked clipboard is not an error worth interrupting for: the code is
       // on screen and can be selected by hand.
@@ -126,6 +142,7 @@ export function OrderStatusPanel({
     try {
       await navigator.clipboard.writeText(codes.join("\n"));
       setAllCopied(true);
+      toast.success("All codes copied to clipboard!");
     } catch {
       // The individual codes remain visible and selectable.
     }

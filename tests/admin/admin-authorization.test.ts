@@ -20,7 +20,7 @@ import { describe, expect, it } from "vitest";
  * needs a database and runs under `supabase test db`.
  */
 
-const DASHBOARD = join(process.cwd(), "src/app/[locale]/dashboard");
+const DASHBOARD = join(process.cwd(), "legacy-next-snapshot/app/[locale]/dashboard");
 
 function actionFiles(dir: string): string[] {
   const found: string[] = [];
@@ -95,7 +95,7 @@ describe("audit coverage", () => {
      * have been the point at which they drifted — so the insert now lives in
      * `admin-audit.service.ts` alone, and this is what says so.
      */
-    const services = join(process.cwd(), "src/lib/services");
+    const services = join(process.cwd(), "legacy-next-snapshot/lib/services");
     const writers = readdirSync(services)
       .filter((name) => name.endsWith(".ts"))
       .filter((name) => name !== "admin-audit.service.ts")

@@ -44,3 +44,77 @@ export function isCrossOriginMutation(request: Request): boolean {
   const origin = request.headers.get("origin");
   return request.headers.get("sec-fetch-site") === "cross-site" || (origin !== null && origin !== new URL(request.url).origin);
 }
+
+export type CachePolicy = {
+  ttlSeconds: number;
+  tags: string[];
+};
+
+/** Resolve cache TTL and cache tags based on route tier. */
+export function resolveCachePolicy(request: Request): CachePolicy {
+  const url = new URL(request.url);
+  const path = url.pathname;
+
+  // 1. Specific product page: /(ar|en)/:category/:slug -> 1 hour TTL
+  const productMatch = path.match(/^\/(?:ar|en)\/([^/]+)\/([^/]+)\/?$/);
+  if (
+    productMatch &&
+    !["products", "games", "gift-cards", "sale", "search", "checkout", "orders", "recharge"].includes(
+      productMatch[1],
+    )
+  ) {
+    const category = productMatch[1];
+    const slug = productMatch[2];
+    return {
+      ttlSeconds: 3600,
+      tags: ["catalog", `category-${category}`, `product-${slug}`],
+    };
+  }
+
+  // 2. Category listing page: /(ar|en)/:category -> 5 minutes TTL
+  const categoryMatch = path.match(/^\/(?:ar|en)\/([^/]+)\/?$/);
+  if (
+    categoryMatch &&
+    !["login", "dashboard", "wallet", "orders", "profile"].includes(categoryMatch[1])
+  ) {
+    return {
+      ttlSeconds: 300,
+      tags: ["catalog", `category-${categoryMatch[1]}`],
+    };
+  }
+
+  // 3. Homepage and root -> 1 minute TTL
+  return {
+    ttlSeconds: 60,
+    tags: ["home", "catalog"],
+  };
+}
+
+/** Purge edge cache for a product and its parent category across both locales. */
+export async function purgeEdgeCacheForProduct(
+  originUrl: string,
+  categorySlug: string,
+  productSlug: string,
+): Promise<void> {
+  if (typeof caches === "undefined") return;
+  try {
+    const cacheStore = caches as unknown as { default: Cache };
+    const cache = cacheStore.default;
+    const origin = new URL(originUrl).origin;
+    const paths = [
+      `/ar/${categorySlug}/${productSlug}`,
+      `/en/${categorySlug}/${productSlug}`,
+      `/ar/${categorySlug}`,
+      `/en/${categorySlug}`,
+      `/ar/products`,
+      `/en/products`,
+      `/ar`,
+      `/en`,
+    ];
+    await Promise.all(
+      paths.map((p) => cache.delete(new Request(`${origin}${p}`)).catch(() => false)),
+    );
+  } catch {
+    // Non-blocking cache cleanup
+  }
+}

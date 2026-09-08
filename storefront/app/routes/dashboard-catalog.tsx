@@ -1,12 +1,14 @@
 import { Link } from "react-router";
 import { z } from "zod";
-import { TextField } from "@/components/admin/admin-form";
 import { EmptyState } from "@/components/shared/states";
 import { StoreImage } from "@/components/store/store-image";
-import { Badge } from "@/components/ui/badge";
-import { Button, ButtonLink } from "@/components/ui/button";
-import { ChevronIcon, GamepadIcon, LinkIcon, SearchIcon } from "@/components/ui/icons";
-import { SectionHeader } from "@/components/ui/section";
+import {
+  ChevronIcon,
+  GamepadIcon,
+  LinkIcon,
+  PlusIcon,
+  SearchIcon,
+} from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import { formatMessage, getMessages } from "@/i18n/messages";
 import { cn } from "@/lib/cn";
@@ -14,14 +16,9 @@ import {
   listAdminProducts,
   listAdminProviderCategories,
 } from "@server/legacy/lib/services/admin-catalog.service";
-
-
-/**
- * Catalog list.
- *
- * Search and the published filter live in the URL, not in component state: an
- * operator can bookmark unpublished imports that still need pricing.
- */
+import { useLoaderData, type LoaderFunctionArgs } from "react-router";
+import { isLocale } from "@/i18n/config";
+import { requireDashboardAdmin } from "@server/dashboard-access";
 
 const MAX_QUERY_LENGTH = 80;
 
@@ -33,7 +30,6 @@ const filtersSchema = z.object({
 
 type CatalogFilters = { query: string; publishedOnly: boolean; category: string };
 
-/** A malformed query string degrades to the unfiltered list rather than an error page. */
 function parseFilters(input: unknown): CatalogFilters {
   const parsed = filtersSchema.safeParse(input ?? {});
 
@@ -70,14 +66,10 @@ function catalogPath(locale: Locale, filters: CatalogFilters): string {
     : `/${locale}/dashboard/catalog`;
 }
 
-const FILTER_LINK_CLASSES =
-  "inline-flex min-h-11 items-center rounded-[var(--radius-pill)] border px-4 text-sm font-semibold transition-colors duration-[var(--duration)]";
-
-
-import { useLoaderData, type LoaderFunctionArgs } from "react-router";
-import { isLocale } from "@/i18n/config";
-function requireLocale(value: string | undefined) { if (!value || !isLocale(value)) throw new Response("Not Found", { status: 404 }); return value; }
-import { requireDashboardAdmin } from "@server/dashboard-access";
+function requireLocale(value: string | undefined) {
+  if (!value || !isLocale(value)) throw new Response("Not Found", { status: 404 });
+  return value;
+}
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
   const locale = requireLocale(params.locale);
@@ -96,34 +88,59 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 }
 
 export default function Page() {
- const { locale, filters, products, providerCategories } = useLoaderData<typeof loader>();
-const messages = getMessages(locale, "admin").catalog;
-  return (
-    <div className="grid gap-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <SectionHeader
-          as="h1"
-          eyebrow={messages.eyebrow}
-          title={messages.title}
-          subtitle={messages.description}
-        />
+  const { locale, filters, products, providerCategories } = useLoaderData<typeof loader>();
+  const messages = getMessages(locale, "admin").catalog;
 
-        {/* Beside the list, not inside it: creating is a different errand. */}
-        <ButtonLink href={`/${locale}/dashboard/catalog/new`} variant="secondary">
-          {messages.create.action}
-        </ButtonLink>
+  return (
+    <div className="space-y-6">
+      {/* 1. Header with Title & Action */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+            <GamepadIcon className="size-4 text-[var(--accent)]" />
+            <span>{messages.eyebrow}</span>
+          </div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">
+            {messages.title}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">
+            {messages.description}
+          </p>
+        </div>
+
+        <div>
+          <Link
+            to={`/${locale}/dashboard/catalog/new`}
+            className="inline-flex items-center gap-2 rounded-[var(--radius-control)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--accent-strong)] transition-colors"
+          >
+            <PlusIcon className="size-4" />
+            <span>{messages.create.action}</span>
+          </Link>
+        </div>
       </div>
 
-      <div className="grid gap-4 rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--shell)] p-5 sm:p-6">
-        <form method="get" action={`/${locale}/dashboard/catalog`} className="flex flex-wrap items-end gap-3">
+      {/* 2. Modern Filter & Search Toolbar */}
+      <div className="admin-card space-y-4">
+        <form
+          method="get"
+          action={`/${locale}/dashboard/catalog`}
+          className="flex flex-wrap items-end gap-3"
+        >
           {filters.publishedOnly ? <input type="hidden" name="published" value="1" /> : null}
 
-          <label className="grid min-w-48 gap-1.5">
-            <span className="text-xs font-semibold text-[var(--ink-soft)]">{messages.categoryFilterLabel}</span>
+          {/* Category Filter */}
+          <div className="grid min-w-48 flex-1 sm:flex-none gap-1.5">
+            <label
+              htmlFor="catalog-category-select"
+              className="text-xs font-semibold text-[var(--ink-soft)]"
+            >
+              {messages.categoryFilterLabel}
+            </label>
             <select
+              id="catalog-category-select"
               name="category"
               defaultValue={filters.category}
-              className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+              className="h-10 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface-strong)] px-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-colors"
             >
               <option value="">{messages.allCategories}</option>
               {providerCategories.map((category) => (
@@ -132,24 +149,41 @@ const messages = getMessages(locale, "admin").catalog;
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <TextField
-            label={messages.searchLabel}
-            name="q"
-            type="search"
-            defaultValue={filters.query}
-            placeholder={messages.searchPlaceholder}
-            maxLength={MAX_QUERY_LENGTH}
-            fieldClassName="min-w-0 flex-1 basis-64"
-          />
+          {/* Search Input */}
+          <div className="grid min-w-0 flex-1 basis-64 gap-1.5">
+            <label
+              htmlFor="catalog-search-input"
+              className="text-xs font-semibold text-[var(--ink-soft)]"
+            >
+              {messages.searchLabel}
+            </label>
+            <div className="relative flex items-center">
+              <input
+                id="catalog-search-input"
+                name="q"
+                type="search"
+                defaultValue={filters.query}
+                placeholder={messages.searchPlaceholder}
+                maxLength={MAX_QUERY_LENGTH}
+                className="h-10 w-full rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface-strong)] px-3 text-sm text-[var(--ink)] placeholder:text-[var(--ink-faint)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-colors"
+              />
+            </div>
+          </div>
 
-          <Button type="submit" variant="secondary" leadingIcon={<SearchIcon />}>
-            {messages.searchLabel}
-          </Button>
+          {/* Submit Search Button */}
+          <button
+            type="submit"
+            className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--surface-strong)] hover:border-[var(--line-strong)] transition-colors cursor-pointer"
+          >
+            <SearchIcon className="size-4 text-[var(--ink-muted)]" />
+            <span>{messages.searchLabel}</span>
+          </button>
         </form>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Filter Pills */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-3">
           {[
             { label: messages.allFilter, publishedOnly: false },
             { label: messages.publishedFilter, publishedOnly: true },
@@ -166,23 +200,24 @@ const messages = getMessages(locale, "admin").catalog;
                 })}
                 aria-current={active ? "true" : undefined}
                 className={cn(
-                  FILTER_LINK_CLASSES,
+                  "inline-flex h-8 items-center rounded-full px-3.5 text-xs font-semibold transition-all duration-150",
                   active
-                    ? "border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-[var(--accent-strong)]"
-                    : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]",
+                    ? "bg-[var(--accent)] text-white shadow-xs"
+                    : "border border-[var(--line)] bg-[var(--surface-strong)] text-[var(--ink-soft)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]",
                 )}
               >
                 {option.label}
               </Link>
             );
           })}
+
+          <div className="ms-auto text-xs font-semibold text-[var(--ink-muted)] tabular-nums">
+            {formatMessage(messages.countLabel, { count: products.length }, locale)}
+          </div>
         </div>
       </div>
 
-      <p className="text-sm text-[var(--ink-muted)] tabular-nums">
-        {formatMessage(messages.countLabel, { count: products.length }, locale)}
-      </p>
-
+      {/* 3. Products List / Grid */}
       {products.length === 0 ? (
         <EmptyState
           icon={<GamepadIcon />}
@@ -194,75 +229,99 @@ const messages = getMessages(locale, "admin").catalog;
           }}
         />
       ) : (
-        <ul className="grid gap-2">
+        <div className="divide-y divide-[var(--line)] rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-[var(--elevation-1)]">
           {products.map((product) => (
-            <li key={product.id}>
-              <div className="flex min-h-11 flex-wrap items-center gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--shell)] p-3 transition-colors duration-[var(--duration)] ease-[var(--ease-spring)] hover:border-[var(--line-strong)] hover:bg-[var(--surface)] sm:p-4">
-                <div className="size-14 shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line)]">
-                  <StoreImage src={product.imageUrl} alt="" sizes="56px" />
-                </div>
+            <div
+              key={product.id}
+              className="group flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 hover:bg-[var(--surface-strong)] transition-colors duration-150"
+            >
+              {/* Product Artwork Thumbnail */}
+              <div className="size-14 shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface-inset)]">
+                <StoreImage src={product.imageUrl} alt="" sizes="56px" />
+              </div>
 
-                <div className="min-w-0 flex-1">
+              {/* Product Info */}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <Link
                     to={`/${locale}/dashboard/catalog/${product.id}`}
-                    className="block min-h-11 rounded-[var(--radius-control)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
+                    className="font-bold text-sm text-[var(--ink)] hover:text-[var(--accent-strong)] transition-colors"
                   >
-                    <span className="block truncate text-sm font-semibold text-[var(--ink)]">{locale === "ar" ? product.nameAr : product.nameEn}</span>
-                    <span className="block truncate text-xs text-[var(--ink-soft)]" dir={locale === "ar" ? "ltr" : "rtl"}>
-                      {locale === "ar" ? product.nameEn : product.nameAr}
-                    </span>
+                    {locale === "ar" ? product.nameAr : product.nameEn}
                   </Link>
-                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--ink-faint)]">
-                    <span dir="ltr" className="font-mono">
-                      {product.slug}
-                    </span>
-                    <span className="text-[var(--ink-muted)] tabular-nums">
-                      {formatMessage(messages.offersCount, { count: product.offerCount }, locale)}
-                    </span>
-                    {product.providerCode ? (
-                      <span>
-                        {messages.providerLabel}: <span dir="ltr">{product.providerCode}</span>
-                      </span>
-                    ) : null}
-                    {product.providerUrl ? (
-                      <a
-                        href={product.providerUrl}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="inline-flex items-center gap-1 text-[var(--accent-strong)] underline-offset-4 transition-colors duration-[var(--duration)] hover:underline"
-                      >
-                        <LinkIcon className="size-3" />
-                        <span dir="ltr">{messages.supplierLinkTitle}</span>
-                      </a>
-                    ) : null}
-                    {product.providerCategoryTitle ? (
-                      <span>
-                        {messages.providerCategoryLabel}: {product.providerCategoryTitle}
-                      </span>
-                    ) : null}
-                  </p>
+                  <span className="text-xs text-[var(--ink-muted)] font-medium" dir="ltr">
+                    ({locale === "ar" ? product.nameEn : product.nameAr})
+                  </span>
                 </div>
-
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <Badge tone={product.isActive ? "success" : "neutral"}>
-                    {product.isActive ? messages.published : messages.unpublished}
-                  </Badge>
-                  {product.activeOfferCount === 0 ? <Badge tone="warning">{messages.noActiveOffers}</Badge> : null}
-                  {product.isFeatured ? <Badge tone="accent">{messages.featured}</Badge> : null}
-                  {product.showInCarousel ? <Badge tone="sale">{messages.inCarousel}</Badge> : null}
-                  <Link
-                    to={`/${locale}/dashboard/catalog/${product.id}`}
-                    className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] px-2 text-xs font-semibold text-[var(--ink-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-                    aria-label={`${messages.editAction}: ${locale === "ar" ? product.nameAr : product.nameEn}`}
-                  >
-                    {messages.editAction}
-                    <ChevronIcon direction="end" className="size-4 rtl:rotate-180" />
-                  </Link>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--ink-soft)]">
+                  <span dir="ltr" className="font-mono text-[var(--ink-muted)] bg-[var(--surface-inset)] px-1.5 py-0.5 rounded border border-[var(--line)] text-[11px]">
+                    {product.slug}
+                  </span>
+                  <span className="font-semibold text-[var(--ink)] tabular-nums">
+                    {formatMessage(messages.offersCount, { count: product.offerCount }, locale)}
+                  </span>
+                  {product.providerCode ? (
+                    <span className="text-[var(--ink-muted)]">
+                      {messages.providerLabel}: <span dir="ltr" className="font-semibold text-[var(--ink)]">{product.providerCode}</span>
+                    </span>
+                  ) : null}
+                  {product.providerUrl ? (
+                    <a
+                      href={product.providerUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 text-[var(--accent)] hover:underline"
+                    >
+                      <LinkIcon className="size-3" />
+                      <span dir="ltr">{messages.supplierLinkTitle}</span>
+                    </a>
+                  ) : null}
+                  {product.providerCategoryTitle ? (
+                    <span className="text-[var(--ink-muted)]">
+                      {product.providerCategoryTitle}
+                    </span>
+                  ) : null}
                 </div>
               </div>
-            </li>
+
+              {/* Badges & Edit Arrow */}
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--line)]">
+                <span
+                  className={cn(
+                    "admin-badge",
+                    product.isActive ? "admin-badge-success" : "admin-badge-neutral",
+                  )}
+                >
+                  {product.isActive ? messages.published : messages.unpublished}
+                </span>
+
+                {product.activeOfferCount === 0 ? (
+                  <span className="admin-badge admin-badge-warning">
+                    {messages.noActiveOffers}
+                  </span>
+                ) : null}
+
+                {product.isFeatured ? (
+                  <span className="admin-badge admin-badge-accent">
+                    {messages.featured}
+                  </span>
+                ) : null}
+                <Link
+                  to={`/${locale}/dashboard/catalog/${product.id}`}
+                  className="ms-1 inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 text-xs font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--surface-inset)] transition-colors"
+                  aria-label={`${messages.editAction}: ${locale === "ar" ? product.nameAr : product.nameEn}`}
+                >
+                  <span className="hidden md:inline">{messages.editAction}</span>
+                  <ChevronIcon
+                    direction={locale === "ar" ? "start" : "end"}
+                    className="size-4"
+                  />
+                </Link>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

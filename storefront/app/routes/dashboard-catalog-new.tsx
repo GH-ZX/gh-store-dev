@@ -1,23 +1,16 @@
 import { Link } from "react-router";
 import { AdminCard } from "@/components/admin/admin-form";
 import { ProductCreateForm } from "@/components/admin/product-create-form";
-import { ChevronIcon } from "@/components/ui/icons";
-import { SectionHeader } from "@/components/ui/section";
+import { ChevronIcon, GamepadIcon } from "@/components/ui/icons";
 import { getMessages } from "@/i18n/messages";
-
-
-/**
- * A product that no supplier carries.
- *
- * Its own page rather than a panel on the list: creating is not something an
- * operator does while scanning a catalog, and a form permanently occupying the
- * top of the list would be in the way of the thing they came for.
- */
-
 import { useLoaderData, type LoaderFunctionArgs } from "react-router";
 import { isLocale } from "@/i18n/config";
-function requireLocale(value: string | undefined) { if (!value || !isLocale(value)) throw new Response("Not Found", { status: 404 }); return value; }
 import { requireDashboardAdmin } from "@server/dashboard-access";
+
+function requireLocale(value: string | undefined) {
+  if (!value || !isLocale(value)) throw new Response("Not Found", { status: 404 });
+  return value;
+}
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
   const locale = requireLocale(params.locale);
@@ -27,29 +20,44 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 }
 
 export default function Page() {
- const { locale } = useLoaderData<typeof loader>();
-const messages = getMessages(locale, "admin").catalog;
+  const { locale } = useLoaderData<typeof loader>();
+  const messages = getMessages(locale, "admin").catalog;
+
   return (
-    <div className="grid gap-8">
+    <div className="space-y-6">
+      {/* Back Link */}
       <div>
         <Link
           to={`/${locale}/dashboard/catalog`}
-          className="inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
         >
-          <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
-          {messages.backToCatalog}
+          <ChevronIcon
+            direction={locale === "ar" ? "end" : "start"}
+            className="size-4"
+          />
+          <span>{messages.backToCatalog}</span>
         </Link>
-
-        <SectionHeader
-          as="h1"
-          eyebrow={messages.eyebrow}
-          title={messages.create.title}
-          subtitle={messages.create.description}
-          className="mt-5"
-        />
       </div>
 
-      <AdminCard title={messages.create.formTitle} description={messages.create.formDescription}>
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+          <GamepadIcon className="size-4 text-[var(--accent)]" />
+          <span>{messages.eyebrow}</span>
+        </div>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">
+          {messages.create.title}
+        </h1>
+        <p className="mt-1 text-sm text-[var(--ink-muted)]">
+          {messages.create.description}
+        </p>
+      </div>
+
+      {/* Form Container */}
+      <AdminCard
+        title={messages.create.formTitle}
+        description={messages.create.formDescription}
+      >
         <ProductCreateForm locale={locale} messages={messages.create} errors={messages.errors} />
       </AdminCard>
     </div>

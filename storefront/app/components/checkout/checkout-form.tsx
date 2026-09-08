@@ -13,6 +13,7 @@ import type { Locale } from "@/i18n/config";
 import type { CheckoutMessages } from "@/i18n/messages";
 import { formatPrice } from "@/lib/format/money";
 import type { InputField as StoreInputField } from "@/lib/catalog-queries";
+import { toast } from "@/components/ui/toaster";
 
 /**
  * The account details a supplier needs, plus the confirm control.
@@ -122,6 +123,12 @@ export function CheckoutForm({
   const error = state.error
     ? (messages.errors[state.error as ErrorKey] ?? messages.errors.unknown)
     : null;
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   function fillFields(fields: Record<string, string>): void {
     const form = formRef.current;

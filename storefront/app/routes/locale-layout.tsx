@@ -16,11 +16,7 @@ import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { buildBrandName } from "@/lib/brand";
 import { APP_NAME } from "@/lib/app-config";
 import { redirectToDefaultLocale } from "@/lib/routing/default-locale";
-import {
-  SiteFooter,
-  SiteHeader,
-  type ChromeData,
-} from "@/components/site-chrome";
+import type { ChromeData } from "@/components/site-chrome";
 import {
   StorefrontHeader,
   StorefrontFooter,
@@ -103,20 +99,25 @@ export default function LocaleLayout() {
   const isDashboard = matches.some(
     (match) => match.id === "routes/dashboard-layout",
   );
-  const Header = isDashboard ? SiteHeader : StorefrontHeader;
+  if (isDashboard) {
+    return (
+      <div lang={locale} dir={getLocaleDirection(locale)} className="min-h-screen">
+        <Outlet />
+      </div>
+    );
+  }
+  const Header = StorefrontHeader;
   const common = getMessages(locale, "common");
   const notificationsLabel = getMessages(locale, "account").notifications
     .badgeLabel as string;
 
   return (
     <div
-      data-storefront-shell={isDashboard ? undefined : ""}
+      data-storefront-shell=""
       data-storefront-checkout={
-        !isDashboard && pathname.startsWith(`/${locale}/checkout/`)
-          ? ""
-          : undefined
+        pathname.startsWith(`/${locale}/checkout/`) ? "" : undefined
       }
-      style={isDashboard ? undefined : getStorefrontThemeStyle(chrome.theme)}
+      style={getStorefrontThemeStyle(chrome.theme)}
       lang={locale}
       dir={getLocaleDirection(locale)}
       className="flex min-h-screen flex-col"
@@ -127,16 +128,6 @@ export default function LocaleLayout() {
       >
         {common.navigation.skipToContent}
       </a>
-      {isDashboard &&
-      chrome.theme?.backdrop !== "none" &&
-      chrome.theme?.backdropIntensity !== "off" ? (
-        <div
-          className="gh-backdrop"
-          data-backdrop={chrome.theme?.backdrop}
-          data-intensity={chrome.theme?.backdropIntensity}
-          aria-hidden="true"
-        />
-      ) : null}
       <Header
         locale={locale}
         messages={common}
@@ -166,17 +157,7 @@ export default function LocaleLayout() {
           <Outlet />
         )}
       </main>
-      {isDashboard ? (
-        <SiteFooter
-          locale={locale}
-          messages={common}
-          socialLinks={chrome.socialLinks}
-          year={chrome.year}
-          brandName={chrome.brandName}
-        />
-      ) : (
-        <StorefrontFooter locale={locale} messages={common} data={chrome} />
-      )}
+      <StorefrontFooter locale={locale} messages={common} data={chrome} />
       <SupportFab
         locale={locale}
         label={common.links.support}

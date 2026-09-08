@@ -12,11 +12,11 @@ export default defineConfig({
   test: {
     environment: "node",
     exclude: [...configDefaults.exclude, "tests/storefront/**"],
-    include: ["tests/**/*.test.ts", "src/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "legacy-next-snapshot/**/*.test.ts"],
   },
   resolve: {
     alias: {
-      "@": `${root}src`,
+      "@": `${root}legacy-next-snapshot`,
       /*
        * Services carry `import "server-only"`, whose real entry throws outside a
        * react-server runtime — exactly backwards for a unit test. The stub keeps

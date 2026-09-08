@@ -2,8 +2,16 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 import { initRuntimeEnv } from "../app/.server/runtime-env";
 import { cloudflareContext } from "../app/lib/cloudflare-context";
 import { withRequestContext } from "../app/.server/request-context";
-import { canonicalHostRedirect, isCacheableHtml, isCrossOriginMutation, isPublicHtmlRequest, legacyProductRedirect } from "./request-policy";
-import { applySecurityHeaders } from "./response-headers";
+import {
+  canonicalHostRedirect,
+  isCacheableHtml,
+  isCrossOriginMutation,
+  isPublicHtmlRequest,
+  legacyProductRedirect,
+  resolveCachePolicy,
+} from "./request-policy";
+import { applyEarlyHintHeaders, applySecurityHeaders } from "./response-headers";
+import { buildRateLimitResponse, checkRateLimit } from "./rate-limiter";
 
 const requestHandler = createRequestHandler(
   () => import("virtual:react-router/server-build"),
@@ -24,12 +32,11 @@ async function handleRequest(
   const response = await withRequestContext(request, contextValue.env, () => requestHandler(request, loadContext));
   const secured = new Response(response.body, response);
   applySecurityHeaders(secured.headers);
+  if (isPublicHtmlRequest(request)) applyEarlyHintHeaders(secured.headers);
   if (request.headers.has("cookie")) secured.headers.set("Cache-Control", "private, no-store");
   return secured;
 }
 
-/** Anonymous pages are identical for every visitor: cacheable for 30 seconds. */
-const ANONYMOUS_CACHE_TTL = 30;
 
 export default {
   async fetch(request, env, ctx) {
@@ -37,6 +44,12 @@ export default {
     const canonical = canonicalHostRedirect(request, env.APP_URL);
     if (canonical) {
       const response = new Response(null, { status: 301, headers: { Location: canonical.toString() } });
+      applySecurityHeaders(response.headers);
+      return response;
+    }
+    const rateLimit = checkRateLimit(request);
+    if (!rateLimit.allowed) {
+      const response = buildRateLimitResponse(request, rateLimit);
       applySecurityHeaders(response.headers);
       return response;
     }
@@ -75,10 +88,12 @@ export default {
           // Clone first: the visitor's body must stay untouched. Sharing the
           // stream serves empty pages and throws 1101 in production.
           const stored = response.clone();
+          const policy = resolveCachePolicy(request);
           stored.headers.set(
             "Cache-Control",
-            `public, max-age=${ANONYMOUS_CACHE_TTL}, s-maxage=${ANONYMOUS_CACHE_TTL}`,
+            `public, max-age=${policy.ttlSeconds}, s-maxage=${policy.ttlSeconds}, stale-while-revalidate=86400`,
           );
+          stored.headers.set("Cache-Tag", policy.tags.join(", "));
           stored.headers.set("X-Edge-Cache", "MISS");
           ctx.waitUntil(
             cache.put(request, stored).catch((error: unknown) => {

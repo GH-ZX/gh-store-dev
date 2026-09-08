@@ -140,8 +140,8 @@ function ProductOfferSelection({ locale, product, offers }: { locale: Locale; pr
         {visibleOffers.length === 0 ? <p role="status" className="sf-catalog-muted">{locale === "ar" ? "لا توجد عروض تطابق البحث. جرّب اسماً أو منطقة أخرى." : "No matching offers. Try another name or region."}</p> : null}
       </> : <EmptyState className="mt-5" title={catalog.gameDetail.emptyTitle} description={catalog.gameDetail.emptyDescription} action={{ href: `/${locale}/${product.categorySlug}`, label: product.categoryName ?? common.navigation.allProducts }} />}
     </section>
-    <PurchaseSummary locale={locale} product={product} offer={selected} />
-    <div className="sf-product-details">
+    {offers.length > 0 ? <PurchaseSummary locale={locale} product={product} offer={selected} /> : null}
+    <div className="sf-product-details" style={offers.length === 0 ? { gridColumn: "1 / -1" } : undefined}>
       {product.description ? <section><h2>{locale === "ar" ? "تفاصيل المنتج" : "Product details"}</h2><DescriptionText text={product.description} /></section> : null}
       <section><h2>{catalog.gameDetail.howItWorksHeading}</h2><ol className="sf-product-steps">{catalog.gameDetail.howItWorksSteps.map((step, index) => <li key={step}><span className="sf-product-step-number" aria-hidden="true">{index + 1}</span>{step}</li>)}</ol></section>
     </div>

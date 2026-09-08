@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { toPng } from "html-to-image";
 
 export type InvoiceDownloadActionsProps = {
   orderNumber: string;
@@ -17,11 +16,13 @@ function safeName(value: string): string {
   return value.replace(/[^\w.-]+/g, "_").slice(0, 80);
 }
 
-function captureInvoice(): Promise<string> {
+async function captureInvoice(): Promise<string> {
   const node = document.getElementById(INVOICE_NODE_ID);
   if (!node) {
     throw new Error("Invoice document not found");
   }
+  // Client-only DOM canvas export: avoid bloating Cloudflare Worker server bundle.
+  const { toPng } = await import("html-to-image");
   return toPng(node, { cacheBust: true, pixelRatio: 2, backgroundColor: "#ffffff" });
 }
 
@@ -59,6 +60,7 @@ export function InvoiceDownloadActions({ orderNumber, messages }: InvoiceDownloa
         triggerDownload(dataUrl, `${filename}.png`);
         return;
       }
+      // Client-only PDF generator: avoid bloating Cloudflare Worker server bundle.
       const { jsPDF } = await import("jspdf");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   data,
   Form,
@@ -6,6 +7,7 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "react-router";
+import { toast } from "@/components/ui/toaster";
 import { getMessages } from "@/i18n/messages";
 import { accountContext } from "@server/account";
 import { sessionCookieHeaders } from "@server/session";
@@ -56,7 +58,17 @@ export default function Notifications() {
   const { locale, notifications } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
   const account = getMessages(locale, "account"),
-    messages = account.notifications;
+  messages = account.notifications;
+
+  useEffect(() => {
+    if (!result) return;
+    if (!result.error) {
+      toast.success(locale === "ar" ? "تم تحديث الإشعارات بنجاح" : "Notifications updated successfully");
+    } else {
+      toast.error(locale === "ar" ? "تعذر تحديث الإشعارات" : "Could not update notifications");
+    }
+  }, [result, locale]);
+
   return (
     <section className="sf-account-page">
       <AccountHeading

@@ -1,7 +1,11 @@
 import { getMessages } from "@/i18n/messages";
-import { Badge as ThemeBadge, type BadgeTone } from "@/components/ui/badge";
 import { OrderStatusBadge, FulfillmentBadge } from "./order-badges";
 import { formatPrice } from "@/lib/format/money";
+import {
+  ArrowIcon,
+  ChevronIcon,
+  SearchIcon,
+} from "@/components/ui/icons";
 import {
   Form,
   Link,
@@ -10,16 +14,25 @@ import {
   useParams,
   useLocation,
 } from "react-router";
+import type { loadDashboardOperations } from "@server/dashboard-operations";
 import type { ReactNode } from "react";
 import type { AdminOrderRow } from "@server/lib/services/admin-orders.service";
 import type { AdminRechargeRequest } from "@server/lib/services/admin-recharge.service";
 
 export const inputClass =
-  "min-h-11 w-full rounded-[var(--radius-control)] border border-line bg-surface px-3 py-2 text-ink focus-visible:outline-2 focus-visible:outline-accent";
+  "min-h-10 w-full rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-faint)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-colors";
+
 export const buttonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-line bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-strong focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50";
-export const panelClass =
-  "grid gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:p-6";
+  "inline-flex min-h-10 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-xs sm:text-sm font-semibold text-[var(--ink)] hover:bg-[var(--surface-strong)] hover:border-[var(--line-strong)] transition-colors disabled:opacity-50 cursor-pointer";
+
+export const primaryButtonClass =
+  "inline-flex min-h-10 items-center justify-center rounded-[var(--radius-control)] bg-[var(--accent)] px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[var(--accent-strong)] transition-colors disabled:opacity-50 cursor-pointer shadow-xs";
+
+export const dangerButtonClass =
+  "inline-flex min-h-10 items-center justify-center rounded-[var(--radius-control)] border border-[var(--danger)]/30 bg-[var(--danger-surface)] px-4 py-2 text-xs sm:text-sm font-semibold text-[var(--danger)] hover:bg-[var(--danger)]/20 transition-colors disabled:opacity-50 cursor-pointer";
+
+export const panelClass = "admin-card space-y-4";
+
 export function Field({
   label,
   children,
@@ -28,26 +41,37 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="grid gap-1 text-sm font-medium">
-      {label}
+    <label className="grid gap-1.5 text-xs font-semibold text-[var(--ink-soft)]">
+      <span>{label}</span>
       {children}
     </label>
   );
 }
+
 export function Hidden({ name, value }: { name: string; value: string }) {
   return <input type="hidden" name={name} value={value} />;
 }
+
 export function Submit({
   children,
   intent,
+  variant = "secondary",
 }: {
   children: ReactNode;
   intent?: string;
+  variant?: "primary" | "secondary" | "danger";
 }) {
   const nav = useNavigation();
+  const cls =
+    variant === "primary"
+      ? primaryButtonClass
+      : variant === "danger"
+        ? dangerButtonClass
+        : buttonClass;
+
   return (
     <button
-      className={buttonClass}
+      className={cls}
       name="intent"
       value={intent}
       type="submit"
@@ -57,6 +81,7 @@ export function Submit({
     </button>
   );
 }
+
 export function JsonDetails({
   value,
   label = "Details",
@@ -65,19 +90,20 @@ export function JsonDetails({
   label?: string;
 }) {
   return (
-    <details>
-      <summary className="cursor-pointer py-2 text-sm font-semibold">
+    <details className="rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface-inset)] p-3 text-xs">
+      <summary className="cursor-pointer font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] select-none">
         {label}
       </summary>
       <pre
         dir="ltr"
-        className="max-h-80 overflow-auto rounded-xl bg-surface-strong p-3 text-xs whitespace-pre-wrap break-all"
+        className="mt-2 max-h-80 overflow-auto rounded-lg bg-[var(--surface-strong)] p-3 text-[11px] font-mono text-[var(--ink)] whitespace-pre-wrap break-all border border-[var(--line)]"
       >
         {JSON.stringify(value, null, 2)}
       </pre>
     </details>
   );
 }
+
 export function statusLabel(value: string, locale: "ar" | "en", section = "") {
   const admin = getMessages(locale, "admin");
   const checkout = getMessages(locale, "checkout");
@@ -98,29 +124,33 @@ export function statusLabel(value: string, locale: "ar" | "en", section = "") {
   };
   return map[value] ?? value.replaceAll("_", " ");
 }
+
 export function Badge({ children }: { children: ReactNode }) {
   const { locale } = useParams();
   const { pathname } = useLocation();
   const section = pathname.split("/dashboard/")[1]?.split("/")[0] ?? "";
   const value = typeof children === "string" ? children : null;
-  const tone: BadgeTone =
-    value &&
-    ["completed", "approved", "paid", "settled", "resolved"].includes(value)
-      ? "success"
-      : value && ["failed", "rejected", "error"].includes(value)
-        ? "danger"
-        : value &&
-            ["pending", "fulfilling", "attention", "refunded"].includes(value)
-          ? "warning"
-          : "neutral";
+
+  let badgeCls = "admin-badge admin-badge-neutral";
+  if (value && ["completed", "approved", "paid", "settled", "resolved"].includes(value)) {
+    badgeCls = "admin-badge admin-badge-success";
+  } else if (value && ["failed", "rejected", "error"].includes(value)) {
+    badgeCls = "admin-badge admin-badge-danger";
+  } else if (value && ["pending", "fulfilling", "attention", "refunded"].includes(value)) {
+    badgeCls = "admin-badge admin-badge-warning";
+  } else if (value && ["admin", "processing"].includes(value)) {
+    badgeCls = "admin-badge admin-badge-accent";
+  }
+
   return (
-    <ThemeBadge tone={tone}>
+    <span className={badgeCls}>
       {value
         ? statusLabel(value, locale === "ar" ? "ar" : "en", section)
         : children}
-    </ThemeBadge>
+    </span>
   );
 }
+
 export function Money({
   amount,
   currency = "USD",
@@ -130,18 +160,20 @@ export function Money({
 }) {
   const { locale } = useParams();
   return (
-    <bdi className="font-mono tabular-nums">
+    <bdi className="font-semibold tabular-nums text-[var(--ink)]" dir="ltr">
       {formatPrice(amount, currency, locale === "ar" ? "ar" : "en")}
     </bdi>
   );
 }
+
 export function DateTime({ value }: { value: string | null }) {
   return (
-    <time dateTime={value ?? undefined}>
+    <time dateTime={value ?? undefined} className="text-xs text-[var(--ink-muted)] font-mono">
       <bdi>{value ? value.replace("T", " ").slice(0, 16) : "—"}</bdi>
     </time>
   );
 }
+
 export function Pager({
   page,
   total,
@@ -157,27 +189,38 @@ export function Pager({
     p.set("page", String(next));
     return `?${p}`;
   };
+  const totalPages = Math.max(1, Math.ceil(total / 20));
+
   return (
     <nav
-      className="flex items-center gap-3"
+      className="flex items-center justify-between gap-3 border-t border-[var(--line)] pt-4"
       aria-label={ar ? "الصفحات" : "Pagination"}
     >
-      {page > 1 && (
-        <Link className={buttonClass} to={href(page - 1)}>
-          {ar ? "السابق" : "Previous"}
-        </Link>
-      )}
-      <span>
-        {page} / {Math.max(1, Math.ceil(total / 20))}
+      <div className="flex items-center gap-2">
+        {page > 1 ? (
+          <Link className={buttonClass} to={href(page - 1)}>
+            <ArrowIcon direction={ar ? "end" : "start"} className="size-3.5 me-1" />
+            <span>{ar ? "السابق" : "Previous"}</span>
+          </Link>
+        ) : null}
+      </div>
+
+      <span className="text-xs font-semibold text-[var(--ink-muted)] tabular-nums">
+        {page} / {totalPages}
       </span>
-      {page * 20 < total && (
-        <Link className={buttonClass} to={href(page + 1)}>
-          {ar ? "التالي" : "Next"}
-        </Link>
-      )}
+
+      <div className="flex items-center gap-2">
+        {page * 20 < total ? (
+          <Link className={buttonClass} to={href(page + 1)}>
+            <span>{ar ? "التالي" : "Next"}</span>
+            <ArrowIcon direction={ar ? "start" : "end"} className="size-3.5 ms-1" />
+          </Link>
+        ) : null}
+      </div>
     </nav>
   );
 }
+
 export function Filters({
   q,
   status,
@@ -193,32 +236,55 @@ export function Filters({
 }) {
   const { pathname } = useLocation();
   const section = pathname.split("/dashboard/")[1]?.split("/")[0] ?? "";
+
   return (
-    <Form className="flex flex-wrap items-end gap-3" method="get">
-      {search && (
-        <Field label={ar ? "البحث" : "Search"}>
-          <input className={inputClass} name="q" defaultValue={q} />
-        </Field>
-      )}
-      {options.length > 0 && (
-        <Field label={ar ? "الحالة" : "Status"}>
-          <select name="status" defaultValue={status} className={inputClass}>
-            {options.map((value) => (
-              <option key={value} value={value}>
-                {value === "all"
-                  ? ar
-                    ? "الكل"
-                    : "All"
-                  : statusLabel(value, ar ? "ar" : "en", section)}
-              </option>
-            ))}
-          </select>
-        </Field>
-      )}
-      <Submit>{ar ? "تصفية" : "Filter"}</Submit>
-    </Form>
+    <div className="admin-card">
+      <Form className="flex flex-wrap items-end gap-3" method="get">
+        {search && (
+          <div className="min-w-0 flex-1 basis-64">
+            <Field label={ar ? "البحث" : "Search"}>
+              <div className="relative flex items-center">
+                <input
+                  className={inputClass}
+                  name="q"
+                  defaultValue={q}
+                  placeholder={ar ? "بحث..." : "Search..."}
+                />
+              </div>
+            </Field>
+          </div>
+        )}
+
+        {options.length > 0 && (
+          <div className="min-w-44 flex-1 sm:flex-none">
+            <Field label={ar ? "الحالة" : "Status"}>
+              <select name="status" defaultValue={status} className={inputClass}>
+                {options.map((value) => (
+                  <option key={value} value={value}>
+                    {value === "all"
+                      ? ar
+                        ? "الكل"
+                        : "All"
+                      : statusLabel(value, ar ? "ar" : "en", section)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface-strong)] px-4 text-xs sm:text-sm font-semibold text-[var(--ink)] hover:bg-[var(--surface)] hover:border-[var(--line-strong)] transition-colors cursor-pointer"
+        >
+          <SearchIcon className="size-4 text-[var(--ink-muted)]" />
+          <span>{ar ? "تصفية" : "Filter"}</span>
+        </button>
+      </Form>
+    </div>
   );
 }
+
 export function Orders({
   rows,
   locale,
@@ -227,24 +293,33 @@ export function Orders({
   locale: string;
 }) {
   const checkout = getMessages(locale === "ar" ? "ar" : "en", "checkout");
+
   return (
-    <div className="grid gap-3">
+    <div className="space-y-3">
       {rows.length > 0 && (
-        <p className="text-sm text-ink-muted">
+        <p className="text-xs font-semibold text-[var(--ink-muted)] tabular-nums">
           {rows.length} {locale === "ar" ? "طلب" : "orders"}
         </p>
       )}
-      <ul className="grid gap-2">
-        {rows.map((order) => (
-          <li key={order.id}>
+
+      {!rows.length ? (
+        <div className="admin-card py-10 text-center text-sm text-[var(--ink-muted)]">
+          {locale === "ar"
+            ? "لا توجد طلبات مطابقة."
+            : "No matching orders found."}
+        </div>
+      ) : (
+        <div className="divide-y divide-[var(--line)] rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-[var(--elevation-1)]">
+          {rows.map((order) => (
             <Link
+              key={order.id}
               to={`/${locale}/dashboard/orders/${order.id}`}
-              className="group flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3 transition-colors hover:border-accent"
+              className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 hover:bg-[var(--surface-strong)] transition-colors duration-150"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-sm font-semibold">
-                    <bdi>{order.orderNumber}</bdi>
+                  <span className="font-mono text-xs sm:text-sm font-bold text-[var(--ink)] group-hover:text-[var(--accent-strong)] transition-colors" dir="ltr">
+                    #{order.orderNumber}
                   </span>
                   <OrderStatusBadge messages={checkout} status={order.status} />
                   {order.fulfillmentState &&
@@ -255,37 +330,40 @@ export function Orders({
                       />
                     )}
                 </div>
-                <p className="mt-1 truncate text-xs text-ink-muted">
+
+                <p className="mt-1.5 truncate text-xs font-medium text-[var(--ink-soft)]">
                   <bdi>
                     {order.customer.name ||
                       order.customer.email ||
                       order.customer.id}
                   </bdi>
                 </p>
-                <p className="mt-0.5 truncate text-xs text-ink-faint">
+
+                <p className="mt-0.5 truncate text-xs text-[var(--ink-muted)]">
                   {order.itemNames.join(" · ")}
                 </p>
               </div>
-              <div className="text-end text-sm">
-                <Money amount={order.total} currency={order.currency} />
-                <p className="mt-0.5 text-xs text-ink-faint">
+
+              <div className="flex sm:flex-col sm:items-end sm:justify-center justify-between shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--line)]">
+                <div className="text-sm font-bold text-[var(--ink)]">
+                  <Money amount={order.total} currency={order.currency} />
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
                   <DateTime value={order.createdAt} />
-                </p>
+                  <ChevronIcon
+                    direction={locale === "ar" ? "start" : "end"}
+                    className="size-3.5 text-[var(--ink-muted)] group-hover:text-[var(--ink)] transition-colors"
+                  />
+                </div>
               </div>
             </Link>
-          </li>
-        ))}
-      </ul>
-      {!rows.length && (
-        <p className="p-4 text-ink-muted">
-          {locale === "ar"
-            ? "لا توجد طلبات مطابقة."
-            : "No matching orders found."}
-        </p>
+          ))}
+        </div>
       )}
     </div>
   );
 }
+
 export function RechargeRows({
   rows,
   locale,
@@ -296,36 +374,60 @@ export function RechargeRows({
   review?: boolean;
 }) {
   const ar = locale === "ar";
+
+  if (!rows.length) {
+    return (
+      <div className="admin-card py-8 text-center text-sm text-[var(--ink-muted)]">
+        {ar ? "لا توجد طلبات تعبئة." : "No recharge requests."}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-3">
       {rows.map((row) => (
-        <article className={panelClass} key={row.id}>
-          <div className="flex flex-wrap items-center gap-3">
-            <strong>
-              <bdi>{row.reference}</bdi>
-            </strong>
-            <Money amount={row.requestedAmount} currency={row.currency} />
-            <Badge>{row.status}</Badge>
-            <Badge>{row.paymentMethod}</Badge>
+        <article className="admin-card space-y-3" key={row.id}>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <strong className="font-mono text-sm text-[var(--ink)]" dir="ltr">
+                #{row.reference}
+              </strong>
+              <Money amount={row.requestedAmount} currency={row.currency} />
+              <Badge>{row.status}</Badge>
+              <span className="admin-badge admin-badge-neutral">
+                {row.paymentMethod}
+              </span>
+            </div>
+
+            <DateTime value={row.createdAt} />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
             <Link
-              className="underline"
+              className="text-[var(--accent)] hover:underline font-medium"
               to={`/${locale}/dashboard/customers/${row.customer.id}`}
             >
               <bdi>{row.customer.name || row.customer.email}</bdi>
             </Link>
-            <DateTime value={row.createdAt} />
+
+            {row.creditedAmount !== null && (
+              <p className="text-[var(--ink-soft)]">
+                {ar ? "الرصيد المضاف: " : "Credited: "}
+                <strong className="text-[var(--success)]">
+                  <Money amount={row.creditedAmount} />
+                </strong>
+              </p>
+            )}
           </div>
-          {row.creditedAmount !== null && (
-            <p>
-              {ar ? "الرصيد المضاف: " : "Credited: "}
-              <Money amount={row.creditedAmount} />
+
+          {row.adminNote && (
+            <p className="rounded-lg bg-[var(--surface-inset)] p-2.5 text-xs text-[var(--ink-soft)] whitespace-pre-wrap border border-[var(--line)]">
+              {row.adminNote}
             </p>
           )}
-          {row.adminNote && (
-            <p className="whitespace-pre-wrap">{row.adminNote}</p>
-          )}
+
           {review && (
-            <Form method="post" className="grid gap-3 sm:grid-cols-2">
+            <Form method="post" className="grid gap-3 sm:grid-cols-2 pt-2 border-t border-[var(--line)]">
               <Hidden name="requestId" value={row.id} />
               <Field
                 label={
@@ -338,32 +440,33 @@ export function RechargeRows({
                   type="number"
                   min="0.01"
                   step="0.01"
+                  placeholder={String(row.requestedAmount)}
                 />
               </Field>
               <Field label={ar ? "ملاحظة" : "Note"}>
-                <input className={inputClass} name="note" maxLength={2000} />
+                <input
+                  className={inputClass}
+                  name="note"
+                  maxLength={2000}
+                  placeholder={ar ? "سبب الموافقة أو الرفض..." : "Reason..."}
+                />
               </Field>
-              <Submit intent="approve">
-                {ar ? "تأكيد وإضافة الرصيد" : "Approve and credit"}
-              </Submit>
-              <Submit intent="reject">
-                {ar ? "رفض (تتطلب ملاحظة)" : "Reject (note required)"}
-              </Submit>
+              <div className="sm:col-span-2 flex flex-wrap gap-2.5 pt-1">
+                <Submit intent="approve" variant="primary">
+                  {ar ? "تأكيد وإضافة الرصيد" : "Approve and credit"}
+                </Submit>
+                <Submit intent="reject" variant="danger">
+                  {ar ? "رفض (تتطلب ملاحظة)" : "Reject (note required)"}
+                </Submit>
+              </div>
             </Form>
           )}
         </article>
       ))}
-      {!rows.length && (
-        <p className="text-ink-muted">
-          {ar ? "لا توجد طلبات تعبئة." : "No recharge requests."}
-        </p>
-      )}
     </div>
   );
 }
 
 export type OperationsView = Awaited<
-  ReturnType<
-    typeof import("@server/dashboard-operations").loadDashboardOperations
-  >
+  ReturnType<typeof loadDashboardOperations>
 >["data"];

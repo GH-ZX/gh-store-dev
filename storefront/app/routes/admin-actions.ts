@@ -83,7 +83,18 @@ export async function action({ request }: ActionFunctionArgs) {
   } catch { return new Response("Invalid arguments", { status: 400 }); }
   try {
     const fn = actions[name as keyof typeof actions] as (...args: unknown[]) => Promise<unknown>;
-    return Response.json({ result: await fn(...args) });
+    const result = await fn(...args);
+    if (typeof caches !== "undefined") {
+      try {
+        const cacheStore = caches as unknown as { default: Cache };
+        const cache = cacheStore.default;
+        const origin = new URL(request.url).origin;
+        for (const p of ["/ar", "/en", "/ar/products", "/en/products", "/ar/games", "/en/games"]) {
+          cache.delete(new Request(`${origin}${p}`)).catch(() => false);
+        }
+      } catch {}
+    }
+    return Response.json({ result });
   } catch (error) {
     if (error instanceof Response && error.status >= 300 && error.status < 400) {
       return Response.json({ redirect: error.headers.get("Location") });

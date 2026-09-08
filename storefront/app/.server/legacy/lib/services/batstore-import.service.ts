@@ -219,6 +219,8 @@ async function importOneProduct(
         slug: uniqueSlug(toBatStoreGameSlug(product), slugs),
         name_ar: product.name,
         name_en: product.name,
+        description_ar: product.description?.trim() || null,
+        description_en: product.description?.trim() || null,
         category_id: selection.categoryId,
         ...(product.imageUrl ? { image_url: product.imageUrl } : {}),
         product_kind: "digital",
@@ -238,7 +240,16 @@ async function importOneProduct(
     // picked; names and artwork stay as the editor left them.
     const { error } = await supabase
       .from("products")
-      .update({ category_id: selection.categoryId, updated_at: nowIso() })
+      .update({
+        category_id: selection.categoryId,
+        ...(product.description?.trim()
+          ? {
+              description_ar: product.description.trim(),
+              description_en: product.description.trim(),
+            }
+          : {}),
+        updated_at: nowIso(),
+      })
       .eq("id", gameId);
 
     if (error) {
@@ -258,7 +269,12 @@ async function importOneProduct(
     supplierCostUsd: product.priceUsd,
     markupPercent: options.markupPercent,
   });
-  const available = (product.stock ?? 0) > 0;
+  // For direct stock products, availability requires stock > 0.
+  // For on-demand/account/subscription products (e.g. Gemini 18m, Office 365),
+  // BatStore fulfills on demand, so availability does not require warehouse stock > 0.
+  const available = isDirect
+    ? (product.stock ?? 0) > 0
+    : product.stock === null || product.stock === undefined || product.stock >= 0;
 
   const { data: existingOffers } = await supabase
     .from("offers")
@@ -296,9 +312,14 @@ async function importOneProduct(
       .from("offers")
       .update({
         ...(refreshPrice ? { price } : {}),
-        // No stock means nothing to deliver, so the offer leaves the storefront
-        // until the provider restocks — the same rule the voucher import uses.
-        ...(available ? {} : { is_active: false }),
+        // Warehouse stock out disables offer; on-demand/accounts stay available.
+        ...(available ? { is_active: current?.is_active ?? true } : { is_active: false }),
+        ...(product.description?.trim()
+          ? {
+              description_ar: product.description.trim(),
+              description_en: product.description.trim(),
+            }
+          : {}),
         delivery_kind: isDirect ? "direct" : "account",
         updated_at: nowIso(),
       })
@@ -322,6 +343,8 @@ async function importOneProduct(
       slug,
       name_ar: product.name,
       name_en: product.name,
+      description_ar: product.description?.trim() || null,
+      description_en: product.description?.trim() || null,
       price,
       offer_type: toOfferType(product),
       is_active: options.publish && available,

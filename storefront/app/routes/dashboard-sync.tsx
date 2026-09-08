@@ -1,5 +1,5 @@
 import { SyncPageClient, type SyncProviderLane } from "@/components/admin/sync-page-client";
-import { SectionHeader } from "@/components/ui/section";
+import { SyncIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { requireDashboardAdmin } from "@server/dashboard-access";
@@ -156,13 +156,19 @@ export default function Page() {
  const { locale, providers } = useLoaderData<typeof loader>();
 const messages = getMessages(locale, "admin");
   return (
-    <div className="grid gap-8">
-      <SectionHeader
-        as="h1"
-        eyebrow={messages.sync.eyebrow}
-        title={messages.sync.title}
-        subtitle={messages.sync.description}
-      />
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+          <SyncIcon className="size-4 text-[var(--accent)]" />
+          <span>{messages.sync.eyebrow}</span>
+        </div>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">
+          {messages.sync.title}
+        </h1>
+        <p className="mt-1 text-sm text-[var(--ink-muted)]">
+          {messages.sync.description}
+        </p>
+      </div>
 
       <SyncPageClient
         locale={locale}

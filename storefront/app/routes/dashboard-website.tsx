@@ -9,7 +9,7 @@ import { CarouselForm } from "@/components/admin/carousel-form";
 import { PageSeoEditor } from "@/components/admin/page-seo-editor";
 import { SeoForm } from "@/components/admin/seo-form";
 import { SocialLinksEditor } from "@/components/admin/social-links-editor";
-import { SectionHeader } from "@/components/ui/section";
+import { GlobeIcon } from "@/components/ui/icons";
 import { getMessages } from "@/i18n/messages";
 import { getHomePickCandidates, getWebsiteSettings } from "@server/lib/services/admin-website.service";
 
@@ -29,13 +29,19 @@ export default function WebsiteSettingsPage() {
   const { locale, settings, candidates } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "admin").website;
   return (
-    <div className="grid gap-8">
-      <SectionHeader
-        as="h1"
-        eyebrow={messages.eyebrow}
-        title={messages.title}
-        subtitle={messages.description}
-      />
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+          <GlobeIcon className="size-4 text-[var(--accent)]" />
+          <span>{messages.eyebrow}</span>
+        </div>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">
+          {messages.title}
+        </h1>
+        <p className="mt-1 text-sm text-[var(--ink-muted)]">
+          {messages.description}
+        </p>
+      </div>
 
       <AdminCard title={messages.branding.title} description={messages.branding.description}>
         <BrandingForm

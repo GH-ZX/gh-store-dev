@@ -21,6 +21,8 @@ import { getMessages } from "@/i18n/messages";
 import { Button, ButtonLink } from "@/components/ui/button";
 import "./app.css";
 import "./styles/storefront-shell.css";
+import "./styles/admin-shell.css";
+import { AppToaster } from "@/components/ui/toaster";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const segment = new URL(request.url).pathname.split("/")[1] ?? "";
@@ -89,6 +91,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <AppToaster locale={locale} />
         <ScrollRestoration />
         <Scripts />
       </body>

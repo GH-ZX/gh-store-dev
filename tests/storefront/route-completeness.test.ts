@@ -6,7 +6,7 @@ import routes from "../../storefront/app/routes";
 
 type RegisteredRoute = { path?: string; file: string; index?: boolean; children?: RegisteredRoute[] };
 const root = fileURLToPath(new URL("../../", import.meta.url));
-const legacyApp = join(root, "src/app");
+const legacyApp = join(root, "legacy-next-snapshot/app");
 const storefrontApp = join(root, "storefront/app");
 
 function filesBelow(directory: string): string[] {

@@ -2,7 +2,7 @@
 
 The active storefront and administration application runs React Router framework
 mode with server rendering on Cloudflare Workers. The previous Next.js source
-in `../src/` is retained as a behavior reference.
+in `../legacy-next-snapshot/` is retained as an inactive reference archive.
 
 From the repository root:
 

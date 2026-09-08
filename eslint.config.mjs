@@ -44,6 +44,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Deno, with its own imports and globals. Checked by the Supabase CLI.
     "supabase/functions/**",
+    "legacy-next-snapshot/**",
   ]),
 ]);
 
