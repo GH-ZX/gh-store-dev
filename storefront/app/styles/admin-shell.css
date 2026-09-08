@@ -28,12 +28,11 @@
   --ink-faint: #5a6476;
 
   /* Brand Accent */
-  --accent: #5354ee;
-  --accent-strong: #6869f5;
-  --accent-soft: rgba(83, 84, 238, 0.14);
-  --accent-line: rgba(83, 84, 238, 0.35);
-  --accent-ink: #ffffff;
-
+  --accent: var(--sf-dark-accent, #7576ff);
+  --accent-strong: color-mix(in srgb, var(--accent) 72%, white);
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 35%, transparent);
+  --accent-ink: var(--sf-dark-button-ink, #ffffff);
   /* Status Colors */
   --success: #74d69a;
   --success-surface: rgba(116, 214, 154, 0.12);
@@ -70,10 +69,10 @@
 
   /* Surfaces */
   --canvas: #f5f6f8;
-  --canvas-raised: #ebedf2;
+  --canvas-raised: #ffffff;
   --surface: #ffffff;
   --surface-strong: #f0f2f6;
-  --surface-inset: #f8f9fb;
+  --surface-inset: #f0f2f6;
   --surface-muted: #f0f2f6;
 
   /* Lines & Borders */
@@ -87,12 +86,11 @@
   --ink-faint: #9ca3af;
 
   /* Brand Accent */
-  --accent: #5354ee;
-  --accent-strong: #4344d6;
-  --accent-soft: rgba(83, 84, 238, 0.09);
-  --accent-line: rgba(83, 84, 238, 0.28);
-  --accent-ink: #ffffff;
-
+  --accent: var(--sf-light-accent, #5354ee);
+  --accent-strong: color-mix(in srgb, var(--accent) 80%, black);
+  --accent-soft: color-mix(in srgb, var(--accent) 9%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 28%, transparent);
+  --accent-ink: var(--sf-light-button-ink, #ffffff);
   /* Status Colors */
   --success: #177641;
   --success-surface: rgba(23, 118, 65, 0.08);

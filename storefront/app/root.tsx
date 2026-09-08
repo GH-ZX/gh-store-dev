@@ -30,12 +30,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const { env } = getCloudflareContext(context);
   const settings = await getPublicStoreSettings(createPublicClient(env));
   const { theme } = settings;
+  const cookie = request.headers.get("cookie") ?? "";
+  const cookieTheme = cookie.match(/(?:^|;\s*)gh-theme=(light|dark)(?:;|$)/)?.[1];
   return {
     locale,
     siteUrl: getSiteUrl(env),
     seoSettings: { seo: settings.seo, branding: settings.branding },
     themeCss: themeStyle(theme),
     defaultMode: theme.defaultMode,
+    cookieTheme,
   };
 }
 
@@ -72,6 +75,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <html
       lang={locale}
       dir={getLocaleDirection(locale)}
+      data-theme={data?.cookieTheme || (data?.defaultMode === "light" ? "light" : "dark")}
       suppressHydrationWarning
     >
       <head>
@@ -93,7 +97,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         ) : null}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("gh-store-theme")||localStorage.getItem("gh-theme");if(t!=="light"&&t!=="dark"){t=${JSON.stringify(data?.defaultMode ?? "system")};if(t==="system")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}document.documentElement.dataset.theme=t}catch(e){}`,
+            __html: `try{var t=localStorage.getItem("gh-store-theme")||localStorage.getItem("gh-theme");if(t==="light"||t==="dark"){document.documentElement.dataset.theme=t}else{var m=${JSON.stringify(data?.defaultMode ?? "system")};document.documentElement.dataset.theme=m==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):m}}catch(e){}`,
           }}
         />
         <script

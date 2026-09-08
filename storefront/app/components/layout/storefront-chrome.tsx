@@ -35,11 +35,13 @@ export function ThemeToggle({ label }: { label: string }) {
       className={control}
       aria-label={label}
       onClick={() => {
-        const next =
-          document.documentElement.dataset.theme === "light" ? "dark" : "light";
+        const current = document.documentElement.dataset.theme;
+        const next = current === "light" ? "dark" : "light";
         document.documentElement.dataset.theme = next;
         try {
           localStorage.setItem("gh-store-theme", next);
+          localStorage.setItem("gh-theme", next);
+          document.cookie = `gh-theme=${next}; path=/; max-age=31536000; SameSite=Lax`;
         } catch {}
       }}
     >

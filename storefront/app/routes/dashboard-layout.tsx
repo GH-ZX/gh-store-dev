@@ -5,6 +5,9 @@ import { AdminHeader } from "@/components/admin/admin-header";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { buildPageMeta } from "@/lib/seo";
+import { createPublicClient } from "@/lib/catalog-queries";
+import { getPublicStoreSettings } from "@server/lib/services/settings.service";
+import { getStorefrontThemeStyle } from "@/lib/storefront-theme";
 import { getSessionSummary } from "@server/lib/services/session.service";
 import { createSessionClient, getSessionUserId, redirectToLogin, sessionCookieHeaders, withSessionCookies } from "@server/session";
 import type { Route } from "./+types/dashboard-layout";
@@ -29,8 +32,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!session?.isAdmin) {
     throw new Response("Forbidden", { status: 403 });
   }
+  const settings = await getPublicStoreSettings(createPublicClient(env));
   return data(
-    { locale, displayName: session.displayName },
+    { locale, displayName: session.displayName, theme: settings.theme },
     { headers: sessionCookieHeaders(jar, isProduction) },
   );
 }
@@ -41,7 +45,7 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export default function DashboardLayout() {
-  const { locale, displayName } = useLoaderData<typeof loader>();
+  const { locale, displayName, theme } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "admin");
   const { revalidate } = useRevalidator();
 
@@ -56,6 +60,7 @@ export default function DashboardLayout() {
       data-storefront-shell=""
       data-admin-shell=""
       data-dashboard-shell=""
+      style={getStorefrontThemeStyle(theme)}
       lang={locale}
       dir={getLocaleDirection(locale)}
       className="flex min-h-screen flex-col bg-[var(--canvas)] text-[var(--ink)]"

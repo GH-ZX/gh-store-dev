@@ -64,7 +64,7 @@ describe("admin workspace shell & navigation", () => {
     expect(css).toContain("--canvas: #101218;");
     expect(css).toContain("--surface: #191c25;");
     expect(css).toContain("--line: #2a2e3a;");
-    expect(css).toContain("--accent: #5354ee;");
+    expect(css).toContain("--accent: var(--sf-dark-accent");
 
     // Light mode tokens
     expect(css).toContain('[data-theme="light"] [data-admin-shell]');
