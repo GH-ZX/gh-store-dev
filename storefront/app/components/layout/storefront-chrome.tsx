@@ -21,6 +21,8 @@ import {
   MoonIcon,
   SunIcon,
   WalletIcon,
+  BellIcon,
+  GlobeIcon,
 } from "@/components/ui/icons";
 import { formatPrice } from "@/lib/format/money";
 import { parseSearchParams } from "@/lib/catalog/search";
@@ -202,13 +204,27 @@ export function StorefrontHeader({
         />
         <div className="sf-header-actions">
           <Link
+            to={`/${locale}/notifications`}
+            aria-label={notificationsLabel || (locale === "ar" ? "الإشعارات" : "Notifications")}
+            title={notificationsLabel || (locale === "ar" ? "الإشعارات" : "Notifications")}
+            className={`${control} relative`}
+          >
+            <BellIcon className="size-5" />
+            {unreadCount ? (
+              <span className="absolute -top-1 -end-1 flex min-w-4 h-4 px-1 items-center justify-center rounded-full bg-[var(--danger)] text-[10px] font-bold text-white shadow-xs leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            ) : null}
+          </Link>
+          <Link
             to={switchHref}
             aria-label={messages.locale.switchLabel}
+            title={messages.locale.switchLabel}
             lang={otherLocale}
             hrefLang={otherLocale}
             className={`${control} sf-locale-control`}
           >
-            {otherLocale === "en" ? "EN" : "ع"}
+            <GlobeIcon className="size-5" />
           </Link>
           <ThemeToggle label={messages.theme.toggleLabel} />
           {session && walletPanel ? (

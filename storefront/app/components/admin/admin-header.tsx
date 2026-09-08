@@ -2,6 +2,7 @@ import { Form, Link, useLocation } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowIcon,
+  BellIcon,
   CableIcon,
   CloseIcon,
   DepositIcon,
@@ -180,18 +181,29 @@ export function AdminHeader({
             title={locale === "ar" ? "زيارة المتجر" : "View store"}
             className={`${control} admin-header-store-link`}
           >
-            <GlobeIcon className="size-5 text-[var(--accent)]" />
+            <GamepadIcon className="size-5 text-[var(--accent)]" />
+          </Link>
+
+          {/* Notifications Button */}
+          <Link
+            to={`/${locale}/notifications`}
+            aria-label={locale === "ar" ? "الإشعارات" : "Notifications"}
+            title={locale === "ar" ? "الإشعارات" : "Notifications"}
+            className={`${control} relative`}
+          >
+            <BellIcon className="size-5" />
           </Link>
 
           {/* Locale Switcher */}
           <Link
             to={switchHref}
             aria-label={switchLocaleLabel}
+            title={switchLocaleLabel}
             lang={otherLocale}
             hrefLang={otherLocale}
             className={`${control} sf-locale-control`}
           >
-            {otherLocale === "en" ? "EN" : "ع"}
+            <GlobeIcon className="size-5" />
           </Link>
 
           {/* Theme Toggle Button */}
