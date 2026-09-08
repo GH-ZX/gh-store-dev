@@ -149,9 +149,9 @@ export function AdminHeader({
     <header data-site-header className="sf-site-header">
       {/* 1. Main Header Row (Identical to Storefront) */}
       <div className="gh-page sf-header-main">
-        {/* Brand Link with Admin Tag */}
+        {/* Brand Link to Storefront Home */}
         <Link
-          to={base}
+          to={`/${locale}`}
           className="sf-brand-link flex items-center gap-2.5"
           aria-label={brandName}
         >
@@ -171,19 +171,8 @@ export function AdminHeader({
         </div>
 
         {/* Actions Cluster (Identical 44px Controls to Storefront) */}
+        {/* Actions Cluster (Identical Controls to Storefront) */}
         <div className="sf-header-actions">
-          {/* Quick View Store Link */}
-          <Link
-            to={`/${locale}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={locale === "ar" ? "زيارة المتجر" : "View store"}
-            title={locale === "ar" ? "زيارة المتجر" : "View store"}
-            className={`${control} admin-header-store-link`}
-          >
-            <GamepadIcon className="size-5 text-[var(--accent)]" />
-          </Link>
-
           {/* Notifications Button */}
           <Link
             to={`/${locale}/notifications`}
@@ -350,12 +339,12 @@ export function AdminHeader({
         }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <Link to={`/${locale}`} className="flex items-center gap-2">
             <StorefrontBrand name={brandName} />
             <span className="admin-badge admin-badge-accent text-[11px] font-bold py-0.5 px-2">
               Admin
             </span>
-          </div>
+          </Link>
           <button
             type="button"
             className={control}
