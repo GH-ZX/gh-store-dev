@@ -66,7 +66,7 @@ async function access(args: LoaderFunctionArgs | ActionFunctionArgs) {
   const userId = await getSessionUserId(session.supabase);
   if (!userId)
     throw withSessionCookies(
-      redirectToLogin(args.request, locale, new URL(args.request.url).pathname),
+      redirectToLogin(args.request, locale, new URL(args.request.url).pathname.replace(/\.data$/, "")),
       session.jar,
       session.isProduction,
     );
@@ -86,8 +86,9 @@ export async function loadDashboardOperations(args: LoaderFunctionArgs) {
   const session = await access(args);
   const { supabase, locale } = session;
   const url = new URL(args.request.url);
-  const section =
-    url.pathname.split("/dashboard/")[1]?.split("/")[0] ?? "orders";
+  const cleanPathname = url.pathname.replace(/\.data$/, "");
+  const afterDashboard = cleanPathname.split("/dashboard/")[1] ?? "";
+  const section = afterDashboard.split("/")[0] || "orders";
   const q = url.searchParams.get("q") ?? "";
   const status = url.searchParams.get("status") ?? "all";
   const page = Math.min(

@@ -128,7 +128,7 @@ export function statusLabel(value: string, locale: "ar" | "en", section = "") {
 export function Badge({ children }: { children: ReactNode }) {
   const { locale } = useParams();
   const { pathname } = useLocation();
-  const section = pathname.split("/dashboard/")[1]?.split("/")[0] ?? "";
+  const section = pathname.replace(/\.data$/, "").split("/dashboard/")[1]?.split("/")[0] ?? "";
   const value = typeof children === "string" ? children : null;
 
   let badgeCls = "admin-badge admin-badge-neutral";
@@ -235,7 +235,7 @@ export function Filters({
   search?: boolean;
 }) {
   const { pathname } = useLocation();
-  const section = pathname.split("/dashboard/")[1]?.split("/")[0] ?? "";
+  const section = pathname.replace(/\.data$/, "").split("/dashboard/")[1]?.split("/")[0] ?? "";
 
   return (
     <div className="admin-card">

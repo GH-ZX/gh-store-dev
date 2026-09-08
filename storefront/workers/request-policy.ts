@@ -59,7 +59,7 @@ export function resolveCachePolicy(request: Request): CachePolicy {
   const productMatch = path.match(/^\/(?:ar|en)\/([^/]+)\/([^/]+)\/?$/);
   if (
     productMatch &&
-    !["products", "games", "gift-cards", "sale", "search", "checkout", "orders", "recharge"].includes(
+    !["products", "games", "gift-cards", "sale", "search", "checkout", "orders", "recharge", "dashboard"].includes(
       productMatch[1],
     )
   ) {
