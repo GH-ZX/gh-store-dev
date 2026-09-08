@@ -5,6 +5,8 @@
   "scripts": {
     "build": "pnpm --dir storefront run build",
     "dev": "pnpm --dir storefront run dev",
+    "dev:background": "./scripts/dev.sh --background",
+    "dev:stop": "./scripts/stop.sh",
     "start": "pnpm --dir storefront exec vite preview",
     "lint": "eslint",
     "test": "vitest run && vitest run --config storefront/vitest.config.ts",
