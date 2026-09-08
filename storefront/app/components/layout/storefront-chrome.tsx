@@ -262,6 +262,8 @@ export function StorefrontHeader({
       brandName={brandName}
       showLogo={data.showLogo ?? false}
       loadingLabel={messages.states.loading}
+      onOpenDrawer={() => drawer.current?.showModal()}
+      openDrawerLabel={messages.navigation.menu}
       center={centerSearch}
       actions={
         <HeaderActions
@@ -275,8 +277,6 @@ export function StorefrontHeader({
           accountItems={accountItems}
           signedInAsLabel={locale === "ar" ? "مسجل الدخول كـ" : "Signed in as"}
           accountMenuLabel={messages.account.accountMenuLabel}
-          onOpenDrawer={() => drawer.current?.showModal()}
-          openDrawerLabel={messages.navigation.menu}
         />
       }
       subnav={storefrontSubnav}
@@ -285,6 +285,7 @@ export function StorefrontHeader({
           dialogRef={drawer}
           locale={locale}
           brandName={brandName}
+          showLogo={data.showLogo ?? false}
           footer={drawerFooter}
         >
           {drawerContent}

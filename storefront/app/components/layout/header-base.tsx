@@ -75,6 +75,8 @@ export interface HeaderShellProps {
   actions?: ReactNode;
   subnav?: ReactNode;
   drawer?: ReactNode;
+  onOpenDrawer?: () => void;
+  openDrawerLabel?: string;
   loadingLabel?: string;
 }
 
@@ -88,6 +90,8 @@ export function HeaderShell({
   actions,
   subnav,
   drawer,
+  onOpenDrawer,
+  openDrawerLabel = "Menu",
   loadingLabel = "Loading",
 }: HeaderShellProps) {
   const navigation = useNavigation();
@@ -103,19 +107,32 @@ export function HeaderShell({
         />
       ) : null}
 
-      <div className="gh-page sf-header-main" dir="ltr">
-        <Link
-          to={homeHref}
-          className="sf-brand-link flex items-center gap-2.5"
-          aria-label={brandName}
-        >
-          <StorefrontBrand name={brandName} showLogo={showLogo} />
-          {brandBadge}
-        </Link>
+      <div className="gh-page sf-header-main flex items-center justify-between" dir="ltr">
+        <div className="flex items-center gap-2 shrink-0">
+          {onOpenDrawer ? (
+            <button
+              type="button"
+              className={`${headerControlClass} sf-menu-trigger lg:hidden cursor-pointer`}
+              aria-label={openDrawerLabel}
+              onClick={onOpenDrawer}
+            >
+              <MenuIcon />
+            </button>
+          ) : null}
 
-        {center}
+          <Link
+            to={homeHref}
+            className="sf-brand-link flex items-center gap-2.5 shrink-0"
+            aria-label={brandName}
+          >
+            <StorefrontBrand name={brandName} showLogo={showLogo} />
+            {brandBadge}
+          </Link>
+        </div>
 
-        {actions}
+        {center ? <div className="flex-1 flex justify-center px-4">{center}</div> : null}
+
+        <div className="ms-auto shrink-0">{actions}</div>
       </div>
 
       {subnav}
@@ -140,8 +157,6 @@ export interface HeaderActionsProps {
   accountItems?: { href: string; label: string }[];
   signedInAsLabel?: string;
   accountMenuLabel?: string;
-  onOpenDrawer: () => void;
-  openDrawerLabel?: string;
 }
 
 export function HeaderActions({
@@ -155,8 +170,6 @@ export function HeaderActions({
   accountItems = [],
   signedInAsLabel = "Signed in as",
   accountMenuLabel = "Account menu",
-  onOpenDrawer,
-  openDrawerLabel = "Open menu",
 }: HeaderActionsProps) {
   const location = useLocation();
   const otherLocale: Locale = locale === "ar" ? "en" : "ar";
@@ -310,7 +323,7 @@ export function HeaderActions({
                   position: "fixed",
                   top: accountPosition.top,
                   right: accountPosition.right,
-                  zIndex: 60,
+                  zIndex: 70,
                 }}
               >
                 <div className="p-3 border-b border-[var(--line)]">
@@ -350,16 +363,6 @@ export function HeaderActions({
           </Link>
         )}
       </div>
-
-      {/* Mobile Drawer Trigger Button */}
-      <button
-        type="button"
-        className={`${headerControlClass} sf-drawer-trigger`}
-        aria-label={openDrawerLabel}
-        onClick={onOpenDrawer}
-      >
-        <MenuIcon />
-      </button>
     </div>
   );
 }
@@ -389,7 +392,17 @@ export function HeaderMobileDrawer({
   return (
     <dialog
       ref={dialogRef}
-      className="sf-mobile-drawer bg-[var(--surface)] text-[var(--ink)]"
+      className="sf-mobile-drawer bg-[var(--surface)] text-[var(--ink)] lg:hidden"
+      style={{
+        position: "fixed",
+        top: 0,
+        bottom: 0,
+        right: 0,
+        left: "auto",
+        margin: 0,
+        marginLeft: "auto",
+        marginRight: 0,
+      }}
       aria-label="Navigation menu"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -398,7 +411,7 @@ export function HeaderMobileDrawer({
       }}
     >
       <div className="flex items-center justify-between" dir="ltr">
-        <Link to={homeHref} className="flex items-center gap-2" onClick={() => dialogRef.current?.close()}>
+        <Link to={homeHref} className="flex items-center gap-2 shrink-0" onClick={() => dialogRef.current?.close()}>
           <StorefrontBrand name={brandName} showLogo={showLogo} />
           {brandBadge}
         </Link>

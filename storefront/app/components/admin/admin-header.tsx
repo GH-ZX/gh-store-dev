@@ -108,17 +108,17 @@ export function AdminHeader({
   ];
 
   const adminSubnav = (
-    <div className="sf-categories-wrapper border-t border-[var(--line)]">
+    <div className="sf-category-bar border-t border-[var(--line)]">
       <div className="gh-page">
         <nav
-          className="sf-categories-bar admin-horizontal-nav"
+          className="sf-category-nav"
           aria-label={messages.title}
         >
           {allNavItems.map(({ key, href, label, Icon, active }) => (
             <Link
               key={key}
               to={href}
-              className={`sf-category-pill admin-nav-pill ${active ? "is-active" : ""}`}
+              className={`sf-category-link ${active ? "is-active" : ""}`}
               aria-current={active ? "page" : undefined}
             >
               <Icon className="size-4 shrink-0" />
@@ -183,6 +183,8 @@ export function AdminHeader({
       brandName={brandName}
       brandBadge={adminBadge}
       showLogo={showLogo}
+      onOpenDrawer={() => drawerRef.current?.showModal()}
+      openDrawerLabel="Menu"
       center={centerBreadcrumb}
       actions={
         <HeaderActions
@@ -191,7 +193,6 @@ export function AdminHeader({
           accountItems={accountItems}
           signedInAsLabel={messages.signedInAs}
           accountMenuLabel="Admin menu"
-          onOpenDrawer={() => drawerRef.current?.showModal()}
         />
       }
       subnav={adminSubnav}

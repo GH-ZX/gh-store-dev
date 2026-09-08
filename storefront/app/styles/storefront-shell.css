@@ -334,6 +334,9 @@
   background: rgb(8 12 24 / 55%);
   backdrop-filter: blur(4px);
 }
+dialog:not([open]) {
+  display: none !important;
+}
 body:has(.sf-mobile-drawer[open]) {
   overflow: hidden;
 }
@@ -469,9 +472,15 @@ body:has(.sf-mobile-drawer[open]) {
   [data-storefront-shell] .sf-desktop-account {
     display: block;
   }
+  .sf-mobile-search,
+  .sf-menu-trigger,
+  .sf-mobile-drawer,
+  dialog.sf-mobile-drawer,
   [data-storefront-shell] .sf-mobile-search,
-  [data-storefront-shell] .sf-menu-trigger {
-    display: none;
+  [data-storefront-shell] .sf-menu-trigger,
+  [data-admin-shell] .sf-menu-trigger,
+  [data-admin-shell] .sf-mobile-drawer {
+    display: none !important;
   }
   [data-storefront-shell] .sf-category-nav {
     gap: 40px;
