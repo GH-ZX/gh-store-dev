@@ -47,8 +47,9 @@ export const ATTENTION_STATUSES: AdminOrderStatus[] = ["failed", "fulfilling", "
 
 export const ATTENTION_FILTER = "attention";
 
-export const MANUAL_FILTER = "manual";
+export const LOW_FUNDS_FILTER = "low_funds";
 
+export const MANUAL_FILTER = "manual";
 export type AdminOrderRow = {
   id: string;
   orderNumber: string;
@@ -61,6 +62,8 @@ export type AdminOrderRow = {
   itemNames: string[];
   /** Worst fulfilment state across the order's items, or null before any attempt. */
   fulfillmentState: string | null;
+  hasLowBalanceError?: boolean;
+  latestErrorMessage?: string | null;
 };
 
 export type AdminOrderAttempt = {
@@ -164,7 +167,7 @@ export async function getOrders(supabase: Client, filter: OrderListFilter = {}):
     .select(
       `id, order_number, status, payment_status, total, currency, created_at, user_id,
        profiles!orders_user_id_fkey (id, email, full_name, username),
-       order_items (id, name_ar_snapshot, name_en_snapshot, fulfillment_attempts (status))`,
+       order_items (id, name_ar_snapshot, name_en_snapshot, fulfillment_attempts (status, error_code, error_message, created_at))`,
     )
     .order("created_at", { ascending: false })
     .limit(filter.limit ?? 100);
@@ -175,6 +178,8 @@ export async function getOrders(supabase: Client, filter: OrderListFilter = {}):
 
   if (filter.status === ATTENTION_FILTER) {
     query = query.in("status", ATTENTION_STATUSES);
+  } else if (filter.status === LOW_FUNDS_FILTER) {
+    query = query.not("status", "in", "(completed,cancelled)");
   } else if (filter.status === MANUAL_FILTER) {
     // Manual orders: orders with an offer whose delivery_kind is 'manual'
     // and the order is not yet settled.
@@ -224,15 +229,33 @@ export async function getOrders(supabase: Client, filter: OrderListFilter = {}):
 
   const { data } = await query;
 
-  return (data ?? []).map((row) => {
+  const rows = (data ?? []).map((row) => {
     const items = (row.order_items ?? []) as {
       id: string;
       name_ar_snapshot: string;
       name_en_snapshot: string;
-      fulfillment_attempts: { status: string }[] | null;
+      fulfillment_attempts: { status: string; error_code: string | null; error_message: string | null }[] | null;
     }[];
 
-    const states = items.flatMap((item) => (item.fulfillment_attempts ?? []).map((a) => a.status));
+    const attempts = items.flatMap((item) => item.fulfillment_attempts ?? []);
+    const states = attempts.map((a) => a.status);
+
+    const hasLowBalance = attempts.some((a) => {
+      const c = (a.error_code ?? "").toLowerCase();
+      const m = (a.error_message ?? "").toLowerCase();
+      return (
+        c.includes("balance") ||
+        c.includes("fund") ||
+        c.includes("credit") ||
+        m.includes("balance") ||
+        m.includes("fund") ||
+        m.includes("credit") ||
+        m.includes("رصيد") ||
+        m.includes("غير كاف")
+      );
+    });
+
+    const latestError = attempts.find((a) => a.error_message)?.error_message ?? null;
 
     return {
       id: row.id,
@@ -245,8 +268,16 @@ export async function getOrders(supabase: Client, filter: OrderListFilter = {}):
       customer: toCustomer(row.profiles as ProfileEmbed | ProfileEmbed[] | null, row.user_id),
       itemNames: items.map((item) => item.name_en_snapshot || item.name_ar_snapshot),
       fulfillmentState: worstFulfillmentState(states),
+      hasLowBalanceError: hasLowBalance,
+      latestErrorMessage: latestError,
     };
   });
+
+  if (filter.status === LOW_FUNDS_FILTER) {
+    return rows.filter((r) => r.hasLowBalanceError);
+  }
+
+  return rows;
 }
 
 export async function getOrderDetail(supabase: Client, orderId: string): Promise<AdminOrderDetail | null> {

@@ -1,6 +1,6 @@
 import { Form, Link } from "react-router";
 import * as UI from "./operations-shared";
-import { ChevronIcon, UserIcon } from "@/components/ui/icons";
+import { ChevronIcon, UserIcon, AlertIcon } from "@/components/ui/icons";
 
 export function OrderView({
   view,
@@ -9,9 +9,44 @@ export function OrderView({
 }) {
   const ar = view.locale === "ar";
   const t = (en: string, arabic: string) => (ar ? arabic : en);
+  const hasLowBalance = view.order.items.some((item) =>
+    item.attempts.some((a) => {
+      const c = (a.errorCode ?? "").toLowerCase();
+      const m = (a.errorMessage ?? "").toLowerCase();
+      return (
+        c.includes("balance") ||
+        c.includes("fund") ||
+        c.includes("credit") ||
+        m.includes("balance") ||
+        m.includes("fund") ||
+        m.includes("credit") ||
+        m.includes("رصيد") ||
+        m.includes("غير كاف")
+      );
+    }),
+  );
 
   return (
     <div className="space-y-6">
+      {hasLowBalance && (
+        <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger-surface)] p-4 text-xs sm:text-sm text-[var(--danger)] flex items-start gap-3 shadow-xs">
+          <AlertIcon className="size-5 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <strong className="font-bold block text-sm sm:text-base">
+              {t(
+                "Alert: Order fulfillment stalled due to low provider API funds",
+                "تنبيه: تعثر تنفيذ الطلب بسبب نقص رصيد حساب المزود (API Low Balance)",
+              )}
+            </strong>
+            <p className="text-xs text-[var(--ink-soft)] leading-relaxed">
+              {t(
+                "Please top up your provider balance first, then click 'Retry fulfillment' below to process automatically, or deliver manually using the form below.",
+                "يرجى شحن حساب المزود أولاً، ثم الضغط على زر 'إعادة محاولة التنفيذ' أدناه للمتابعة تلقائياً، أو إتمام الطلب عبر 'تأكيد التسليم اليدوي'.",
+              )}
+            </p>
+          </div>
+        </div>
+      )}
       {/* Back Navigation Link */}
       <div>
         <Link
@@ -189,9 +224,21 @@ export function OrderView({
 
         {!["completed", "refunded", "cancelled"].includes(view.order.status) ? (
           <div className="space-y-4">
+            {hasLowBalance && (
+              <div className="rounded-lg bg-[var(--surface-inset)] border border-[var(--line)] p-3 text-xs text-[var(--ink-soft)]">
+                <span className="font-semibold text-[var(--ink)] block mb-0.5">
+                  {t("Low balance recovery:", "معالجة نقص رصيد المزود:")}
+                </span>
+                {t(
+                  "After topping up the supplier account, click 'Retry fulfillment' to re-dispatch the API order.",
+                  "بعد شحن رصيد حساب المزود، اضغط على 'إعادة محاولة التنفيذ' لإعادة إرسال الطلب تلقائياً للمزود.",
+                )}
+              </div>
+            )}
+
             <Form method="post">
               <UI.Hidden name="orderId" value={view.order.id} />
-              <UI.Submit intent="retry" variant="secondary">
+              <UI.Submit intent="retry" variant="primary">
                 {t("Retry fulfillment", "إعادة محاولة التنفيذ")}
               </UI.Submit>
             </Form>

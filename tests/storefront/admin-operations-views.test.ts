@@ -22,6 +22,11 @@ describe("admin sales, recharges and customers operations", () => {
     expect(statusLabel("approved", "ar", "recharges")).toBeTruthy();
     expect(statusLabel("rejected", "ar", "recharges")).toBeTruthy();
   });
+  it("translates low_funds status correctly in Arabic and English", () => {
+    expect(statusLabel("low_funds", "en")).toBe("Low API Funds");
+    expect(statusLabel("low_funds", "ar")).toBe("نقص رصيد المزود");
+  });
+
 
   it("ensures all operation group translation keys exist in both locales", () => {
     const groups = ["orders", "recharges", "payments", "customers"] as const;

@@ -21,6 +21,7 @@ export function OrdersView({
         options={[
           "all",
           "attention",
+          "low_funds",
           "manual",
           "pending",
           "payment_pending",

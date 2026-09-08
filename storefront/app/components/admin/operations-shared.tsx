@@ -5,6 +5,7 @@ import {
   ArrowIcon,
   ChevronIcon,
   SearchIcon,
+  AlertIcon,
 } from "@/components/ui/icons";
 import {
   Form,
@@ -116,6 +117,7 @@ export function statusLabel(value: string, locale: "ar" | "en", section = "") {
     ...admin.support.roles,
     all: locale === "ar" ? "الكل" : "All",
     attention: admin.orders.filterAttention,
+    low_funds: locale === "ar" ? "نقص رصيد المزود" : "Low API Funds",
     manual: admin.orders.filterManual,
     ...(section === "recharges" ? recharge.statuses : {}),
     ...(section === "reviews" ? admin.reviews.statuses : {}),
@@ -329,6 +331,12 @@ export function Orders({
                         state={order.fulfillmentState}
                       />
                     )}
+                  {order.hasLowBalanceError ? (
+                    <span className="admin-badge admin-badge-danger font-bold text-[11px] flex items-center gap-1">
+                      <AlertIcon className="size-3 text-[var(--danger)]" />
+                      <span>{locale === "ar" ? "نقص رصيد المزود" : "Low API Funds"}</span>
+                    </span>
+                  ) : null}
                 </div>
 
                 <p className="mt-1.5 truncate text-xs font-medium text-[var(--ink-soft)]">
