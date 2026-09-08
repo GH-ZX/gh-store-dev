@@ -1,55 +1,29 @@
-import { Form, Link, NavLink, useLocation, useNavigation } from "react-router";
-import { useEffect, useRef, useState } from "react";
-import { getLocaleDirection, type Locale } from "@/i18n/config";
+import { Form, Link, NavLink, useLocation } from "react-router";
+import { useRef } from "react";
+import { type Locale } from "@/i18n/config";
 import { getMessages, type CommonMessages } from "@/i18n/messages";
 import type { ChromeData } from "@/components/site-chrome";
-import { getStorefrontThemeStyle } from "@/lib/storefront-theme";
 export { getStorefrontThemeStyle } from "@/lib/storefront-theme";
 import { SocialIcon } from "@/components/ui/brand-icons";
 import { getSocialLinkLabel } from "@/lib/settings/public-settings";
 import { SearchField } from "@/components/search/search-field";
 import {
-  SearchIcon,
   GridIcon,
   GamepadIcon,
   CardIcon,
   SparkIcon,
   TagIcon,
-  UserIcon,
-  CloseIcon,
-  MenuIcon,
-  MoonIcon,
-  SunIcon,
-  WalletIcon,
-  BellIcon,
-  GlobeIcon,
 } from "@/components/ui/icons";
 import { formatPrice } from "@/lib/format/money";
 import { parseSearchParams } from "@/lib/catalog/search";
-
-const control = "sf-control";
-export function ThemeToggle({ label }: { label: string }) {
-  return (
-    <button
-      type="button"
-      className={control}
-      aria-label={label}
-      onClick={() => {
-        const current = document.documentElement.dataset.theme;
-        const next = current === "light" ? "dark" : "light";
-        document.documentElement.dataset.theme = next;
-        try {
-          localStorage.setItem("gh-store-theme", next);
-          localStorage.setItem("gh-theme", next);
-          document.cookie = `gh-theme=${next}; path=/; max-age=31536000; SameSite=Lax`;
-        } catch {}
-      }}
-    >
-      <SunIcon className="gh-only-dark" />
-      <MoonIcon className="gh-only-light" />
-    </button>
-  );
-}
+import {
+  HeaderShell,
+  HeaderActions,
+  HeaderMobileDrawer,
+  StorefrontBrand,
+  ThemeToggle,
+} from "./header-base";
+export { StorefrontBrand, ThemeToggle };
 
 export function StorefrontHeader({
   locale,
@@ -64,18 +38,7 @@ export function StorefrontHeader({
 }) {
   const { session, walletPanel, unreadCount, brandName } = data;
   const location = useLocation();
-  const navigation = useNavigation();
   const drawer = useRef<HTMLDialogElement>(null);
-  const account = useRef<HTMLDivElement>(null);
-  const accountButton = useRef<HTMLButtonElement>(null);
-  const [accountPopover, setAccountPosition] = useState<{
-    top: number;
-    right: number;
-    locationKey: string;
-  } | null>(null);
-  const accountPosition =
-    accountPopover?.locationKey === location.key ? accountPopover : null;
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const search = getMessages(locale, "search");
   const currentSearch = location.pathname === `/${locale}/search`
     ? parseSearchParams(Object.fromEntries(new URLSearchParams(location.search)))
@@ -125,52 +88,24 @@ export function StorefrontHeader({
   ];
   const secondaryItems = [
     { href: `/${locale}/faq`, label: messages.links.faq },
-    { href: `/${locale}/how`, label: messages.links.how },
+    { href: `/${locale}/about`, label: messages.links.about },
     { href: `/${locale}/contact`, label: messages.links.contact },
+    { href: `/${locale}/privacy`, label: messages.links.privacy },
+    { href: `/${locale}/terms`, label: messages.links.terms },
   ];
-  const otherLocale = locale === "ar" ? "en" : "ar";
-  const switchHref =
-    location.pathname.replace(/^\/(ar|en)(?=\/|$)/, `/${otherLocale}`) +
-    location.search +
-    location.hash;
-  useEffect(() => {
-    drawer.current?.close();
-  }, [location.pathname, location.search]);
-  useEffect(() => {
-    const onClick = (event: PointerEvent) => {
-      if (
-        account.current &&
-        !account.current.contains(event.target as Node) &&
-        !accountButton.current?.contains(event.target as Node)
-      )
-        setAccountPosition(null);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (account.current?.contains(document.activeElement)) {
-          accountButton.current?.focus();
-        }
-        setAccountPosition(null);
-      }
-    };
-    document.addEventListener("pointerdown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
+
   const signOut = (
     <Form method="post" action={`/${locale}`}>
       <input type="hidden" name="intent" value="sign-out" />
       <button
-        className="min-h-11 w-full rounded-xl px-3 text-start text-sm text-[var(--danger)] hover:bg-[var(--surface-strong)]"
+        className="min-h-11 w-full rounded-xl px-3 text-start text-sm text-[var(--danger)] hover:bg-[var(--surface-strong)] cursor-pointer"
         type="submit"
       >
         {messages.account.signOut}
       </button>
     </Form>
   );
+
   const searchLabels = {
     fieldLabel: search.fieldLabel,
     placeholder: messages.actions.searchPlaceholder,
@@ -178,176 +113,21 @@ export function StorefrontHeader({
     clear: search.clear,
     suggestionsLabel: search.suggestionsLabel,
   };
-  return (
-    <header data-site-header className="sf-site-header">
-      {navigation.state !== "idle" ? (
-        <div
-          role="progressbar"
-          aria-label={messages.states.loading}
-          className="sf-navigation-progress"
-        />
-      ) : null}
-      <div className="gh-page sf-header-main">
-        <Link
-          to={`/${locale}`}
-          className="sf-brand-link"
-          aria-label={brandName}
-        >
-          <StorefrontBrand name={brandName} />
-        </Link>
-        <SearchField
-          key={`desktop:${locale}:${currentSearch.query}:${currentSearch.filter}`}
-          locale={locale}
-          defaultQuery={currentSearch.query}
-          filter={currentSearch.filter}
-          size="sm"
-          className="sf-header-search sf-search"
-          labels={searchLabels}
-        />
-        <div className="sf-header-actions">
-          <Link
-            to={`/${locale}/notifications`}
-            aria-label={notificationsLabel || (locale === "ar" ? "الإشعارات" : "Notifications")}
-            title={notificationsLabel || (locale === "ar" ? "الإشعارات" : "Notifications")}
-            className={`${control} relative`}
-          >
-            <BellIcon className="size-5" />
-            {unreadCount ? (
-              <span className="absolute -top-1 -end-1 flex min-w-4 h-4 px-1 items-center justify-center rounded-full bg-[var(--danger)] text-[10px] font-bold text-white shadow-xs leading-none">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            ) : null}
-          </Link>
-          <Link
-            to={switchHref}
-            aria-label={messages.locale.switchLabel}
-            title={messages.locale.switchLabel}
-            lang={otherLocale}
-            hrefLang={otherLocale}
-            className={`${control} sf-locale-control`}
-          >
-            <GlobeIcon className="size-5" />
-          </Link>
-          <ThemeToggle label={messages.theme.toggleLabel} />
-          {session && walletPanel ? (
-            <Link
-              to={`/${locale}/wallet`}
-              aria-label={messages.account.walletLabel}
-              className="sf-wallet-control"
-            >
-              <WalletIcon />
-              <bdi dir="ltr">
-                {formatPrice(walletPanel.balance, walletPanel.currency, locale)}
-              </bdi>
-            </Link>
-          ) : null}
-          <div className="sf-desktop-account">
-            {session ? (
-              <div
-                className="relative"
-                ref={account}
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                    setAccountPosition(null);
-                  }
-                }}
-              >
-                <button
-                  type="button"
-                  ref={accountButton}
-                  aria-expanded={!!accountPosition}
-                  aria-controls="site-account-menu"
-                  onClick={() => {
-                    if (accountPosition) {
-                      setAccountPosition(null);
-                      return;
-                    }
-                    const box = accountButton.current?.getBoundingClientRect();
-                    if (box)
-                      setAccountPosition({
-                        top: box.bottom + 8,
-                        locationKey: location.key,
-                        right: Math.min(
-                          Math.max(16, window.innerWidth - 276),
-                          Math.max(16, window.innerWidth - box.right),
-                        ),
-                      });
-                  }}
-                  aria-label={messages.account.accountMenuLabel}
-                  className={`${control} sf-account-trigger`}
-                >
-                  {session.avatarUrl ? (
-                    <img
-                      src={session.avatarUrl}
-                      alt=""
-                      className="size-full rounded-full"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <UserIcon />
-                  )}
-                </button>
-                {accountPosition ? (
-                  <div
-                    id="site-account-menu"
-                    data-storefront-shell=""
-                    dir={getLocaleDirection(locale)}
-                    style={{
-                      ...getStorefrontThemeStyle(data.theme),
-                      top: accountPosition.top,
-                      right: accountPosition.right,
-                    }}
-                    className="sf-account-popover"
-                  >
-                    <p className="px-3 py-2 font-semibold">
-                      <bdi>{session.displayName}</bdi>
-                    </p>
-                    {accountItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        to={item.href}
-                        className="flex min-h-11 items-center rounded-xl px-3 text-sm hover:bg-[var(--surface-strong)]"
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                    {signOut}
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <Link to={`/${locale}/login`} className="sf-sign-in">
-                {messages.account.signIn}
-              </Link>
-            )}
-          </div>
-          <Link
-            to={`/${locale}/search`}
-            aria-label={messages.actions.search}
-            className={`${control} sf-mobile-search-shortcut`}
-          >
-            <SearchIcon />
-          </Link>
-          <button
-            type="button"
-            className={`${control} sf-menu-trigger`}
-            aria-label={
-              drawerOpen ? messages.navigation.close : messages.navigation.menu
-            }
-            aria-expanded={drawerOpen}
-            aria-controls="site-mobile-menu"
-            onClick={() => {
-              if (drawerOpen) drawer.current?.close();
-              else {
-                drawer.current?.showModal();
-                setDrawerOpen(true);
-              }
-            }}
-          >
-            <MenuIcon />
-          </button>
-        </div>
-      </div>
+
+  const centerSearch = (
+    <SearchField
+      key={`desktop:${locale}:${currentSearch.query}:${currentSearch.filter}`}
+      locale={locale}
+      defaultQuery={currentSearch.query}
+      filter={currentSearch.filter}
+      size="sm"
+      className="sf-header-search sf-search"
+      labels={searchLabels}
+    />
+  );
+
+  const storefrontSubnav = (
+    <>
       <div className="gh-page sf-mobile-search">
         <SearchField
           key={`mobile:${locale}:${currentSearch.query}:${currentSearch.filter}`}
@@ -378,127 +158,141 @@ export function StorefrontHeader({
           ))}
         </nav>
       </div>
-      <dialog
-        id="site-mobile-menu"
-        onClose={() => setDrawerOpen(false)}
-        aria-label={messages.navigation.mobileLabel}
-        ref={drawer}
-        dir={getLocaleDirection(locale)}
-        className="sf-mobile-drawer"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            const box = event.currentTarget.getBoundingClientRect();
-            if (event.clientX < box.left || event.clientX > box.right)
-              drawer.current?.close();
-          }
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <StorefrontBrand name={brandName} />
-          <button
-            type="button"
-            className={control}
-            onClick={() => drawer.current?.close()}
-            aria-label={messages.navigation.close}
-          >
-            <CloseIcon />
-          </button>
-        </div>
-        <div className="my-5 border-y py-4">
-          {session ? (
-            <>
-              <Link
-                to={`/${locale}/profile`}
-                className="block text-lg font-semibold"
-              >
-                <bdi>{session.displayName}</bdi>
-              </Link>
-              <p className="mt-1 truncate text-sm text-[var(--ink-muted)]">
-                <bdi>{session.email}</bdi>
-              </p>
-              {walletPanel ? (
-                <Link
-                  to={`/${locale}/wallet`}
-                  className="mt-3 flex justify-between rounded-xl bg-[var(--surface)] p-3"
-                >
-                  <span>{messages.account.walletLabel}</span>
-                  <bdi dir="ltr">
-                    {formatPrice(
-                      walletPanel.balance,
-                      walletPanel.currency,
-                      locale,
-                    )}
-                  </bdi>
-                </Link>
-              ) : null}
-            </>
-          ) : (
-            <Link
-              to={`/${locale}/login`}
-              className="flex min-h-11 justify-center rounded-full bg-[var(--accent)] p-3 font-semibold text-[var(--accent-ink)]"
-            >
-              {messages.account.signIn}
-            </Link>
-          )}
-        </div>
-        <nav
-          aria-label={messages.navigation.mobileLabel}
-          className="grid gap-1"
-        >
-          {primaryItems.map((item) => (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              className={({ isActive }) =>
-                `rounded-xl px-3 py-3 font-medium ${isActive ? "bg-[var(--surface-strong)] text-[var(--accent)]" : "hover:bg-[var(--surface)]"}`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
+    </>
+  );
+
+  const drawerContent = (
+    <>
+      <div className="my-5 border-y py-4">
         {session ? (
-          <nav className="mt-4 grid gap-1 border-t pt-4">
-            {accountItems.map((item) => (
+          <>
+            <Link
+              to={`/${locale}/profile`}
+              className="block text-lg font-semibold"
+              onClick={() => drawer.current?.close()}
+            >
+              <bdi>{session.displayName}</bdi>
+            </Link>
+            <p className="mt-1 truncate text-sm text-[var(--ink-muted)]">
+              <bdi>{session.email}</bdi>
+            </p>
+            {walletPanel ? (
               <Link
-                key={item.href}
-                to={item.href}
-                className="rounded-xl px-3 py-3 text-sm hover:bg-[var(--surface)]"
+                to={`/${locale}/wallet`}
+                onClick={() => drawer.current?.close()}
+                className="mt-3 flex justify-between rounded-xl bg-[var(--surface)] p-3"
               >
-                {item.label}
+                <span>{messages.account.walletLabel}</span>
+                <bdi dir="ltr">
+                  {formatPrice(
+                    walletPanel.balance,
+                    walletPanel.currency,
+                    locale,
+                  )}
+                </bdi>
               </Link>
-            ))}
-          </nav>
-        ) : null}
+            ) : null}
+          </>
+        ) : (
+          <Link
+            to={`/${locale}/login`}
+            onClick={() => drawer.current?.close()}
+            className="flex min-h-11 justify-center rounded-full bg-[var(--accent)] p-3 font-semibold text-[var(--accent-ink)]"
+          >
+            {messages.account.signIn}
+          </Link>
+        )}
+      </div>
+      <nav
+        aria-label={messages.navigation.mobileLabel}
+        className="grid gap-1"
+      >
+        {primaryItems.map((item) => (
+          <NavLink
+            key={item.href}
+            to={item.href}
+            onClick={() => drawer.current?.close()}
+            className={({ isActive }) =>
+              `rounded-xl px-3 py-3 font-medium ${isActive ? "bg-[var(--surface-strong)] text-[var(--accent)]" : "hover:bg-[var(--surface)]"}`
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+      {session ? (
         <nav className="mt-4 grid gap-1 border-t pt-4">
-          {secondaryItems.map((item) => (
+          {accountItems.map((item) => (
             <Link
               key={item.href}
               to={item.href}
-              className="rounded-xl px-3 py-3 text-sm text-[var(--ink-muted)]"
+              onClick={() => drawer.current?.close()}
+              className="rounded-xl px-3 py-3 text-sm hover:bg-[var(--surface)]"
             >
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="mt-4 flex items-center justify-between border-t pt-4">
-          <ThemeToggle label={messages.theme.toggleLabel} />
-          {session ? signOut : null}
-        </div>
-      </dialog>
-    </header>
+      ) : null}
+      <nav className="mt-4 grid gap-1 border-t pt-4">
+        {secondaryItems.map((item) => (
+          <Link
+            key={item.href}
+            to={item.href}
+            onClick={() => drawer.current?.close()}
+            className="rounded-xl px-3 py-3 text-sm text-[var(--ink-muted)]"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+    </>
+  );
+
+  const drawerFooter = (
+    <div className="mt-4 flex items-center justify-between border-t pt-4">
+      <ThemeToggle label={messages.theme.toggleLabel} />
+      {session ? signOut : null}
+    </div>
+  );
+
+  return (
+    <HeaderShell
+      locale={locale}
+      brandName={brandName}
+      loadingLabel={messages.states.loading}
+      center={centerSearch}
+      actions={
+        <HeaderActions
+          locale={locale}
+          unreadCount={unreadCount}
+          notificationsLabel={notificationsLabel}
+          switchLocaleLabel={messages.locale.switchLabel}
+          themeToggleLabel={messages.theme.toggleLabel}
+          walletPanel={walletPanel}
+          session={session}
+          accountItems={accountItems}
+          signedInAsLabel={locale === "ar" ? "مسجل الدخول كـ" : "Signed in as"}
+          accountMenuLabel={messages.account.accountMenuLabel}
+          onOpenDrawer={() => drawer.current?.showModal()}
+          openDrawerLabel={messages.navigation.menu}
+        />
+      }
+      subnav={storefrontSubnav}
+      drawer={
+        <HeaderMobileDrawer
+          dialogRef={drawer}
+          locale={locale}
+          brandName={brandName}
+          footer={drawerFooter}
+        >
+          {drawerContent}
+        </HeaderMobileDrawer>
+      }
+    />
   );
 }
 
-export function StorefrontBrand({ name }: { name: string }) {
-  const [first, ...rest] = name.trim().split(/\s+/);
-  return (
-    <span className="sf-brand" dir="auto">
-      <span>{first}</span>
-      {rest.length ? <span>{rest.join(" ")}</span> : null}
-    </span>
-  );
-}
 
 export function StorefrontFooter({
   locale,

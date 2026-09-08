@@ -1,15 +1,12 @@
 import { Form, Link, useLocation } from "react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   ArrowIcon,
-  BellIcon,
   CableIcon,
-  CloseIcon,
   DepositIcon,
   GamepadIcon,
   GlobeIcon,
   GridIcon,
-  MenuIcon,
   ReceiptIcon,
   ScrollIcon,
   SparkIcon,
@@ -20,11 +17,15 @@ import {
   WalletIcon,
 } from "@/components/ui/icons";
 import {
-  StorefrontBrand,
+  HeaderShell,
+  HeaderActions,
+  HeaderMobileDrawer,
   ThemeToggle,
-} from "@/components/layout/storefront-chrome";
+  StorefrontBrand,
+} from "@/components/layout/header-base";
+export { StorefrontBrand, ThemeToggle };
 import { DASHBOARD_NAV_GROUPS, isDashboardNavActive } from "@/lib/admin-dashboard/navigation";
-import { getLocaleDirection, type Locale } from "@/i18n/config";
+import { type Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
 
 type IconComponent = React.ComponentType<{ className?: string }>;
@@ -60,51 +61,11 @@ export function AdminHeader({
 }: AdminHeaderProps) {
   const location = useLocation();
   const base = `/${locale}/dashboard`;
-
   const drawerRef = useRef<HTMLDialogElement>(null);
-  const accountRef = useRef<HTMLDivElement>(null);
-  const accountButtonRef = useRef<HTMLButtonElement>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [accountPopover, setAccountPosition] = useState<{
-    top: number;
-    right: number;
-    locationKey: string;
-  } | null>(null);
 
-  const accountPosition =
-    accountPopover?.locationKey === location.key ? accountPopover : null;
-
-  // Close drawer on path change
   useEffect(() => {
     drawerRef.current?.close();
   }, [location.pathname, location.search]);
-
-  // Account popover blur / Escape handlers
-  useEffect(() => {
-    const onClick = (event: PointerEvent) => {
-      if (
-        accountRef.current &&
-        !accountRef.current.contains(event.target as Node) &&
-        !accountButtonRef.current?.contains(event.target as Node)
-      ) {
-        setAccountPosition(null);
-      }
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (accountRef.current?.contains(document.activeElement)) {
-          accountButtonRef.current?.focus();
-        }
-        setAccountPosition(null);
-      }
-    };
-    document.addEventListener("pointerdown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
 
   // Map all navigation items
   const allNavItems = DASHBOARD_NAV_GROUPS.flatMap((group) =>
@@ -122,283 +83,126 @@ export function AdminHeader({
   const activeItem = allNavItems.find((item) => item.active);
   const activeTitle = activeItem?.label ?? messages.title;
 
-  // Language switcher
-  const otherLocale: Locale = locale === "ar" ? "en" : "ar";
-  const switchHref =
-    location.pathname.replace(/^\/(ar|en)(?=\/|$)/, `/${otherLocale}`) +
-    location.search +
-    location.hash;
-
-  const control = "sf-control";
-  const switchLocaleLabel = otherLocale === "en" ? "English" : "العربية";
-  const themeToggleLabel = locale === "ar" ? "تبديل المظهر" : "Toggle theme";
-
-  const signOut = (
-    <Form method="post" action={`/${locale}`}>
-      <input type="hidden" name="intent" value="sign-out" />
-      <button
-        className="min-h-11 w-full rounded-xl px-3 text-start text-sm text-[var(--danger)] hover:bg-[var(--surface-strong)] transition-colors cursor-pointer"
-        type="submit"
-      >
-        {locale === "ar" ? "تسجيل الخروج" : "Sign out"}
-      </button>
-    </Form>
+  const adminBadge = (
+    <span className="admin-badge admin-badge-accent text-[11px] font-extrabold uppercase px-2 py-0.5 tracking-wider">
+      Admin
+    </span>
   );
 
-  return (
-    <header data-site-header className="sf-site-header">
-      {/* 1. Main Header Row (Identical to Storefront) */}
-      <div className="gh-page sf-header-main">
-        {/* Brand Link to Storefront Home */}
-        <Link
-          to={`/${locale}`}
-          className="sf-brand-link flex items-center gap-2.5"
-          aria-label={brandName}
-        >
-          <StorefrontBrand name={brandName} />
-          <span className="admin-badge admin-badge-accent text-[11px] font-extrabold uppercase px-2 py-0.5 tracking-wider">
-            Admin
-          </span>
-        </Link>
+  const centerBreadcrumb = (
+    <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--surface-strong)] border border-[var(--line)] text-xs text-[var(--ink-muted)]">
+      <Link to={base} className="hover:text-[var(--ink)] font-medium transition-colors">
+        {messages.title}
+      </Link>
+      <span className="text-[var(--line-strong)] select-none">/</span>
+      <span className="font-bold text-[var(--ink)]">{activeTitle}</span>
+    </div>
+  );
 
-        {/* Dynamic Section Indicator (Breadcrumb) in Center */}
-        <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--surface-strong)] border border-[var(--line)] text-xs text-[var(--ink-muted)]">
-          <Link to={base} className="hover:text-[var(--ink)] font-medium transition-colors">
-            {messages.title}
-          </Link>
-          <span className="text-[var(--line-strong)] select-none">/</span>
-          <span className="font-bold text-[var(--ink)]">{activeTitle}</span>
-        </div>
+  const accountItems = [
+    { href: `/${locale}`, label: locale === "ar" ? "زيارة المتجر" : "View store" },
+    { href: base, label: messages.title },
+    { href: `${base}/support`, label: messages.nav.support ?? "Support" },
+  ];
 
-        {/* Actions Cluster (Identical 44px Controls to Storefront) */}
-        {/* Actions Cluster (Identical Controls to Storefront) */}
-        <div className="sf-header-actions">
-          {/* Notifications Button */}
-          <Link
-            to={`/${locale}/notifications`}
-            aria-label={locale === "ar" ? "الإشعارات" : "Notifications"}
-            title={locale === "ar" ? "الإشعارات" : "Notifications"}
-            className={`${control} relative`}
-          >
-            <BellIcon className="size-5" />
-          </Link>
-
-          {/* Locale Switcher */}
-          <Link
-            to={switchHref}
-            aria-label={switchLocaleLabel}
-            title={switchLocaleLabel}
-            lang={otherLocale}
-            hrefLang={otherLocale}
-            className={`${control} sf-locale-control`}
-          >
-            <GlobeIcon className="size-5" />
-          </Link>
-
-          {/* Theme Toggle Button */}
-          <ThemeToggle label={themeToggleLabel} />
-
-          {/* Desktop Account Menu */}
-          <div className="sf-desktop-account">
-            <div
-              className="relative"
-              ref={accountRef}
-              onBlur={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                  setAccountPosition(null);
-                }
-              }}
-            >
-              <button
-                type="button"
-                ref={accountButtonRef}
-                aria-expanded={!!accountPosition}
-                aria-controls="admin-account-menu"
-                onClick={() => {
-                  if (accountPosition) {
-                    setAccountPosition(null);
-                    return;
-                  }
-                  const box = accountButtonRef.current?.getBoundingClientRect();
-                  if (box) {
-                    setAccountPosition({
-                      top: box.bottom + 8,
-                      locationKey: location.key,
-                      right: Math.min(
-                        Math.max(16, window.innerWidth - 276),
-                        Math.max(16, window.innerWidth - box.right),
-                      ),
-                    });
-                  }
-                }}
-                aria-label={displayName || "Admin Account"}
-                className={`${control} sf-account-trigger`}
-              >
-                <UserIcon />
-              </button>
-
-              {accountPosition ? (
-                <div
-                  id="admin-account-menu"
-                  data-storefront-shell=""
-                  dir={getLocaleDirection(locale)}
-                  style={{
-                    top: accountPosition.top,
-                    right: accountPosition.right,
-                  }}
-                  className="sf-account-popover"
-                >
-                  <div className="px-3 py-2 border-b border-[var(--line)]">
-                    <p className="font-semibold text-sm text-[var(--ink)]">
-                      <bdi>{displayName || "Admin"}</bdi>
-                    </p>
-                    <span className="text-[11px] text-[var(--ink-muted)]">
-                      {messages.signedInAs}
-                    </span>
-                  </div>
-
-                  <div className="py-1">
-                    <Link
-                      to={`/${locale}`}
-                      target="_blank"
-                      className="flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm hover:bg-[var(--surface-strong)] text-[var(--ink)]"
-                    >
-                      <GlobeIcon className="size-4 text-[var(--accent)]" />
-                      <span>{locale === "ar" ? "زيارة المتجر" : "View store"}</span>
-                    </Link>
-                    <Link
-                      to={base}
-                      className="flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm hover:bg-[var(--surface-strong)] text-[var(--ink)]"
-                    >
-                      <GridIcon className="size-4" />
-                      <span>{messages.title}</span>
-                    </Link>
-                  </div>
-
-                  <div className="pt-1 border-t border-[var(--line)]">
-                    {signOut}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Mobile Menu Trigger Button */}
-          <button
-            type="button"
-            className={`${control} sf-menu-trigger`}
-            aria-label={drawerOpen ? "Close menu" : "Open menu"}
-            aria-expanded={drawerOpen}
-            aria-controls="admin-mobile-menu"
-            onClick={() => {
-              if (drawerOpen) drawerRef.current?.close();
-              else {
-                drawerRef.current?.showModal();
-                setDrawerOpen(true);
-              }
-            }}
-          >
-            <MenuIcon />
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Section Navigation Bar (Identical Category Bar Geometry & Styles) */}
-      <div className="sf-category-bar">
+  const adminSubnav = (
+    <div className="sf-categories-wrapper border-t border-[var(--line)]">
+      <div className="gh-page">
         <nav
-          className="gh-page sf-category-nav"
-          aria-label={messages.navLabel}
+          className="sf-categories-bar admin-horizontal-nav"
+          aria-label={messages.title}
         >
-          {allNavItems.map(({ href, label, Icon, active }) => (
+          {allNavItems.map(({ key, href, label, Icon, active }) => (
             <Link
-              key={href}
+              key={key}
               to={href}
-              className={`sf-category-link${active ? " is-active" : ""}`}
+              className={`sf-category-pill admin-nav-pill ${active ? "is-active" : ""}`}
               aria-current={active ? "page" : undefined}
             >
-              <Icon className="size-4.5 shrink-0" />
+              <Icon className="size-4 shrink-0" />
               <span>{label}</span>
             </Link>
           ))}
         </nav>
       </div>
+    </div>
+  );
 
-      {/* 3. Mobile Drawer (Identical Native Dialog & Styling to Storefront) */}
-      <dialog
-        id="admin-mobile-menu"
-        onClose={() => setDrawerOpen(false)}
-        ref={drawerRef}
-        dir={getLocaleDirection(locale)}
-        className="sf-mobile-drawer"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            const box = event.currentTarget.getBoundingClientRect();
-            if (event.clientX < box.left || event.clientX > box.right)
-              drawerRef.current?.close();
-          }
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <Link to={`/${locale}`} className="flex items-center gap-2">
-            <StorefrontBrand name={brandName} />
-            <span className="admin-badge admin-badge-accent text-[11px] font-bold py-0.5 px-2">
-              Admin
-            </span>
-          </Link>
-          <button
-            type="button"
-            className={control}
-            onClick={() => drawerRef.current?.close()}
-            aria-label="Close"
-          >
-            <CloseIcon />
-          </button>
-        </div>
+  const drawerContent = (
+    <>
+      <p className="font-semibold text-base text-[var(--ink)]">
+        <bdi>{displayName || "Admin"}</bdi>
+      </p>
+      <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{messages.signedInAs}</p>
 
-        <div className="my-5 border-y border-[var(--line)] py-4">
-          <p className="font-semibold text-base text-[var(--ink)]">
-            <bdi>{displayName || "Admin"}</bdi>
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-            {messages.signedInAs}
-          </p>
+      <div className="my-4 space-y-1">
+        {allNavItems.map(({ key, href, label, Icon, active }) => (
           <Link
-            to={`/${locale}`}
-            target="_blank"
-            className="mt-3 flex items-center justify-between rounded-xl bg-[var(--surface-strong)] p-3 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-inset)]"
+            key={key}
+            to={href}
+            onClick={() => drawerRef.current?.close()}
+            className={`flex items-center justify-between rounded-xl p-3 text-xs font-semibold transition-colors ${
+              active
+                ? "bg-[var(--accent)] text-white shadow-xs"
+                : "text-[var(--ink-soft)] hover:bg-[var(--surface-strong)] hover:text-[var(--ink)]"
+            }`}
+            aria-current={active ? "page" : undefined}
           >
-            <span className="flex items-center gap-2">
-              <GlobeIcon className="size-4 text-[var(--accent)]" />
-              <span>{locale === "ar" ? "زيارة المتجر" : "View store"}</span>
+            <span className="flex items-center gap-2.5">
+              <Icon className="size-4" />
+              <span>{label}</span>
             </span>
-            <ArrowIcon direction={locale === "ar" ? "start" : "end"} className="size-3" />
+            <ArrowIcon direction={locale === "ar" ? "start" : "end"} className="size-3 opacity-60" />
           </Link>
-        </div>
+        ))}
+      </div>
+    </>
+  );
 
-        {/* Dashboard Nav Items in Drawer */}
-        <nav aria-label={messages.navLabel} className="grid gap-1">
-          {allNavItems.map(({ href, label, Icon, active }) => (
-            <Link
-              key={href}
-              to={href}
-              onClick={() => drawerRef.current?.close()}
-              className={`rounded-xl px-3 py-3 font-medium flex items-center gap-3 transition-colors ${
-                active
-                  ? "bg-[var(--surface-strong)] text-[var(--accent)]"
-                  : "hover:bg-[var(--surface)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
-              }`}
-            >
-              <Icon className="size-4.5 shrink-0" />
-              <span className="text-sm">{label}</span>
-            </Link>
-          ))}
-        </nav>
+  const drawerFooter = (
+    <div className="mt-6 flex items-center justify-between border-t border-[var(--line)] pt-4">
+      <ThemeToggle label={locale === "ar" ? "تبديل المظهر" : "Toggle theme"} />
+      <Form method="post" action={`/${locale}`}>
+        <button
+          type="submit"
+          name="intent"
+          value="sign-out"
+          className="text-xs font-semibold text-[var(--danger)] hover:underline cursor-pointer"
+        >
+          {locale === "ar" ? "تسجيل الخروج" : "Sign out"}
+        </button>
+      </Form>
+    </div>
+  );
 
-        <div className="mt-6 flex items-center justify-between border-t border-[var(--line)] pt-4">
-          <ThemeToggle label={themeToggleLabel} />
-          {signOut}
-        </div>
-      </dialog>
-    </header>
+  return (
+    <HeaderShell
+      locale={locale}
+      brandName={brandName}
+      brandBadge={adminBadge}
+      center={centerBreadcrumb}
+      actions={
+        <HeaderActions
+          locale={locale}
+          session={{ displayName: displayName || "Admin" }}
+          accountItems={accountItems}
+          signedInAsLabel={messages.signedInAs}
+          accountMenuLabel="Admin menu"
+          onOpenDrawer={() => drawerRef.current?.showModal()}
+        />
+      }
+      subnav={adminSubnav}
+      drawer={
+        <HeaderMobileDrawer
+          dialogRef={drawerRef}
+          locale={locale}
+          brandName={brandName}
+          brandBadge={adminBadge}
+          footer={drawerFooter}
+        >
+          {drawerContent}
+        </HeaderMobileDrawer>
+      }
+    />
   );
 }
