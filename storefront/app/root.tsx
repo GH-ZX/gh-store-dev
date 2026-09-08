@@ -80,12 +80,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
         <link rel="icon" href="/gh-store-logo-mark.png" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="theme-color" content="#101218" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="GH Store" />
         {data?.themeCss ? (
           <style dangerouslySetInnerHTML={{ __html: data.themeCss }} />
         ) : null}
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem("gh-store-theme")||localStorage.getItem("gh-theme");if(t!=="light"&&t!=="dark"){t=${JSON.stringify(data?.defaultMode ?? "system")};if(t==="system")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}document.documentElement.dataset.theme=t}catch(e){}`,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if("serviceWorker" in navigator&&location.protocol==="https:"){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}`,
           }}
         />
       </head>

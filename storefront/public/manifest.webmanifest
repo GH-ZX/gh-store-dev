@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
+  "name": "GH Store — متجر الألعاب والاشتراكات الرقمية",
+  "short_name": "GH Store",
+  "description": "متجر رقمي لشحن الألعاب، بطاقات الهدايا والاشتراكات الفورية",
+  "start_url": "/ar",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#101218",
+  "theme_color": "#101218",
+  "dir": "rtl",
+  "lang": "ar",
+  "categories": ["games", "shopping", "entertainment"],
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/gh-store-logo-mark.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "الرئيسية",
+      "short_name": "الرئيسية",
+      "description": "تصفح الصفحة الرئيسية",
+      "url": "/ar",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "الألعاب",
+      "short_name": "الألعاب",
+      "description": "شحن الألعاب الفوري",
+      "url": "/ar/games",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "بطاقات الهدايا",
+      "short_name": "بطاقات",
+      "description": "بطاقات الهدايا والقسائم",
+      "url": "/ar/gift-cards",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "المحفظة",
+      "short_name": "محفظتي",
+      "description": "رصيد المحفظة وعمليات الشحن",
+      "url": "/ar/wallet",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
