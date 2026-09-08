@@ -491,6 +491,7 @@ export async function saveBrandingAction(
       nameAr: parsed.data.name_ar ?? "",
       nameEn: parsed.data.name_en ?? "",
       useEverywhere: formFlag(formData, "use_everywhere"),
+      showLogo: formFlag(formData, "show_logo"),
     });
   } catch (error) {
     logFailure("admin.website", "branding_save_failed", error);

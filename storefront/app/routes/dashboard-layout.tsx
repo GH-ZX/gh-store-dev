@@ -34,7 +34,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   }
   const settings = await getPublicStoreSettings(createPublicClient(env));
   return data(
-    { locale, displayName: session.displayName, theme: settings.theme },
+    {
+      locale,
+      displayName: session.displayName,
+      theme: settings.theme,
+      showLogo: settings.branding.showLogo ?? false,
+    },
     { headers: sessionCookieHeaders(jar, isProduction) },
   );
 }
@@ -45,7 +50,7 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export default function DashboardLayout() {
-  const { locale, displayName, theme } = useLoaderData<typeof loader>();
+  const { locale, displayName, theme, showLogo } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "admin");
   const { revalidate } = useRevalidator();
 
@@ -69,6 +74,7 @@ export default function DashboardLayout() {
         locale={locale}
         messages={messages.shell}
         displayName={displayName}
+        showLogo={showLogo}
       />
       <main id="main" className="gh-page py-6 sm:py-8 w-full flex-1">
         <Outlet />

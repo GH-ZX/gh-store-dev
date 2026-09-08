@@ -62,7 +62,7 @@ describe("migrated website settings mutations", () => {
   it("changes only branding and preserves unrelated stored branding keys", async () => {
     test.row.branding = { future_setting: "retained" };
     await saveBrandingAction(initial, form({ name_en: "New store" }));
-    expect(test.updates[0]).toEqual({ branding: { future_setting: "retained", name_ar: "", name_en: "New store", use_everywhere: false } });
+    expect(test.updates[0]).toEqual({ branding: { future_setting: "retained", name_ar: "", name_en: "New store", use_everywhere: false, show_logo: false } });
   });
 
   it("keeps carousel settings when the homepage layout is saved", async () => {

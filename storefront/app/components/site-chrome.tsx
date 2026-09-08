@@ -38,6 +38,7 @@ export type ChromeData = {
   walletPanel: ChromeWalletPanel;
   unreadCount: number;
   brandName: string;
+  showLogo?: boolean;
   socialLinks: ChromeSocialLink[];
   year: number;
   theme?: ThemeSettings;

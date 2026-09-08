@@ -15,17 +15,25 @@ import { formatPrice } from "@/lib/format/money";
 
 export const headerControlClass = "sf-control";
 
-export function StorefrontBrand({ name = "GH Store" }: { name?: string }) {
+export function StorefrontBrand({
+  name = "GH Store",
+  showLogo = false,
+}: {
+  name?: string;
+  showLogo?: boolean;
+}) {
   const [first, ...rest] = (name || "GH Store").trim().split(/\s+/);
   return (
     <div className="flex items-center gap-2.5">
-      <img
-        src="/gh-store-logo-mark.png"
-        alt=""
-        width="36"
-        height="36"
-        className="gh-logo-theme size-9 rounded-[var(--radius-control,8px)] shadow-xs"
-      />
+      {showLogo ? (
+        <img
+          src="/gh-store-logo-mark.png"
+          alt=""
+          width="36"
+          height="36"
+          className="gh-logo-theme size-9 rounded-[var(--radius-control,8px)] shadow-xs"
+        />
+      ) : null}
       <span className="sf-brand font-bold text-lg tracking-tight text-[var(--ink)]" dir="auto">
         <span>{first}</span>
         {rest.length ? <span>{rest.join(" ")}</span> : null}
@@ -62,6 +70,7 @@ export interface HeaderShellProps {
   brandName?: string;
   brandHref?: string;
   brandBadge?: ReactNode;
+  showLogo?: boolean;
   center?: ReactNode;
   actions?: ReactNode;
   subnav?: ReactNode;
@@ -74,6 +83,7 @@ export function HeaderShell({
   brandName = "GH Store",
   brandHref,
   brandBadge,
+  showLogo = false,
   center,
   actions,
   subnav,
@@ -99,7 +109,7 @@ export function HeaderShell({
           className="sf-brand-link flex items-center gap-2.5"
           aria-label={brandName}
         >
-          <StorefrontBrand name={brandName} />
+          <StorefrontBrand name={brandName} showLogo={showLogo} />
           {brandBadge}
         </Link>
 
@@ -360,16 +370,17 @@ export interface HeaderMobileDrawerProps {
   brandName?: string;
   brandHref?: string;
   brandBadge?: ReactNode;
+  showLogo?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 }
-
 export function HeaderMobileDrawer({
   dialogRef,
   locale,
   brandName = "GH Store",
   brandHref,
   brandBadge,
+  showLogo = false,
   children,
   footer,
 }: HeaderMobileDrawerProps) {
@@ -388,7 +399,7 @@ export function HeaderMobileDrawer({
     >
       <div className="flex items-center justify-between">
         <Link to={homeHref} className="flex items-center gap-2" onClick={() => dialogRef.current?.close()}>
-          <StorefrontBrand name={brandName} />
+          <StorefrontBrand name={brandName} showLogo={showLogo} />
           {brandBadge}
         </Link>
         <button

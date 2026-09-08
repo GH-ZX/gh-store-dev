@@ -107,6 +107,7 @@ export type BrandingInput = {
   nameAr: string;
   nameEn: string;
   useEverywhere: boolean;
+  showLogo?: boolean;
 };
 
 type JsonObject = { [key: string]: Json | undefined };
@@ -418,6 +419,7 @@ export async function saveBranding(input: BrandingInput): Promise<void> {
       name_ar: input.nameAr.trim(),
       name_en: input.nameEn.trim(),
       use_everywhere: input.useEverywhere,
+      show_logo: Boolean(input.showLogo),
     },
   });
 }

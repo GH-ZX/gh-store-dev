@@ -92,6 +92,7 @@ const publicSettingsSchema = z.object({
       name_ar: z.string().trim().max(80).optional(),
       name_en: z.string().trim().max(80).optional(),
       use_everywhere: z.boolean().optional(),
+      show_logo: z.boolean().optional(),
     })
     .optional(),
   maintenance_mode: z.boolean().optional(),
@@ -137,12 +138,14 @@ export type PublicStoreSettings = {
     nameAr: string;
     nameEn: string;
     useEverywhere: boolean;
-  };    maintenanceMode: boolean;
-    maintenanceMessageAr: string;
-    maintenanceMessageEn: string;
-    /** The store's Telegram bot @username, for connect instructions. */
-    telegramBotUsername: string | null;
+    showLogo: boolean;
   };
+  maintenanceMode: boolean;
+  maintenanceMessageAr: string;
+  maintenanceMessageEn: string;
+  /** The store's Telegram bot @username, for connect instructions. */
+  telegramBotUsername: string | null;
+};
 
 export const EMPTY_PUBLIC_SETTINGS: PublicStoreSettings = {
   socialLinks: [],
@@ -162,6 +165,7 @@ export const EMPTY_PUBLIC_SETTINGS: PublicStoreSettings = {
     nameAr: "",
     nameEn: "",
     useEverywhere: false,
+    showLogo: false,
   },
   maintenanceMode: false,
   telegramBotUsername: null,
@@ -279,6 +283,7 @@ export function normalizePublicSettings(value: unknown): PublicStoreSettings {
       nameAr: settings.branding?.name_ar ?? "",
       nameEn: settings.branding?.name_en ?? "",
       useEverywhere: settings.branding?.use_everywhere ?? false,
+      showLogo: settings.branding?.show_logo ?? false,
     },
     maintenanceMode: settings.maintenance_mode ?? false,
     maintenanceMessageAr: settings.maintenance_message_ar ?? "",

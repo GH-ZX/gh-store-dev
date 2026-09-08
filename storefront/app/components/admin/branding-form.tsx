@@ -1,3 +1,4 @@
+import { useLocation } from "react-router";
 import { useWebsiteAction } from "@/components/admin/use-website-action";
 import { resolveWebsiteError } from "@/components/admin/website-action-state";
 import { CheckboxField, FormResult, TextField } from "@/components/admin/admin-form";
@@ -20,7 +21,8 @@ export type BrandingFormProps = {
 
 export function BrandingForm({ branding, messages, errors }: BrandingFormProps) {
   const [state, formAction, pending] = useWebsiteAction("saveBrandingAction");
-
+  const { pathname } = useLocation();
+  const ar = pathname.startsWith("/ar");
   return (
     <form method="post" onSubmit={formAction} className="grid gap-4">
         <input type="hidden" name="intent" value="saveBrandingAction" />
@@ -47,6 +49,16 @@ export function BrandingForm({ branding, messages, errors }: BrandingFormProps) 
         defaultChecked={branding.useEverywhere}
       />
 
+      <CheckboxField
+        label={ar ? "إظهار الشعار الصوري بجانب اسم المتجر" : "Show logo image beside store name"}
+        hint={
+          ar
+            ? "عند التعطيل، يظهر فقط اسم المتجر النصي الأنيق بدون صورة الشعار في الترويسة."
+            : "When disabled, only the clean textual store name is shown in the header without the logo image."
+        }
+        name="show_logo"
+        defaultChecked={branding.showLogo}
+      />
       <FormResult
         error={resolveWebsiteError(errors, state.error)}
         notice={state.notice ? messages.saved : null}

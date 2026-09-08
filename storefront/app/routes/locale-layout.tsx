@@ -67,6 +67,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     brandName: settings.branding.useEverywhere
       ? buildBrandName(settings, locale)
       : APP_NAME,
+    showLogo: settings.branding.showLogo ?? false,
     socialLinks: settings.socialLinks,
     year: new Date().getFullYear(),
     theme: settings.theme,

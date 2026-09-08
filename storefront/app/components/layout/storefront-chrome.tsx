@@ -260,6 +260,7 @@ export function StorefrontHeader({
     <HeaderShell
       locale={locale}
       brandName={brandName}
+      showLogo={data.showLogo ?? false}
       loadingLabel={messages.states.loading}
       center={centerSearch}
       actions={

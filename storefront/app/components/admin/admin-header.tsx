@@ -51,6 +51,7 @@ export interface AdminHeaderProps {
   messages: AdminMessages["shell"];
   displayName?: string;
   brandName?: string;
+  showLogo?: boolean;
 }
 
 export function AdminHeader({
@@ -58,6 +59,7 @@ export function AdminHeader({
   messages,
   displayName,
   brandName = "GH Store",
+  showLogo = false,
 }: AdminHeaderProps) {
   const location = useLocation();
   const base = `/${locale}/dashboard`;
@@ -180,6 +182,7 @@ export function AdminHeader({
       locale={locale}
       brandName={brandName}
       brandBadge={adminBadge}
+      showLogo={showLogo}
       center={centerBreadcrumb}
       actions={
         <HeaderActions
@@ -198,6 +201,7 @@ export function AdminHeader({
           locale={locale}
           brandName={brandName}
           brandBadge={adminBadge}
+          showLogo={showLogo}
           footer={drawerFooter}
         >
           {drawerContent}
