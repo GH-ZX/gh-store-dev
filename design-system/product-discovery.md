@@ -70,8 +70,12 @@ inspection compares the concept with the implementation; functional checks
 separately exercise real navigation and mocked admin states. No production
 catalog content, supplier rate, wallet or payment is changed during QA.
 
-Release validation: 1,129 unit tests and 104 browser checks pass; two browser
+Release validation: 1,142 unit tests and 104 browser checks pass; two browser
 cases are skipped where their controls do not apply to the device. English
 and Arabic storefront navigation, themes, artwork and product selection are
 covered. Isolated admin fixtures verify price drafts, refresh/error states,
 daily figures and the integrated header/drawer at 360–430px without live writes.
+
+Final live review also found Telegram custom-emoji wrappers in imported
+descriptions. Public product and offer mappings remove only those wrappers,
+preserving their emoji, links and line breaks without changing stored copy.

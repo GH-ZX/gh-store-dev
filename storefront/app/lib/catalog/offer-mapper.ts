@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import { UNCATEGORIZED_PRODUCT_PATH } from "@/lib/catalog/paths";
+import { catalogDescriptionText } from "@/lib/catalog/description";
 
 /** Shape of the `products` relation when an offer read joins its parent product. */
 type OfferProductRelation = {
@@ -119,7 +120,7 @@ export function toStoreOffer(row: OfferRow, locale: Locale): StoreOffer {
     slug: row.slug,
     offerType,
     name: displayName(isArabic ? row.name_ar : row.name_en, pointsName),
-    description: isArabic ? row.description_ar : row.description_en,
+    description: catalogDescriptionText(isArabic ? row.description_ar : row.description_en),
     price: row.price,
     originalPrice: row.original_price,
     currency: row.currency,
