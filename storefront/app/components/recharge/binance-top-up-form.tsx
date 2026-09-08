@@ -28,6 +28,8 @@ export type BinanceTopUpFormProps = {
   currency: string;
   minAmount: number;
   maxAmount: number;
+  initialAmount?: number | null;
+  returnTo?: string | null;
 };
 
 export function BinanceTopUpForm({
@@ -36,6 +38,8 @@ export function BinanceTopUpForm({
   currency,
   minAmount,
   maxAmount,
+  initialAmount,
+  returnTo,
 }: BinanceTopUpFormProps) {
   const [state, _formAction, pending, formActionSubmit] = useCommerceAction<BinanceTopUpState>('startBinanceTopUpAction',
     INITIAL_BINANCE_STATE,
@@ -56,6 +60,7 @@ export function BinanceTopUpForm({
   return (
     <form onSubmit={formActionSubmit} className="grid gap-4">
       <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="returnTo" value={returnTo ?? ""} />
 
       <label className="grid max-w-xs gap-2">
         <span className="text-sm font-medium text-[var(--ink-soft)]">
@@ -64,6 +69,7 @@ export function BinanceTopUpForm({
         <input
           type="number"
           name="amount"
+          defaultValue={initialAmount ?? undefined}
           min={minAmount}
           max={maxAmount}
           step={0.01}

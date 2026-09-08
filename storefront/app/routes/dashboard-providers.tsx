@@ -51,11 +51,11 @@ import { G2BULK_PROVIDER_NAME } from "@server/providers/g2bulk/mapping";
 import { useLoaderData, type LoaderFunctionArgs } from "react-router";
 import { isLocale } from "@/i18n/config";
 function requireLocale(value: string | undefined) { if (!value || !isLocale(value)) throw new Response("Not Found", { status: 404 }); return value; }
-import { requireAdmin } from "@server/lib/auth/guards";
+import { requireDashboardAdmin } from "@server/dashboard-access";
 
-export async function loader({ params }: LoaderFunctionArgs) {
-  await requireAdmin();
+export async function loader({ params, request }: LoaderFunctionArgs) {
   const locale = requireLocale(params.locale);
+  await requireDashboardAdmin(request, locale);
   const [status, callback, maxstoreStatus, batstoreStatus, logs, samStatus, binanceStatus, samOverview, axiomStatus, fulfillmentSettings, telegramStatus, igdbStatus, walletCards, rechargeQueues] =
     await Promise.all([
       getG2BulkStatus(),

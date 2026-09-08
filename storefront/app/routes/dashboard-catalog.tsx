@@ -20,8 +20,7 @@ import {
  * Catalog list.
  *
  * Search and the published filter live in the URL, not in component state: an
- * operator can bookmark "unpublished imports I still have to price", and the
- * whole page stays a Server Component with no client bundle at all.
+ * operator can bookmark unpublished imports that still need pricing.
  */
 
 const MAX_QUERY_LENGTH = 80;
@@ -78,13 +77,13 @@ const FILTER_LINK_CLASSES =
 import { useLoaderData, type LoaderFunctionArgs } from "react-router";
 import { isLocale } from "@/i18n/config";
 function requireLocale(value: string | undefined) { if (!value || !isLocale(value)) throw new Response("Not Found", { status: 404 }); return value; }
-import { requireAdmin } from "@server/lib/auth/guards";
+import { requireDashboardAdmin } from "@server/dashboard-access";
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
-  await requireAdmin();
   const locale = requireLocale(params.locale);
+  await requireDashboardAdmin(request, locale);
   const filters = parseFilters(Object.fromEntries(new URL(request.url).searchParams));
-  const [games, providerCategories] = await Promise.all([
+  const [products, providerCategories] = await Promise.all([
     listAdminProducts({
       query: filters.query,
       publishedOnly: filters.publishedOnly,
@@ -93,11 +92,11 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     listAdminProviderCategories(),
   ]);
 
-  return { locale, filters, games, providerCategories };
+  return { locale, filters, products, providerCategories };
 }
 
 export default function Page() {
- const { locale, filters, games, providerCategories } = useLoaderData<typeof loader>();
+ const { locale, filters, products, providerCategories } = useLoaderData<typeof loader>();
 const messages = getMessages(locale, "admin").catalog;
   return (
     <div className="grid gap-8">
@@ -181,10 +180,10 @@ const messages = getMessages(locale, "admin").catalog;
       </div>
 
       <p className="text-sm text-[var(--ink-muted)] tabular-nums">
-        {formatMessage(messages.countLabel, { count: games.length }, locale)}
+        {formatMessage(messages.countLabel, { count: products.length }, locale)}
       </p>
 
-      {games.length === 0 ? (
+      {products.length === 0 ? (
         <EmptyState
           icon={<GamepadIcon />}
           title={messages.emptyTitle}
@@ -196,36 +195,38 @@ const messages = getMessages(locale, "admin").catalog;
         />
       ) : (
         <ul className="grid gap-2">
-          {games.map((game) => (
-            <li key={game.id}>
-              <Link
-                to={`/${locale}/dashboard/catalog/${game.id}`}
-                className="flex min-h-11 flex-wrap items-center gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--shell)] p-3 transition-colors duration-[var(--duration)] ease-[var(--ease-spring)] hover:border-[var(--line-strong)] hover:bg-[var(--surface)] sm:p-4"
-              >
+          {products.map((product) => (
+            <li key={product.id}>
+              <div className="flex min-h-11 flex-wrap items-center gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--shell)] p-3 transition-colors duration-[var(--duration)] ease-[var(--ease-spring)] hover:border-[var(--line-strong)] hover:bg-[var(--surface)] sm:p-4">
                 <div className="size-14 shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line)]">
-                  <StoreImage src={game.imageUrl} alt="" sizes="56px" />
+                  <StoreImage src={product.imageUrl} alt="" sizes="56px" />
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-[var(--ink)]">{game.nameAr}</p>
-                  <p className="truncate text-xs text-[var(--ink-soft)]" dir="ltr">
-                    {game.nameEn}
-                  </p>
+                  <Link
+                    to={`/${locale}/dashboard/catalog/${product.id}`}
+                    className="block min-h-11 rounded-[var(--radius-control)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
+                  >
+                    <span className="block truncate text-sm font-semibold text-[var(--ink)]">{locale === "ar" ? product.nameAr : product.nameEn}</span>
+                    <span className="block truncate text-xs text-[var(--ink-soft)]" dir={locale === "ar" ? "ltr" : "rtl"}>
+                      {locale === "ar" ? product.nameEn : product.nameAr}
+                    </span>
+                  </Link>
                   <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--ink-faint)]">
                     <span dir="ltr" className="font-mono">
-                      {game.slug}
+                      {product.slug}
                     </span>
                     <span className="text-[var(--ink-muted)] tabular-nums">
-                      {formatMessage(messages.offersCount, { count: game.offerCount }, locale)}
+                      {formatMessage(messages.offersCount, { count: product.offerCount }, locale)}
                     </span>
-                    {game.providerCode ? (
+                    {product.providerCode ? (
                       <span>
-                        {messages.providerLabel}: <span dir="ltr">{game.providerCode}</span>
+                        {messages.providerLabel}: <span dir="ltr">{product.providerCode}</span>
                       </span>
                     ) : null}
-                    {game.providerUrl ? (
+                    {product.providerUrl ? (
                       <a
-                        href={game.providerUrl}
+                        href={product.providerUrl}
                         target="_blank"
                         rel="noreferrer noopener"
                         className="inline-flex items-center gap-1 text-[var(--accent-strong)] underline-offset-4 transition-colors duration-[var(--duration)] hover:underline"
@@ -234,26 +235,31 @@ const messages = getMessages(locale, "admin").catalog;
                         <span dir="ltr">{messages.supplierLinkTitle}</span>
                       </a>
                     ) : null}
-                    {game.providerCategoryTitle ? (
+                    {product.providerCategoryTitle ? (
                       <span>
-                        {messages.providerCategoryLabel}: {game.providerCategoryTitle}
+                        {messages.providerCategoryLabel}: {product.providerCategoryTitle}
                       </span>
                     ) : null}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  <Badge tone={game.isActive ? "success" : "neutral"}>
-                    {game.isActive ? messages.published : messages.unpublished}
+                  <Badge tone={product.isActive ? "success" : "neutral"}>
+                    {product.isActive ? messages.published : messages.unpublished}
                   </Badge>
-                  {game.isFeatured ? <Badge tone="accent">{messages.featured}</Badge> : null}
-                  {game.showInCarousel ? <Badge tone="sale">{messages.inCarousel}</Badge> : null}
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-soft)]">
+                  {product.activeOfferCount === 0 ? <Badge tone="warning">{messages.noActiveOffers}</Badge> : null}
+                  {product.isFeatured ? <Badge tone="accent">{messages.featured}</Badge> : null}
+                  {product.showInCarousel ? <Badge tone="sale">{messages.inCarousel}</Badge> : null}
+                  <Link
+                    to={`/${locale}/dashboard/catalog/${product.id}`}
+                    className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] px-2 text-xs font-semibold text-[var(--ink-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                    aria-label={`${messages.editAction}: ${locale === "ar" ? product.nameAr : product.nameEn}`}
+                  >
                     {messages.editAction}
                     <ChevronIcon direction="end" className="size-4 rtl:rotate-180" />
-                  </span>
+                  </Link>
                 </div>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>

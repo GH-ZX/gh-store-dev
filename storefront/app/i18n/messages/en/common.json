@@ -4,6 +4,9 @@
     "games": "Games",
     "giftCards": "Gift cards",
     "products": "Products",
+    "allProducts": "All products",
+    "aiSubscriptions": "AI & subscriptions",
+    "bestSellers": "Bestsellers",
     "offers": "Offers",
     "menu": "Menu",
     "close": "Close",
@@ -36,7 +39,9 @@
     "emptyTitle": "Nothing to show yet",
     "emptyDescription": "We are still filling this section. Browse the rest of the store in the meantime.",
     "errorTitle": "We could not load this",
-    "errorDescription": "Please refresh the page in a moment."
+    "errorDescription": "Please refresh the page in a moment.",
+    "notFoundTitle": "This page is unavailable",
+    "notFoundDescription": "The address may have changed, or this item is no longer available. Browse the store to find what you need."
   },
   "locale": {
     "switchLabel": "Change language"
@@ -47,7 +52,7 @@
     "light": "Light appearance"
   },
   "footer": {
-    "tagline": "Digital products and clear delivery for players.",
+    "tagline": "Digital products, subscriptions, and gift cards in one place.",
     "storeHeading": "Store",
     "helpHeading": "Help",
     "legalHeading": "Legal",
@@ -83,6 +88,7 @@
   "account": {
     "signIn": "Sign in",
     "account": "My account",
+    "orders": "My orders",
     "adminBadge": "Admin",
     "dashboard": "Dashboard",
     "walletLabel": "Balance",

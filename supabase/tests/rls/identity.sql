@@ -33,16 +33,18 @@ select ok(
 
 select ok(
   (
-    select count(*) = 4
+    select count(*) = 3
       and count(*) filter (where policyname = 'profiles_select_admin') = 1
       and count(*) filter (where policyname = 'profiles_select_own') = 1
-      and count(*) filter (where policyname = 'profiles_update_admin') = 1
+      -- Access-control changes use the guarded service-role path; the broad
+      -- admin update policy was retired by 20260821020000.
+      and count(*) filter (where policyname = 'profiles_update_admin') = 0
       and count(*) filter (where policyname = 'profiles_update_own') = 1
     from pg_policies
     where schemaname = 'public'
       and tablename = 'profiles'
   ),
-  'Profile policies are explicit and limited'
+  'Profile policies allow direct updates only to the authenticated user''s own row'
 );
 
 select * from finish();

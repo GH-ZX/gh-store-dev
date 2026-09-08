@@ -8,13 +8,35 @@ function remote<T extends (...args: never[]) => Promise<unknown>>(name: string):
       for (const [key, value] of arg.entries()) body.append(`form${index}:${key}`, value);
       return { $form: index };
     })));
-    const response = await fetch("/api/admin-actions", { method: "POST", body, headers: { Accept: "application/json" } });
-    if (response.redirected) { window.location.assign(response.url); return await new Promise(() => {}); }
-    if (!response.ok) throw new Error("Unable to complete the admin action. Please retry.");
-    const envelope = await response.json() as { result: Awaited<ReturnType<T>>; redirect?: string };
-    if (envelope.redirect) { window.location.assign(envelope.redirect); return await new Promise(() => {}); }
-    window.dispatchEvent(new Event("admin-action-complete"));
-    return envelope.result;
+    try {
+      const response = await fetch("/api/admin-actions", { method: "POST", body, headers: { Accept: "application/json" } });
+      if (response.redirected) { window.location.assign(response.url); return await new Promise(() => {}); }
+      if (!response.ok) throw new Error("Unable to complete the admin action. Please retry.");
+      const envelope = await response.json() as { result: Awaited<ReturnType<T>>; redirect?: string };
+      if (envelope.redirect) { window.location.assign(envelope.redirect); return await new Promise(() => {}); }
+      const result = envelope.result;
+      const failed = result && typeof result === "object" && (
+        ("error" in result && !!result.error) ||
+        ("success" in result && result.success === false)
+      );
+      const readOnly = name === "searchIgdbArtworkAction" || name === "loadProductPresentationAction";
+      if (!failed && !readOnly) window.dispatchEvent(new Event("admin-action-complete"));
+      return result;
+    } catch (error) {
+      const [previous, form] = args as unknown[];
+      if (form instanceof FormData && previous && typeof previous === "object" && "error" in previous) {
+        // Form actions have an inline error channel. A failed request must not
+        // replace the entire dashboard with React's nearest error boundary.
+        return {
+          ...previous,
+          error: "unknown",
+          ...("notice" in previous ? { notice: null } : {}),
+          ...("summary" in previous ? { summary: null } : {}),
+        } as Awaited<ReturnType<T>>;
+      }
+      // Direct operations (stock, carousel ordering) handle their own errors.
+      throw error;
+    }
   }) as T;
 }
 import type * as actions0 from "@server/legacy/app/[locale]/dashboard/catalog/actions";

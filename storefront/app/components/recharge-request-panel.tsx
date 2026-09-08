@@ -1,12 +1,15 @@
 
 import { useEffect } from "react";
 import { useRevalidator } from "react-router";
+import { useCommerceAction } from "@/components/commerce/use-commerce-action";
+import { FormResult } from "@/components/admin/admin-form";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { AlertIcon, CheckIcon, WalletIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { RechargeMessages } from "@/i18n/messages";
 import { formatPrice } from "@/lib/format/money";
+import { getMethodInstructions, type RechargeMethod } from "@/lib/recharge-settings";
 import type { MyRechargeRequestDetail } from "@server/lib/services/recharge.service";
 
 /**
@@ -30,6 +33,8 @@ export type RechargeRequestPanelProps = {
   balance: number;
   currency: string;
   methodLabel: string;
+  method?: RechargeMethod | null;
+  returnTo?: string | null;
 };
 
 /** Manual review is human-paced; five seconds is calm but responsive. */
@@ -44,19 +49,22 @@ export function RechargeRequestPanel({
   balance,
   currency,
   methodLabel,
+  method,
+  returnTo,
 }: RechargeRequestPanelProps) {
   const { revalidate, state } = useRevalidator();
+  const [paidState, , markingPaid, markPaidSubmit] = useCommerceAction<{ error: string | null }>("markRechargePaid", { error: null });
   const requestMessages = messages.request;
 
   useEffect(() => {
-    if (!open || state !== "idle") {
+    if (!open || state !== "idle" || markingPaid) {
       return;
     }
 
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") void revalidate(); }, POLL_MS);
 
     return () => window.clearInterval(timer);
-  }, [open, revalidate, state]);
+  }, [open, revalidate, state, markingPaid]);
 
   if (approved) {
     return (
@@ -93,6 +101,9 @@ export function RechargeRequestPanel({
           </p>
         </div>
 
+        <ButtonLink href={returnTo ?? `/${locale}/wallet`}>
+          {returnTo ? messages.returnToCheckout : messages.backToWallet}
+        </ButtonLink>
         <ButtonLink href={`/${locale}/recharge/${request.id}/invoice`} variant="secondary">
           {requestMessages.viewInvoice}
         </ButtonLink>
@@ -138,7 +149,7 @@ export function RechargeRequestPanel({
   return (
     <div className="grid gap-5">
       <div className="rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] p-6 text-center sm:p-8">
-        <Badge tone="warning">{requestMessages.waitingTitle}</Badge>
+        <Badge tone="warning">{request.status === "pending" ? messages.statuses.pending : requestMessages.waitingTitle}</Badge>
         <p
           className="mt-4 text-3xl font-semibold tracking-tight text-[var(--ink)] tabular-nums"
           dir="ltr"
@@ -146,19 +157,34 @@ export function RechargeRequestPanel({
           {formatPrice(request.requestedAmount, request.currency, locale)}
         </p>
         <p className="mt-3 text-sm leading-6 text-[var(--ink-soft)]">
-          {requestMessages.waitingDescription}
+          {request.status === "pending" ? requestMessages.paymentDescription : requestMessages.waitingDescription}
         </p>
       </div>
 
       <div className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5">
         <p className="text-xs font-medium text-[var(--ink-faint)]">{messages.referenceLabel}</p>
         <p
-          className="mt-2 font-mono text-2xl font-semibold tracking-tight text-[var(--ink)]"
+          className="mt-2 break-all font-mono text-2xl font-semibold tracking-tight text-[var(--ink)]"
           dir="ltr"
         >
           {request.reference}
         </p>
+        <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">{messages.referenceHint}</p>
       </div>
+
+      {request.status === "pending" && method ? (
+        <div className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5">
+          <h2 className="text-sm font-semibold text-[var(--ink)]">{messages.instructionsTitle}</h2>
+          {method.account ? <p className="break-all font-mono text-sm text-[var(--ink)]" dir="ltr">{method.account}</p> : null}
+          {getMethodInstructions(method, locale) ? <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--ink-muted)]" dir="auto">{getMethodInstructions(method, locale)}</p> : null}
+          <form onSubmit={markPaidSubmit} className="grid gap-3">
+            <FormResult error={paidState.error ? messages.errors[paidState.error as keyof typeof messages.errors] ?? messages.errors.unknown : null} />
+            <Button type="submit" disabled={markingPaid} aria-busy={markingPaid}>
+              {markingPaid ? requestMessages.markingPaid : messages.markPaidAction}
+            </Button>
+          </form>
+        </div>
+      ) : request.status === "payment_sent" ? <p role="status" className="text-sm leading-6 text-[var(--ink-muted)]">{messages.markedPaid}</p> : null}
 
       <dl className="grid gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5 text-sm sm:grid-cols-2">
         <div>
@@ -177,8 +203,8 @@ export function RechargeRequestPanel({
         {requestMessages.updatesAutomatically}
       </p>
 
-      <Button variant="secondary" onClick={() => void revalidate()}>
-        {requestMessages.checkNow}
+      <Button variant="secondary" disabled={state !== "idle" || markingPaid} aria-busy={state !== "idle"} onClick={() => void revalidate()}>
+        {state !== "idle" ? requestMessages.checking : requestMessages.checkNow}
       </Button>
     </div>
   );

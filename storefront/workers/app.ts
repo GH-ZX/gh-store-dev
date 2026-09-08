@@ -2,7 +2,7 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 import { initRuntimeEnv } from "../app/.server/runtime-env";
 import { cloudflareContext } from "../app/lib/cloudflare-context";
 import { withRequestContext } from "../app/.server/request-context";
-import { isCacheableHtml, isCrossOriginMutation, isPublicHtmlRequest, legacyProductRedirect } from "./request-policy";
+import { canonicalHostRedirect, isCacheableHtml, isCrossOriginMutation, isPublicHtmlRequest, legacyProductRedirect } from "./request-policy";
 import { applySecurityHeaders } from "./response-headers";
 
 const requestHandler = createRequestHandler(
@@ -34,6 +34,12 @@ const ANONYMOUS_CACHE_TTL = 30;
 export default {
   async fetch(request, env, ctx) {
     if (isCrossOriginMutation(request)) return new Response("Forbidden", { status: 403 });
+    const canonical = canonicalHostRedirect(request, env.APP_URL);
+    if (canonical) {
+      const response = new Response(null, { status: 301, headers: { Location: canonical.toString() } });
+      applySecurityHeaders(response.headers);
+      return response;
+    }
     const legacy = legacyProductRedirect(request);
     if (legacy) {
       const response = new Response(null, { status: 308, headers: { Location: legacy.toString() } });

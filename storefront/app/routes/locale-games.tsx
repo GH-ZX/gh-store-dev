@@ -29,10 +29,14 @@ export function meta({ params, matches }: Route.MetaArgs) {
   const locale =
     params.locale && isLocale(params.locale) ? params.locale : "ar";
   const catalog = getMessages(locale, "catalog");
+  const match = matches.find((item) => item?.id === "routes/locale-games") as
+    | { loaderData?: { page?: number } }
+    | undefined;
   return buildStorePageMeta(
     {
       locale,
       path: "/games",
+      page: match?.loaderData?.page,
       title: catalog.games.title,
       description: catalog.games.description,
     },

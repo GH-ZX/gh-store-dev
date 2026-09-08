@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Locale } from "@/i18n/config";
+import { UNCATEGORIZED_PRODUCT_PATH } from "@/lib/catalog/paths";
 import {
   normalizeOfferInputFields,
   resolveCheckoutFieldKeys,
@@ -126,7 +127,7 @@ export type ProductDetail = {
 };
 
 /**
- * Game detail in two sequential reads (offers need the product id), each a
+ * Product detail in two sequential reads (offers need the product id), each a
  * single round trip. Returns null when missing, inactive, or filed under a
  * different category — one canonical URL per product, no duplicates.
  */
@@ -268,19 +269,29 @@ export async function searchProducts(
 
 /** Active product identities with their canonical category paths. */
 export async function getSitemapSlugs(client: SupabaseClient): Promise<{ slug: string; categorySlug: string }[]> {
-  const { data, error } = await client
-    .from("products")
-    .select("slug, categories!inner(slug, is_active)")
-    .eq("is_active", true)
-    .eq("categories.is_active", true)
-    .order("slug", { ascending: true });
+  const products: { slug: string; categorySlug: string }[] = [];
+  const batchSize = 1000;
+  for (let from = 0; ; from += batchSize) {
+    const { data, error } = await client
+      .from("products")
+      .select("slug, categories!products_category_id_fkey(slug, is_active)")
+      .eq("is_active", true)
+      .order("slug", { ascending: true })
+      .range(from, from + batchSize - 1);
 
-  if (error) throw error;
-  return (data ?? []).flatMap((row) => {
-    const raw = row as unknown as { slug: string; categories: { slug: string } | { slug: string }[] | null };
-    const category = Array.isArray(raw.categories) ? raw.categories[0] : raw.categories;
-    return category?.slug ? [{ slug: raw.slug, categorySlug: category.slug }] : [];
-  });
+    if (error) throw error;
+    const rows = data ?? [];
+    for (const row of rows) {
+      const raw = row as unknown as {
+        slug: string;
+        categories: { slug: string; is_active?: boolean } | { slug: string; is_active?: boolean }[] | null;
+      };
+      const category = Array.isArray(raw.categories) ? raw.categories[0] : raw.categories;
+      if (category?.is_active === false) continue;
+      products.push({ slug: raw.slug, categorySlug: category?.slug ?? UNCATEGORIZED_PRODUCT_PATH });
+    }
+    if (rows.length < batchSize) return products;
+  }
 }
 
 /** Published category landing pages, including categories with no current products. */
@@ -355,11 +366,11 @@ export async function getOfferDetail(
   client: SupabaseClient,
   locale: Locale,
   categorySlug: string | null,
-  gameSlug: string,
+  productSlug: string,
   offerSlug: string,
 ): Promise<OfferDetail | null> {
 
-  const detail = await getProductDetail(client, locale, gameSlug, categorySlug);
+  const detail = await getProductDetail(client, locale, productSlug, categorySlug);
   if (!detail) return null;
   const offer = detail.offers.find((candidate) => candidate.slug === offerSlug);
   if (!offer) return null;

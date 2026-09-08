@@ -1,3 +1,21 @@
+/** Consolidate the configured production www alias without redirecting previews. */
+export function canonicalHostRedirect(request: Request, appUrl?: string): URL | null {
+  if (!appUrl || !["GET", "HEAD"].includes(request.method)) return null;
+  let canonical: URL;
+  try {
+    canonical = new URL(appUrl);
+  } catch {
+    return null;
+  }
+  const url = new URL(request.url);
+  if (canonical.protocol !== "https:" || url.hostname !== `www.${canonical.hostname}`) return null;
+  // Callback URLs and authenticated mutations keep their configured origin.
+  if (/^\/(api|auth)(\/|$)/.test(url.pathname) || url.pathname.endsWith(".data")) return null;
+  url.protocol = canonical.protocol;
+  url.host = canonical.host;
+  return url;
+}
+
 /** Preserve bookmarks from the original singular product URL convention. */
 export function legacyProductRedirect(request: Request): URL | null {
   const url = new URL(request.url);

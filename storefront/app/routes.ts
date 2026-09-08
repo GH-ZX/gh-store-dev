@@ -16,6 +16,7 @@ export default [
     route("dashboard", "routes/dashboard-layout.tsx", [
       index("routes/dashboard-index.tsx"),
       route("logs", "routes/dashboard-logs.tsx"),
+      route("operations", "routes/dashboard-operations.tsx"),
       route("support", "routes/dashboard-support.tsx"),
       route("reviews", "routes/dashboard-reviews.tsx"),
       route("customers/:userId", "routes/dashboard-customer-detail.tsx"),

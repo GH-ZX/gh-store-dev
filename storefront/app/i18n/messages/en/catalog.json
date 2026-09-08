@@ -10,7 +10,7 @@
     "errorDescription": "Please refresh the page in a moment."
   },
   "gameDetail": {
-    "chooseOffer": "Pick the package you need, then complete your top-up details securely.",
+    "chooseOffer": "Pick the package you need, then review your order details securely.",
     "offersHeading": "Available packages",
     "emptyTitle": "No packages available",
     "emptyDescription": "No packages are available for this product right now. Try another product or check back later.",
@@ -18,9 +18,9 @@
     "howItWorksHeading": "How delivery works",
     "howItWorksSteps": [
       "Choose the package that fits you.",
-      "Enter your in-game account details carefully.",
+      "Provide the requested details, if any, and review your order.",
       "Pay from your wallet balance.",
-      "Your top-up or code arrives once processed."
+      "Track delivery and order updates in your account."
     ]
   },
   "offerDetail": {
@@ -29,7 +29,7 @@
     "fieldsHeading": "Details we will need",
     "fieldsDescription": "We ask for these at checkout. Make sure they are correct before paying.",
     "noFieldsTitle": "This package needs no extra details",
-    "noFieldsDescription": "Your code is delivered to your account once payment completes.",
+    "noFieldsDescription": "Review delivery details and track your order from your account.",
     "requiredField": "Required",
     "optionalField": "Optional",
     "regionLabel": "Region",

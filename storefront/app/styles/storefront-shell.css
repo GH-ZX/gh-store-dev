@@ -242,8 +242,8 @@
   padding-block: 8px;
 }
 [data-storefront-shell] .sf-search button {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 6px;
 }
 [data-storefront-shell] .sf-search button[type="submit"] {
@@ -315,7 +315,7 @@
   max-height: none;
   overflow-y: auto;
   border-inline-start: 1px solid var(--line);
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
   background: var(--surface);
   color: var(--ink);
 }
@@ -375,7 +375,7 @@ body:has(.sf-mobile-drawer[open]) {
 [data-storefront-shell] .sf-footer-columns li a {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
+  min-height: 36px;
   color: var(--ink-muted);
   font-size: 13px;
 }
@@ -473,6 +473,14 @@ body:has(.sf-mobile-drawer[open]) {
   [data-storefront-shell] .sf-navigation-progress {
     animation: none;
   }
+}
+@media (max-width: 639px) {
+  [data-storefront-shell] .sf-search input,
+  [data-storefront-shell] .sf-catalog-search-control input,
+  [data-storefront-shell] .sf-catalog-select-label select {
+    font-size: 16px;
+  }
+  [data-storefront-shell] .sf-footer-columns li a { min-height: 44px; }
 }
 @media print {
   [data-storefront-shell] {

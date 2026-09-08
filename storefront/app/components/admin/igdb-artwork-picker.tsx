@@ -15,19 +15,19 @@ import {
 import { searchIgdbArtworkAction } from "@/lib/admin-actions";
 
 /**
- * IGDB artwork search inside the game editor.
+ * IGDB artwork search for the product editor.
  *
  * A picker, not a writer: choosing an image only fills the editor's own URL
- * fields, and nothing reaches the database until the admin saves the game. That
+ * fields, and nothing reaches the database until the admin saves the product. That
  * keeps one write path for catalog changes and makes the picker safe to play
  * with — a mis-click costs a field edit, not a row.
  */
 export type IgdbArtworkPickerProps = {
   locale: Locale;
   messages: AdminMessages["catalog"]["game"]["igdb"];
-  /** Fills the cover URL field of the surrounding game form. */
+  /** Fills the cover URL field of the product form. */
   onPickCover: (url: string) => void;
-  /** Fills the logo URL field of the surrounding game form. */
+  /** Fills the logo URL field of the product form. */
   onPickArtwork: (url: string) => void;
 };
 

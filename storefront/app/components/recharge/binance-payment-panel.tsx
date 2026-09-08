@@ -2,7 +2,7 @@ import { useCommerceAction } from "@/components/commerce/use-commerce-action";
 
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { AlertIcon, CheckIcon, WalletIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import { formatMessage } from "@/i18n/format";
@@ -31,6 +31,7 @@ export type BinancePaymentPanelProps = {
   locale: Locale;
   messages: RechargeMessages;
   invoice: BinanceInvoiceView;
+  returnTo?: string | null;
 };
 
 /** Binance settles within seconds of paying; five is often enough. */
@@ -76,7 +77,7 @@ function formatRemaining(seconds: number): string {
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
-export function BinancePaymentPanel({ locale, messages, invoice }: BinancePaymentPanelProps) {
+export function BinancePaymentPanel({ locale, messages, invoice, returnTo }: BinancePaymentPanelProps) {
   const [state, action, pending, actionSubmit] = useCommerceAction<BinanceTopUpState>('checkBinanceInvoiceAction',
     INITIAL_BINANCE_STATE,
   );
@@ -107,16 +108,21 @@ export function BinancePaymentPanel({ locale, messages, invoice }: BinancePaymen
 
   if (status === "credited") {
     return (
-      <div className="rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--success)_40%,transparent)] bg-[color-mix(in_srgb,var(--success)_10%,transparent)] p-6 text-center">
-        <Badge tone="success" icon={<CheckIcon />}>
-          {messages.binance.creditedTitle}
-        </Badge>
-        <p className="mt-4 text-3xl font-semibold tracking-tight text-[var(--ink)] tabular-nums" dir="ltr">
-          {formatPrice(invoice.amount, invoice.currency, locale)}
-        </p>
-        <p className="mt-3 text-sm leading-6 text-[var(--ink-soft)]">
-          {messages.binance.creditedDescription}
-        </p>
+      <div className="grid gap-4">
+        <div className="rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--success)_40%,transparent)] bg-[color-mix(in_srgb,var(--success)_10%,transparent)] p-6 text-center">
+          <Badge tone="success" icon={<CheckIcon />}>
+            {messages.binance.creditedTitle}
+          </Badge>
+          <p className="mt-4 text-3xl font-semibold tracking-tight text-[var(--ink)] tabular-nums" dir="ltr">
+            {formatPrice(invoice.amount, invoice.currency, locale)}
+          </p>
+          <p className="mt-3 text-sm leading-6 text-[var(--ink-soft)]">
+            {messages.binance.creditedDescription}
+          </p>
+        </div>
+        <ButtonLink href={returnTo ?? `/${locale}/wallet`}>
+          {returnTo ? messages.returnToCheckout : messages.backToWallet}
+        </ButtonLink>
       </div>
     );
   }
@@ -164,8 +170,8 @@ export function BinancePaymentPanel({ locale, messages, invoice }: BinancePaymen
       <form onSubmit={actionSubmit} className="flex flex-wrap items-center gap-3">
         <input type="hidden" name="invoiceId" value={invoice.id} />
         <input type="hidden" name="locale" value={locale} />
-        <Button type="submit" variant="secondary">
-          {messages.binance.checkAction}
+        <Button type="submit" variant="secondary" disabled={pending} aria-busy={pending}>
+          {pending ? messages.request.checking : messages.binance.checkAction}
         </Button>
         {state.error ? (
           <span className="text-sm text-[var(--ink-muted)]">{messages.errors.unknown}</span>

@@ -3,7 +3,7 @@ import { useCommerceAction } from "@/components/commerce/use-commerce-action";
 import { useEffect, useState } from "react";
 import { FormResult, TextField } from "@/components/admin/admin-form";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { AlertIcon, CheckIcon, WalletIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import { formatMessage } from "@/i18n/format";
@@ -31,6 +31,7 @@ export type SamPaymentPanelProps = {
   locale: Locale;
   messages: RechargeMessages;
   invoice: SamInvoiceView;
+  returnTo?: string | null;
 };
 
 type ErrorKey = keyof RechargeMessages["sam"]["errors"];
@@ -78,7 +79,7 @@ function formatRemaining(seconds: number): string {
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
-export function SamPaymentPanel({ locale, messages, invoice }: SamPaymentPanelProps) {
+export function SamPaymentPanel({ locale, messages, invoice, returnTo }: SamPaymentPanelProps) {
   const [checkState, checkAction, checking, checkActionSubmit] = useCommerceAction<SamTopUpState>('checkSamInvoiceAction',
     INITIAL_SAM_TOPUP_STATE,
   );
@@ -139,6 +140,9 @@ export function SamPaymentPanel({ locale, messages, invoice }: SamPaymentPanelPr
             {messages.sam.creditedDescription}
           </p>
         </div>
+        <ButtonLink href={returnTo ?? `/${locale}/wallet`}>
+          {returnTo ? messages.returnToCheckout : messages.backToWallet}
+        </ButtonLink>
       </div>
     );
   }
@@ -233,6 +237,9 @@ export function SamPaymentPanel({ locale, messages, invoice }: SamPaymentPanelPr
         <TextField
           label={messages.sam.referenceLabel}
           name="transactionRef"
+          required
+          minLength={2}
+          maxLength={120}
           dir="ltr"
           autoComplete="off"
           spellCheck={false}
@@ -244,7 +251,7 @@ export function SamPaymentPanel({ locale, messages, invoice }: SamPaymentPanelPr
         <FormResult error={error} notice={verifyState.detail} />
 
         <div>
-          <Button type="submit" variant="secondary" disabled={verifying}>
+          <Button type="submit" variant="secondary" disabled={verifying || checking} aria-busy={verifying}>
             {messages.sam.verifyAction}
           </Button>
         </div>

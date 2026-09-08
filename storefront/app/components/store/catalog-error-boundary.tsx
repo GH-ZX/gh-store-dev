@@ -24,13 +24,13 @@ export function CatalogErrorBoundary() {
       <div className="mx-auto max-w-xl rounded-[var(--radius-shell)] border bg-[var(--surface)] p-8 text-center">
         <h1 className="text-2xl font-semibold">
           {missing
-            ? catalog.offerDetail.notFoundTitle
-            : catalog.games.errorTitle}
+            ? common.states.notFoundTitle
+            : catalog.products.errorTitle}
         </h1>
         <p className="mt-4 text-[var(--ink-muted)]">
           {missing
-            ? catalog.offerDetail.notFoundDescription
-            : catalog.games.errorDescription}
+            ? common.states.notFoundDescription
+            : catalog.products.errorDescription}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <ButtonLink href={`/${locale}/products`}>
@@ -42,7 +42,7 @@ export function CatalogErrorBoundary() {
               disabled={state !== "idle"}
               onClick={() => void revalidate()}
             >
-              {locale === "ar" ? "إعادة المحاولة" : "Try again"}
+              {state !== "idle" ? common.states.loading : common.actions.retry}
             </Button>
           ) : null}
         </div>

@@ -11,6 +11,8 @@ import { ChevronIcon, WalletIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/commerce/commerce-page";
 import { formatPrice } from "@/lib/format/money";
 import { getMethodLabel } from "@/lib/recharge-settings";
+import { rechargeAmount, rechargeHref } from "@/lib/recharge-flow";
+import { checkoutReturnTo } from "@server/recharge-flow";
 import type { SamMethod } from "@server/lib/settings/sam-settings";
 import { getSamPaymentOptions, startSamTopUp } from "@server/lib/services/sam-recharge.service";
 import { getBinancePaymentOptions, startBinanceTopUp } from "@server/lib/services/binance-recharge.service";
@@ -34,9 +36,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   }
   const { env } = getCloudflareContext(context);
   const { supabase, jar, isProduction } = createSessionClient(request, env);
+  const url = new URL(request.url);
   const userId = await getSessionUserId(supabase);
   if (!userId) {
-    return withSessionCookies(redirectToLogin(request, locale, `/${locale}/recharge`), jar, isProduction);
+    return withSessionCookies(redirectToLogin(request, locale, url.pathname + url.search), jar, isProduction);
   }
   const session = await getSessionSummary(supabase, userId);
   if (session?.isAdmin) return withSessionCookies(redirect(`/${locale}/dashboard`), jar, isProduction);
@@ -46,7 +49,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     getSamPaymentOptions(supabase),
     getBinancePaymentOptions(),
   ]);
-  return data({ locale, config, requests, sam, binance, chosen: new URL(request.url).searchParams.get("method") ?? "" }, { headers: sessionCookieHeaders(jar, isProduction) });
+  return data({
+    locale, config, requests, sam, binance,
+    chosen: url.searchParams.get("method") ?? "",
+    initialAmount: rechargeAmount(url.searchParams.get("amount"), config.minAmount, config.maxAmount),
+    returnTo: checkoutReturnTo(url.searchParams.get("returnTo"), locale),
+  }, { headers: sessionCookieHeaders(jar, isProduction) });
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
@@ -58,9 +66,11 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const { supabase, jar, isProduction } = createSessionClient(request, env);
   const userId = await getSessionUserId(supabase);
   if (!userId) {
-    return withSessionCookies(redirectToLogin(request, locale, `/${locale}/recharge`), jar, isProduction);
+    const url = new URL(request.url);
+    return withSessionCookies(redirectToLogin(request, locale, url.pathname + url.search), jar, isProduction);
   }
   const form = await request.formData();
+  const returnTo = checkoutReturnTo(form.get("returnTo") ?? new URL(request.url).searchParams.get("returnTo"), locale);
   const amount = Number(form.get("amount"));
   const method = String(form.get("method") ?? "");
   const intent = String(form.get("intent") ?? "submitRechargeAction");
@@ -71,17 +81,17 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     if (method !== "shamcash" && method !== "syriatel") return data({ ...initial, error: "invalid_input" }, { status: 400, headers });
     const result = await startSamTopUp(supabase, { amount, method });
     if (!result.ok) return data({ ...initial, error: result.reason }, { status: 400, headers });
-    return withSessionCookies(redirect(`/${locale}/recharge/pay/${encodeURIComponent(result.invoice.samInvoiceId)}`), jar, isProduction);
+    return withSessionCookies(redirect(rechargeHref(`/${locale}/recharge/pay/${encodeURIComponent(result.invoice.samInvoiceId)}`, { returnTo })), jar, isProduction);
   }
   if (intent === "startBinanceTopUpAction") {
-    const result = await startBinanceTopUp(supabase, { amount, locale });
+    const result = await startBinanceTopUp(supabase, { amount, locale, returnTo });
     if (!result.ok) return data({ ...initial, error: result.reason }, { status: 400, headers });
-    return withSessionCookies(redirect(`/${locale}/recharge/pay/${encodeURIComponent(result.invoiceId)}`), jar, isProduction);
+    return withSessionCookies(redirect(rechargeHref(`/${locale}/recharge/pay/${encodeURIComponent(result.invoiceId)}`, { returnTo })), jar, isProduction);
   }
   if (intent !== "submitRechargeAction") return data({ ...initial, error: "invalid_input" }, { status: 400, headers });
   const result = await submitRechargeRequest(supabase, { amount, method });
   if (!result.ok) return data({ ...initial, error: result.reason }, { status: 400, headers });
-  return withSessionCookies(redirect(`/${locale}/recharge/${result.requestId}`), jar, isProduction);
+  return withSessionCookies(redirect(rechargeHref(`/${locale}/recharge/${result.requestId}`, { returnTo })), jar, isProduction);
 }
 
 export function meta({ params }: Route.MetaArgs) {
@@ -99,7 +109,7 @@ export function meta({ params }: Route.MetaArgs) {
 const OPEN_STATUSES = new Set(["pending", "payment_sent", "processing"]);
 type MethodCard = { id: string; label: string; hint: string };
 export default function Page() {
-  const { locale, config, requests, sam, binance, chosen } = useLoaderData<typeof loader>();
+  const { locale, config, requests, sam, binance, chosen, initialAmount, returnTo } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "recharge");
   const account = getMessages(locale, "account");
   const manualMethods = config.methods.filter((method) => method.enabled);
@@ -151,6 +161,13 @@ export default function Page() {
 
       <AccountNavigation locale={locale} messages={getMessages(locale, "account")} />
 
+      {returnTo ? (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4">
+          <p className="text-sm text-[var(--ink-muted)]">{messages.checkoutHint}</p>
+          <ButtonLink href={returnTo} variant="secondary" size="sm">{messages.returnToCheckout}</ButtonLink>
+        </div>
+      ) : null}
+
       <div className="sf-commerce-columns sf-recharge-columns">
         <div className="grid gap-6">
           {selected ? (
@@ -166,7 +183,7 @@ export default function Page() {
               }
             >
               <Link
-                to={`/${locale}/recharge`}
+                to={rechargeHref(`/${locale}/recharge`, { amount: initialAmount, returnTo })}
                 className="mb-4 inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
               >
                 <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
@@ -178,6 +195,8 @@ export default function Page() {
                   locale={locale}
                   messages={messages}
                   config={{ ...config, methods: [selectedManual] }}
+                  initialAmount={initialAmount}
+                  returnTo={returnTo}
                 />
               ) : selected.id === "binance" ? (
                 <BinanceTopUpForm
@@ -186,6 +205,8 @@ export default function Page() {
                   currency={binance.currency}
                   minAmount={config.minAmount}
                   maxAmount={config.maxAmount}
+                  initialAmount={initialAmount}
+                  returnTo={returnTo}
                 />
               ) : (
                 <SamTopUpForm
@@ -195,6 +216,8 @@ export default function Page() {
                   minAmount={config.minAmount}
                   maxAmount={config.maxAmount}
                   currency={config.currency}
+                  initialAmount={initialAmount}
+                  returnTo={returnTo}
                 />
               )}
             </AdminCard>
@@ -212,7 +235,7 @@ export default function Page() {
                 {cards.map((card) => (
                   <li key={card.id}>
                     <Link
-                      to={`/${locale}/recharge?method=${encodeURIComponent(card.id)}`}
+                      to={rechargeHref(`/${locale}/recharge`, { amount: initialAmount, returnTo, method: card.id })}
                       className="sf-payment-method group"
                     >
                       <span className="min-w-0">
@@ -285,7 +308,7 @@ export default function Page() {
                   ) : (
                     <div className="mt-3">
                       <ButtonLink
-                        href={`/${locale}/recharge/${request.id}`}
+                        href={rechargeHref(`/${locale}/recharge/${request.id}`, { returnTo })}
                         variant="secondary"
                         size="sm"
                       >

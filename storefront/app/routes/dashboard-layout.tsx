@@ -18,8 +18,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const { supabase, jar, isProduction } = createSessionClient(request, env);
   const userId = await getSessionUserId(supabase);
   if (!userId) {
+    const url = new URL(request.url);
     return withSessionCookies(
-      redirectToLogin(request, locale, `/${locale}/dashboard`),
+      redirectToLogin(request, locale, `${url.pathname}${url.search}`),
       jar,
       isProduction,
     );

@@ -15,14 +15,17 @@
     "offers": "الباقات"
   },
   "resultsFor": "نتائج البحث عن “{query}”",
-  "gamesHeading": "الألعاب",
+  "resultsLabel": "نتائج البحث عن",
+  "productsHeading": "المنتجات",
   "offersHeading": "الباقات",
-  "gamesCount": "{count} لعبة",
+  "productsCount": "{count} منتج",
   "offersCount": "{count} باقة",
   "promptTitle": "ابدأ بكتابة ما تبحث عنه",
   "promptDescription": "جرّب اسم المنتج أو المنصة أو نوع البطاقة.",
   "emptyTitle": "لا نتائج مطابقة",
   "emptyDescription": "جرّب كلمة أقصر أو تحقق من الإملاء، أو تصفح الكتالوج كاملًا.",
+  "filteredEmptyDescription": "لا نتائج مطابقة ضمن هذا النوع. ابحث في جميع الأنواع أو جرّب اسماً أقصر للمنتج.",
+  "clearFilters": "البحث في جميع الأنواع",
   "errorTitle": "تعذر إكمال البحث",
   "errorDescription": "حاول مرة أخرى بعد قليل."
 }

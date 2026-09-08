@@ -15,6 +15,7 @@ import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { buildBrandName } from "@/lib/brand";
 import { APP_NAME } from "@/lib/app-config";
+import { redirectToDefaultLocale } from "@/lib/routing/default-locale";
 import {
   SiteFooter,
   SiteHeader,
@@ -42,8 +43,7 @@ import type { Route } from "./+types/locale-layout";
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const locale = params.locale ?? "";
   if (!isLocale(locale)) {
-    const url = new URL(request.url);
-    throw redirect(`/ar${url.pathname}${url.search}`);
+    redirectToDefaultLocale(request);
   }
   const { env } = getCloudflareContext(context);
   const { supabase, jar, isProduction } = createSessionClient(request, env);
@@ -84,8 +84,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 export async function action({ params, request, context }: Route.ActionArgs) {
   const locale = params.locale ?? "";
   if (!isLocale(locale)) {
-    const url = new URL(request.url);
-    throw redirect(`/ar${url.pathname}${url.search}`);
+    redirectToDefaultLocale(request);
   }
   const { env } = getCloudflareContext(context);
   const { supabase, jar, isProduction } = createSessionClient(request, env);

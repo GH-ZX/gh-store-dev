@@ -30,11 +30,13 @@ export type RechargeFormProps = {
   locale: Locale;
   messages: RechargeMessages;
   config: RechargeConfig;
+  initialAmount?: number | null;
+  returnTo?: string | null;
 };
 
 type ErrorKey = keyof RechargeMessages["errors"];
 
-export function RechargeForm({ locale, messages, config }: RechargeFormProps) {
+export function RechargeForm({ locale, messages, config, initialAmount, returnTo }: RechargeFormProps) {
   const [state, _formAction, pending, formActionSubmit] = useCommerceAction<RechargeActionState>('submitRechargeAction',
     INITIAL_RECHARGE_STATE,
   );
@@ -85,6 +87,7 @@ export function RechargeForm({ locale, messages, config }: RechargeFormProps) {
   return (
     <form onSubmit={formActionSubmit} className="grid gap-5">
       <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="returnTo" value={returnTo ?? ""} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField
@@ -95,6 +98,7 @@ export function RechargeForm({ locale, messages, config }: RechargeFormProps) {
             locale,
           )}
           name="amount"
+          defaultValue={initialAmount ?? undefined}
           type="number"
           step="0.01"
           min={config.minAmount}
@@ -124,12 +128,12 @@ export function RechargeForm({ locale, messages, config }: RechargeFormProps) {
             {messages.instructionsTitle}
           </p>
           {method.account ? (
-            <p className="mt-3 font-mono text-sm text-[var(--ink)]" dir="ltr">
+            <p className="mt-3 break-all font-mono text-sm text-[var(--ink)]" dir="ltr">
               {method.account}
             </p>
           ) : null}
           {getMethodInstructions(method, locale) ? (
-            <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--ink-muted)]" dir="auto">
               {getMethodInstructions(method, locale)}
             </p>
           ) : null}

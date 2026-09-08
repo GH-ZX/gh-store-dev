@@ -15,32 +15,28 @@ import { getStockSummaries, listStockItems } from "@server/lib/services/stock.se
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@server/lib/supabase/service";
 
 
-/**
- * One game's editor.
- *
- * A Server Component that loads the game once and hands the two forms exactly
- * the data they render, so neither form fetches anything. A missing game is a
- * 404 rather than an empty editor — an id that no longer exists is not a page.
- */
+/** Load one product and the data needed by its editing forms. */
 
 import { useLoaderData, type LoaderFunctionArgs } from "react-router";
 import { isLocale } from "@/i18n/config";
 function requireLocale(value: string | undefined) { if (!value || !isLocale(value)) throw new Response("Not Found", { status: 404 }); return value; }
-import { requireAdmin } from "@server/lib/auth/guards";
+import { requireDashboardAdmin } from "@server/dashboard-access";
 
-export async function loader({ params }: LoaderFunctionArgs) {
-  await requireAdmin();
+export async function loader({ params, request }: LoaderFunctionArgs) {
   const locale = requireLocale(params.locale);
+  await requireDashboardAdmin(request, locale);
   const { productId } = params;
   if (!productId) throw new Response("Not Found", { status: 404 });
-  const detail = await getAdminProduct(productId);
-  const categories = await listAdminCategories();
+  const [detail, categories] = await Promise.all([
+    getAdminProduct(productId),
+    listAdminCategories(),
+  ]);
 
   if (!detail) {
     notFound();
   }
 
-  const { game, offers } = detail;
+  const { game: product, offers, activeOfferCount } = detail;
 
   // Stock reads need service authority, but ordinary catalog editing must still
   // work when fulfillment is intentionally not configured.
@@ -68,11 +64,11 @@ export async function loader({ params }: LoaderFunctionArgs) {
     }
   }
 
-  return { locale, categories, game, offers, storedOffers, stockSummaries, stockItemLists };
+  return { locale, categories, product, offers, activeOfferCount, storedOffers, stockSummaries, stockItemLists };
 }
 
 export default function Page() {
- const { locale, categories, game, offers, storedOffers, stockSummaries, stockItemLists } = useLoaderData<typeof loader>();
+ const { locale, categories, product, offers, activeOfferCount, storedOffers, stockSummaries, stockItemLists } = useLoaderData<typeof loader>();
 const messages = getMessages(locale, "admin").catalog;
   return (
     <div className="grid gap-8">
@@ -85,33 +81,33 @@ const messages = getMessages(locale, "admin").catalog;
           {messages.backToCatalog}
         </Link>
 
-        <SectionHeader as="h1" eyebrow={messages.eyebrow} title={game.nameAr} subtitle={game.nameEn} className="mt-5" />
+        <SectionHeader as="h1" eyebrow={messages.eyebrow} title={locale === "ar" ? product.nameAr : product.nameEn} subtitle={locale === "ar" ? product.nameEn : product.nameAr} className="mt-5" />
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <Badge tone={game.isActive ? "success" : "neutral"}>
-            {game.isActive ? messages.published : messages.unpublished}
+          <Badge tone={product.isActive ? "success" : "neutral"}>
+            {product.isActive ? messages.published : messages.unpublished}
           </Badge>
-          {game.isFeatured ? <Badge tone="accent">{messages.featured}</Badge> : null}
-          {game.showInCarousel ? <Badge tone="sale">{messages.inCarousel}</Badge> : null}
+          {product.isFeatured ? <Badge tone="accent">{messages.featured}</Badge> : null}
+          {product.showInCarousel ? <Badge tone="sale">{messages.inCarousel}</Badge> : null}
           <span className="font-mono text-xs text-[var(--ink-faint)]" dir="ltr">
-            {game.slug}
+            {product.slug}
           </span>
           <span className="text-xs text-[var(--ink-muted)] tabular-nums">
             {formatMessage(messages.offersCount, { count: offers.length }, locale)}
           </span>
-          {game.providerCode ? (
+          {product.providerCode ? (
             <span className="text-xs text-[var(--ink-faint)]">
-              {messages.providerLabel}: <span dir="ltr">{game.providerCode}</span>
+              {messages.providerLabel}: <span dir="ltr">{product.providerCode}</span>
             </span>
           ) : null}
-          {game.providerCategoryTitle ? (
+          {product.providerCategoryTitle ? (
             <span className="text-xs text-[var(--ink-faint)]">
-              {messages.providerCategoryLabel}: {game.providerCategoryTitle}
+              {messages.providerCategoryLabel}: {product.providerCategoryTitle}
             </span>
           ) : null}
-          {game.providerUrl ? (
+          {product.providerUrl ? (
             <a
-              href={game.providerUrl}
+              href={product.providerUrl}
               target="_blank"
               rel="noreferrer noopener"
               className="inline-flex items-center gap-1 text-xs text-[var(--accent-strong)] underline-offset-4 transition-colors duration-[var(--duration)] hover:underline"
@@ -120,15 +116,15 @@ const messages = getMessages(locale, "admin").catalog;
               <span dir="ltr">{messages.supplierLinkTitle}</span>
             </a>
           ) : null}
-          <Link
-            to={`/${locale}/${categories.find((category) => category.id === game.categoryId)?.slug ?? "products"}/${game.slug}`}
+          {product.isActive ? <Link
+            to={`/${locale}/${categories.find((category) => category.id === product.categoryId)?.slug ?? "products"}/${product.slug}`}
             target="_blank"
             rel="noreferrer noopener"
             className="inline-flex items-center gap-1 text-xs text-[var(--accent-strong)] underline-offset-4 transition-colors duration-[var(--duration)] hover:underline"
           >
             <LinkIcon className="size-3.5" />
             {messages.viewOnStore}
-          </Link>
+          </Link> : null}
         </div>
       </div>
 
@@ -138,8 +134,8 @@ const messages = getMessages(locale, "admin").catalog;
       >
         <ProviderLinkForm
           locale={locale}
-          gameId={game.id}
-          url={game.providerUrl}
+          gameId={product.id}
+          url={product.providerUrl}
           messages={{
             label: messages.supplierLinkLabel,
             hint: messages.supplierLinkHint,
@@ -156,15 +152,22 @@ const messages = getMessages(locale, "admin").catalog;
         messages={messages.game}
         errors={messages.errors}
         categories={categories}
-        game={game}
+        product={product}
       />
+
+      {activeOfferCount === 0 ? (
+        <div role="status" className="rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--warning)_35%,transparent)] bg-[color-mix(in_srgb,var(--warning)_8%,transparent)] p-4">
+          <p className="text-sm font-semibold text-[var(--warning)]">{messages.noActiveOffers}</p>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">{messages.noActiveOffersHint}</p>
+        </div>
+      ) : null}
 
       <OfferRowsForm
         locale={locale}
         messages={messages.offers}
         errors={messages.errors}
         offerTypes={getMessages(locale, "catalog").offerTypes}
-        gameId={game.id}
+        gameId={product.id}
         offers={offers}
       />
 
@@ -174,7 +177,7 @@ const messages = getMessages(locale, "admin").catalog;
       >
         <OfferManageForm
           locale={locale}
-          gameId={game.id}
+          gameId={product.id}
           offers={offers}
           messages={messages.manageOffers}
           errors={messages.errors}
@@ -189,7 +192,7 @@ const messages = getMessages(locale, "admin").catalog;
             <StockManager
               key={offer.id}
               messages={messages.stock}
-              gameId={game.id}
+              gameId={product.id}
               offerId={offer.id}
               offerName={offer.nameEn}
               deliveryKind={offer.deliveryKind}

@@ -1,4 +1,4 @@
-import { SUPPORTED_LOCALES } from "@/lib/app-config";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/lib/app-config";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { createPublicClient, getSitemapSlugs, getSitemapCategories } from "@/lib/catalog-queries";
 import { buildAbsoluteUrl, getSiteUrl } from "@/lib/seo";
@@ -27,10 +27,13 @@ function escapeXml(value: string): string {
 type Alternate = { hreflang: string; href: string };
 
 function alternatesFor(path: string, siteUrl: string): Alternate[] {
-  return SUPPORTED_LOCALES.map((supported) => ({
-    hreflang: supported,
-    href: buildAbsoluteUrl(supported, path, siteUrl),
-  }));
+  return [
+    ...SUPPORTED_LOCALES.map((supported) => ({
+      hreflang: supported,
+      href: buildAbsoluteUrl(supported, path, siteUrl),
+    })),
+    { hreflang: "x-default", href: buildAbsoluteUrl(DEFAULT_LOCALE, path, siteUrl) },
+  ];
 }
 
 function entry(url: string, alternates: Alternate[], changefreq: string, priority: number): string {
@@ -44,8 +47,8 @@ function entry(url: string, alternates: Alternate[], changefreq: string, priorit
 }
 
 /**
- * Localized XML sitemap with hreflang alternates. A catalog outage degrades
- * to static routes rather than failing the crawl.
+ * Localized XML sitemap with hreflang alternates. A temporary catalog outage
+ * must not replace the complete sitemap with a long-cached, partial catalog.
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = getCloudflareContext(context);
@@ -56,8 +59,18 @@ export async function loader({ context }: Route.LoaderArgs) {
     getSitemapSlugs(client),
     getSitemapCategories(client),
   ]);
-  const products = productsResult.status === "fulfilled" ? productsResult.value : [];
-  const categories = categoriesResult.status === "fulfilled" ? categoriesResult.value : [];
+  if (productsResult.status === "rejected" || categoriesResult.status === "rejected") {
+    return new Response("Sitemap temporarily unavailable. Please retry shortly.", {
+      status: 503,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Retry-After": "60",
+      },
+    });
+  }
+  const products = productsResult.value;
+  const categories = categoriesResult.value;
   const paths = new Map(STATIC_PATHS.map((path) => [path, { frequency: "daily", priority: path === "" ? 1 : 0.5 }]));
   for (const slug of categories) paths.set(`/${encodeURIComponent(slug)}`, { frequency: "daily", priority: 0.5 });
   for (const product of products) {
@@ -77,7 +90,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   return new Response(xml, {
     headers: {
-      "Content-Type": "application/xml",
+      "Content-Type": "application/xml; charset=utf-8",
       "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
     },
   });

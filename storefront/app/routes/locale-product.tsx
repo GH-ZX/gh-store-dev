@@ -16,10 +16,11 @@ import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { DEFAULT_LOCALE, isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { createPublicClient, getProductDetail } from "@/lib/catalog-queries";
-import { getSiteUrl } from "@/lib/seo";
+import { productPath } from "@/lib/catalog/paths";
+import { buildBreadcrumbJsonLd, buildCatalogDescription, getSiteUrl } from "@/lib/seo";
 import type { Route } from "./+types/locale-product";
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, request, context }: Route.LoaderArgs) {
   const locale = params.locale ?? "";
   const category = params.category ?? "";
   const slug = params.slug ?? "";
@@ -31,23 +32,15 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     createPublicClient(env),
     locale,
     slug,
-    category,
+    null,
   );
-  if (!detail && category === "games") {
-    const legacy = await getProductDetail(
-      createPublicClient(env),
-      locale,
-      slug,
-      null,
-    );
-    if (legacy)
-      throw redirect(
-        `/${locale}/${legacy.product.categorySlug}/${legacy.product.slug}`,
-        301,
-      );
-  }
   if (!detail) {
     throw new Response("Not Found", { status: 404 });
+  }
+  // Category changes must preserve shared links and search results. Resolve
+  // the globally unique product once, then send old paths to its current URL.
+  if (category !== detail.product.categorySlug) {
+    throw redirect(`${productPath(locale, detail.product)}${new URL(request.url).search}`, 301);
   }
   return {
     locale,
@@ -64,11 +57,7 @@ export function meta({ params, matches }: Route.MetaArgs) {
   const match = matches.find((m) => m?.id === "routes/locale-product") as
     | {
         loaderData?: {
-          product?: {
-            name?: string;
-            description?: string | null;
-            imageUrl?: string | null;
-          };
+          product?: StoreProduct;
           category?: string;
           siteUrl?: string;
         };
@@ -76,18 +65,27 @@ export function meta({ params, matches }: Route.MetaArgs) {
     | undefined;
   const product = match?.loaderData?.product;
   const category = match?.loaderData?.category ?? params.category ?? "";
-  const slug = params.slug ?? "";
-  return buildStorePageMeta(
-    {
-      locale,
-      path: `/${category}/${slug}`,
-      title: product?.name ?? "GH Store",
-      description: product?.description ?? "",
-      imageUrl: product?.imageUrl ?? null,
-      siteUrl: match?.loaderData?.siteUrl ?? getSiteUrl(),
-    },
-    matches,
-  );
+  const path = `/${encodeURIComponent(category)}/${encodeURIComponent(product?.slug ?? params.slug ?? "")}`;
+  const siteUrl = match?.loaderData?.siteUrl ?? getSiteUrl();
+  const common = getMessages(locale, "common");
+  return [
+    ...buildStorePageMeta(
+      {
+        locale,
+        path,
+        title: product?.name ?? "GH Store",
+        description: product ? buildCatalogDescription({ locale, productName: product.name, description: product.description }) : "",
+        imageUrl: product?.imageUrl ?? product?.logoUrl ?? null,
+        siteUrl,
+      },
+      matches,
+    ),
+    ...(product ? [{ "script:ld+json": buildBreadcrumbJsonLd({ locale, siteUrl, items: [
+      { name: common.navigation.home, path: "" },
+      { name: product.categoryName ?? common.navigation.allProducts, path: `/${encodeURIComponent(product.categorySlug)}` },
+      { name: product.name, path },
+    ] }) }] : []),
+  ];
 }
 
 export default function LocaleProduct() {
@@ -96,7 +94,7 @@ export default function LocaleProduct() {
   const catalog = getMessages(locale, "catalog");
   const cheapest = lowestPrice(offers);
   return <CatalogPage>
-    <div className="sf-product-breadcrumb"><ProductBreadcrumb locale={locale} homeLabel={common.navigation.home} categorySlug={product.categorySlug} categoryName={product.categoryName ?? catalog.products.title} productName={product.name} /></div>
+    <div className="sf-product-breadcrumb"><ProductBreadcrumb locale={locale} homeLabel={common.navigation.home} categorySlug={product.categorySlug} categoryName={product.categoryName ?? common.navigation.allProducts} productName={product.name} /></div>
     <header className="sf-product-intro">
       <div className="sf-product-art"><StoreImage src={product.imageUrl ?? product.logoUrl} alt={product.name} priority focus={product.carouselFocus} sizes="(max-width: 719px) 104px, 180px" /></div>
       <div className="sf-product-intro-copy"><h1><bdi>{product.name}</bdi></h1><p>{catalog.gameDetail.chooseOffer}</p>
@@ -115,9 +113,10 @@ function ProductOfferSelection({ locale, product, offers }: { locale: Locale; pr
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("");
   const filterQuery = useDeferredValue(query).trim().toLocaleLowerCase(locale);
-  const selected = offers.find((offer) => offer.id === selectedId) ?? offers[0];
   const regions = [...new Set(offers.flatMap((offer) => offer.regionCode ? [offer.regionCode] : []))];
   const visibleOffers = offers.filter((offer) => (!region || offer.regionCode === region) && (!filterQuery || `${offer.name} ${offer.regionCode ?? ""}`.toLocaleLowerCase(locale).includes(filterQuery)));
+  // The checkout selection must always be one of the offers the shopper can see.
+  const selected = visibleOffers.find((offer) => offer.id === selectedId) ?? visibleOffers[0];
   const common = getMessages(locale, "common");
   const catalog = getMessages(locale, "catalog");
   return <div className="sf-product-layout">
@@ -139,12 +138,12 @@ function ProductOfferSelection({ locale, product, offers }: { locale: Locale; pr
           </div>)}
         </fieldset>
         {visibleOffers.length === 0 ? <p role="status" className="sf-catalog-muted">{locale === "ar" ? "لا توجد عروض تطابق البحث. جرّب اسماً أو منطقة أخرى." : "No matching offers. Try another name or region."}</p> : null}
-      </> : <EmptyState className="mt-5" title={catalog.gameDetail.emptyTitle} description={catalog.gameDetail.emptyDescription} action={{ href: `/${locale}/${product.categorySlug}`, label: product.categoryName ?? catalog.products.title }} />}
+      </> : <EmptyState className="mt-5" title={catalog.gameDetail.emptyTitle} description={catalog.gameDetail.emptyDescription} action={{ href: `/${locale}/${product.categorySlug}`, label: product.categoryName ?? common.navigation.allProducts }} />}
     </section>
     <PurchaseSummary locale={locale} product={product} offer={selected} />
     <div className="sf-product-details">
       {product.description ? <section><h2>{locale === "ar" ? "تفاصيل المنتج" : "Product details"}</h2><DescriptionText text={product.description} /></section> : null}
-      <section><h2>{catalog.gameDetail.howItWorksHeading}</h2><ol className="sf-product-steps">{catalog.gameDetail.howItWorksSteps.map((step) => <li key={step}>{step}</li>)}</ol></section>
+      <section><h2>{catalog.gameDetail.howItWorksHeading}</h2><ol className="sf-product-steps">{catalog.gameDetail.howItWorksSteps.map((step, index) => <li key={step}><span className="sf-product-step-number" aria-hidden="true">{index + 1}</span>{step}</li>)}</ol></section>
     </div>
   </div>;
 }

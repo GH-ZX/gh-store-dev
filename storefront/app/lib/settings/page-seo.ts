@@ -21,12 +21,15 @@ import type { Locale } from "@/i18n/config";
  */
 
 export const SEO_PAGE_PATHS = [
+  "/products",
   "/games",
+  "/best-sellers",
   "/gift-cards",
   "/sale",
   "/search",
   "/faq",
   "/how",
+  "/about",
   "/contact",
   "/refunds",
   "/privacy",

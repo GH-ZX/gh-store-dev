@@ -120,6 +120,21 @@ export async function getMyRechargeRequests(
   }));
 }
 
+/** Resume a provider payment from recharge history without creating another invoice. */
+export async function getMyRechargePaymentInvoice(
+  supabase: SupabaseClient,
+  userId: string,
+  requestId: string,
+): Promise<string | null> {
+  const [sam, binance] = await Promise.all([
+    supabase.from("sam_invoices").select("sam_invoice_id")
+      .eq("recharge_request_id", requestId).eq("user_id", userId).limit(1).maybeSingle(),
+    supabase.from("binance_invoices").select("id")
+      .eq("recharge_request_id", requestId).eq("user_id", userId).limit(1).maybeSingle(),
+  ]);
+  return sam.data?.sam_invoice_id ?? binance.data?.id ?? null;
+}
+
 function reasonFor(message: string): SubmitResult {
   const text = message.toLowerCase();
 

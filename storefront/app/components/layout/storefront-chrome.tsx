@@ -1,4 +1,3 @@
-import { createPortal } from "react-dom";
 import { Form, Link, NavLink, useLocation, useNavigation } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import { getLocaleDirection, type Locale } from "@/i18n/config";
@@ -24,6 +23,7 @@ import {
   WalletIcon,
 } from "@/components/ui/icons";
 import { formatPrice } from "@/lib/format/money";
+import { parseSearchParams } from "@/lib/catalog/search";
 
 const control = "sf-control";
 function ThemeToggle({ label }: { label: string }) {
@@ -73,10 +73,13 @@ export function StorefrontHeader({
     accountPopover?.locationKey === location.key ? accountPopover : null;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const search = getMessages(locale, "search");
+  const currentSearch = location.pathname === `/${locale}/search`
+    ? parseSearchParams(Object.fromEntries(new URLSearchParams(location.search)))
+    : { query: "", filter: "all" as const };
   const primaryItems = [
     {
       href: `/${locale}/products`,
-      label: locale === "ar" ? "جميع المنتجات" : "All products",
+      label: messages.navigation.allProducts,
       icon: GridIcon,
     },
     {
@@ -91,8 +94,7 @@ export function StorefrontHeader({
     },
     {
       href: `/${locale}/ai`,
-      label:
-        locale === "ar" ? "الذكاء الاصطناعي والاشتراكات" : "AI & subscriptions",
+      label: messages.navigation.aiSubscriptions,
       icon: SparkIcon,
     },
     {
@@ -105,7 +107,7 @@ export function StorefrontHeader({
     { href: `/${locale}/profile`, label: messages.account.account },
     {
       href: `/${locale}/orders`,
-      label: locale === "ar" ? "طلباتي" : "My orders",
+      label: messages.account.orders,
     },
     { href: `/${locale}/wallet`, label: messages.account.openWallet },
     {
@@ -140,7 +142,12 @@ export function StorefrontHeader({
         setAccountPosition(null);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setAccountPosition(null);
+      if (event.key === "Escape") {
+        if (account.current?.contains(document.activeElement)) {
+          accountButton.current?.focus();
+        }
+        setAccountPosition(null);
+      }
     };
     document.addEventListener("pointerdown", onClick);
     document.addEventListener("keydown", onKey);
@@ -172,7 +179,7 @@ export function StorefrontHeader({
       {navigation.state !== "idle" ? (
         <div
           role="progressbar"
-          aria-label={locale === "ar" ? "جار التحميل" : "Loading"}
+          aria-label={messages.states.loading}
           className="sf-navigation-progress"
         />
       ) : null}
@@ -185,7 +192,10 @@ export function StorefrontHeader({
           <StorefrontBrand name={brandName} />
         </Link>
         <SearchField
+          key={`desktop:${locale}:${currentSearch.query}:${currentSearch.filter}`}
           locale={locale}
+          defaultQuery={currentSearch.query}
+          filter={currentSearch.filter}
           size="sm"
           className="sf-header-search sf-search"
           labels={searchLabels}
@@ -194,6 +204,8 @@ export function StorefrontHeader({
           <Link
             to={switchHref}
             aria-label={messages.locale.switchLabel}
+            lang={otherLocale}
+            hrefLang={otherLocale}
             className={`${control} sf-locale-control`}
           >
             {otherLocale === "en" ? "EN" : "ع"}
@@ -213,7 +225,15 @@ export function StorefrontHeader({
           ) : null}
           <div className="sf-desktop-account">
             {session ? (
-              <div className="relative">
+              <div
+                className="relative"
+                ref={account}
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    setAccountPosition(null);
+                  }
+                }}
+              >
                 <button
                   type="button"
                   ref={accountButton}
@@ -249,37 +269,33 @@ export function StorefrontHeader({
                     <UserIcon />
                   )}
                 </button>
-                {accountPosition
-                  ? createPortal(
-                      <div
-                        ref={account}
-                        id="site-account-menu"
-                        data-storefront-shell=""
-                        dir={getLocaleDirection(locale)}
-                        style={{
-                          ...getStorefrontThemeStyle(data.theme),
-                          top: accountPosition.top,
-                          right: accountPosition.right,
-                        }}
-                        className="sf-account-popover"
+                {accountPosition ? (
+                  <div
+                    id="site-account-menu"
+                    data-storefront-shell=""
+                    dir={getLocaleDirection(locale)}
+                    style={{
+                      ...getStorefrontThemeStyle(data.theme),
+                      top: accountPosition.top,
+                      right: accountPosition.right,
+                    }}
+                    className="sf-account-popover"
+                  >
+                    <p className="px-3 py-2 font-semibold">
+                      <bdi>{session.displayName}</bdi>
+                    </p>
+                    {accountItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className="flex min-h-11 items-center rounded-xl px-3 text-sm hover:bg-[var(--surface-strong)]"
                       >
-                        <p className="px-3 py-2 font-semibold">
-                          {session.displayName}
-                        </p>
-                        {accountItems.map((item) => (
-                          <Link
-                            key={item.href}
-                            to={item.href}
-                            className="flex min-h-11 items-center rounded-xl px-3 text-sm hover:bg-[var(--surface-strong)]"
-                          >
-                            {item.label}
-                          </Link>
-                        ))}
-                        {signOut}
-                      </div>,
-                      document.body,
-                    )
-                  : null}
+                        {item.label}
+                      </Link>
+                    ))}
+                    {signOut}
+                  </div>
+                ) : null}
               </div>
             ) : (
               <Link to={`/${locale}/login`} className="sf-sign-in">
@@ -316,7 +332,10 @@ export function StorefrontHeader({
       </div>
       <div className="gh-page sf-mobile-search">
         <SearchField
+          key={`mobile:${locale}:${currentSearch.query}:${currentSearch.filter}`}
           locale={locale}
+          defaultQuery={currentSearch.query}
+          filter={currentSearch.filter}
           size="sm"
           className="sf-search"
           labels={searchLabels}
@@ -331,7 +350,6 @@ export function StorefrontHeader({
             <NavLink
               key={href}
               to={href}
-              end
               className={({ isActive }) =>
                 `sf-category-link${isActive ? " is-active" : ""}`
               }
@@ -375,7 +393,7 @@ export function StorefrontHeader({
                 to={`/${locale}/profile`}
                 className="block text-lg font-semibold"
               >
-                {session.displayName}
+                <bdi>{session.displayName}</bdi>
               </Link>
               <p className="mt-1 truncate text-sm text-[var(--ink-muted)]">
                 <bdi>{session.email}</bdi>
@@ -412,7 +430,6 @@ export function StorefrontHeader({
           {primaryItems.map((item) => (
             <NavLink
               key={item.href}
-              end
               to={item.href}
               className={({ isActive }) =>
                 `rounded-xl px-3 py-3 font-medium ${isActive ? "bg-[var(--surface-strong)] text-[var(--accent)]" : "hover:bg-[var(--surface)]"}`

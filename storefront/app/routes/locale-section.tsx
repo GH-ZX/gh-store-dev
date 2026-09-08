@@ -22,6 +22,7 @@ import { redirect, useLoaderData } from "react-router";
 import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
+import { buildCollectionDescription } from "@/lib/seo";
 import {
   createPublicClient,
   getCategoryPage,
@@ -112,6 +113,9 @@ export function meta({ params, matches }: Route.MetaArgs) {
   const section = params.section ?? "";
   const resolved = sectionOf(section);
   const catalog = getMessages(locale, "catalog");
+  const match = matches.find((m) => m?.id === "routes/locale-section") as
+    | { loaderData?: { page?: number; category?: { categoryName?: string | null; page?: number } } }
+    | undefined;
 
   if (resolved.kind === "content") {
     const content = getMessages(locale, "content")[resolved.page];
@@ -136,22 +140,21 @@ export function meta({ params, matches }: Route.MetaArgs) {
       {
         locale,
         path: `/${resolved.rail}`,
+        page: match?.loaderData?.page,
         title: copy.title,
         description: copy.description,
       },
       matches,
     );
   }
-  const match = matches.find((m) => m?.id === "routes/locale-section") as
-    | { loaderData?: { category?: { categoryName?: string | null } } }
-    | undefined;
   const categoryName = match?.loaderData?.category?.categoryName ?? section;
   return buildStorePageMeta(
     {
       locale,
-      path: `/${section}`,
+      path: `/${encodeURIComponent(section)}`,
+      page: match?.loaderData?.category?.page,
       title: categoryName,
-      description: "",
+      description: buildCollectionDescription({ locale, categoryName }),
     },
     matches,
   );

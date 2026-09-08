@@ -85,6 +85,7 @@ export type AdminProductListItem = {
   showInCarousel: boolean;
   sortOrder: number;
   offerCount: number;
+  activeOfferCount: number;
   providerName: string | null;
   providerCode: string | null;
   providerUrl: string | null;
@@ -108,32 +109,37 @@ function orIlike(columns: string[], token: string): string {
 }
 
 /**
- * Offer totals per game.
- *
- * A plain id read tallied in memory rather than one count query per game: the
- * dashboard list needs every total at once, and a single round trip keeps the
- * page fast as the catalog grows.
+ * Total and published offers for the catalog, including catalogs larger than
+ * Supabase's default response limit.
  */
-async function countOffersByProduct(client: Client, gameIds: string[]): Promise<Map<string, number>> {
-  const counts = new Map<string, number>();
+async function countOffersByProduct(client: Client, productIds: string[]): Promise<Map<string, { total: number; active: number }>> {
+  const counts = new Map<string, { total: number; active: number }>();
 
-  if (gameIds.length === 0) {
+  if (productIds.length === 0) {
     return counts;
   }
 
-  const { data, error } = await client.from("offers").select("product_id").in("product_id", gameIds);
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client
+      .from("offers")
+      .select("product_id, is_active")
+      .in("product_id", productIds)
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
 
-  if (error) {
-    throw new Error(`Counting offers failed: ${error.message}`);
-  }
-
-  for (const row of data) {
-    // Offers without a product do not contribute to a product's total.
-    if (!row.product_id) {
-      continue;
+    if (error) {
+      throw new Error(`Counting offers failed: ${error.message}`);
     }
 
-    counts.set(row.product_id, (counts.get(row.product_id) ?? 0) + 1);
+    for (const row of data) {
+      if (!row.product_id) continue;
+      const count = counts.get(row.product_id) ?? { total: 0, active: 0 };
+      count.total += 1;
+      if (row.is_active) count.active += 1;
+      counts.set(row.product_id, count);
+    }
+    if (data.length < pageSize) break;
   }
 
   return counts;
@@ -286,7 +292,8 @@ export async function listAdminProducts({
         isFeatured: game.is_featured,
         showInCarousel: game.show_in_carousel,
         sortOrder: game.sort_order,
-        offerCount: offerCounts.get(game.id) ?? 0,
+        offerCount: offerCounts.get(game.id)?.total ?? 0,
+        activeOfferCount: offerCounts.get(game.id)?.active ?? 0,
         providerName: provider?.providerName ?? null,
         providerCode: provider?.providerCode ?? null,
         providerUrl: provider?.externalUrl ?? null,
@@ -353,6 +360,7 @@ export type AdminProductOffer = {
 export type AdminProductDetail = {
   game: AdminProduct;
   offers: AdminProductOffer[];
+  activeOfferCount: number;
 };
 
 const OFFER_COLUMNS =
@@ -382,7 +390,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
     return null;
   }
 
-  const [offers, providerInfo] = await Promise.all([
+  const [offers, providerInfo, activeOffers] = await Promise.all([
     client
       .from("offers")
       .select(OFFER_COLUMNS)
@@ -390,13 +398,22 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
       .order("sort_order", { ascending: true })
       .order("price", { ascending: true }),
     providerInfoByProduct(client, [gameId]),
+    client
+      .from("offers")
+      .select("id", { count: "exact", head: true })
+      .eq("product_id", gameId)
+      .eq("is_active", true),
   ]);
 
   if (offers.error) {
     throw new Error(`Reading the game's offers failed: ${offers.error.message}`);
   }
+  if (activeOffers.error || activeOffers.count === null) {
+    throw new Error(`Counting active offers failed: ${activeOffers.error?.message ?? "Count unavailable"}`);
+  }
 
   return {
+    activeOfferCount: activeOffers.count,
     game: {
       id: game.id,
       categoryId: game.category_id,

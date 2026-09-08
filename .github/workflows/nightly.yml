@@ -49,9 +49,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    env:
-      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -61,38 +58,31 @@ jobs:
         with:
           version: latest
 
-      # Starts the local stack and replays every migration in
-      # supabase/migrations against an empty database. A seed file would also
-      # run here; the store deliberately has none, so what exists afterwards is
-      # what the migrations alone produce.
+      # db reset requires a running database. Only Postgres is needed for these
+      # checks, so avoid starting unrelated API, Studio, and Edge services.
+      - name: Start the disposable local database
+        run: supabase db start
+
+      # Replay every migration against an empty database without seed data.
+      # Explicit --local keeps this check independent of any linked project.
       - name: Apply all migrations to a fresh local database
-        run: supabase db reset
+        run: supabase db reset --local --no-seed
 
-      - name: Enable pgTAP
-        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -c "create extension if not exists pgtap;"
-
-      # A failing assertion prints `not ok`; a broken statement makes psql exit
-      # non-zero. Both are failures, so `pipefail` plus a grep covers the pair.
+      # The CLI enables pgTAP and uses pg_prove to validate assertions, test
+      # plans, and SQL errors rather than matching formatted psql output.
       # The hosted suites in supabase/tests/hosted are deliberately absent:
       # they assert against a live project and belong to the release checklist,
       # not to a local run.
       - name: Run pgTAP suites
         run: |
           set -o pipefail
-          failed=0
-          for file in supabase/tests/rls/*.sql; do
-            echo "::group::$file"
-            if psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$file" | tee /tmp/tap.out \
-              && ! grep -q '^not ok' /tmp/tap.out; then
-              grep -c '^ok' /tmp/tap.out | xargs -I{} echo "✓ $file: {} assertions passed"
-            else
-              echo "::error::pgTAP failures in $file"
-              cat /tmp/tap.out
-              failed=1
-            fi
-            echo "::endgroup::"
-          done
-          exit "$failed"
+          supabase test db --local supabase/tests/rls/*.sql | tee /tmp/gh-store-pgtap.out
+          # pg_prove can exit successfully with NOTESTS if no tests are found.
+          grep -q '^Result: PASS$' /tmp/gh-store-pgtap.out
+
+      - name: Remove the disposable local database
+        if: always()
+        run: supabase stop --no-backup
 
   # The full browser suite — anonymous storefront always, administrator flows
   # when the credentials secrets exist. Playwright uses its bundled Chromium

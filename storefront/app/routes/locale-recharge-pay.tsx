@@ -3,6 +3,8 @@ import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { buildPageMeta } from "@/lib/seo";
+import { rechargeHref } from "@/lib/recharge-flow";
+import { checkoutReturnTo } from "@server/recharge-flow";
 import { AdminCard } from "@/components/admin/admin-form";
 import { Section, SectionHeader } from "@/components/commerce/commerce-page";
 import { SamPaymentPanel } from "@/components/recharge/sam-payment-panel";
@@ -17,11 +19,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!isLocale(locale)) throw new Response("Not Found", { status: 404 });
   const { env } = getCloudflareContext(context);
   const { supabase, jar, isProduction } = createSessionClient(request, env);
-  if (!await getSessionUserId(supabase)) return withSessionCookies(redirectToLogin(request, locale, new URL(request.url).pathname), jar, isProduction);
+  const url = new URL(request.url);
+  if (!await getSessionUserId(supabase)) return withSessionCookies(redirectToLogin(request, locale, url.pathname + url.search), jar, isProduction);
   const sam = await getMySamInvoice(supabase, invoiceId);
   const binance = sam ? null : await getMyBinanceInvoice(supabase, invoiceId);
   if (!sam && !binance) throw new Response("Not Found", { status: 404 });
-  return data({ locale, sam, binance }, { headers: sessionCookieHeaders(jar, isProduction) });
+  return data({ locale, sam, binance, returnTo: checkoutReturnTo(url.searchParams.get("returnTo"), locale) }, { headers: sessionCookieHeaders(jar, isProduction) });
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
@@ -29,7 +32,8 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   if (!isLocale(locale)) throw new Response("Not Found", { status: 404 });
   const { env } = getCloudflareContext(context);
   const { supabase, jar, isProduction } = createSessionClient(request, env);
-  if (!await getSessionUserId(supabase)) return withSessionCookies(redirectToLogin(request, locale, new URL(request.url).pathname), jar, isProduction);
+  const url = new URL(request.url);
+  if (!await getSessionUserId(supabase)) return withSessionCookies(redirectToLogin(request, locale, url.pathname + url.search), jar, isProduction);
   const form = await request.formData();
   const intent = form.get("intent");
   const headers = sessionCookieHeaders(jar, isProduction);
@@ -54,13 +58,13 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export default function PaymentPage() {
-  const { locale, sam, binance } = useLoaderData<typeof loader>();
+  const { locale, sam, binance, returnTo } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "recharge");
   return <Section spacing="page" className="sf-recharge-pay">
-    <Link className="inline-flex min-h-9 items-center text-sm text-[var(--ink-muted)]" to={`/${locale}/recharge`}>{messages.sam.backToTopUp}</Link>
+    <Link className="inline-flex min-h-9 items-center text-sm text-[var(--ink-muted)]" to={rechargeHref(`/${locale}/recharge`, { returnTo })}>{messages.sam.backToTopUp}</Link>
     <SectionHeader as="h1" title={messages.sam.payTitle} subtitle={messages.sam.payDescription} className="mt-5" />
     <div className="sf-payment-content"><AdminCard className="sf-commerce-panel" title={messages.sam.payTitle}>
-      {sam ? <SamPaymentPanel locale={locale} messages={messages} invoice={sam} /> : binance ? <BinancePaymentPanel locale={locale} messages={messages} invoice={binance} /> : null}
+      {sam ? <SamPaymentPanel key={sam.samInvoiceId} locale={locale} messages={messages} invoice={sam} returnTo={returnTo} /> : binance ? <BinancePaymentPanel key={binance.id} locale={locale} messages={messages} invoice={binance} returnTo={returnTo} /> : null}
     </AdminCard></div>
   </Section>;
 }

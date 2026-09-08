@@ -29,13 +29,13 @@ export function CatalogHeading({ locale, title, description, total, item = "prod
 }
 
 export function CatalogNavigation({ locale, active }: { locale: Locale; active: string }) {
-  const catalog = getMessages(locale, "catalog");
+  const common = getMessages(locale, "common");
   const links = [
-    ["products", catalog.products.title], ["games", catalog.games.title],
-    ["gift-cards", catalog.giftCards.title], ["sale", catalog.sale.title],
-    ["best-sellers", catalog.bestSellers.title],
+    ["products", common.navigation.allProducts], ["games", common.navigation.games],
+    ["gift-cards", common.navigation.giftCards], ["sale", common.navigation.offers],
+    ["best-sellers", common.navigation.bestSellers],
   ];
-  return <nav className="sf-catalog-nav" aria-label={locale === "ar" ? "تصفح المتجر" : "Browse the store"}>
+  return <nav className="sf-catalog-nav" aria-label={common.actions.browse}>
     {links.map(([path, label]) => <Link key={path} to={`/${locale}/${path}`} aria-current={active === path ? "page" : undefined}>{label}</Link>)}
   </nav>;
 }

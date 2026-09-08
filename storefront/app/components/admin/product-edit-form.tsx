@@ -25,7 +25,7 @@ import type { AdminCategory, AdminProduct } from "@server/legacy/lib/services/ad
 import { PRODUCT_KINDS } from "@/lib/product-kind";
 
 /**
- * Game editor.
+ * Product editor.
  *
  * Two sibling forms rather than one: saving and deleting are different
  * intentions, and a destructive submit must never be the button an admin hits by
@@ -40,7 +40,7 @@ export type ProductEditFormProps = {
   messages: AdminMessages["catalog"]["game"];
   errors: AdminMessages["catalog"]["errors"];
   categories: AdminCategory[];
-  game: AdminProduct;
+  product: AdminProduct;
 };
 
 function resolveError(
@@ -54,7 +54,7 @@ function resolveError(
   return errors[key as keyof AdminMessages["catalog"]["errors"]] ?? errors.unknown;
 }
 
-export function ProductEditForm({ locale, messages, errors, categories, game }: ProductEditFormProps) {
+export function ProductEditForm({ locale, messages, errors, categories, product }: ProductEditFormProps) {
   const [saveState, saveAction, saving] = useActionState<CatalogActionState, FormData>(
     updateProductAction,
     INITIAL_CATALOG_STATE,
@@ -70,23 +70,31 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
    * by hand, which is the step this exists to remove. Everything else stays
    * uncontrolled — the picker has no opinion about a slug.
    */
-  const [imageUrl, setImageUrl] = useState(game.imageUrl ?? "");
-  const [logoUrl, setLogoUrl] = useState(game.logoUrl ?? "");
+  const [imageUrl, setImageUrl] = useState(product.imageUrl ?? "");
+  const [logoUrl, setLogoUrl] = useState(product.logoUrl ?? "");
 
   const error = resolveError(errors, saveState.error ?? deleteState.error);
 
   return (
     <AdminCard title={messages.title} description={messages.description}>
+      <div className="mb-5">
+        <IgdbArtworkPicker
+          locale={locale}
+          messages={messages.igdb}
+          onPickCover={setImageUrl}
+          onPickArtwork={setLogoUrl}
+        />
+      </div>
       <form action={saveAction} className="grid gap-5">
         <input type="hidden" name="locale" value={locale} />
-        <input type="hidden" name="gameId" value={game.id} />
+        <input type="hidden" name="gameId" value={product.id} />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
             label={messages.categoryLabel}
             hint={messages.categoryHint}
             name="categoryId"
-            defaultValue={game.categoryId ?? ""}
+            defaultValue={product.categoryId ?? ""}
             options={[
               { value: "", label: messages.categoryNone },
               ...categories.map((category) => ({
@@ -99,7 +107,7 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             label={messages.productKindLabel}
             hint={messages.productKindHint}
             name="productKind"
-            defaultValue={game.productKind}
+            defaultValue={product.productKind}
             options={PRODUCT_KINDS.map((kind) => ({
               value: kind,
               label: messages.productKinds[kind],
@@ -111,14 +119,14 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
           <TextField
             label={messages.nameAr}
             name="nameAr"
-            defaultValue={game.nameAr}
+            defaultValue={product.nameAr}
             required
             maxLength={160}
           />
           <TextField
             label={messages.nameEn}
             name="nameEn"
-            defaultValue={game.nameEn}
+            defaultValue={product.nameEn}
             required
             maxLength={160}
             dir="ltr"
@@ -127,7 +135,7 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             label={messages.slug}
             hint={messages.slugHint}
             name="slug"
-            defaultValue={game.slug}
+            defaultValue={product.slug}
             required
             maxLength={80}
             dir="ltr"
@@ -140,7 +148,7 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             type="number"
             min={0}
             step={1}
-            defaultValue={game.sortOrder}
+            defaultValue={product.sortOrder}
             required
             dir="ltr"
             className="tabular-nums"
@@ -149,13 +157,13 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             label={messages.pointsNameAr}
             hint={messages.pointsHint}
             name="pointsNameAr"
-            defaultValue={game.pointsNameAr ?? ""}
+            defaultValue={product.pointsNameAr ?? ""}
             maxLength={80}
           />
           <TextField
             label={messages.pointsNameEn}
             name="pointsNameEn"
-            defaultValue={game.pointsNameEn ?? ""}
+            defaultValue={product.pointsNameEn ?? ""}
             maxLength={80}
             dir="ltr"
           />
@@ -166,7 +174,7 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             label={messages.descriptionAr}
             hint={messages.descriptionHint}
             name="descriptionAr"
-            defaultValue={game.descriptionAr ?? ""}
+            defaultValue={product.descriptionAr ?? ""}
             maxLength={4000}
             rows={4}
           />
@@ -174,19 +182,12 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             label={messages.descriptionEn}
             hint={messages.descriptionHint}
             name="descriptionEn"
-            defaultValue={game.descriptionEn ?? ""}
+            defaultValue={product.descriptionEn ?? ""}
             maxLength={4000}
             rows={4}
             dir="ltr"
           />
         </div>
-
-        <IgdbArtworkPicker
-          locale={locale}
-          messages={messages.igdb}
-          onPickCover={setImageUrl}
-          onPickArtwork={setLogoUrl}
-        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
@@ -212,13 +213,13 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
           <TextField
             label={messages.carouselBadgeAr}
             name="carouselBadgeAr"
-            defaultValue={game.carouselBadgeAr ?? ""}
+            defaultValue={product.carouselBadgeAr ?? ""}
             maxLength={80}
           />
           <TextField
             label={messages.carouselBadgeEn}
             name="carouselBadgeEn"
-            defaultValue={game.carouselBadgeEn ?? ""}
+            defaultValue={product.carouselBadgeEn ?? ""}
             maxLength={80}
             dir="ltr"
           />
@@ -228,7 +229,7 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             type="number"
             min={0}
             step={1}
-            defaultValue={game.carouselOrder ?? ""}
+            defaultValue={product.carouselOrder ?? ""}
             dir="ltr"
             className="tabular-nums"
           />
@@ -236,7 +237,7 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             label={messages.carouselLogoTone}
             hint={messages.carouselLogoToneHint}
             name="carouselLogoTone"
-            defaultValue={game.carouselLogoTone ?? ""}
+            defaultValue={product.carouselLogoTone ?? ""}
             options={[
               { value: "", label: messages.carouselLogoToneNone },
               { value: "light", label: messages.carouselLogoToneLight },
@@ -247,7 +248,7 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             label={messages.carouselColor}
             hint={messages.carouselColorHint}
             name="carouselColor"
-            defaultValue={game.carouselColor ?? ""}
+            defaultValue={product.carouselColor ?? ""}
             maxLength={9}
             dir="ltr"
             spellCheck={false}
@@ -260,17 +261,17 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
             label={messages.isActive}
             hint={messages.isActiveHint}
             name="isActive"
-            defaultChecked={game.isActive}
+            defaultChecked={product.isActive}
           />
           <CheckboxField
             label={messages.isFeatured}
             name="isFeatured"
-            defaultChecked={game.isFeatured}
+            defaultChecked={product.isFeatured}
           />
           <CheckboxField
             label={messages.showInCarousel}
             name="showInCarousel"
-            defaultChecked={game.showInCarousel}
+            defaultChecked={product.showInCarousel}
           />
         </div>
 
@@ -287,7 +288,7 @@ export function ProductEditForm({ locale, messages, errors, categories, game }: 
         <div className="flex flex-wrap items-center gap-4">
           <form action={deleteAction}>
             <input type="hidden" name="locale" value={locale} />
-            <input type="hidden" name="gameId" value={game.id} />
+            <input type="hidden" name="gameId" value={product.id} />
             <Button
               type="submit"
               variant="secondary"

@@ -4,6 +4,9 @@
     "games": "الألعاب",
     "giftCards": "البطاقات",
     "products": "المنتجات",
+    "allProducts": "جميع المنتجات",
+    "aiSubscriptions": "الذكاء الاصطناعي والاشتراكات",
+    "bestSellers": "الأكثر مبيعاً",
     "offers": "العروض",
     "menu": "القائمة",
     "close": "إغلاق",
@@ -36,7 +39,9 @@
     "emptyTitle": "لا يوجد شيء لعرضه بعد",
     "emptyDescription": "نجهّز هذا القسم حاليًا. تصفّح باقي أقسام المتجر في الوقت الحالي.",
     "errorTitle": "تعذر تحميل البيانات",
-    "errorDescription": "حاول تحديث الصفحة بعد قليل."
+    "errorDescription": "حاول تحديث الصفحة بعد قليل.",
+    "notFoundTitle": "هذه الصفحة غير متاحة",
+    "notFoundDescription": "ربما تغيّر العنوان أو لم يعد هذا المنتج متاحاً. تصفح المتجر للعثور على ما تحتاجه."
   },
   "locale": {
     "switchLabel": "تغيير اللغة"
@@ -47,7 +52,7 @@
     "light": "المظهر الفاتح"
   },
   "footer": {
-    "tagline": "منتجات رقمية وتسليم واضح.",
+    "tagline": "منتجات رقمية واشتراكات وبطاقات هدايا في مكان واحد.",
     "storeHeading": "المتجر",
     "helpHeading": "المساعدة",
     "legalHeading": "قانوني",
@@ -83,6 +88,7 @@
   "account": {
     "signIn": "تسجيل الدخول",
     "account": "حسابي",
+    "orders": "طلباتي",
     "adminBadge": "مدير",
     "dashboard": "لوحة الإدارة",
     "walletLabel": "الرصيد",

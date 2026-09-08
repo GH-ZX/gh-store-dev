@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ArrowIcon, CloseIcon, SearchIcon, TagIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
-import { buildSearchPath, type SearchFilter } from "@/lib/catalog/search";
+import { buildSearchPath, SEARCH_QUERY_MAX_LENGTH, type SearchFilter } from "@/lib/catalog/search";
 import { cn } from "@/lib/cn";
 
 /**
@@ -48,7 +48,7 @@ type Suggestion = {
   key: string;
   href: string;
   label: string;
-  kind: "game" | "offer";
+  kind: "product" | "offer";
 };
 
 type SuggestResponse = {
@@ -72,6 +72,7 @@ export function SearchField({
 }: SearchFieldProps) {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const [draft, setDraft] = useState(defaultQuery);
   /*
    * The suggestions are stored with the query that produced them, and visible
@@ -79,36 +80,31 @@ export function SearchField({
    * response (or a draft shortened below the fetch threshold) hides itself by
    * derivation, with no state-resetting effect chasing the keystrokes.
    */
-  const [result, setResult] = useState<{ query: string; items: Suggestion[] }>({
-    query: "",
+  const [result, setResult] = useState<{ key: string; items: Suggestion[] }>({
+    key: "",
     items: [],
   });
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const query = draft.trim();
-  const suggestions = result.query === query ? result.items : [];
+  const resultKey = `${locale}:${filter}:${query}`;
+  const suggestions = result.key === resultKey ? result.items : [];
+  const expanded = open && suggestions.length > 0;
 
   const listId = useId();
   const active =
-    open && activeIndex >= 0 ? (suggestions[activeIndex] ?? undefined) : undefined;
+    expanded && activeIndex >= 0 ? (suggestions[activeIndex] ?? undefined) : undefined;
 
   function submit(event: FormEvent<HTMLFormElement>) {
-    // Enter with a highlighted suggestion opens it instead of searching.
-    if (active) {
-      event.preventDefault();
-      choose(active);
-      return;
-    }
-
+    event.preventDefault();
     const trimmed = draft.trim();
 
     if (!trimmed) {
       return;
     }
 
-    event.preventDefault();
-    setOpen(false);
+    dismiss();
     navigate(buildSearchPath(locale, { query: trimmed, filter }));
   }
 
@@ -125,16 +121,26 @@ export function SearchField({
   }
 
   function onInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (open && suggestions.length > 0) {
+    if (event.nativeEvent.isComposing) return;
+
+    if (event.key === "Enter" && active) {
+      event.preventDefault();
+      choose(active);
+      return;
+    }
+
+    if (suggestions.length > 0) {
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setActiveIndex((index) => (index + 1) % suggestions.length);
+        setOpen(true);
+        setActiveIndex((index) => !expanded ? 0 : (index + 1) % suggestions.length);
         return;
       }
 
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setActiveIndex((index) => (index <= 0 ? suggestions.length - 1 : index - 1));
+        setOpen(true);
+        setActiveIndex((index) => !expanded || index <= 0 ? suggestions.length - 1 : index - 1);
         return;
       }
     }
@@ -155,14 +161,14 @@ export function SearchField({
   useEffect(() => {
     const trimmed = draft.trim();
 
-    if (trimmed.length < MIN_QUERY_LENGTH) {
+    if (!open || trimmed.length < MIN_QUERY_LENGTH || result.key === `${locale}:${filter}:${trimmed}`) {
       return;
     }
 
     const controller = new AbortController();
     const timer = setTimeout(() => {
       fetch(
-        `/api/search/suggest?locale=${locale}&q=${encodeURIComponent(trimmed)}`,
+        `/api/search/suggest?locale=${locale}&q=${encodeURIComponent(trimmed)}&type=${filter}`,
         { signal: controller.signal },
       )
         .then(async (response) => {
@@ -173,12 +179,14 @@ export function SearchField({
           return (await response.json()) as SuggestResponse;
         })
         .then((data) => {
+          if (controller.signal.aborted) return;
+
           const items: Suggestion[] = [
-            ...(data.games ?? data.products ?? []).map((game) => ({
-              key: `game:${game.slug}`,
-              kind: "game" as const,
-              label: game.name,
-              href: `/${locale}/${game.categorySlug}/${game.slug}`,
+            ...(data.products ?? data.games ?? []).map((product) => ({
+              key: `product:${product.slug}`,
+              kind: "product" as const,
+              label: product.name,
+              href: `/${locale}/${product.categorySlug}/${product.slug}`,
             })),
             ...(data.offers ?? [])
               .map((offer) => ({
@@ -191,16 +199,14 @@ export function SearchField({
 
           // Stamped with the query it answers; a newer draft simply does not
           // match this stamp and renders nothing until its own response lands.
-          setResult({ query: trimmed, items });
+          setResult({ key: `${locale}:${filter}:${trimmed}`, items });
           setActiveIndex(-1);
-          setOpen(items.length > 0);
         })
         .catch((error: unknown) => {
           // Aborted requests are the normal cost of a faster keystroke; any
           // other failure quietly degrades to plain search.
-          if ((error as Error).name !== "AbortError") {
-            setResult({ query: trimmed, items: [] });
-            setOpen(false);
+          if (!controller.signal.aborted && (error as Error).name !== "AbortError") {
+            setResult({ key: `${locale}:${filter}:${trimmed}`, items: [] });
             setActiveIndex(-1);
           }
         });
@@ -210,7 +216,13 @@ export function SearchField({
       controller.abort();
       clearTimeout(timer);
     };
-  }, [draft, locale]);
+  }, [draft, locale, filter, open, result.key]);
+
+  useEffect(() => {
+    if (expanded && activeIndex >= 0) {
+      listRef.current?.children[activeIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex, expanded]);
 
   function clear() {
     setDraft("");
@@ -234,6 +246,7 @@ export function SearchField({
         method="get"
         onSubmit={submit}
         role="search"
+        aria-label={labels.fieldLabel}
         className={cn(
           "flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--surface)] ps-3 pe-1",
           size === "sm" ? "min-h-11" : "min-h-12",
@@ -244,19 +257,21 @@ export function SearchField({
           ref={inputRef}
           type="search"
           name="q"
+          dir="auto"
+          maxLength={SEARCH_QUERY_MAX_LENGTH}
           value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={onInputKeyDown}
-          onFocus={() => {
-            if (suggestions.length > 0) {
-              setOpen(true);
-            }
+          onChange={(event) => {
+            setDraft(event.target.value);
+            setActiveIndex(-1);
+            setOpen(true);
           }}
+          onKeyDown={onInputKeyDown}
+          onFocus={() => setOpen(true)}
           placeholder={labels.placeholder}
           aria-label={labels.fieldLabel}
           role="combobox"
-          aria-expanded={open}
-          aria-controls={open ? listId : undefined}
+          aria-expanded={expanded}
+          aria-controls={expanded ? listId : undefined}
           aria-activedescendant={active ? optionId(listId, activeIndex) : undefined}
           aria-autocomplete="list"
           autoComplete="off"
@@ -272,45 +287,32 @@ export function SearchField({
             type="button"
             onClick={clear}
             aria-label={labels.clear}
-            className="grid size-9 shrink-0 place-items-center rounded-full text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:bg-[var(--surface-strong)] hover:text-[var(--ink)] [&>svg]:size-4"
+            className="grid size-11 shrink-0 place-items-center rounded-full text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:bg-[var(--surface-strong)] hover:text-[var(--ink)] [&>svg]:size-4"
           >
             <CloseIcon />
           </button>
         ) : null}
-        {/*
-         * The one magnifier in the field, and it is on the button.
-         *
-         * There used to be a second, decorative one at the head of the input. Two
-         * copies of the same glyph a few pixels apart read as a mistake, and of
-         * the two this is the one worth keeping: it labels the control that does
-         * something. A direction-aware arrow was the other candidate and is a
-         * trap — this field also sits in the header bar, which is pinned LTR so
-         * the mark does not change sides, and every way CSS has of asking "which
-         * way does text run" answers for the Arabic document rather than for the
-         * box, so the arrow would point back into the field it submits.
-         */}
+        {/* The magnifier identifies the search action in either direction. */}
         <button
           type="submit"
           aria-label={labels.submit}
           disabled={!draft.trim()}
-          className={cn(
-            "grid shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[var(--accent-ink)] transition-[opacity,transform] duration-[var(--duration)] ease-[var(--ease-spring)] active:scale-95 disabled:opacity-40 [&>svg]:size-4",
-            size === "sm" ? "size-9" : "size-10",
-          )}
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[var(--accent-ink)] transition-[opacity,transform] duration-[var(--duration)] ease-[var(--ease-spring)] active:scale-95 disabled:opacity-40 [&>svg]:size-4"
         >
           <SearchIcon />
         </button>
       </form>
 
-      {open && suggestions.length > 0 ? (
+      {expanded ? (
         <ul
+          ref={listRef}
           id={listId}
           role="listbox"
           aria-label={labels.suggestionsLabel}
-          className="absolute inset-x-0 top-full z-50 mt-1.5 grid overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-1 shadow-[var(--elevation-3)]"
+          className="absolute inset-x-0 top-full z-50 mt-1.5 grid max-h-[min(420px,50dvh)] overflow-y-auto overscroll-contain rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-1 shadow-[var(--elevation-3)]"
           // Focus must not leave the input when the list is pressed, or blur
           // would dismiss it before the click lands.
-          onMouseDown={(event) => event.preventDefault()}
+          onPointerDown={(event) => event.preventDefault()}
         >
           {suggestions.map((suggestion, index) => (
             <li
@@ -333,10 +335,10 @@ export function SearchField({
                 <TagIcon
                   className={cn(
                     "size-4 shrink-0",
-                    suggestion.kind === "game" ? "text-[var(--accent)]" : "text-[var(--ink-faint)]",
+                    suggestion.kind === "product" ? "text-[var(--accent)]" : "text-[var(--ink-faint)]",
                   )}
                 />
-                <span className="min-w-0 flex-1 truncate">{suggestion.label}</span>
+                <span className="min-w-0 flex-1 truncate"><bdi>{suggestion.label}</bdi></span>
                 <ArrowIcon
                   direction="end"
                   className="size-3.5 shrink-0 text-[var(--ink-faint)] rtl:rotate-180"

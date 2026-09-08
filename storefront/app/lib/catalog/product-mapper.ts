@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import type { ProductKind } from "@/lib/catalog/product-kind-mapper";
+import { UNCATEGORIZED_PRODUCT_PATH } from "@/lib/catalog/paths";
 
 export type ProductRow = {
   id: string;
@@ -89,7 +90,7 @@ export function toStoreProduct(row: ProductRow, locale: Locale): StoreProduct {
   return {
     id: row.id,
     slug: row.slug,
-    categorySlug: cat?.slug ?? "games",
+    categorySlug: cat?.slug ?? UNCATEGORIZED_PRODUCT_PATH,
     categoryName: cat ? (isArabic ? (cat.name_ar ?? null) : (cat.name_en ?? null)) : null,
     kind: toProductKind(row.product_kind),
     name: isArabic ? row.name_ar : row.name_en,

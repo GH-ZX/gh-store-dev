@@ -12,13 +12,16 @@ import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { DEFAULT_LOCALE, isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { createPublicClient, getOfferDetail } from "@/lib/catalog-queries";
-import { getSiteUrl } from "@/lib/seo";
+import { offerPath } from "@/lib/catalog/paths";
+import type { StoreProduct } from "@/lib/catalog/product-mapper";
+import type { StoreOffer } from "@/lib/catalog/offer-mapper";
+import { buildBreadcrumbJsonLd, buildCatalogDescription, buildOfferJsonLd, getSiteUrl } from "@/lib/seo";
 import type { Route } from "./+types/locale-offer";
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, request, context }: Route.LoaderArgs) {
   const locale = params.locale ?? "";
   const category = params.category ?? "";
-  const gameSlug = params.slug ?? "";
+  const productSlug = params.slug ?? "";
   const offerSlug = params.offerSlug ?? "";
   if (!isLocale(locale)) {
     throw new Response("Not Found", { status: 404 });
@@ -27,26 +30,15 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const detail = await getOfferDetail(
     createPublicClient(env),
     locale,
-    category,
-    gameSlug,
+    null,
+    productSlug,
     offerSlug,
   );
-  if (!detail && category === "games") {
-    const legacy = await getOfferDetail(
-      createPublicClient(env),
-      locale,
-      null,
-      gameSlug,
-      offerSlug,
-    );
-    if (legacy)
-      throw redirect(
-        `/${locale}/${legacy.product.categorySlug}/${legacy.product.slug}/${legacy.offer.slug}`,
-        301,
-      );
-  }
   if (!detail) {
     throw new Response("Not Found", { status: 404 });
+  }
+  if (category !== detail.product.categorySlug) {
+    throw redirect(`${offerPath(locale, detail.product, detail.offer)}${new URL(request.url).search}`, 301);
   }
   const [offer, ...relatedOffers] = await withAdminOfferCosts([
     detail.offer,
@@ -68,31 +60,48 @@ export function meta({ params, matches }: Route.MetaArgs) {
   const match = matches.find((m) => m?.id === "routes/locale-offer") as
     | {
         loaderData?: {
-          offer?: {
-            name?: string;
-            description?: string | null;
-            imageUrl?: string | null;
-          };
-          product?: { name?: string };
+          offer?: StoreOffer;
+          product?: StoreProduct;
           category?: string;
           siteUrl?: string;
         };
       }
     | undefined;
   const offer = match?.loaderData?.offer;
-  const productName = match?.loaderData?.product?.name ?? "";
+  const product = match?.loaderData?.product;
+  const productName = product?.name ?? "";
   const category = match?.loaderData?.category ?? params.category ?? "";
-  return buildStorePageMeta(
-    {
-      locale,
-      path: `/${category}/${params.slug ?? ""}/${params.offerSlug ?? ""}`,
-      title: offer?.name ? `${offer.name} — ${productName}` : "GH Store",
-      description: offer?.description ?? "",
-      imageUrl: offer?.imageUrl ?? null,
-      siteUrl: match?.loaderData?.siteUrl ?? getSiteUrl(),
-    },
-    matches,
-  );
+  const productRoutePath = `/${encodeURIComponent(category)}/${encodeURIComponent(product?.slug ?? params.slug ?? "")}`;
+  const path = `${productRoutePath}/${encodeURIComponent(offer?.slug ?? params.offerSlug ?? "")}`;
+  const siteUrl = match?.loaderData?.siteUrl ?? getSiteUrl();
+  const common = getMessages(locale, "common");
+  const title = offer?.name
+    ? offer.name.trim() === productName.trim() ? offer.name : `${offer.name} — ${productName}`
+    : "GH Store";
+  return [
+    ...buildStorePageMeta(
+      {
+        locale,
+        path,
+        type: "product",
+        title,
+        description: product && offer ? buildCatalogDescription({
+          locale, productName, description: product.description, offerName: offer.name, offerDescription: offer.description,
+        }) : "",
+        imageUrl: offer?.imageUrl ?? product?.imageUrl ?? product?.logoUrl ?? null,
+        siteUrl,
+      },
+      matches,
+    ),
+    ...(product && offer ? [
+      { "script:ld+json": buildBreadcrumbJsonLd({ locale, siteUrl, items: [
+        { name: common.navigation.home, path: "" },
+        { name: product.name, path: productRoutePath },
+        { name: offer.name, path },
+      ] }) },
+      { "script:ld+json": buildOfferJsonLd({ locale, siteUrl, product, offer }) },
+    ] : []),
+  ];
 }
 
 function FieldPreview({ field, labels }: { field: InputField; labels: { required: string; optional: string } }) {
@@ -130,7 +139,7 @@ export default function LocaleOffer() {
       <PurchaseSummary locale={locale} product={product} offer={offer} />
       <div className="sf-product-details">
         {offer.description || product.description ? <section><h2>{locale === "ar" ? "تفاصيل العرض" : "Offer details"}</h2><DescriptionText text={offer.description ?? product.description ?? ""} /></section> : null}
-        <section><h2>{catalog.gameDetail.howItWorksHeading}</h2><ol className="sf-product-steps">{catalog.gameDetail.howItWorksSteps.map((step) => <li key={step}>{step}</li>)}</ol></section>
+        <section><h2>{catalog.gameDetail.howItWorksHeading}</h2><ol className="sf-product-steps">{catalog.gameDetail.howItWorksSteps.map((step, index) => <li key={step}><span className="sf-product-step-number" aria-hidden="true">{index + 1}</span>{step}</li>)}</ol></section>
       </div>
     </div>
     {relatedOffers.length ? <section className="sf-catalog-result-section">

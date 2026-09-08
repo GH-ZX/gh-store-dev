@@ -27,6 +27,8 @@ export type SamTopUpFormProps = {
   minAmount: number;
   maxAmount: number;
   currency: string;
+  initialAmount?: number | null;
+  returnTo?: string | null;
 };
 
 type ErrorKey = keyof RechargeMessages["sam"]["errors"];
@@ -38,6 +40,8 @@ export function SamTopUpForm({
   minAmount,
   maxAmount,
   currency,
+  initialAmount,
+  returnTo,
 }: SamTopUpFormProps) {
   const [state, _formAction, pending, formActionSubmit] = useCommerceAction<SamTopUpState>('startSamTopUpAction',
     INITIAL_SAM_TOPUP_STATE,
@@ -52,10 +56,12 @@ export function SamTopUpForm({
   return (
     <form onSubmit={formActionSubmit} className="grid gap-4">
       <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="returnTo" value={returnTo ?? ""} />
 
       <TextField
         label={formatMessage(messages.amountLabel, { currency }, locale)}
         name="amount"
+        defaultValue={initialAmount ?? undefined}
         type="number"
         step="0.01"
         min={minAmount}
@@ -91,9 +97,11 @@ export function SamTopUpForm({
         <Button
           type="submit"
           disabled={pending}
-          trailingIcon={<ArrowIcon direction="end" className="sf-commerce-submit rtl:rotate-180" />}
+          aria-busy={pending}
+          className="sf-commerce-submit"
+          trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
         >
-          {messages.sam.startAction}
+          {pending ? messages.submitting : messages.sam.startAction}
         </Button>
       </div>
     </form>

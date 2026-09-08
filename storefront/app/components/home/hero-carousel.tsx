@@ -100,6 +100,7 @@ export function HeroCarousel({
   );
   const [userPaused, setUserPaused] = useState<boolean | null>(null);
   const [tabHidden, setTabHidden] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const paused = userPaused ?? reducedMotion;
 
   /* Carousel reorder mode (admin only) — shows up/down arrows on thumbnails. */
@@ -121,7 +122,7 @@ export function HeroCarousel({
    * lifecycle / internalEngine race conditions.
    */
   useEffect(() => {
-    if (!emblaApi || !rotating || paused || tabHidden) {
+    if (!emblaApi || !rotating || paused || tabHidden || hovered) {
       return;
     }
 
@@ -136,7 +137,7 @@ export function HeroCarousel({
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [emblaApi, rotating, paused, tabHidden, intervalSeconds]);
+  }, [emblaApi, rotating, paused, tabHidden, hovered, intervalSeconds]);
 
   const toggleRotation = useCallback(() => {
     setUserPaused(!paused);
@@ -210,7 +211,15 @@ export function HeroCarousel({
 
   return (
     <section className={cn("sf-featured", className)} aria-roledescription="carousel"
-      aria-label={labels.regionLabel} aria-live={rotating && !paused ? "off" : "polite"}>
+      aria-label={labels.regionLabel} aria-live={rotating && !paused && !hovered && !tabHidden ? "off" : "polite"}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      onFocusCapture={(event) => {
+        // Keep a focused product from rotating out of reach. The rotation
+        // control remains an explicit choice to pause or resume.
+        if (!(event.target instanceof Element) || !event.target.closest("[data-carousel-rotation]")) {
+          setUserPaused(true);
+        }
+      }}>
       <div className="sf-featured-main">
         <div ref={emblaRef} className="gh-sheen sf-featured-viewport">
           <div className="sf-featured-track">
@@ -242,7 +251,7 @@ export function HeroCarousel({
         </div>
         {total > 1 ? <div className="sf-featured-controls">
           <button type="button" onClick={()=>emblaApi?.scrollPrev()} disabled={!canPrev} aria-label={labels.previous}><ArrowIcon direction="start" className="size-4 rtl:rotate-180"/></button>
-          {rotating ? <button type="button" onClick={toggleRotation} aria-label={paused?labels.play:labels.pause} aria-pressed={paused}>{paused?<PlayIcon className="size-4"/>:<PauseIcon className="size-4"/>}</button> : null}
+          {rotating ? <button type="button" data-carousel-rotation onClick={toggleRotation} aria-label={paused?labels.play:labels.pause} aria-pressed={paused}>{paused?<PlayIcon className="size-4"/>:<PauseIcon className="size-4"/>}</button> : null}
           <button type="button" onClick={()=>emblaApi?.scrollNext()} disabled={!canNext} aria-label={labels.next}><ArrowIcon direction="end" className="size-4 rtl:rotate-180"/></button>
         </div> : null}
       </div>

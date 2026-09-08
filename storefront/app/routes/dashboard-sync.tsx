@@ -2,7 +2,7 @@ import { SyncPageClient, type SyncProviderLane } from "@/components/admin/sync-p
 import { SectionHeader } from "@/components/ui/section";
 import type { Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
-import { requireAdmin } from "@server/lib/auth/guards";
+import { requireDashboardAdmin } from "@server/dashboard-access";
 import {
   getBatStoreCredentials,
   getG2BulkCredentials,
@@ -142,11 +142,10 @@ import { useLoaderData, type LoaderFunctionArgs } from "react-router";
 import { isLocale } from "@/i18n/config";
 function requireLocale(value: string | undefined) { if (!value || !isLocale(value)) throw new Response("Not Found", { status: 404 }); return value; }
 
-export async function loader({ params }: LoaderFunctionArgs) {
-  await requireAdmin();
+export async function loader({ params, request }: LoaderFunctionArgs) {
   const { locale: rawLocale } = params;
   const locale = requireLocale(rawLocale);
-  await requireAdmin();
+  await requireDashboardAdmin(request, locale);
 
   const providers = await loadSyncProviders(locale);
 

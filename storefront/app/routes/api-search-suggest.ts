@@ -2,6 +2,7 @@ import { isLocale } from "@/i18n/config";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { createPublicClient } from "@/lib/catalog-queries";
 import { searchCatalog } from "@server/lib/services/catalog.service";
+import { parseSearchParams } from "@/lib/catalog/search";
 import type { Route } from "./+types/api-search-suggest";
 
 const CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=300";
@@ -14,12 +15,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const localeParam = url.searchParams.get("locale") ?? "ar";
   const locale = isLocale(localeParam) ? localeParam : "ar";
-  const q = url.searchParams.get("q") ?? "";
+  const { query, filter } = parseSearchParams(Object.fromEntries(url.searchParams));
   const { env } = getCloudflareContext(context);
 
-  if (!q.trim()) {
+  if (!query) {
     return Response.json(
-      { products: [] },
+      { products: [], offers: [] },
       { headers: { "Cache-Control": "public, max-age=30" } },
     );
   }
@@ -27,8 +28,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const { games: products, offers } = await searchCatalog(
     createPublicClient(env),
     locale,
-    q,
-    "all",
+    query,
+    filter,
   );
   return Response.json(
     {

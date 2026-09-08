@@ -1,9 +1,8 @@
-import { redirect } from "react-router";
-import { DEFAULT_LOCALE } from "@/lib/app-config";
+import { redirectToDefaultLocale } from "@/lib/routing/default-locale";
 
 /** Unprefixed paths land on the default locale in one hop, no middleware. */
-export async function loader({ request }: { request: Request }) {
-  throw redirect(`/${DEFAULT_LOCALE}${new URL(request.url).search}`);
+export function loader({ request }: { request: Request }) {
+  redirectToDefaultLocale(request);
 }
 
 export default function RootIndex() {

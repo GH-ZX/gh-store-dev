@@ -1,4 +1,14 @@
 {
+  "campaign": {
+    "title": "Your digital world.",
+    "titleEnd": "One place.",
+    "description": "Top-ups, gift cards and subscriptions, ready when you are.",
+    "browse": "Explore products",
+    "aiTitle": "More possibilities with AI",
+    "explore": "Explore",
+    "giftTitle": "A gift for every platform",
+    "shopGiftCards": "Shop gift cards"
+  },
   "carousel": {
     "regionLabel": "Featured products",
     "slideLabel": "Slide {index} of {total}",
@@ -12,8 +22,8 @@
     "gamesSubtitle": "Pick your game and start topping up.",
     "giftCardsSubtitle": "Cards and codes ready for delivery.",
     "saleSubtitle": "Discounts running right now.",
-    "suggestedSubtitle": "Packages most players start with.",
-    "trendingSubtitle": "What players have been buying this month.",
+    "suggestedSubtitle": "Popular offers to help you get started.",
+    "trendingSubtitle": "What customers have been buying this month.",
     "reviewsSubtitle": "Real experiences from store customers."
   },
   "trust": {
@@ -23,8 +33,8 @@
         "caption": "Local transfers, crypto, or the in-store wallet."
       },
       "instant": {
-        "title": "Instant delivery",
-        "caption": "Top-ups and codes land on your order page in seconds."
+        "title": "Track your delivery",
+        "caption": "Find delivery details and status updates on your order page."
       },
       "support": {
         "title": "Real support",
@@ -42,15 +52,15 @@
     "steps": [
       {
         "title": "Pick a package",
-        "body": "Choose your game, then the package that fits."
+        "body": "Choose your product, then the offer that fits."
       },
       {
         "title": "Top up your wallet",
         "body": "Add balance with ShamCash, SyriatelCash, or Binance Pay."
       },
       {
-        "title": "Get it instantly",
-        "body": "Your top-up or code is delivered to your order page."
+        "title": "Follow your order",
+        "body": "Track your purchase and find delivery details on your order page."
       }
     ]
   },

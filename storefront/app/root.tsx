@@ -7,7 +7,6 @@ import {
   ScrollRestoration,
   useLoaderData,
   useLocation,
-  Link,
 } from "react-router";
 
 import type { Route } from "./+types/root";
@@ -17,6 +16,9 @@ import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { createPublicClient } from "@/lib/catalog-queries";
 import { getPublicStoreSettings } from "@server/lib/services/settings.service";
 import { themeStyle } from "@server/lib/settings/theme-settings";
+import { getSiteUrl } from "@/lib/seo";
+import { getMessages } from "@/i18n/messages";
+import { Button, ButtonLink } from "@/components/ui/button";
 import "./app.css";
 import "./styles/storefront-shell.css";
 
@@ -28,6 +30,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const { theme } = settings;
   return {
     locale,
+    siteUrl: getSiteUrl(env),
     seoSettings: { seo: settings.seo, branding: settings.branding },
     themeCss: themeStyle(theme),
     defaultMode: theme.defaultMode,
@@ -46,6 +49,18 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Tektur:wght@400..900&family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap",
   },
 ];
+
+export function meta({ error, location }: Route.MetaArgs) {
+  if (!error) return [];
+  const segment = location.pathname.split("/")[1] ?? "";
+  const locale = isLocale(segment) ? segment : DEFAULT_LOCALE;
+  const { states } = getMessages(locale, "common");
+  const missing = isRouteErrorResponse(error) && error.status === 404;
+  return [
+    { title: `${missing ? states.notFoundTitle : states.errorTitle} | GH Store` },
+    { name: "robots", content: "noindex, follow" },
+  ];
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const data = useLoaderData<typeof loader>();
@@ -86,30 +101,31 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
-  let stack: string | undefined;
-
-  if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
-  }
+  const segment = useLocation().pathname.split("/")[1] ?? "";
+  const locale = isLocale(segment) ? segment : DEFAULT_LOCALE;
+  const common = getMessages(locale, "common");
+  const missing = isRouteErrorResponse(error) && error.status === 404;
+  const title = missing ? common.states.notFoundTitle : common.states.errorTitle;
+  const description = missing ? common.states.notFoundDescription : common.states.errorDescription;
+  const stack = import.meta.env.DEV && error instanceof Error ? error.stack : undefined;
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      <Link to="/" className="mt-6 inline-flex rounded-full border px-5 py-3">
-        Back to store / العودة للمتجر
-      </Link>
+    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-6 py-16">
+      <div className="rounded-[var(--radius-shell)] border border-[var(--line)] bg-[var(--surface)] p-8 text-center">
+        {missing ? <p className="mb-4 font-mono text-4xl font-semibold text-[var(--accent)]">404</p> : null}
+        <h1 className="text-2xl font-semibold text-[var(--ink)]">{title}</h1>
+        <p className="mt-4 leading-7 text-[var(--ink-soft)]">{description}</p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <ButtonLink href={`/${locale}/products`} variant="secondary">{common.actions.browse}</ButtonLink>
+          {missing ? (
+            <ButtonLink href={`/${locale}`} variant="secondary">{common.navigation.home}</ButtonLink>
+          ) : (
+            <Button type="button" variant="secondary" onClick={() => window.location.reload()}>{common.actions.retry}</Button>
+          )}
+        </div>
+      </div>
       {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
+        <pre dir="ltr" className="mt-6 w-full overflow-x-auto p-4 text-sm">
           <code>{stack}</code>
         </pre>
       )}

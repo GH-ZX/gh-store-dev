@@ -81,3 +81,18 @@ for (const path of PRIVATE_PAGES) {
     expect(new URL(page.url()).pathname).toBe("/ar/login");
   });
 }
+
+for (const locale of ["ar", "en"] as const) {
+  test(`${locale} missing pages offer a localized recovery path`, async ({ page }) => {
+    const response = await page.goto(`/${locale}/unavailable/page/deep/link`, { waitUntil: "domcontentloaded" });
+    expect(response?.status()).toBe(404);
+    await expect(page.locator("html")).toHaveAttribute("lang", locale);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page).toHaveTitle(/GH Store/);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, follow");
+    const browse = page.getByRole("link").filter({ hasText: locale === "ar" ? "تصفح المتجر" : "Browse the store" });
+    await browse.click();
+    await expect(page).toHaveURL(new RegExp(`/${locale}/products$`));
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  });
+}

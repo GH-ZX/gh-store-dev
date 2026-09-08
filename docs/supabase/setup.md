@@ -21,12 +21,16 @@ supabase test db
 ```
 
 **One deliberate exception, and it is not development:** the nightly CI workflow
-(`.github/workflows/nightly.yml`) runs `supabase db reset` against a throwaway
-local stack to prove the whole migration set still applies cleanly, in order, to
+(`.github/workflows/nightly.yml`) starts a throwaway database with
+`supabase db start`, then runs `supabase db reset --local --no-seed` to prove
+the whole migration set still applies cleanly, in order, to
 an empty database — the check hosted staging cannot give, because staging keeps
-its data. The RLS pgTAP suites (`supabase/tests/rls/`) run against that same
-fresh database. Nothing from this job is a development environment; no one works
-against it, and it stops existing when the job ends.
+its data. `supabase test db --local supabase/tests/rls/*.sql` runs the RLS pgTAP suites
+against that same fresh database and checks their assertion results and test
+plans. The workflow also rejects empty test runs. The job removes the disposable
+database with `supabase stop --no-backup`,
+including after a failed check. Nothing from this job is a development
+environment; no one works against it, and it stops existing when the job ends.
 
 Use the hosted workflow instead:
 

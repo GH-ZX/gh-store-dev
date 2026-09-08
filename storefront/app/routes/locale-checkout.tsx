@@ -263,6 +263,7 @@ export default function CheckoutPage() {
 
             <div className="mt-5">
               <CheckoutForm
+                key={`${product.slug}/${offer.slug}`}
                 idempotencyKey={idempotencyKey}
                 locale={locale}
                 messages={messages}

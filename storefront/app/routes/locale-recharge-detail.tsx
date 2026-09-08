@@ -1,13 +1,16 @@
 import { ChevronIcon } from "@/components/ui/icons";
 import { Section, SectionHeader } from "@/components/commerce/commerce-page";
-import { data, Link, useLoaderData } from "react-router";
+import { data, Link, redirect, useLoaderData } from "react-router";
 import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { buildPageMeta } from "@/lib/seo";
+import { rechargeHref } from "@/lib/recharge-flow";
+import { checkoutReturnTo } from "@server/recharge-flow";
 import { getMethodLabel } from "@server/lib/settings/recharge-settings";
 import {
   getMyRechargeRequest,
+  getMyRechargePaymentInvoice,
   getRechargeConfig,
   markRechargePaid,
 } from "@server/lib/services/recharge.service";
@@ -26,10 +29,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   }
   const { env } = getCloudflareContext(context);
   const { supabase, jar, isProduction } = createSessionClient(request, env);
+  const url = new URL(request.url);
+  const returnTo = checkoutReturnTo(url.searchParams.get("returnTo"), locale);
   const userId = await getSessionUserId(supabase);
   if (!userId) {
     return withSessionCookies(
-      redirectToLogin(request, locale, `/${locale}/recharge/${requestId}`),
+      redirectToLogin(request, locale, url.pathname + url.search),
       jar,
       isProduction,
     );
@@ -42,6 +47,13 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!detail) {
     throw new Response("Not Found", { status: 404 });
   }
+  if (detail.status === "pending") {
+    const invoiceId = await getMyRechargePaymentInvoice(supabase, userId, requestId);
+    if (invoiceId) return withSessionCookies(
+      redirect(rechargeHref(`/${locale}/recharge/pay/${encodeURIComponent(invoiceId)}`, { returnTo })),
+      jar, isProduction,
+    );
+  }
   const method = config.methods.find((candidate) => candidate.id === detail.paymentMethod);
   const methodLabel = method ? getMethodLabel(method, locale) : detail.paymentMethod;
   return data({
@@ -50,6 +62,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       balance: wallet?.balance ?? 0,
       currency: wallet?.currency ?? config.currency,
       methodLabel,
+      method: method ?? null,
+      returnTo,
     }, { headers: sessionCookieHeaders(jar, isProduction) });
 }
 
@@ -61,29 +75,22 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   }
   const { env } = getCloudflareContext(context);
   const { supabase, jar, isProduction } = createSessionClient(request, env);
+  const url = new URL(request.url);
   const userId = await getSessionUserId(supabase);
   if (!userId) {
     return withSessionCookies(
-      redirectToLogin(request, locale, `/${locale}/recharge/${requestId}`),
+      redirectToLogin(request, locale, url.pathname + url.search),
       jar,
       isProduction,
     );
   }
+  const form = await request.formData();
+  if (form.get("intent") !== "markRechargePaid" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(requestId)) {
+    return data({ error: "invalid_input" }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
+  }
   const marked = await markRechargePaid(supabase, requestId);
   if (!marked) return data({ error: "not_found" }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
-  const [detail, wallet, config] = await Promise.all([
-    getMyRechargeRequest(supabase, userId, requestId),
-    getMyWallet(supabase, userId),
-    getRechargeConfig(supabase),
-  ]);
-  const method = config.methods.find((candidate) => candidate.id === detail?.paymentMethod);
-  return data({
-      locale,
-      detail,
-      balance: wallet?.balance ?? 0,
-      currency: wallet?.currency ?? config.currency,
-      methodLabel: method && detail ? getMethodLabel(method, locale) : (detail?.paymentMethod ?? ""),
-    }, { headers: sessionCookieHeaders(jar, isProduction) });
+  return data({ error: null }, { headers: sessionCookieHeaders(jar, isProduction) });
 }
 
 export function meta({ params }: Route.MetaArgs) {
@@ -99,14 +106,14 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export default function RechargeDetail() {
-  const { locale, detail: request, balance, currency, methodLabel } = useLoaderData<typeof loader>();
+  const { locale, detail: request, balance, currency, methodLabel, method, returnTo } = useLoaderData<typeof loader>();
   const recharge = getMessages(locale, "recharge");
   const open = OPEN_STATUSES.has(request.status);
   return (
     <Section spacing="page" className="sf-recharge-detail">
       <nav>
         <Link
-          to={`/${locale}/recharge`}
+          to={rechargeHref(`/${locale}/recharge`, { returnTo })}
           className="inline-flex min-h-9 items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors duration-[var(--duration)] hover:text-[var(--ink)]"
         >
           <ChevronIcon direction="start" className="size-4 rtl:rotate-180" />
@@ -122,6 +129,7 @@ export default function RechargeDetail() {
 
       <div className="sf-payment-content">
         <RechargeRequestPanel
+          key={request.id}
           locale={locale}
           messages={recharge}
           request={request}
@@ -130,6 +138,8 @@ export default function RechargeDetail() {
           balance={balance}
           currency={currency}
           methodLabel={methodLabel}
+          method={method}
+          returnTo={returnTo}
         />
       </div>
     </Section>

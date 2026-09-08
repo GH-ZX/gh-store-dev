@@ -1,9 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { isCacheableHtml, isCrossOriginMutation, isPublicHtmlRequest } from "../../storefront/workers/request-policy";
+import { canonicalHostRedirect, isCacheableHtml, isCrossOriginMutation, isPublicHtmlRequest } from "../../storefront/workers/request-policy";
 import { safeRedirectTarget } from "@server/lib/auth/redirect-target";
 
 const documentRequest = (path: string, init: RequestInit = {}) => new Request(`https://store.example${path}`, {
   ...init, headers: { accept: "text/html", ...init.headers },
+});
+
+describe("canonical production host", () => {
+  it.each(["GET", "HEAD"])("redirects %s www documents with their path and query intact", (method) => {
+    const request = new Request("https://www.gh-store.me/en/products?q=gift%20card&page=2", { method });
+    expect(canonicalHostRedirect(request, "https://gh-store.me")?.href).toBe("https://gh-store.me/en/products?q=gift%20card&page=2");
+  });
+
+  it.each(["gh-store.me", "gh-store.example.workers.dev", "localhost:5173", "www.other.example"])("leaves %s unchanged", (host) => {
+    expect(canonicalHostRedirect(new Request(`https://${host}/en`), "https://gh-store.me")).toBeNull();
+  });
+
+  it("preserves callback origins and never redirects mutation bodies", () => {
+    for (const path of ["/auth/callback?code=sample", "/api/reconcile", "/api/media-proxy", "/en/products.data", "/en/recharge.data"]) {
+      expect(canonicalHostRedirect(new Request(`https://www.gh-store.me${path}`), "https://gh-store.me")).toBeNull();
+    }
+    expect(canonicalHostRedirect(new Request("https://www.gh-store.me/en/login", { method: "POST" }), "https://gh-store.me")).toBeNull();
+    expect(canonicalHostRedirect(new Request("https://www.gh-store.me/en"), "invalid")).toBeNull();
+    expect(canonicalHostRedirect(new Request("https://www.gh-store.me/en"))).toBeNull();
+  });
 });
 
 describe("anonymous document cache boundary", () => {

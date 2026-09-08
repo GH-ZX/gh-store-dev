@@ -2,6 +2,7 @@
 import { requireUserId } from "@server/lib/auth/guards";
 import { log, logOutcome } from "@server/lib/logging/logger";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/config";
+import { binanceReturnUrl, checkoutReturnTo } from "@server/recharge-flow";
 import { readBinanceCredentials } from "@server/lib/settings/binance-settings";
 import { functionUrl } from "@server/lib/supabase/functions-url";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -89,6 +90,7 @@ export async function getBinancePaymentOptions(): Promise<{ enabled: boolean; cu
 export async function startBinanceTopUp(supabase: SupabaseClient<Database>, input: {
   amount: number;
   locale?: Locale;
+  returnTo?: string | null;
 }): Promise<StartBinanceResult> {
   const result = await attemptBinanceTopUp(supabase, input);
 
@@ -97,7 +99,7 @@ export async function startBinanceTopUp(supabase: SupabaseClient<Database>, inpu
   return result;
 }
 
-async function attemptBinanceTopUp(supabase: SupabaseClient<Database>, input: { amount: number; locale?: Locale }): Promise<StartBinanceResult> {
+async function attemptBinanceTopUp(supabase: SupabaseClient<Database>, input: { amount: number; locale?: Locale; returnTo?: string | null }): Promise<StartBinanceResult> {
   const user = await requireUserId(supabase);
   const credentials = await readCredentials();
 
@@ -142,6 +144,8 @@ async function attemptBinanceTopUp(supabase: SupabaseClient<Database>, input: { 
   // before the row exists, which is what lets the return address point at this
   // store's own payment screen rather than a page that never changes again.
   const merchantTradeNo = toMerchantTradeNo(request.request_id);
+  const locale = input.locale ?? DEFAULT_LOCALE;
+  const returnTo = checkoutReturnTo(input.returnTo, locale);
 
   try {
     const order = await client.createOrder({
@@ -151,8 +155,8 @@ async function attemptBinanceTopUp(supabase: SupabaseClient<Database>, input: { 
       amount: input.amount,
       currency: credentials.currency,
       description: `Wallet top-up ${request.reference}`,
-      returnUrl: `${siteUrl}/${input.locale ?? DEFAULT_LOCALE}/recharge/pay/${encodeURIComponent(merchantTradeNo)}`,
-      cancelUrl: `${siteUrl}/${input.locale ?? DEFAULT_LOCALE}/recharge`,
+      returnUrl: binanceReturnUrl(siteUrl, `/${locale}/recharge/pay/${encodeURIComponent(merchantTradeNo)}`, returnTo),
+      cancelUrl: binanceReturnUrl(siteUrl, `/${locale}/recharge`, returnTo),
       webhookUrl: webhookUrl(),
     });
 

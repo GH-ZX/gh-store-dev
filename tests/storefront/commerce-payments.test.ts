@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { resolveSamPaidAmount, getMySamInvoice } from "@server/lib/services/sam-recharge.service";
 import { getMyBinanceInvoice, syncMyBinanceInvoice } from "@server/lib/services/binance-recharge.service";
+import { getMyRechargePaymentInvoice } from "@server/lib/services/recharge.service";
 
 function sessionClient(row: unknown = null) {
   const query = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: row }) };
@@ -29,6 +30,26 @@ describe("migrated payment ownership", () => {
   it("does not contact the provider or access service credentials for another customer's invoice", async () => {
     const { client } = sessionClient();
     expect(await syncMyBinanceInvoice(client, "not-owned")).toEqual({ ok: false, reason: "not_found" });
+  });
+  it.each([
+    [{ sam_invoice_id: "sam-existing" }, null, "sam-existing"],
+    [null, { id: "binance-existing" }, "binance-existing"],
+    [null, null, null],
+  ])("resumes only invoices belonging to the customer's recharge request", async (sam, binance, expected) => {
+    const queries = [sam, binance].map((row) => {
+      const query = { select: vi.fn(), eq: vi.fn(), limit: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: row }) };
+      query.select.mockReturnValue(query);
+      query.eq.mockReturnValue(query);
+      query.limit.mockReturnValue(query);
+      return query;
+    });
+    const client = { from: vi.fn().mockReturnValueOnce(queries[0]).mockReturnValueOnce(queries[1]) };
+    expect(await getMyRechargePaymentInvoice(client as never, "customer-1", "request-1")).toBe(expected);
+    expect(client.from.mock.calls).toEqual([["sam_invoices"], ["binance_invoices"]]);
+    for (const query of queries) {
+      expect(query.eq).toHaveBeenCalledWith("user_id", "customer-1");
+      expect(query.eq).toHaveBeenCalledWith("recharge_request_id", "request-1");
+    }
   });
 });
 

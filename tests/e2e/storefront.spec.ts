@@ -72,6 +72,25 @@ test.describe("document direction", () => {
 });
 
 test.describe("hero carousel", () => {
+  test("keyboard browsing pauses rotation until the visitor resumes it", async ({ page }) => {
+    for (const locale of ["ar", "en"] as const) {
+      await openHome(page, locale);
+      const carousel = page.locator('[aria-roledescription="carousel"]');
+      const rotation = carousel.locator("[data-carousel-rotation]");
+      if (await rotation.count() === 0) test.skip(true, "fewer than two featured products");
+      const product = carousel.locator('[aria-hidden="false"] a').first();
+      await product.focus();
+      await expect(rotation).toHaveAttribute("aria-pressed", "true");
+      await expect(carousel).toHaveAttribute("aria-live", "polite");
+      await page.locator(".sf-site-header a").first().focus();
+      await expect(rotation).toHaveAttribute("aria-pressed", "true");
+      await rotation.click();
+      await page.mouse.move(0, 0);
+      await expect(rotation).toHaveAttribute("aria-pressed", "false");
+      await expect(carousel).toHaveAttribute("aria-live", "off");
+    }
+  });
+
   test("a drag advances in reading order and never navigates", async ({ page }) => {
     for (const locale of ["ar", "en"] as const) {
       await openHome(page, locale);

@@ -30,6 +30,13 @@
 [data-storefront-shell] .sf-catalog-search-panel > form { max-width: 720px; }
 [data-storefront-shell] .sf-catalog-search-filters { margin-block-start: 18px; }
 [data-storefront-shell] .sf-catalog-search-filters a { min-height: 44px; border-radius: 8px; }
+[data-storefront-shell] .sf-search-feedback { margin-block-start: 20px; overflow-wrap: anywhere; }
+[data-storefront-shell] .sf-search-feedback:empty { display: none; }
+[data-storefront-shell] .sf-search-prompt { display: flex; align-items: flex-start; gap: 16px; padding-block: 28px 24px; }
+[data-storefront-shell] .sf-search-prompt > svg { flex-shrink: 0; color: var(--accent); margin-block-start: 3px; }
+[data-storefront-shell] .sf-search-prompt h2 { font-size: 18px; }
+[data-storefront-shell] .sf-search-prompt p { margin-block-start: 6px; color: var(--ink-muted); font-size: 14px; }
+[data-storefront-shell] .sf-search-results[aria-busy="true"] { opacity: 0.6; }
 [data-storefront-shell] .sf-product-breadcrumb { margin-block-end: 20px; }
 [data-storefront-shell] .sf-product-breadcrumb button { min-height: 44px; border-radius: 8px; }
 [data-storefront-shell] .sf-product-intro { display: flex; align-items: center; gap: 28px; margin-block-end: 28px; }
@@ -74,9 +81,9 @@
 [data-storefront-shell] .sf-purchase-note { font-size: 13px; line-height: 1.6; color: var(--ink-muted); margin-block-start: 14px; }
 [data-storefront-shell] .sf-product-details { grid-area: details; display: grid; gap: 24px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 22px; min-width: 0; }
 [data-storefront-shell] .sf-product-details h2 { margin-block-end: 14px; }
-[data-storefront-shell] .sf-product-steps { display: grid; gap: 14px; counter-reset: steps; }
+[data-storefront-shell] .sf-product-steps { display: grid; gap: 14px; }
 [data-storefront-shell] .sf-product-steps li { display: flex; align-items: flex-start; gap: 12px; color: var(--ink-muted); font-size: 14px; line-height: 1.7; }
-[data-storefront-shell] .sf-product-steps li::before { content: counter(steps); counter-increment: steps; display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; border: 1px solid var(--line); border-radius: 50%; color: var(--accent); font-size: 12px; font-weight: 600; }
+[data-storefront-shell] .sf-product-step-number { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; border: 1px solid var(--line); border-radius: 50%; color: var(--accent); font-size: 12px; font-weight: 600; }
 [data-storefront-shell] .sf-offer-field-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-block-start: 18px; }
 [data-storefront-shell] .sf-offer-field { padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-inset); }
 [data-storefront-shell] .sf-offer-field > div { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; color: var(--ink); }

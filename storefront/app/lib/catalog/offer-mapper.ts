@@ -1,4 +1,5 @@
 import type { Locale } from "@/i18n/config";
+import { UNCATEGORIZED_PRODUCT_PATH } from "@/lib/catalog/paths";
 
 /** Shape of the `products` relation when an offer read joins its parent product. */
 type OfferProductRelation = {
@@ -111,7 +112,7 @@ export function toStoreOffer(row: OfferRow, locale: Locale): StoreOffer {
 
   const pointsName = game ? (isArabic ? game.points_name_ar : game.points_name_en) : null;
   const cat = game?.categories;
-  const catSlug = (Array.isArray(cat) ? cat[0]?.slug : (cat && typeof cat === "object" && "slug" in cat ? cat.slug : null)) ?? "games";
+  const catSlug = (Array.isArray(cat) ? cat[0]?.slug : (cat && typeof cat === "object" && "slug" in cat ? cat.slug : null)) ?? UNCATEGORIZED_PRODUCT_PATH;
 
   return {
     id: row.id,

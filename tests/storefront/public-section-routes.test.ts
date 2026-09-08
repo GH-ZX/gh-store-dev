@@ -10,7 +10,7 @@ vi.mock("@/lib/catalog-queries", () => ({ createPublicClient: () => mocks.client
 vi.mock("@server/lib/services/home-catalog.service", () => ({ getOfferRailPage: mocks.rail }));
 vi.mock("@server/lib/services/settings.service", () => ({ getPublicStoreSettings: mocks.settings }));
 
-import { loader } from "../../storefront/app/routes/locale-section";
+import { loader, meta } from "../../storefront/app/routes/locale-section";
 import { withRequestContext } from "@server/request-context";
 
 function requestArgs(locale: string, section: string, search = "") {
@@ -65,5 +65,21 @@ describe("public section route dispatch", () => {
     expect(mocks.category).toHaveBeenCalledExactlyOnceWith(mocks.client, "en", "vouchers", 1);
     expect(mocks.rail).not.toHaveBeenCalled();
     expect(result).toMatchObject({ kind: "category", section: "vouchers" });
+  });
+
+  it("gives a paginated category its own canonical URL and a useful description", () => {
+    const result = meta({ params: { locale: "en", section: "ai" }, matches: [
+      { id: "routes/locale-section", loaderData: { kind: "category", category: { categoryName: "AI", page: 2 } } },
+    ] } as unknown as Parameters<typeof meta>[0]);
+    expect(result).toContainEqual({ tagName: "link", rel: "canonical", href: "https://gh-store.me/en/ai?page=2" });
+    expect(result).toContainEqual({ name: "description", content: expect.stringContaining("AI") });
+  });
+
+  it("keeps offer rail pagination in canonical and language alternate URLs", () => {
+    const result = meta({ params: { locale: "ar", section: "gift-cards" }, matches: [
+      { id: "routes/locale-section", loaderData: { kind: "rail", page: 3 } },
+    ] } as unknown as Parameters<typeof meta>[0]);
+    expect(result).toContainEqual({ tagName: "link", rel: "canonical", href: "https://gh-store.me/ar/gift-cards?page=3" });
+    expect(result).toContainEqual({ tagName: "link", rel: "alternate", hrefLang: "en", href: "https://gh-store.me/en/gift-cards?page=3" });
   });
 });

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createProductAction, reorderCarouselProducts } from "@/lib/admin-actions";
+import { createProductAction, reorderCarouselProducts, searchIgdbArtworkAction } from "@/lib/admin-actions";
 
 const fetchMock = vi.fn();
 const dispatchEvent = vi.fn();
@@ -33,7 +33,7 @@ describe("admin action browser transport", () => {
     const upload = sent.get("form1:artwork") as File;
     expect(upload.name).toBe("product.png");
     expect(await upload.text()).toBe("image bytes");
-    expect(dispatchEvent.mock.calls[0][0].type).toBe("admin-action-complete");
+    expect(dispatchEvent).not.toHaveBeenCalled();
   });
 
   it("keeps direct product arguments intact for catalog ordering", async () => {
@@ -42,12 +42,32 @@ describe("admin action browser transport", () => {
     const sent = fetchMock.mock.calls[0][1].body as FormData;
     expect(sent.get("action")).toBe("reorderCarouselProducts");
     expect(JSON.parse(String(sent.get("args")))).toEqual(["product-b", "product-a"]);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe("admin-action-complete");
   });
 
-  it("reports a rejected server action without claiming completion", async () => {
+  it("returns a rejected form action to its inline error channel without claiming completion", async () => {
     fetchMock.mockResolvedValueOnce(new Response("Forbidden", { status: 403 }));
-    await expect(createProductAction({ error: null, notice: null }, new FormData())).rejects.toThrow("Unable to complete");
+    await expect(createProductAction({ error: null, notice: "saved" }, new FormData())).resolves.toEqual({ error: "unknown", notice: null });
     expect(dispatchEvent).not.toHaveBeenCalled();
     expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("keeps network failures in the form's existing error state", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await expect(createProductAction({ error: null, notice: null }, new FormData())).resolves.toEqual({ error: "unknown", notice: null });
+    expect(dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("lets direct operation callers handle transport failures", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("Unavailable", { status: 503 }));
+    await expect(reorderCarouselProducts("product-b", "product-a")).rejects.toThrow("Unable to complete");
+    expect(dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not reload the entire dashboard after a read-only artwork search", async () => {
+    const result = { error: null, query: "Test product", results: [] };
+    fetchMock.mockResolvedValueOnce(Response.json({ result }));
+    await expect(searchIgdbArtworkAction({ error: null, query: "", results: [] }, new FormData())).resolves.toEqual(result);
+    expect(dispatchEvent).not.toHaveBeenCalled();
   });
 });

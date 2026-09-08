@@ -41,10 +41,14 @@ export function meta({ params, matches }: Route.MetaArgs) {
   const locale =
     params.locale && isLocale(params.locale) ? params.locale : "ar";
   const catalog = getMessages(locale, "catalog");
+  const match = matches.find((item) => item?.id === "routes/locale-products") as
+    | { loaderData?: { catalog?: { page?: number } } }
+    | undefined;
   return buildStorePageMeta(
     {
       locale,
       path: "/products",
+      page: match?.loaderData?.catalog?.page,
       title: catalog.products.title,
       description: catalog.products.description,
     },

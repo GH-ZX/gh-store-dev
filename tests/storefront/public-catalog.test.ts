@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getProductsByIds, getOfferRailPage } from "@server/lib/services/home-catalog.service";
 import { searchCatalog } from "@server/lib/services/catalog.service";
-import { getSitemapSlugs, getCatalogPage, getCategoryPage, getAllProductsPage } from "@/lib/catalog-queries";
+import { getSitemapSlugs, getCatalogPage, getCategoryPage, getAllProductsPage, getProductDetail } from "@/lib/catalog-queries";
+import { toStoreProduct, type ProductRow } from "@/lib/catalog/product-mapper";
+import { toStoreOffer, type OfferRow } from "@/lib/catalog/offer-mapper";
 import { getHomeLayout } from "@server/lib/services/settings.service";
 
 function mockClient(results: { data: unknown; error?: unknown; count?: number }[]) {
@@ -59,16 +61,50 @@ describe("restored public catalog data", () => {
     expect(queries[1].calls).toContainEqual(["in", ["offer_type", ["gift_card", "redeem_code"]]]);
   });
 
-  it("keeps actual canonical categories in sitemap identities", async () => {
+  it("includes uncategorized active items under products while keeping assigned sitemap categories", async () => {
     const { client, queries } = mockClient([{ data: [
       { slug: "assistant", categories: { slug: "ai" } },
       { slug: "voucher", categories: [{ slug: "vouchers" }] },
       { slug: "orphan", categories: null },
+      { slug: "disabled-category", categories: { slug: "hidden", is_active: false } },
     ] }]);
     expect(await getSitemapSlugs(client)).toEqual([
       { slug: "assistant", categorySlug: "ai" }, { slug: "voucher", categorySlug: "vouchers" },
+      { slug: "orphan", categorySlug: "products" },
     ]);
-    expect(queries[0].calls).toContainEqual(["eq", ["categories.is_active", true]]);
+    expect(queries[0].calls).toContainEqual(["eq", ["is_active", true]]);
+    expect(queries[0].calls.find(([name]) => name === "select")?.[1][0]).not.toContain("!inner");
+  });
+
+  it("continues sitemap reads beyond the database's default 1000-row response limit", async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, index) => ({ slug: `item-${index}`, categories: null }));
+    const { client, queries } = mockClient([{ data: firstPage }, { data: [{ slug: "last", categories: { slug: "ai" } }] }]);
+    const identities = await getSitemapSlugs(client);
+    expect(identities).toHaveLength(1001);
+    expect(identities.at(-1)).toEqual({ slug: "last", categorySlug: "ai" });
+    expect(queries.map((query) => query.calls.find(([name]) => name === "range"))).toEqual([
+      ["range", [0, 999]], ["range", [1000, 1999]],
+    ]);
+  });
+
+  it("gives uncategorized products and their offer links the same generic category", () => {
+    const row = { ...product("subscription"), categories: null } as unknown as ProductRow;
+    const mappedProduct = toStoreProduct(row, "en");
+    const mappedOffer = toStoreOffer({
+      id: "offer", slug: "monthly", name_en: "Monthly", name_ar: "Monthly", products: row,
+    } as unknown as OfferRow, "en");
+    expect(mappedProduct.categorySlug).toBe("products");
+    expect(mappedOffer.game?.categorySlug).toBe(mappedProduct.categorySlug);
+  });
+
+  it("distinguishes a missing product from an unavailable catalog query", async () => {
+    const missing = mockClient([{ data: null }]);
+    expect(await getProductDetail(missing.client, "en", "missing", null)).toBeNull();
+    const failure = { message: "Database unavailable" };
+    const failedProduct = mockClient([{ data: null, error: failure }]);
+    await expect(getProductDetail(failedProduct.client, "en", "item", null)).rejects.toBe(failure);
+    const failedOffers = mockClient([{ data: product("item") }, { data: null, error: failure }]);
+    await expect(getProductDetail(failedOffers.client, "en", "item", null)).rejects.toBe(failure);
   });
 
   it("loads configured homepage sections through the public RPC", async () => {
