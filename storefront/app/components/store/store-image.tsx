@@ -29,7 +29,17 @@ export type StoreImageProps = {
 
 /** The source key resets failed attempts when navigation replaces the artwork. */
 export function StoreImage(props: StoreImageProps) {
-  return <ImageWithFallback key={`${props.src}:${props.fallbackSrc}:${props.width}`} {...props} />;
+  const pixelMatch = props.sizes?.match(/(\d+)px$/);
+  const computedWidth =
+    props.width ?? (pixelMatch ? Number(pixelMatch[1]) * 2 : undefined);
+
+  return (
+    <ImageWithFallback
+      key={`${props.src}:${props.fallbackSrc}:${props.width}:${props.sizes}`}
+      {...props}
+      width={computedWidth ?? props.width}
+    />
+  );
 }
 
 function ImageWithFallback({

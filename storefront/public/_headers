@@ -32,3 +32,18 @@
 
 /shamcash-logo.svg
   Cache-Control: public,max-age=86400,stale-while-revalidate=2592000
+
+/storefront/*
+  Cache-Control: public,max-age=604800,stale-while-revalidate=2592000
+
+/pwa-*.png
+  Cache-Control: public,max-age=604800,stale-while-revalidate=2592000
+
+/apple-touch-icon.png
+  Cache-Control: public,max-age=604800,stale-while-revalidate=2592000
+
+/manifest.webmanifest
+  Cache-Control: public,max-age=86400,stale-while-revalidate=604800
+
+/sw.js
+  Cache-Control: public,max-age=0,must-revalidate
