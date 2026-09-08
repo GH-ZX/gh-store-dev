@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/web-manifest-combined.json",
-  "name": "GH Store — متجر الألعاب والاشتراكات الرقمية",
+  "name": "GH Store — متجر المنتجات الرقمية",
   "short_name": "GH Store",
-  "description": "متجر رقمي لشحن الألعاب، بطاقات الهدايا والاشتراكات الفورية",
+  "description": "منتجات رقمية وبطاقات هدايا واشتراكات في مكان واحد.",
   "start_url": "/ar",
   "scope": "/",
   "display": "standalone",
@@ -49,7 +49,7 @@
     {
       "name": "الألعاب",
       "short_name": "الألعاب",
-      "description": "شحن الألعاب الفوري",
+      "description": "تصفح عروض شحن الألعاب",
       "url": "/ar/games",
       "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     },

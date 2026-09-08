@@ -1,15 +1,26 @@
 /**
  * GH Store Service Worker cleanup.
- * Unregisters any previously installed service worker and purges client caches.
+ * Retires this worker and removes only the caches its previous versions owned.
+ * There is deliberately no fetch handler or runtime cache.
  */
-self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
+});
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
-      .then(() => self.registration.unregister())
-      .then(() => self.clients.claim()),
-  );
+  event.waitUntil((async () => {
+    try {
+      const keys = await caches.keys();
+      await Promise.allSettled(keys
+        .filter((key) => key === "gh-store-v1" || key.startsWith("gh-store-pwa-"))
+        .map((key) => Promise.resolve().then(() => caches.delete(key))));
+    } catch { /* Cache storage may be unavailable; retirement must continue. */ }
+
+    // Neither storage errors nor one failed lifecycle operation should prevent
+    // the other retirement step from running.
+    await Promise.allSettled([
+      Promise.resolve().then(() => self.registration.unregister()),
+      Promise.resolve().then(() => self.clients.claim()),
+    ]);
+  })());
 });

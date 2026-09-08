@@ -98,7 +98,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){for(var r of regs){r.unregister();}});}`,
+            __html: `if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){return Promise.all(regs.filter(function(r){return [r.active,r.waiting,r.installing].some(function(w){return w&&w.scriptURL===location.origin+"/sw.js";});}).map(function(r){return r.unregister();}));}).catch(function(){});}`,
           }}
         />
       </head>

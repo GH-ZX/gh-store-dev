@@ -70,7 +70,7 @@ inspection compares the concept with the implementation; functional checks
 separately exercise real navigation and mocked admin states. No production
 catalog content, supplier rate, wallet or payment is changed during QA.
 
-Release validation: 1,142 unit tests and 104 browser checks pass; two browser
+Release validation: 1,158 unit tests and 104 browser checks pass; two browser
 cases are skipped where their controls do not apply to the device. English
 and Arabic storefront navigation, themes, artwork and product selection are
 covered. Isolated admin fixtures verify price drafts, refresh/error states,
@@ -79,3 +79,13 @@ daily figures and the integrated header/drawer at 360–430px without live write
 Final live review also found Telegram custom-emoji wrappers in imported
 descriptions. Public product and offer mappings remove only those wrappers,
 preserving their emoji, links and line breaks without changing stored copy.
+
+PWA install metadata and icons remain available. The incoming navigation repair
+retires its background worker so pages reach the network directly. Cleanup is
+limited to this store's registrations and caches; unrelated caches remain.
+
+Production crawl: 912 checks passed, including 226 sitemap URLs, 657 English
+offer links, 12 legacy redirects, eight pagination cases and six deliberate
+404 probes. No unexpected status, canonical, hreflang or robots mismatches.
+This verifies public responses; it does not establish that Search Console's
+reported exclusion count has cleared.
