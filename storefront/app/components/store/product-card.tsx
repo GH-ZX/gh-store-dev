@@ -32,7 +32,8 @@ export function ProductCard({ product, locale, labels, meta, priority = false, o
       <div className="sf-product-cover">
         <StoreImage
           src={product.imageUrl}
-          alt=""
+          alt={product.name}
+          category={product.categorySlug}
           priority={priority}
           focus={product.carouselFocus}
           sizes="(min-width: 1280px) 200px, (min-width: 1024px) 19vw, (min-width: 640px) 30vw, 46vw"

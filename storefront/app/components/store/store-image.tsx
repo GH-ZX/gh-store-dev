@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { resolveImageSource } from "@/lib/images";
 import { cn } from "@/lib/cn";
+import { ArtworkPlaceholder } from "./artwork-placeholder";
 
 /**
  * Catalog artwork.
@@ -57,32 +59,36 @@ function supabaseResponsiveSources(src: string): string | undefined {
 export type StoreImageProps = {
   src: string | null;
   alt: string;
+  category?: string;
   className?: string;
   /** `object-position`, so a hero keeps the subject in frame. */
   focus?: { x: number; y: number };
   priority?: boolean;
   sizes?: string;
-  /**
-   * How the artwork fills its box. `cover` crops to the frame; `contain`
-   * shows the whole upload, so a square supplier image stays a square with
-   * whatever backdrop the caller paints behind it.
-   */
   fit?: "cover" | "contain";
 };
 
 export function StoreImage({
   src,
   alt,
+  category,
   className,
   focus,
   priority = false,
   sizes,
   fit = "cover",
 }: StoreImageProps) {
-  if (!src) {
-    return <div className={cn("size-full", PLACEHOLDER, className)} aria-hidden="true" />;
-  }
+  const [failed, setFailed] = useState(false);
 
+  if (!src || failed) {
+    return (
+      <ArtworkPlaceholder
+        title={alt}
+        category={category}
+        className={className}
+      />
+    );
+  }
   const srcSet = supabaseResponsiveSources(src);
   const resolvedSrc = resolveImageSource(src) ?? undefined;
 
@@ -95,6 +101,7 @@ export function StoreImage({
       decoding={priority ? "sync" : "async"}
       fetchPriority={priority ? "high" : "auto"}
       sizes={sizes}
+      onError={() => setFailed(true)}
       className={cn(
         "size-full",
         fit === "contain" ? "object-contain" : "object-cover",

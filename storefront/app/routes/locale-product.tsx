@@ -96,7 +96,7 @@ export default function LocaleProduct() {
   return <CatalogPage>
     <div className="sf-product-breadcrumb"><ProductBreadcrumb locale={locale} homeLabel={common.navigation.home} categorySlug={product.categorySlug} categoryName={product.categoryName ?? common.navigation.allProducts} productName={product.name} /></div>
     <header className="sf-product-intro">
-      <div className="sf-product-art"><StoreImage src={product.imageUrl ?? product.logoUrl} alt={product.name} priority focus={product.carouselFocus} sizes="(max-width: 719px) 104px, 180px" /></div>
+      <div className="sf-product-art"><StoreImage src={product.imageUrl ?? product.logoUrl} alt={product.name} category={product.categorySlug} priority focus={product.carouselFocus} sizes="(max-width: 719px) 104px, 180px" /></div>
       <div className="sf-product-intro-copy"><h1><bdi>{product.name}</bdi></h1><p>{catalog.gameDetail.chooseOffer}</p>
         <dl className="sf-product-facts">
           {product.categoryName ? <div><dt>{locale === "ar" ? "الفئة" : "Category"}</dt><dd>{product.categoryName}</dd></div> : null}
