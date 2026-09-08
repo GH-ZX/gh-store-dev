@@ -1,9 +1,7 @@
 import { data, Outlet, useLoaderData, useRevalidator } from "react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { getLocaleDirection, isLocale } from "@/i18n/config";
-import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
-import { AdminMobileDrawer } from "@/components/admin/admin-mobile-drawer";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { buildPageMeta } from "@/lib/seo";
@@ -22,7 +20,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!userId) {
     const url = new URL(request.url);
     return withSessionCookies(
-      redirectToLogin(request, locale, `${url.pathname}${url.search}`),
+      redirectToLogin(request, locale, `${url.pathname}${url.search}`.replace(/\.data$/, "")),
       jar,
       isProduction,
     );
@@ -46,7 +44,6 @@ export default function DashboardLayout() {
   const { locale, displayName } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "admin");
   const { revalidate } = useRevalidator();
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
     const refresh = () => { void revalidate(); };
@@ -56,41 +53,21 @@ export default function DashboardLayout() {
 
   return (
     <div
+      data-storefront-shell=""
       data-admin-shell=""
       data-dashboard-shell=""
       lang={locale}
       dir={getLocaleDirection(locale)}
-      className="admin-layout"
+      className="flex min-h-screen flex-col bg-[var(--canvas)] text-[var(--ink)]"
     >
-      {/* Desktop Persistent Sidebar */}
-      <AdminSidebar
-        locale={locale}
-        messages={messages.shell}
-        displayName={displayName}
-        className="hidden lg:flex"
-      />
-
-      {/* Mobile Drawer */}
-      <AdminMobileDrawer
-        isOpen={mobileDrawerOpen}
-        onClose={() => setMobileDrawerOpen(false)}
+      <AdminHeader
         locale={locale}
         messages={messages.shell}
         displayName={displayName}
       />
-
-      {/* Main Workspace Column */}
-      <div className="admin-main-wrapper">
-        <AdminHeader
-          locale={locale}
-          messages={messages.shell}
-          displayName={displayName}
-          onOpenMobile={() => setMobileDrawerOpen(true)}
-        />
-        <main id="admin-main" className="admin-content">
-          <Outlet />
-        </main>
-      </div>
+      <main id="main" className="gh-page py-6 sm:py-8 w-full flex-1">
+        <Outlet />
+      </main>
     </div>
   );
 }

@@ -26,7 +26,7 @@ import { formatPrice } from "@/lib/format/money";
 import { parseSearchParams } from "@/lib/catalog/search";
 
 const control = "sf-control";
-function ThemeToggle({ label }: { label: string }) {
+export function ThemeToggle({ label }: { label: string }) {
   return (
     <button
       type="button"
