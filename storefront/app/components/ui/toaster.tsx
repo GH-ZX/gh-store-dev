@@ -10,7 +10,10 @@ export interface AppToasterProps {
 export function AppToaster({ locale }: AppToasterProps) {
   const dir = getLocaleDirection(locale);
   useEffect(() => {
-    return subscribeToSiteAlerts();
+    const timer = setTimeout(() => {
+      subscribeToSiteAlerts();
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
 
 

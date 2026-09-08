@@ -43,7 +43,6 @@ describe("PWA manifest and assets", () => {
     const swContent = readFileSync(swPath, "utf-8");
     expect(swContent).toContain("addEventListener(\"install\"");
     expect(swContent).toContain("addEventListener(\"activate\"");
-    expect(swContent).toContain("addEventListener(\"fetch\"");
-    expect(swContent).toContain("caches.open");
+    expect(swContent).toContain("unregister");
   });
 });
