@@ -122,7 +122,10 @@
   background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
-[data-storefront-shell] .sf-header-main {
+[data-storefront-shell] .sf-header-main,
+[data-admin-shell] .sf-header-main,
+.sf-header-main {
+  direction: ltr !important;
   display: flex;
   min-height: 64px;
   align-items: center;
@@ -293,20 +296,25 @@
   color: var(--accent-strong);
   border-color: var(--accent);
 }
-[data-storefront-shell].sf-account-popover {
+[data-storefront-shell] .sf-account-popover,
+[data-admin-shell] .sf-account-popover,
+.sf-account-popover {
   position: fixed;
   z-index: 60;
   width: 260px;
   max-height: calc(100dvh - 90px);
   overflow-y: auto;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 8px;
   background: var(--surface);
+  color: var(--ink);
   box-shadow: var(--elevation-3);
   font-size: 14px;
 }
-[data-storefront-shell] .sf-mobile-drawer {
+[data-storefront-shell] .sf-mobile-drawer,
+[data-admin-shell] .sf-mobile-drawer,
+.sf-mobile-drawer {
   margin: 0;
   margin-inline-start: auto;
   width: min(360px, 92vw);
@@ -314,13 +322,17 @@
   height: 100dvh;
   max-height: none;
   overflow-y: auto;
+  border: none;
   border-inline-start: 1px solid var(--line);
   padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
   background: var(--surface);
   color: var(--ink);
 }
-[data-storefront-shell] .sf-mobile-drawer::backdrop {
+[data-storefront-shell] .sf-mobile-drawer::backdrop,
+[data-admin-shell] .sf-mobile-drawer::backdrop,
+.sf-mobile-drawer::backdrop {
   background: rgb(8 12 24 / 55%);
+  backdrop-filter: blur(4px);
 }
 body:has(.sf-mobile-drawer[open]) {
   overflow: hidden;

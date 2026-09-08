@@ -103,7 +103,7 @@ export function HeaderShell({
         />
       ) : null}
 
-      <div className="gh-page sf-header-main">
+      <div className="gh-page sf-header-main" dir="ltr">
         <Link
           to={homeHref}
           className="sf-brand-link flex items-center gap-2.5"
@@ -305,7 +305,7 @@ export function HeaderActions({
             {accountPosition ? (
               <div
                 id="site-account-menu"
-                className="sf-account-menu"
+                className="sf-account-menu sf-account-popover rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[var(--elevation-3)] overflow-hidden w-64 text-sm"
                 style={{
                   position: "fixed",
                   top: accountPosition.top,
@@ -389,7 +389,7 @@ export function HeaderMobileDrawer({
   return (
     <dialog
       ref={dialogRef}
-      className="sf-drawer"
+      className="sf-mobile-drawer bg-[var(--surface)] text-[var(--ink)]"
       aria-label="Navigation menu"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -397,7 +397,7 @@ export function HeaderMobileDrawer({
         }
       }}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" dir="ltr">
         <Link to={homeHref} className="flex items-center gap-2" onClick={() => dialogRef.current?.close()}>
           <StorefrontBrand name={brandName} showLogo={showLogo} />
           {brandBadge}
@@ -412,7 +412,7 @@ export function HeaderMobileDrawer({
         </button>
       </div>
 
-      <div className="my-5 border-y border-[var(--line)] py-4">{children}</div>
+      <div className="my-5 border-y border-[var(--line)] py-4" dir={locale === "ar" ? "rtl" : "ltr"}>{children}</div>
 
       {footer}
     </dialog>
