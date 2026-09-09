@@ -85,10 +85,11 @@
   [data-storefront-shell] .sf-discovery-heading h2 { font-size:21px; }
   [data-storefront-shell] .sf-discovery-heading p { font-size:13px; }
   [data-storefront-shell] .sf-discovery-list { grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 8px; margin-top:8px; }
-  [data-storefront-shell] .sf-discovery-link { gap:8px; padding:10px 4px; min-height:76px; }
+  [data-storefront-shell] .sf-discovery-link { gap:8px; padding:10px 6px; height:76px; }
   [data-storefront-shell] .sf-discovery-art { width:28px; height:32px; }
   [data-storefront-shell] .sf-discovery-art>svg { width:25px; height:25px; }
-  [data-storefront-shell] .sf-discovery-copy strong { font-size:13px; overflow-wrap:anywhere; }
+  [data-storefront-shell] .sf-discovery-copy strong { font-size:13px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  [data-storefront-shell] .sf-discovery-copy span { font-size:12px; line-height:1.25; white-space:nowrap; }
   [data-storefront-shell] .sf-discovery-arrow { display:none; }
   [data-storefront-shell] .sf-campaigns { grid-template-columns:1fr; gap:12px; }
   [data-storefront-shell] .sf-campaign-primary { min-height:250px; }

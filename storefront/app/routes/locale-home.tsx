@@ -63,7 +63,15 @@ export const links: Route.LinksFunction = () => [
   {
     rel: "preload",
     as: "image",
+    href: "/storefront/digital-essentials-v2-mobile.webp",
+    media: "(max-width: 700px)",
+    fetchPriority: "high",
+  },
+  {
+    rel: "preload",
+    as: "image",
     href: "/storefront/digital-essentials-v2.webp",
+    media: "(min-width: 701px)",
     fetchPriority: "high",
   },
 ];
