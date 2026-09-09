@@ -157,7 +157,7 @@ export async function loader({
       cf: {
         cacheEverything: true,
         cacheTtl: ONE_MONTH,
-        ...(width > 0 ? { image: { width, quality: 75, format: "webp" } } : {}),
+        ...(width > 0 ? { image: { width, quality: 70, format: "webp" } } : {}),
       },
     };
     const upstreamRes = await fetchPublic(targetUrl, init);
@@ -168,7 +168,8 @@ export async function loader({
       });
     }
 
-    const contentType = upstreamRes.headers.get("content-type") || "image/jpeg";
+    const upstreamType = upstreamRes.headers.get("content-type") || "image/jpeg";
+    const contentType = width > 0 ? "image/webp" : upstreamType;
     const length = Number(upstreamRes.headers.get("content-length") ?? "0");
 
     if (!contentType.toLowerCase().startsWith("image/") || length > MAX_BYTES) {
