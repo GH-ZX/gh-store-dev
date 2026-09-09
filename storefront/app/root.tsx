@@ -49,15 +49,8 @@ export const links: Route.LinksFunction = () => [
     crossOrigin: "anonymous",
   },
   {
-    rel: "preload",
-    as: "style",
-    href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap",
-  },
-  {
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap",
-    media: "print",
-    onLoad: "this.media='all'",
   },
 ];
 

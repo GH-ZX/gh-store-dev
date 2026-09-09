@@ -9,14 +9,32 @@ export interface AppToasterProps {
 export function AppToaster({ locale }: AppToasterProps) {
   const dir = getLocaleDirection(locale);
   useEffect(() => {
-    const timer = setTimeout(() => {
+    let unmounted = false;
+    const start = () => {
+      window.removeEventListener("pointerdown", start);
+      window.removeEventListener("keydown", start);
+      window.removeEventListener("scroll", start);
+      if (unmounted) return;
       import("@/lib/realtime-alerts")
         .then((mod) => {
-          mod.subscribeToSiteAlerts();
+          if (!unmounted) mod.subscribeToSiteAlerts();
         })
         .catch(() => {});
-    }, 2000);
-    return () => clearTimeout(timer);
+    };
+
+    window.addEventListener("pointerdown", start, { passive: true, once: true });
+    window.addEventListener("keydown", start, { passive: true, once: true });
+    window.addEventListener("scroll", start, { passive: true, once: true });
+
+    const idleTimer = setTimeout(start, 10000);
+
+    return () => {
+      unmounted = true;
+      clearTimeout(idleTimer);
+      window.removeEventListener("pointerdown", start);
+      window.removeEventListener("keydown", start);
+      window.removeEventListener("scroll", start);
+    };
   }, []);
 
 

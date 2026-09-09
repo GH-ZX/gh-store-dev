@@ -81,7 +81,6 @@ export const EARLY_HINT_PRELOADS: string = [
   "<https://fonts.googleapis.com>; rel=preconnect; crossorigin",
   "<https://fonts.gstatic.com>; rel=preconnect; crossorigin",
   "</gh-store-logo-mark.png>; rel=preload; as=image",
-  "</storefront/digital-essentials-v2.webp>; rel=preload; as=image; fetchpriority=high",
 ].join(", ");
 
 export function applyEarlyHintHeaders(headers: Headers): void {

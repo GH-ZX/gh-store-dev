@@ -79,16 +79,24 @@ export function Rail({ className, itemWidth = "md", label, children, controls, i
       setEdge(atStart && atEnd ? "none" : atStart ? "end" : atEnd ? "start" : "both");
     }
 
-    measure();
-    list.addEventListener("scroll", measure, { passive: true });
+    let rafId: number | null = null;
+    function scheduleMeasure() {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        measure();
+      });
+    }
 
-    // A resize changes how much fits, so the overflow decision has to be remade.
-    const observer = new ResizeObserver(measure);
+    scheduleMeasure();
+    list.addEventListener("scroll", scheduleMeasure, { passive: true });
+
+    const observer = new ResizeObserver(scheduleMeasure);
     observer.observe(list);
-    for (const child of list.children) observer.observe(child);
 
     return () => {
-      list.removeEventListener("scroll", measure);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      list.removeEventListener("scroll", scheduleMeasure);
       observer.disconnect();
     };
   }, [children]);
