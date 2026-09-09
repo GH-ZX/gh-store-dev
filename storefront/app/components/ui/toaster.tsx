@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { Toaster as SonnerToaster } from "sonner";
 import { getLocaleDirection, type Locale } from "@/i18n/config";
-import { subscribeToSiteAlerts } from "@/lib/realtime-alerts";
 
 export interface AppToasterProps {
   locale: Locale;
@@ -11,7 +10,11 @@ export function AppToaster({ locale }: AppToasterProps) {
   const dir = getLocaleDirection(locale);
   useEffect(() => {
     const timer = setTimeout(() => {
-      subscribeToSiteAlerts();
+      import("@/lib/realtime-alerts")
+        .then((mod) => {
+          mod.subscribeToSiteAlerts();
+        })
+        .catch(() => {});
     }, 2000);
     return () => clearTimeout(timer);
   }, []);

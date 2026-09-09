@@ -11,6 +11,7 @@ import { getStorefrontThemeStyle } from "@/lib/storefront-theme";
 import { getSessionSummary } from "@server/lib/services/session.service";
 import { createSessionClient, getSessionUserId, redirectToLogin, sessionCookieHeaders, withSessionCookies } from "@server/session";
 import type { Route } from "./+types/dashboard-layout";
+import "@/styles/admin-shell.css";
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const locale = params.locale ?? "";

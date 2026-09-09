@@ -59,6 +59,15 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   };
 }
 
+export const links: Route.LinksFunction = () => [
+  {
+    rel: "preload",
+    as: "image",
+    href: "/storefront/digital-essentials-v2.webp",
+    fetchPriority: "high",
+  },
+];
+
 export function meta({ params, matches }: Route.MetaArgs) {
   const locale =
     params.locale && isLocale(params.locale) ? params.locale : DEFAULT_LOCALE;

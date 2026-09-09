@@ -50,7 +50,7 @@ export type ImageAttempt = {
   logoTone: LogoTone;
 };
 
-const RESPONSIVE_WIDTHS = [160, 320, 480, 640, 960, 1280, 1536];
+const RESPONSIVE_WIDTHS = [160, 240, 320, 384, 480, 640, 960, 1280, 1536];
 const STORAGE_MARKER = "/storage/v1/object/public/";
 
 function responsiveSources(src: string, width: number): string | undefined {

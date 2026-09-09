@@ -2,7 +2,8 @@
 /*
   X-Frame-Options: DENY
   Content-Security-Policy: frame-ancestors 'none'
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
@@ -25,16 +26,16 @@
 # PNG stays for the favicon and Apple touch icon, which the root layout declares
 # in its metadata and the browser fetches by name.
 /gh-store-logo-mark.png
-  Cache-Control: public,max-age=86400,stale-while-revalidate=2592000
+  Cache-Control: public,max-age=2592000,stale-while-revalidate=2592000
 
 /gh-store-logo.png
-  Cache-Control: public,max-age=86400,stale-while-revalidate=2592000
+  Cache-Control: public,max-age=2592000,stale-while-revalidate=2592000
 
 /shamcash-logo.svg
-  Cache-Control: public,max-age=86400,stale-while-revalidate=2592000
+  Cache-Control: public,max-age=2592000,stale-while-revalidate=2592000
 
 /storefront/*
-  Cache-Control: public,max-age=604800,stale-while-revalidate=2592000
+  Cache-Control: public,max-age=2592000,stale-while-revalidate=2592000
 
 /pwa-*.png
   Cache-Control: public,max-age=604800,stale-while-revalidate=2592000

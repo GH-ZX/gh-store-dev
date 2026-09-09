@@ -33,7 +33,7 @@ export function HomeDiscovery({ categories, locale }: { categories: DiscoveryCat
             <Link to={`/${locale}/${category.slug}`} className="sf-discovery-link">
               <span className="sf-discovery-art" aria-hidden="true">
                 {category.imageUrl ? (
-                  <StoreImage src={category.imageUrl} alt="" fit="contain" sizes="44px" />
+                  <StoreImage src={category.imageUrl} alt="" fit="contain" sizes="44px" width={40} height={40} />
                 ) : <CategoryIcon slug={category.slug} />}
               </span>
               <span className="sf-discovery-copy">

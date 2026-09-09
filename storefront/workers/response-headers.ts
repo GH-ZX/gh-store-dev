@@ -20,7 +20,8 @@
 export const SECURITY_HEADERS: ReadonlyArray<readonly [key: string, value: string]> = [
   ["X-Frame-Options", "DENY"],
   ["Content-Security-Policy", "frame-ancestors 'none'"],
-  ["Strict-Transport-Security", "max-age=31536000; includeSubDomains"],
+  ["Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload"],
+  ["Cross-Origin-Opener-Policy", "same-origin-allow-popups"],
   ["X-Content-Type-Options", "nosniff"],
   ["Referrer-Policy", "strict-origin-when-cross-origin"],
   /**
@@ -80,6 +81,7 @@ export const EARLY_HINT_PRELOADS: string = [
   "<https://fonts.googleapis.com>; rel=preconnect; crossorigin",
   "<https://fonts.gstatic.com>; rel=preconnect; crossorigin",
   "</gh-store-logo-mark.png>; rel=preload; as=image",
+  "</storefront/digital-essentials-v2.webp>; rel=preload; as=image; fetchpriority=high",
 ].join(", ");
 
 export function applyEarlyHintHeaders(headers: Headers): void {

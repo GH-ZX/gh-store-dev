@@ -21,7 +21,6 @@ import { getMessages } from "@/i18n/messages";
 import { Button, ButtonLink } from "@/components/ui/button";
 import "./app.css";
 import "./styles/storefront-shell.css";
-import "./styles/admin-shell.css";
 import { AppToaster } from "@/components/ui/toaster";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -50,8 +49,15 @@ export const links: Route.LinksFunction = () => [
     crossOrigin: "anonymous",
   },
   {
+    rel: "preload",
+    as: "style",
+    href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap",
+  },
+  {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Tektur:wght@400..900&family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap",
+    media: "print",
+    onLoad: "this.media='all'",
   },
 ];
 

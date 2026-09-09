@@ -103,6 +103,7 @@ export function SectionHeader({
           {viewAllHref && viewAllLabel ? (
             <Link
               to={viewAllHref}
+              aria-label={title ? `${viewAllLabel} — ${title}` : viewAllLabel}
               className="group inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] px-4 text-sm font-semibold text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
             >
               {viewAllLabel}

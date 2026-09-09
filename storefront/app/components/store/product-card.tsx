@@ -46,7 +46,7 @@ export function ProductCard({ product, locale, labels, meta, priority = false, o
           focus={product.carouselFocus}
           width={640}
           height={640}
-          sizes="(min-width: 1280px) 296px, (min-width: 1024px) 23vw, (min-width: 640px) 30vw, 46vw"
+          sizes="(min-width: 1280px) 296px, (min-width: 1024px) 23vw, (min-width: 640px) 30vw, 176px"
         />
         {product.isFeatured ? <span className="sf-product-featured">{labels.featured}</span> : null}
       </div>

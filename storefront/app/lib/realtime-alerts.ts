@@ -76,6 +76,8 @@ export function subscribeToSiteAlerts(
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") {
         activeChannel = channel;
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        // Silently ignore channel errors when host is offline or project does not exist
       }
     });
   }
