@@ -49,8 +49,14 @@ export const links: Route.LinksFunction = () => [
     crossOrigin: "anonymous",
   },
   {
+    rel: "preload",
+    as: "style",
+    href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600&display=swap",
+  },
+  {
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600&display=swap",
+    media: "print",
   },
 ];
 
@@ -82,6 +88,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `!function(){var l=document.querySelector('link[media="print"][href*="fonts.googleapis.com"]');if(l){if(l.sheet){l.media="all"}else{l.addEventListener("load",function(){l.media="all"})}}}()`,
+          }}
+        />
+        <noscript>
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600&display=swap"
+          />
+        </noscript>
         <link rel="icon" href="/gh-store-logo-mark.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
