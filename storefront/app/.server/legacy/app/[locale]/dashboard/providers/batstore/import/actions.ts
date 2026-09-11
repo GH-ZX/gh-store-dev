@@ -5,14 +5,16 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@server/lib/auth/guards";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
+import { removeImportedProduct } from "@server/legacy/lib/services/admin-catalog.service";
 import { getBatStoreCredentials } from "@server/legacy/lib/services/admin-settings.service";
 import { importBatStoreProducts } from "@server/legacy/lib/services/batstore-import.service";
 import { createSupabaseServerClient } from "@server/lib/supabase/server";
 import { BatStoreError } from "@server/providers/batstore/errors";
+import { BATSTORE_PROVIDER_NAME } from "@server/providers/batstore/mapping";
 import type { UniversalImportActionState } from "@/app/[locale]/dashboard/providers/import/action-state";
 
 const importSchema = z.object({
-  productIds: z.array(z.string().trim().min(1).max(120)).min(1).max(500),
+  productIds: z.array(z.string().trim().min(1).max(120)).max(500),
   publish: z.boolean(),
   locale: z.string().optional(),
 });
@@ -27,8 +29,15 @@ export async function importBatStoreAction(
 ): Promise<UniversalImportActionState> {
   const admin = await requireAdmin();
 
+  const productIds = formTextList(formData, "productIds");
+  const removedCodes = formTextList(formData, "removedCodes");
+
+  if (productIds.length === 0 && removedCodes.length === 0) {
+    return { error: "no_selection", summary: null };
+  }
+
   const parsed = importSchema.safeParse({
-    productIds: formTextList(formData, "productIds"),
+    productIds,
     publish: formFlag(formData, "publish"),
     locale: formText(formData, "locale"),
   });
@@ -56,13 +65,30 @@ export async function importBatStoreAction(
   });
 
   try {
-    const raw = await importBatStoreProducts(
-      supabase,
-      apiToken,
-      selections,
-      { publish: parsed.data.publish, markupPercent },
-      admin.id,
-    );
+    let deletedCount = 0;
+    for (const code of removedCodes) {
+      try {
+        const res = await removeImportedProduct(code, BATSTORE_PROVIDER_NAME);
+        if (res.ok) deletedCount++;
+      } catch {}
+    }
+
+    let raw = {
+      created: 0,
+      updated: 0,
+      failed: 0,
+      outcomes: [] as Array<{ name: string; error?: string }>,
+    };
+
+    if (selections.length > 0) {
+      raw = await importBatStoreProducts(
+        supabase,
+        apiToken,
+        selections,
+        { publish: parsed.data.publish, markupPercent },
+        admin.id,
+      );
+    }
 
     revalidatePath("/", "layout");
 
@@ -71,6 +97,7 @@ export async function importBatStoreAction(
       summary: {
         created: raw.created,
         updated: raw.updated,
+        deleted: deletedCount,
         failed: raw.failed,
         itemsCreated: 0,
         itemsUpdated: 0,

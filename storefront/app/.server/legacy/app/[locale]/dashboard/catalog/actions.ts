@@ -221,6 +221,24 @@ export async function deleteProductAction(
   redirect(`/${locale}/dashboard/catalog`);
 }
 
+export async function deleteProductDirectAction(input: {
+  productId: string;
+  locale?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  if (!input.productId || typeof input.productId !== "string") {
+    return { ok: false, error: "invalid_input" };
+  }
+  try {
+    await deleteAdminProduct(input.productId);
+    const locale = resolveLocale(input.locale);
+    revalidateCatalog(locale, input.productId);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "unknown" };
+  }
+}
+
 const providerLinkSchema = z.object({
   gameId: z.uuid(),
   url: z.union([z.literal(""), z.string().trim().max(2048)]),

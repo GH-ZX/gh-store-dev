@@ -42,6 +42,7 @@ function remote<T extends (...args: never[]) => Promise<unknown>>(name: string):
 import type * as actions0 from "@server/legacy/app/[locale]/dashboard/catalog/actions";
 export const updateProductAction = remote<typeof actions0.updateProductAction>("updateProductAction");
 export const deleteProductAction = remote<typeof actions0.deleteProductAction>("deleteProductAction");
+export const deleteProductDirectAction = remote<typeof actions0.deleteProductDirectAction>("deleteProductDirectAction");
 export const saveProviderLinkAction = remote<typeof actions0.saveProviderLinkAction>("saveProviderLinkAction");
 export const updateOffersAction = remote<typeof actions0.updateOffersAction>("updateOffersAction");
 export const createProductAction = remote<typeof actions0.createProductAction>("createProductAction");

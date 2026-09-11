@@ -81,12 +81,16 @@ export type AdminProductListItem = {
   nameAr: string;
   nameEn: string;
   imageUrl: string | null;
+  categoryId: string | null;
   isActive: boolean;
   isFeatured: boolean;
   showInCarousel: boolean;
   sortOrder: number;
   offerCount: number;
   activeOfferCount: number;
+  missingOffers: boolean;
+  missingArtwork: boolean;
+  missingCategory: boolean;
   providerName: string | null;
   providerCode: string | null;
   providerUrl: string | null;
@@ -101,7 +105,7 @@ export type AdminProviderCategory = {
 };
 
 const LIST_COLUMNS =
-  "id, slug, name_ar, name_en, image_url, is_active, is_featured, show_in_carousel, sort_order";
+  "id, slug, name_ar, name_en, image_url, is_active, is_featured, show_in_carousel, sort_order, category_id";
 
 const GAME_SEARCH_COLUMNS = ["name_ar", "name_en", "slug"];
 
@@ -206,6 +210,7 @@ export type ListAdminProductsOptions = {
   query?: string;
   publishedOnly?: boolean;
   category?: string;
+  problem?: "all" | "missingOffers" | "missingArtwork" | "missingCategory";
 };
 
 export async function listAdminProviderCategories(): Promise<AdminProviderCategory[]> {
@@ -247,6 +252,7 @@ export async function listAdminProducts({
   query,
   publishedOnly = false,
   category,
+  problem,
 }: ListAdminProductsOptions = {}): Promise<AdminProductListItem[]> {
   await requireAdmin();
 
@@ -282,6 +288,8 @@ export async function listAdminProducts({
   return data
     .map((game) => {
       const provider = providerInfo.get(game.id);
+      const offerTotal = offerCounts.get(game.id)?.total ?? 0;
+      const activeOfferTotal = offerCounts.get(game.id)?.active ?? 0;
 
       return {
         id: game.id,
@@ -289,12 +297,16 @@ export async function listAdminProducts({
         nameAr: game.name_ar,
         nameEn: game.name_en,
         imageUrl: game.image_url,
+        categoryId: game.category_id ?? null,
         isActive: game.is_active,
         isFeatured: game.is_featured,
         showInCarousel: game.show_in_carousel,
         sortOrder: game.sort_order,
-        offerCount: offerCounts.get(game.id)?.total ?? 0,
-        activeOfferCount: offerCounts.get(game.id)?.active ?? 0,
+        offerCount: offerTotal,
+        activeOfferCount: activeOfferTotal,
+        missingOffers: activeOfferTotal === 0,
+        missingArtwork: !game.image_url?.trim(),
+        missingCategory: !game.category_id,
         providerName: provider?.providerName ?? null,
         providerCode: provider?.providerCode ?? null,
         providerUrl: provider?.externalUrl ?? null,
@@ -302,7 +314,15 @@ export async function listAdminProducts({
         providerCategoryTitle: provider?.categoryTitle ?? null,
       };
     })
-    .filter((game) => !category || game.providerCategoryId === category);
+    .filter((game) => {
+      if (category && game.providerCategoryId !== category) return false;
+      if (!problem) return true;
+      if (problem === "missingOffers") return game.missingOffers;
+      if (problem === "missingArtwork") return game.missingArtwork;
+      if (problem === "missingCategory") return game.missingCategory;
+      if (problem === "all") return game.missingOffers || game.missingArtwork || game.missingCategory;
+      return true;
+    });
 }
 
 /** The editable half of a game, shared by the read and the write. */

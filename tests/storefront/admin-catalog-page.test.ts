@@ -17,8 +17,12 @@ describe("admin catalog list & editor logic", () => {
     expect(cAr).toHaveProperty("categoryFilterLabel");
     expect(cAr).toHaveProperty("allCategories");
     expect(cAr).toHaveProperty("offersCount");
-    expect(cAr).toHaveProperty("create");
     expect(cAr.create).toHaveProperty("action");
+    expect(cAr).toHaveProperty("needsAttentionFilter");
+    expect(cAr).toHaveProperty("missingOffersFilter");
+    expect(cAr).toHaveProperty("missingArtworkFilter");
+    expect(cAr).toHaveProperty("missingCategoryFilter");
+    expect(cAr).toHaveProperty("deleteAction");
 
     expect(cEn).toHaveProperty("allFilter");
     expect(cEn).toHaveProperty("publishedFilter");
@@ -27,17 +31,23 @@ describe("admin catalog list & editor logic", () => {
     expect(cEn).toHaveProperty("categoryFilterLabel");
     expect(cEn).toHaveProperty("allCategories");
     expect(cEn.create).toHaveProperty("action");
+    expect(cEn).toHaveProperty("needsAttentionFilter");
+    expect(cEn).toHaveProperty("missingOffersFilter");
+    expect(cEn).toHaveProperty("missingArtworkFilter");
+    expect(cEn).toHaveProperty("missingCategoryFilter");
+    expect(cEn).toHaveProperty("deleteAction");
   });
 
   it("accurately builds filtered catalog URLs", () => {
     const buildPath = (
       locale: string,
-      filters: { query?: string; publishedOnly?: boolean; category?: string },
+      filters: { query?: string; publishedOnly?: boolean; category?: string; problem?: string },
     ) => {
       const search = new URLSearchParams();
       if (filters.query) search.set("q", filters.query);
       if (filters.publishedOnly) search.set("published", "1");
       if (filters.category) search.set("category", filters.category);
+      if (filters.problem) search.set("problem", filters.problem);
       const query = search.toString();
       return query ? `/${locale}/dashboard/catalog?${query}` : `/${locale}/dashboard/catalog`;
     };
@@ -48,5 +58,30 @@ describe("admin catalog list & editor logic", () => {
     expect(buildPath("en", { category: "games", publishedOnly: true })).toBe(
       "/en/dashboard/catalog?published=1&category=games",
     );
+    expect(buildPath("ar", { problem: "all" })).toBe("/ar/dashboard/catalog?problem=all");
+    expect(buildPath("en", { problem: "missingOffers" })).toBe("/en/dashboard/catalog?problem=missingOffers");
+    expect(buildPath("ar", { problem: "missingArtwork", publishedOnly: true })).toBe(
+      "/ar/dashboard/catalog?published=1&problem=missingArtwork",
+    );
+  });
+
+  it("provides readiness and sync removal translation keys", () => {
+    const rAr = arAdmin.overview.readiness;
+    const rEn = enAdmin.overview.readiness;
+    expect(rAr).toHaveProperty("showAll");
+    expect(rAr).toHaveProperty("showLess");
+    expect(rAr).toHaveProperty("viewAllInCatalog");
+    expect(rAr).toHaveProperty("deleteProduct");
+    expect(rEn).toHaveProperty("showAll");
+    expect(rEn).toHaveProperty("showLess");
+    expect(rEn).toHaveProperty("viewAllInCatalog");
+    expect(rEn).toHaveProperty("deleteProduct");
+
+    const iAr = arAdmin.import;
+    const iEn = enAdmin.import;
+    expect(iAr).toHaveProperty("willDeleteOnSync");
+    expect(iAr).toHaveProperty("resultDeleted");
+    expect(iEn).toHaveProperty("willDeleteOnSync");
+    expect(iEn).toHaveProperty("resultDeleted");
   });
 });

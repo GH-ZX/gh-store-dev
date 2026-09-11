@@ -5,6 +5,7 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@server/lib/auth/guards";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
+import { removeImportedProduct } from "@server/legacy/lib/services/admin-catalog.service";
 import { getG2BulkCredentials } from "@server/legacy/lib/services/admin-settings.service";
 import { importG2BulkVouchers, toVoucherGameCode } from "@server/legacy/lib/services/g2bulk-voucher-import.service";
 import { createSupabaseServerClient } from "@server/lib/supabase/server";
@@ -20,7 +21,7 @@ import type { UniversalImportActionState } from "@/app/[locale]/dashboard/provid
  * backwards compatibility with the standalone voucher page.
  */
 const importSchema = z.object({
-  categoryIds: z.array(z.coerce.number().int().positive()).min(1).max(200),
+  categoryIds: z.array(z.coerce.number().int().positive()).max(200),
   publish: z.boolean(),
   locale: z.string().optional(),
 });
@@ -43,6 +44,11 @@ export async function importG2BulkVouchersAction(
   const rawIds = formTextList(formData, "productIds").length > 0
     ? formTextList(formData, "productIds")
     : formTextList(formData, "categoryIds");
+  const removedCodes = formTextList(formData, "removedCodes");
+
+  if (rawIds.length === 0 && removedCodes.length === 0) {
+    return { error: "no_selection", summary: null };
+  }
 
   const parsed = importSchema.safeParse({
     categoryIds: rawIds,
@@ -64,29 +70,48 @@ export async function importG2BulkVouchersAction(
   const supabase = await createSupabaseServerClient();
 
   try {
-    const raw = await importG2BulkVouchers(
-      supabase,
-      [...new Set(parsed.data.categoryIds)],
-      { publish: parsed.data.publish, markupPercent },
-      admin.id,
-    );
+    let deletedCount = 0;
+    for (const code of removedCodes) {
+      try {
+        const res = await removeImportedProduct(code, G2BULK_PROVIDER_NAME);
+        if (res.ok) deletedCount++;
+      } catch {}
+    }
 
-    // Assign per-product categories from the form (category-{id} fields).
-    for (const categoryId of parsed.data.categoryIds) {
-      const catIdStr = String(categoryId);
-      const formCategoryId = formText(formData, `category-${catIdStr}`);
-      if (!formCategoryId) continue;
+    let raw = {
+      created: 0,
+      updated: 0,
+      failed: 0,
+      offersCreated: 0,
+      offersUpdated: 0,
+      outcomes: [] as Array<{ name: string; error?: string }>,
+    };
 
-      const gameCode = toVoucherGameCode(categoryId);
-      const { data: mapping } = await supabase
-        .from("provider_game_mappings")
-        .select("game_id")
-        .eq("provider_name", G2BULK_PROVIDER_NAME)
-        .eq("external_game_code", gameCode)
-        .maybeSingle();
+    if (parsed.data.categoryIds.length > 0) {
+      raw = await importG2BulkVouchers(
+        supabase,
+        [...new Set(parsed.data.categoryIds)],
+        { publish: parsed.data.publish, markupPercent },
+        admin.id,
+      );
 
-      if (mapping?.game_id) {
-        await supabase.from("products").update({ category_id: formCategoryId }).eq("id", mapping.game_id);
+      // Assign per-product categories from the form (category-{id} fields).
+      for (const categoryId of parsed.data.categoryIds) {
+        const catIdStr = String(categoryId);
+        const formCategoryId = formText(formData, `category-${catIdStr}`);
+        if (!formCategoryId) continue;
+
+        const gameCode = toVoucherGameCode(categoryId);
+        const { data: mapping } = await supabase
+          .from("provider_game_mappings")
+          .select("game_id")
+          .eq("provider_name", G2BULK_PROVIDER_NAME)
+          .eq("external_game_code", gameCode)
+          .maybeSingle();
+
+        if (mapping?.game_id) {
+          await supabase.from("products").update({ category_id: formCategoryId }).eq("id", mapping.game_id);
+        }
       }
     }
 
@@ -97,6 +122,7 @@ export async function importG2BulkVouchersAction(
       summary: {
         created: raw.created,
         updated: raw.updated,
+        deleted: deletedCount,
         failed: raw.failed,
         itemsCreated: raw.offersCreated,
         itemsUpdated: raw.offersUpdated,

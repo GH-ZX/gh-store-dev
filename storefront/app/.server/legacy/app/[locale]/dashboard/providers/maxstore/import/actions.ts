@@ -5,6 +5,7 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { requireAdmin } from "@server/lib/auth/guards";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
+import { removeImportedProduct } from "@server/legacy/lib/services/admin-catalog.service";
 import { getMaxStoreCredentials } from "@server/legacy/lib/services/admin-settings.service";
 import { importMaxStoreCategories } from "@server/legacy/lib/services/maxstore-import.service";
 import { createSupabaseServerClient } from "@server/lib/supabase/server";
@@ -14,7 +15,7 @@ import type { UniversalImportActionState } from "@/app/[locale]/dashboard/provid
 
 const importSchema = z.object({
   categoryIds: z.array(z.string().trim().min(1).max(120)).max(200),
-  productIds: z.array(z.string().trim().min(1).max(120)).min(1).max(2000),
+  productIds: z.array(z.string().trim().min(1).max(120)).max(2000),
   publish: z.boolean(),
   locale: z.string().optional(),
 });
@@ -29,9 +30,16 @@ export async function importMaxStoreAction(
 ): Promise<UniversalImportActionState> {
   const admin = await requireAdmin();
 
+  const productIds = formTextList(formData, "productIds");
+  const removedCodes = formTextList(formData, "removedCodes");
+
+  if (productIds.length === 0 && removedCodes.length === 0) {
+    return { error: "no_selection", summary: null };
+  }
+
   const parsed = importSchema.safeParse({
     categoryIds: formTextList(formData, "categoryIds"),
-    productIds: formTextList(formData, "productIds"),
+    productIds,
     publish: formFlag(formData, "publish"),
     locale: formText(formData, "locale"),
   });
@@ -50,36 +58,55 @@ export async function importMaxStoreAction(
   const supabase = await createSupabaseServerClient();
 
   try {
-    const raw = await importMaxStoreCategories(
-      supabase,
-      apiToken,
-      parsed.data.categoryIds,
-      { publish: parsed.data.publish, markupPercent },
-      admin.id,
-      parsed.data.productIds,
-    );
+    let deletedCount = 0;
+    for (const code of removedCodes) {
+      try {
+        const res = await removeImportedProduct(code, MAXSTORE_PROVIDER_NAME);
+        if (res.ok) deletedCount++;
+      } catch {}
+    }
 
-    // Assign per-product categories from the form (category-{productId} fields).
-    for (const productId of parsed.data.productIds) {
-      const formCategoryId = formText(formData, `category-${productId}`);
-      if (!formCategoryId) continue;
+    let raw = {
+      created: 0,
+      updated: 0,
+      failed: 0,
+      offersCreated: 0,
+      offersUpdated: 0,
+      outcomes: [] as Array<{ name: string; error?: string }>,
+    };
 
-      const { data: mapping } = await supabase
-        .from("provider_offer_mappings")
-        .select("offer_id")
-        .eq("provider_name", MAXSTORE_PROVIDER_NAME)
-        .eq("external_product_id", productId)
-        .maybeSingle();
+    if (parsed.data.productIds.length > 0) {
+      raw = await importMaxStoreCategories(
+        supabase,
+        apiToken,
+        parsed.data.categoryIds,
+        { publish: parsed.data.publish, markupPercent },
+        admin.id,
+        parsed.data.productIds,
+      );
 
-      if (mapping?.offer_id) {
-        const { data: offer } = await supabase
-          .from("offers")
-          .select("product_id")
-          .eq("id", mapping.offer_id)
+      // Assign per-product categories from the form (category-{productId} fields).
+      for (const productId of parsed.data.productIds) {
+        const formCategoryId = formText(formData, `category-${productId}`);
+        if (!formCategoryId) continue;
+
+        const { data: mapping } = await supabase
+          .from("provider_offer_mappings")
+          .select("offer_id")
+          .eq("provider_name", MAXSTORE_PROVIDER_NAME)
+          .eq("external_product_id", productId)
           .maybeSingle();
 
-        if (offer?.product_id) {
-          await supabase.from("products").update({ category_id: formCategoryId }).eq("id", offer.product_id);
+        if (mapping?.offer_id) {
+          const { data: offer } = await supabase
+            .from("offers")
+            .select("product_id")
+            .eq("id", mapping.offer_id)
+            .maybeSingle();
+
+          if (offer?.product_id) {
+            await supabase.from("products").update({ category_id: formCategoryId }).eq("id", offer.product_id);
+          }
         }
       }
     }
@@ -91,6 +118,7 @@ export async function importMaxStoreAction(
       summary: {
         created: raw.created,
         updated: raw.updated,
+        deleted: deletedCount,
         failed: raw.failed,
         itemsCreated: raw.offersCreated,
         itemsUpdated: raw.offersUpdated,

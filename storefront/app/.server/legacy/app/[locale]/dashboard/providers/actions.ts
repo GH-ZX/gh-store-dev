@@ -162,7 +162,7 @@ export async function regenerateG2BulkCallbackAction(
 }
 
 const importSchema = z.object({
-  codes: z.array(z.string().trim().min(1).max(120)).min(1).max(200),
+  codes: z.array(z.string().trim().min(1).max(120)).max(200),
   publish: z.boolean(),
   locale: z.string().optional(),
 });
@@ -177,6 +177,11 @@ export async function importG2BulkGamesAction(
   const codes = formTextList(formData, "productIds").length > 0
     ? formTextList(formData, "productIds")
     : formTextList(formData, "codes");
+  const removedCodes = formTextList(formData, "removedCodes");
+
+  if (codes.length === 0 && removedCodes.length === 0) {
+    return { error: "no_selection", summary: null };
+  }
 
   const parsed = importSchema.safeParse({
     codes,
@@ -198,28 +203,47 @@ export async function importG2BulkGamesAction(
   const supabase = await createSupabaseServerClient();
 
   try {
-    const raw = await importG2BulkGames(
-      supabase,
-      apiKey,
-      parsed.data.codes,
-      { publish: parsed.data.publish, markupPercent },
-      admin.id,
-    );
+    let deletedCount = 0;
+    for (const code of removedCodes) {
+      try {
+        const res = await removeImportedProduct(code, G2BULK_PROVIDER_NAME);
+        if (res.ok) deletedCount++;
+      } catch {}
+    }
 
-    // Assign per-product categories from the form (category-{code} fields).
-    for (const code of parsed.data.codes) {
-      const categoryId = formText(formData, `category-${code}`);
-      if (!categoryId) continue;
+    let raw = {
+      created: 0,
+      updated: 0,
+      failed: 0,
+      offersCreated: 0,
+      offersUpdated: 0,
+      outcomes: [] as Array<{ name: string; error?: string }>,
+    };
 
-      const { data: mapping } = await supabase
-        .from("provider_game_mappings")
-        .select("game_id")
-        .eq("provider_name", G2BULK_PROVIDER_NAME)
-        .eq("external_game_code", code)
-        .maybeSingle();
+    if (parsed.data.codes.length > 0) {
+      raw = await importG2BulkGames(
+        supabase,
+        apiKey,
+        parsed.data.codes,
+        { publish: parsed.data.publish, markupPercent },
+        admin.id,
+      );
 
-      if (mapping?.game_id) {
-        await supabase.from("products").update({ category_id: categoryId }).eq("id", mapping.game_id);
+      // Assign per-product categories from the form (category-{code} fields).
+      for (const code of parsed.data.codes) {
+        const categoryId = formText(formData, `category-${code}`);
+        if (!categoryId) continue;
+
+        const { data: mapping } = await supabase
+          .from("provider_game_mappings")
+          .select("game_id")
+          .eq("provider_name", G2BULK_PROVIDER_NAME)
+          .eq("external_game_code", code)
+          .maybeSingle();
+
+        if (mapping?.game_id) {
+          await supabase.from("products").update({ category_id: categoryId }).eq("id", mapping.game_id);
+        }
       }
     }
 
@@ -230,6 +254,7 @@ export async function importG2BulkGamesAction(
       summary: {
         created: raw.created,
         updated: raw.updated,
+        deleted: deletedCount,
         failed: raw.failed,
         itemsCreated: raw.offersCreated,
         itemsUpdated: raw.offersUpdated,

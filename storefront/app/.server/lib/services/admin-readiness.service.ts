@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@server/lib/supabase/server";
 
 export type CatalogReadinessItem = {
   id: string;
+  slug?: string;
   nameAr: string;
   nameEn: string;
   missingOffers: boolean;
@@ -17,6 +18,7 @@ export type CatalogReadiness = {
   missingCategory: number;
   needsAttention: number;
   items: CatalogReadinessItem[];
+  allItems?: CatalogReadinessItem[];
 };
 
 const PAGE_SIZE = 1000;
@@ -30,11 +32,11 @@ export async function getCatalogReadiness(): Promise<CatalogReadiness | null> {
     const client = await createSupabaseServerClient();
     const [products, offeredProductIds] = await Promise.all([
       (async () => {
-        const products: { id: string; name_ar: string; name_en: string; image_url: string | null; category_id: string | null }[] = [];
+        const products: { id: string; slug: string; name_ar: string; name_en: string; image_url: string | null; category_id: string | null }[] = [];
         for (let offset = 0; ; ) {
           const { data, error } = await client
             .from("products")
-            .select("id, name_ar, name_en, image_url, category_id")
+            .select("id, slug, name_ar, name_en, image_url, category_id")
             .eq("is_active", true)
             .order("id", { ascending: true })
             .range(offset, offset + PAGE_SIZE - 1);
@@ -65,6 +67,7 @@ export async function getCatalogReadiness(): Promise<CatalogReadiness | null> {
 
     const items = products.map((product): CatalogReadinessItem => ({
       id: product.id,
+      slug: product.slug,
       nameAr: product.name_ar,
       nameEn: product.name_en,
       missingOffers: !offeredProductIds.has(product.id),
@@ -81,6 +84,7 @@ export async function getCatalogReadiness(): Promise<CatalogReadiness | null> {
       missingCategory: items.filter((item) => item.missingCategory).length,
       needsAttention: unfinished.length,
       items: unfinished.slice(0, PREVIEW_SIZE),
+      ...(unfinished.length > PREVIEW_SIZE ? { allItems: unfinished } : {}),
     };
   } catch {
     return null;

@@ -12,7 +12,7 @@ import {
   WalletIcon,
 } from "@/components/ui/icons";
 import { formatPrice } from "@/lib/format/money";
-
+import { cn } from "@/lib/cn";
 export const headerControlClass = "sf-control";
 
 export function StorefrontBrand({
@@ -95,10 +95,41 @@ export function HeaderShell({
   loadingLabel = "Loading",
 }: HeaderShellProps) {
   const navigation = useNavigation();
+  const location = useLocation();
+  const [hidden, setHidden] = useState(false);
+  const lastScrollY = useRef(0);
   const homeHref = brandHref || `/${locale}`;
+  const isHome = location.pathname === `/${locale}` || location.pathname === `/${locale}/`;
+
+  useEffect(() => {
+    if (!isHome) {
+      setHidden(false);
+      return;
+    }
+
+    const onScroll = () => {
+      if (window.innerWidth > 768) {
+        setHidden(false);
+        return;
+      }
+      const currentScrollY = window.scrollY;
+      const diff = currentScrollY - lastScrollY.current;
+
+      if (currentScrollY > 60 && diff > 8) {
+        setHidden(true);
+      } else if (diff < -8 || currentScrollY <= 20) {
+        setHidden(false);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isHome]);
 
   return (
-    <header data-site-header className="sf-site-header">
+    <header data-site-header className={cn("sf-site-header", hidden && "sf-header--hidden")}>
       {navigation.state !== "idle" ? (
         <div
           role="progressbar"

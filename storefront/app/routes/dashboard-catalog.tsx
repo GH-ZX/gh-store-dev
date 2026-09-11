@@ -1,4 +1,5 @@
-import { Link } from "react-router";
+import { useState, useTransition } from "react";
+import { Link, useLoaderData, useRevalidator, type LoaderFunctionArgs } from "react-router";
 import { z } from "zod";
 import { EmptyState } from "@/components/shared/states";
 import { StoreImage } from "@/components/store/store-image";
@@ -8,15 +9,16 @@ import {
   LinkIcon,
   PlusIcon,
   SearchIcon,
+  TrashIcon,
 } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import { formatMessage, getMessages } from "@/i18n/messages";
+import { deleteProductDirectAction } from "@/lib/admin-actions";
 import { cn } from "@/lib/cn";
 import {
   listAdminProducts,
   listAdminProviderCategories,
 } from "@server/legacy/lib/services/admin-catalog.service";
-import { useLoaderData, type LoaderFunctionArgs } from "react-router";
 import { isLocale } from "@/i18n/config";
 import { requireDashboardAdmin } from "@server/dashboard-access";
 
@@ -26,21 +28,27 @@ const filtersSchema = z.object({
   q: z.string().max(400).optional(),
   published: z.string().max(8).optional(),
   category: z.string().max(120).optional(),
+  problem: z.enum(["all", "missingOffers", "missingArtwork", "missingCategory"]).optional(),
 });
 
-type CatalogFilters = { query: string; publishedOnly: boolean; category: string };
-
+type CatalogFilters = {
+  query: string;
+  publishedOnly: boolean;
+  category: string;
+  problem?: "all" | "missingOffers" | "missingArtwork" | "missingCategory";
+};
 function parseFilters(input: unknown): CatalogFilters {
   const parsed = filtersSchema.safeParse(input ?? {});
 
   if (!parsed.success) {
-    return { query: "", publishedOnly: false, category: "" };
+    return { query: "", publishedOnly: false, category: "", problem: undefined };
   }
 
   return {
     query: (parsed.data.q ?? "").trim().slice(0, MAX_QUERY_LENGTH),
     publishedOnly: parsed.data.published === "1",
     category: (parsed.data.category ?? "").trim().slice(0, 120),
+    problem: parsed.data.problem,
   };
 }
 
@@ -54,11 +62,13 @@ function catalogPath(locale: Locale, filters: CatalogFilters): string {
   if (filters.publishedOnly) {
     search.set("published", "1");
   }
-
   if (filters.category) {
     search.set("category", filters.category);
   }
 
+  if (filters.problem) {
+    search.set("problem", filters.problem);
+  }
   const queryString = search.toString();
 
   return queryString
@@ -80,6 +90,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
       query: filters.query,
       publishedOnly: filters.publishedOnly,
       category: filters.category,
+      problem: filters.problem,
     }),
     listAdminProviderCategories(),
   ]);
@@ -90,7 +101,33 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 export default function Page() {
   const { locale, filters, products, providerCategories } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "admin").catalog;
+  let revalidate = () => {};
+  try {
+    const r = useRevalidator();
+    revalidate = () => void r.revalidate();
+  } catch {}
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
+  async function handleDelete(productId: string, name: string) {
+    const confirmMsg = `${messages.deleteConfirm}\n\n${name}`;
+    if (!window.confirm(confirmMsg)) return;
+    setDeletingId(productId);
+    startTransition(async () => {
+      try {
+        const res = await deleteProductDirectAction({ productId, locale });
+        if (res.ok) {
+          revalidate();
+        } else {
+          alert(res.error ?? "Failed to delete product");
+        }
+      } catch {
+        alert("Failed to delete product");
+      } finally {
+        setDeletingId(null);
+      }
+    });
+  }
   return (
     <div className="space-y-6">
       {/* 1. Header with Title & Action */}
@@ -185,10 +222,14 @@ export default function Page() {
         {/* Filter Pills */}
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-3">
           {[
-            { label: messages.allFilter, publishedOnly: false },
-            { label: messages.publishedFilter, publishedOnly: true },
+            { label: messages.allFilter, publishedOnly: false, problem: undefined },
+            { label: messages.publishedFilter, publishedOnly: true, problem: undefined },
+            { label: messages.needsAttentionFilter, publishedOnly: false, problem: "all" as const },
+            { label: messages.missingOffersFilter, publishedOnly: false, problem: "missingOffers" as const },
+            { label: messages.missingArtworkFilter, publishedOnly: false, problem: "missingArtwork" as const },
+            { label: messages.missingCategoryFilter, publishedOnly: false, problem: "missingCategory" as const },
           ].map((option) => {
-            const active = option.publishedOnly === filters.publishedOnly;
+            const active = option.publishedOnly === filters.publishedOnly && option.problem === filters.problem;
 
             return (
               <Link
@@ -197,6 +238,7 @@ export default function Page() {
                   query: filters.query,
                   publishedOnly: option.publishedOnly,
                   category: filters.category,
+                  problem: option.problem,
                 })}
                 aria-current={active ? "true" : undefined}
                 className={cn(
@@ -296,9 +338,21 @@ export default function Page() {
                   {product.isActive ? messages.published : messages.unpublished}
                 </span>
 
-                {product.activeOfferCount === 0 ? (
+                {product.activeOfferCount === 0 || product.missingOffers ? (
                   <span className="admin-badge admin-badge-warning">
                     {messages.noActiveOffers}
+                  </span>
+                ) : null}
+
+                {product.missingArtwork ? (
+                  <span className="admin-badge admin-badge-neutral">
+                    {messages.noArtwork}
+                  </span>
+                ) : null}
+
+                {product.missingCategory ? (
+                  <span className="admin-badge admin-badge-neutral">
+                    {messages.noCategory}
                   </span>
                 ) : null}
 
@@ -318,6 +372,17 @@ export default function Page() {
                     className="size-4"
                   />
                 </Link>
+
+                <button
+                  type="button"
+                  disabled={deletingId === product.id}
+                  onClick={() => handleDelete(product.id, locale === "ar" ? product.nameAr : product.nameEn)}
+                  title={messages.deleteAction}
+                  aria-label={`${messages.deleteAction}: ${locale === "ar" ? product.nameAr : product.nameEn}`}
+                  className="grid size-8 place-items-center rounded-[var(--radius-control)] border border-[var(--line)] text-[var(--ink-muted)] hover:border-[color-mix(in_srgb,var(--danger)_45%,transparent)] hover:bg-[var(--danger-surface)] hover:text-[var(--danger)] transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <TrashIcon className="size-3.5" />
+                </button>
               </div>
             </div>
           ))}

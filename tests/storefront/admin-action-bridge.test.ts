@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ admin: vi.fn(), update: vi.fn(), UnauthorizedE
 vi.mock("@server/lib/auth/guards", () => ({ requireAdmin: mocks.admin, UnauthorizedError: mocks.UnauthorizedError, ForbiddenError: mocks.ForbiddenError }));
 vi.mock("@server/legacy/app/[locale]/dashboard/catalog/actions", () => ({
   updateProductAction: mocks.update,
-  deleteProductAction: vi.fn(), saveProviderLinkAction: vi.fn(), updateOffersAction: vi.fn(),
+  deleteProductAction: vi.fn(), deleteProductDirectAction: vi.fn(), saveProviderLinkAction: vi.fn(), updateOffersAction: vi.fn(),
   createProductAction: vi.fn(), createOfferAction: vi.fn(), deleteOfferAction: vi.fn(),
   searchIgdbArtworkAction: vi.fn(), addStockItemAction: vi.fn(), bulkAddStockItemsAction: vi.fn(),
   deleteStockItemAction: vi.fn(), reorderCarouselProducts: vi.fn(),

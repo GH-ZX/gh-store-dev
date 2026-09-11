@@ -16,6 +16,7 @@ const actions = {
   saveHomeSectionCopyAction: liveActions.saveHomeSectionCopyAction,
   updateProductAction: actions0.updateProductAction,
   deleteProductAction: actions0.deleteProductAction,
+  deleteProductDirectAction: actions0.deleteProductDirectAction,
   saveProviderLinkAction: actions0.saveProviderLinkAction,
   updateOffersAction: actions0.updateOffersAction,
   createProductAction: actions0.createProductAction,

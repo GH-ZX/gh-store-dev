@@ -48,16 +48,34 @@ export function UniversalImportForm({
   );
   const [query, setQuery] = useState("");
   const [activeLaneId, setActiveLaneId] = useState(lanes[0]?.id ?? "");
-  const [selected, setSelected] = useState<Set<string>>(
+  const initialImported = useMemo(
     () =>
       new Set(
         lanes.flatMap((lane) =>
           lane.items.filter((item) => item.alreadyImported).map((item) => item.id),
         ),
       ),
+    [lanes],
   );
+
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(initialImported),
+  );
+  const [dismissedRemovals, setDismissedRemovals] = useState<Set<string>>(new Set());
   const [removals, setRemovals] = useState<Map<string, RemoveImportedResult>>(new Map());
 
+  const allItemsMap = useMemo(
+    () => new Map(lanes.flatMap((lane) => lane.items.map((item) => [item.id, item]))),
+    [lanes],
+  );
+
+  const removedIds = useMemo(
+    () =>
+      new Set(
+        [...initialImported].filter((id) => !selected.has(id) && !dismissedRemovals.has(id)),
+      ),
+    [initialImported, selected, dismissedRemovals],
+  );
   const showCategoryPicker = categories.length > 0;
 
   const totalItems = useMemo(
@@ -135,6 +153,7 @@ export function UniversalImportForm({
         next.delete(itemId);
         return next;
       });
+      setDismissedRemovals((prev) => new Set(prev).add(itemId));
     }
   }
 
@@ -160,6 +179,11 @@ export function UniversalImportForm({
               locale,
             )}
           </p>
+          {summary.deleted && summary.deleted > 0 ? (
+            <p className="mt-1 text-sm leading-6 text-[var(--danger)] font-medium">
+              {formatMessage(messages.resultDeleted, { count: summary.deleted }, locale)}
+            </p>
+          ) : null}
           {(summary.itemsCreated > 0 || summary.itemsUpdated > 0) && (
             <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
               {formatMessage(
@@ -227,14 +251,27 @@ export function UniversalImportForm({
         <input key={itemId} type="hidden" name="productIds" value={itemId} />
       ))}
 
+      {[...removedIds].map((itemId) => {
+        const item = allItemsMap.get(itemId);
+        const code = item?.providerCode ?? itemId;
+        return <input key={`removed-${itemId}`} type="hidden" name="removedCodes" value={code} />;
+      })}
+
       {/* Header: counts */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--ink-muted)] tabular-nums">
           {formatMessage(messages.availableCount, { count: totalItems }, locale)}
         </p>
-        <p className="text-sm font-semibold text-[var(--ink)] tabular-nums">
-          {formatMessage(messages.selectedCount, { count: selectedCount }, locale)}
-        </p>
+        <div className="flex flex-wrap items-center gap-3 text-sm font-semibold tabular-nums">
+          <span className="text-[var(--ink)]">
+            {formatMessage(messages.selectedCount, { count: selectedCount }, locale)}
+          </span>
+          {removedIds.size > 0 ? (
+            <span className="text-[var(--danger)] font-medium">
+              ({removedIds.size} {locale === "ar" ? "سيتم حذفها" : "to delete"})
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {/* Search + lane filter + bulk actions */}
@@ -345,6 +382,7 @@ export function UniversalImportForm({
                 <ItemGrid
                   items={activeItems}
                   selected={selected}
+                  removedIds={removedIds}
                   toggleItem={toggleItem}
                   categories={categories}
                   showCategoryPicker={showCategoryPicker}
@@ -387,6 +425,7 @@ export function UniversalImportForm({
           <ItemGrid
             items={activeItems}
             selected={selected}
+            removedIds={removedIds}
             toggleItem={toggleItem}
             categories={categories}
             showCategoryPicker={showCategoryPicker}
@@ -456,7 +495,7 @@ export function UniversalImportForm({
         <Button
           type="submit"
           size="lg"
-          disabled={pending || selected.size === 0}
+          disabled={pending || (selected.size === 0 && removedIds.size === 0)}
           trailingIcon={<ArrowIcon direction="end" className="rtl:rotate-180" />}
         >
           {messages.submitAction}
@@ -471,6 +510,7 @@ export function UniversalImportForm({
 function ItemGrid({
   items,
   selected,
+  removedIds,
   toggleItem,
   categories,
   showCategoryPicker,
@@ -480,6 +520,7 @@ function ItemGrid({
 }: {
   items: ImportItem[];
   selected: Set<string>;
+  removedIds: Set<string>;
   toggleItem: (id: string) => void;
   categories: AdminCategory[];
   showCategoryPicker: boolean;
@@ -495,6 +536,7 @@ function ItemGrid({
     <ul className="grid max-h-[28rem] gap-2 overflow-y-auto">
       {items.map((item) => {
         const isSelected = selected.has(item.id);
+        const isMarkedForDeletion = removedIds.has(item.id);
 
         return (
           <li key={item.id}>
@@ -503,7 +545,9 @@ function ItemGrid({
                 "rounded-[var(--radius-control)] border transition-colors duration-[var(--duration)]",
                 isSelected
                   ? "border-[color-mix(in_srgb,var(--accent)_50%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]"
-                  : "border-transparent hover:bg-[var(--shell)]",
+                  : isMarkedForDeletion
+                    ? "border-[color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_8%,transparent)]"
+                    : "border-transparent hover:bg-[var(--shell)]",
               )}
             >
               <label className="flex cursor-pointer items-center gap-3 px-4 py-3">
@@ -523,7 +567,11 @@ function ItemGrid({
                     <span className="truncate text-sm font-medium text-[var(--ink)]">
                       {item.name}
                     </span>
-                    {item.alreadyImported ? (
+                    {isMarkedForDeletion ? (
+                      <Badge tone="danger">
+                        {messages.willDeleteOnSync}
+                      </Badge>
+                    ) : item.alreadyImported ? (
                       <Badge tone="neutral" icon={<CheckIcon />}>
                         {messages.alreadyImported}
                       </Badge>

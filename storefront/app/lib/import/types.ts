@@ -35,6 +35,7 @@ export type ImportFormMode = "flat" | "grouped";
 export type ImportFormSummary = {
   created: number;
   updated: number;
+  deleted?: number;
   failed: number;
   itemsCreated: number;
   itemsUpdated: number;
