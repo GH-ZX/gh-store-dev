@@ -5,7 +5,7 @@ import { Link, useRevalidator } from "react-router";
 import { ArrowIcon, CheckIcon, TrashIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import { formatMessage, getMessages } from "@/i18n/messages";
-import { deleteProductDirectAction } from "@/lib/admin-actions";
+import { deleteProductDirectAction, autoCompleteCatalogAction } from "@/lib/admin-actions";
 import { cn } from "@/lib/cn";
 import type { CatalogReadiness } from "@server/lib/services/admin-readiness.service";
 
@@ -25,7 +25,37 @@ export function OverviewReadiness({ locale, readiness }: { locale: Locale; readi
   const revalidator = useSafeRevalidator();
   const [showAll, setShowAll] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isAutoCompleting, setIsAutoCompleting] = useState(false);
   const [, startTransition] = useTransition();
+
+  async function handleAutoComplete() {
+    setIsAutoCompleting(true);
+    startTransition(async () => {
+      try {
+        const res = await autoCompleteCatalogAction({ locale });
+        if (res.ok) {
+          alert(
+            formatMessage(
+              copy.autoCompleteSuccess,
+              {
+                categories: res.categoriesUpdated,
+                artwork: res.artworkUpdated,
+                offers: res.offersCreated,
+              },
+              locale,
+            ),
+          );
+          void revalidator.revalidate();
+        } else {
+          alert(res.error ?? "Failed to auto-complete catalog");
+        }
+      } catch {
+        alert("Failed to auto-complete catalog");
+      } finally {
+        setIsAutoCompleting(false);
+      }
+    });
+  }
 
   async function handleDelete(productId: string, productName: string) {
     const confirmText = `${copy.deleteConfirm}\n\n${productName}`;
@@ -130,6 +160,14 @@ export function OverviewReadiness({ locale, readiness }: { locale: Locale; readi
                       {showAll ? copy.showLess : formatMessage(copy.showAll, { count: allAvailableItems.length }, locale)}
                     </button>
                   ) : null}
+                  <button
+                    type="button"
+                    disabled={isAutoCompleting}
+                    onClick={handleAutoComplete}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-3 text-xs font-semibold text-[var(--accent-strong)] hover:bg-[color-mix(in_srgb,var(--accent)_20%,transparent)] transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <span>{isAutoCompleting ? copy.autoCompleting : copy.autoCompleteAction}</span>
+                  </button>
                   <Link
                     to={`/${locale}/dashboard/catalog?problem=all`}
                     className="inline-flex min-h-9 items-center gap-1 rounded-[var(--radius-control)] bg-[var(--accent)] px-3 text-xs font-semibold text-[var(--accent-ink)] hover:opacity-90 transition-opacity"
