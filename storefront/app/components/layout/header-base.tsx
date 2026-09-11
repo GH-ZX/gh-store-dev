@@ -100,10 +100,10 @@ export function HeaderShell({
   const lastScrollY = useRef(0);
   const homeHref = brandHref || `/${locale}`;
   const isHome = location.pathname === `/${locale}` || location.pathname === `/${locale}/`;
+  const isHeaderHidden = isHome && hidden;
 
   useEffect(() => {
     if (!isHome) {
-      setHidden(false);
       return;
     }
 
@@ -129,7 +129,7 @@ export function HeaderShell({
   }, [isHome]);
 
   return (
-    <header data-site-header className={cn("sf-site-header", hidden && "sf-header--hidden")}>
+    <header data-site-header className={cn("sf-site-header", isHeaderHidden && "sf-header--hidden")}>
       {navigation.state !== "idle" ? (
         <div
           role="progressbar"
