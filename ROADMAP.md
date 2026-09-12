@@ -4,10 +4,11 @@
 **Technical repository name:** `gh-store`  
 **Reference repository:** `echocore-store`  
 **Archive:** `gh-store-old`  
-**Current status:** Stages 0–11 complete; stage 12 is in final release hardening.
-The owner confirms that `gh-store.me`, production Supabase, and Cloudflare
-configuration are ready; this repository still verifies the customer-facing
-runtime, callbacks, monitoring, UAT, and rollback evidence.
+**Current status:** `gh-store.me` is **live in production** with real customer
+traffic. Supabase, Cloudflare, provider callbacks, reconciliation, and rollback
+are running in production. Stage 12 remains in ongoing hardening (API, UAT,
+accessibility, performance, monitoring, and rollback evidence), all executed
+against the live store rather than a staging freeze.
 
 ## Progress Snapshot
 
@@ -25,7 +26,7 @@ runtime, callbacks, monitoring, UAT, and rollback evidence.
 | 9. G2Bulk fulfillment | Complete | Sync, top-ups, redeem codes, reconciliation, and the supplier callback done |
 | 10. Payments | Complete | Manual recharge, Sam invoices, SyriatelCash, ShamCash, payments reconciliation, and Binance Pay |
 | 11. Admin operations | Complete | Every daily operation runs from the dashboard: catalog import and hand-built catalog, pricing, orders and fulfilment, recharges, payments, customers, access, support, reviews, notifications, activity log, website content, theme, and SEO |
-| 12. Release | In progress | CI runs tests and browser coverage exists for anonymous and admin flows; API hardening, accessibility, performance, production callback verification, UAT, and rollback evidence remain |
+| 12. Release | Live — hardening continues | Store is live in production; CI tests and browser coverage run for anonymous and admin flows, with ongoing hardening of the API, accessibility, performance, production callbacks, UAT, and rollback evidence |
 
 ## Working Rules
 

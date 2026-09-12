@@ -22,7 +22,8 @@
   product editor (game top-up, digital, subscription, service, virtual currency,
   or other).
 - Markup, fixed price, charm pricing, promotions, and sale controls.
-- G2Bulk catalog sync, provider wallet, health, and fulfillment controls.
+- Provider catalog sync (G2Bulk, BatStore, MaxStore), provider wallet, health,
+  and fulfillment controls.
 - Manual recharge approval and Sam API configuration.
 - ShamCash, SyriatelCash, and Binance Pay configuration where enabled.
 - Customer management, balance adjustments, bans, and username operations.

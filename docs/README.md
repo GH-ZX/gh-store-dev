@@ -12,6 +12,9 @@ This documentation describes the new GH-Store implementation. The old `echocore-
 | Secrets and security | [Secrets policy](./security/secrets.md) |
 | Domain and hosting | [Cloudflare domain guide](./operations/domain-cloudflare.md) |
 | G2Bulk contract | [G2Bulk API](./providers/g2bulk-api.md) |
+| BatStore contract | [BatStore API](./providers/batstore-api.md) |
+| MaxStore contract | [MaxStore API](./providers/maxstore-api.md) |
+| Binance Pay contract | [Binance Pay](./providers/binance-pay.md) |
 | IGDB contract | [IGDB API](./providers/igdb-api.md) |
 | Owner overview | [Owner guide](./owner-guide.md) |
 
@@ -20,7 +23,7 @@ This documentation describes the new GH-Store implementation. The old `echocore-
 ```text
 Customer -> Cloudflare Workers + Next.js -> Supabase Auth/PostgreSQL/Storage
                                       -> Supabase Edge Functions
-                                      -> G2Bulk / Sam / Binance Pay / IGDB
+                                      -> G2Bulk / BatStore / MaxStore / Sam / Binance Pay / IGDB
 ```
 
 ## Rules

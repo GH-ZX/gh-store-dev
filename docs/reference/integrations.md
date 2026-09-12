@@ -6,6 +6,8 @@
 | Supabase PostgreSQL | Catalog, wallets, orders, audit | Server services, RPC, RLS | `supabase/` |
 | Supabase Storage | Product and game media | Server/admin upload path | `product-images` bucket |
 | G2Bulk | Catalog, UID top-up, redeem codes | Server adapter / Edge Functions | `docs/providers/g2bulk-api.md` |
+| BatStore | Catalog import, digital products, accounts | Server adapter / Edge Functions | `docs/providers/batstore-api.md` |
+| MaxStore | Catalog import, digital products, accounts | Server adapter / Edge Functions | `docs/providers/maxstore-api.md` |
 | Sam API | Wallets, invoices, transfers | Server adapter / Edge Functions | `.agents/skills/sam-api-wallet/` |
 | ShamCash | Manual and Sam-backed recharge | Admin/customer payment flow | Sam and manual contracts |
 | SyriatelCash | Sam-backed recharge and transfer | Server adapter / Edge Functions | Sam API contract |

@@ -31,8 +31,9 @@ Ordered so each step unblocks the next.
       settle only through the sweep, never instantly.
 - [ ] One wallet recharge through every enabled rail: manual ShamCash (approve
       it yourself), Sam invoice (SyriatelCash/ShamCash), Binance Pay.
-- [ ] One UID top-up and one redeem-code order through G2Bulk, end to end,
-      including the delivered code/top-up arriving in-game.
+- [ ] One UID top-up and one redeem-code order through each enabled supplier
+      (G2Bulk, and BatStore/MaxStore where configured), end to end, including
+      the delivered code/top-up arriving in-game.
 - [ ] Check Payments reconciliation shows every top-up paired with its credit.
 - [ ] Refund one order through the dashboard once, to see the audit trail work.
 
@@ -89,7 +90,8 @@ Ordered so each step unblocks the next.
 
 - [ ] Supabase: enable PITR / scheduled backups on the production project.
 - [ ] Rotate every key that ever appeared in a chat, screenshot, or ticket:
-      G2Bulk, Sam, Binance Pay, Telegram bot token, RECONCILE_CRON_SECRET.
+      G2Bulk, BatStore, MaxStore, Sam, Binance Pay, Telegram bot token,
+      RECONCILE_CRON_SECRET.
 - [ ] Run the rollback drill from `docs/operations/incident-response.md` once,
       before there is traffic to protect.
 

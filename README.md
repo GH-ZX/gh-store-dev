@@ -8,10 +8,10 @@ and audit logs from the dashboard.
 
 ## Current status
 
-The application is feature-complete for staging and is in final production
-hardening. The production domain is `https://gh-store.me`; production Supabase
-and Cloudflare configuration are maintained outside this repository and must be
-verified with the release checklist before enabling real customer payments.
+The application is live in production at `https://gh-store.me` and handles real
+customer traffic. Production Supabase and Cloudflare configuration are
+maintained outside this repository; ongoing hardening, UAT, and operational
+attention continue through the release checklist in `ROADMAP.md`.
 
 ## Requirements
 
@@ -47,6 +47,9 @@ Server-only integration settings:
 - `RECONCILE_CRON_SECRET`
 - `G2BULK_API_KEY`
 - `SAM_API_KEY`
+- `MAXSTORE_API_TOKEN`
+- `BATSTORE_API_TOKEN`
+- `BATSTORE_API_BASE_URL`
 - `BINANCE_PAY_API_KEY`
 - `BINANCE_PAY_SECRET_KEY`
 - `BINANCE_PAY_WEBHOOK_SECRET`
@@ -135,9 +138,9 @@ The Worker also hosts the owner Telegram bot: `TELEGRAM_BOT_TOKEN`,
 be set as Worker secrets for alerts to be delivered. See
 `docs/operations/telegram-bot.md` for the full setup.
 
-Before production launch, verify the domain, Auth redirect URLs, payment and
-provider callbacks, Worker secrets, reconciliation logs, smoke tests, and
-rollback procedure using the release checklist in `ROADMAP.md`.
+The domain, Auth redirect URLs, payment and provider callbacks, Worker secrets,
+reconciliation logs, smoke tests, and rollback procedure are verified and live;
+keep running the release checklist in `ROADMAP.md` for ongoing hardening.
 
 ## Framework migration
 
