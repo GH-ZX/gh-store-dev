@@ -13,6 +13,12 @@
 	"account_id": "5c885c3c858ff52e420d04dfb76e9377",
 	"compatibility_date": "2026-09-03",
 	"main": "./workers/app.ts",
+	// Static client build (CSS/JS/images) is served as Worker Assets; the
+	// worker handles only HTML and API routes. Without this the page renders
+	// unstyled because /assets/* requests 404.
+	"assets": {
+		"directory": "./build/client"
+	},
 	"compatibility_flags": [
 		"nodejs_compat",
 		"global_fetch_strictly_public"
@@ -43,9 +49,10 @@
 	"triggers": {
 		"crons": ["*/5 * * * *"]
 	},
-	"limits": {
-		"cpu_ms": 60000
-	},
+	// CPU limit is omitted on purpose: the destination account is on the Free
+	// plan and deploying with cpu_ms fails (code 100328). Re-add after upgrading
+	// to Workers Paid:
+	//   "limits": { "cpu_ms": 60000 },
 	"images": {
 		"binding": "IMAGES"
 	}
