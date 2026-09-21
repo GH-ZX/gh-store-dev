@@ -10,7 +10,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "gh-store",
-	"account_id": "d068278103f7547ed926499dcd9b653d",
+	"account_id": "5c885c3c858ff52e420d04dfb76e9377",
 	"compatibility_date": "2026-09-03",
 	"main": "./workers/app.ts",
 	"compatibility_flags": [
