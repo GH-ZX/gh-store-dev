@@ -11,6 +11,7 @@ import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { buildPageMeta } from "@/lib/seo";
+import { GoogleIcon } from "@/components/ui/icons";
 import {
   createSessionClient,
   getSessionUserId,
@@ -183,7 +184,8 @@ export default function LocaleLogin() {
             <input type="hidden" name="mode" value="google" />
             <input type="hidden" name="redirectTo" value={next} />
             <button type="submit" disabled={busy} className={accountSecondary}>
-              {auth.googleSignInAction}
+              <GoogleIcon className="size-5 shrink-0" />
+              <span>{auth.googleSignInAction}</span>
             </button>
           </Form>
           <div className="sf-auth-links">
