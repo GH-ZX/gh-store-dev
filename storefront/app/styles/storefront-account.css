@@ -189,12 +189,89 @@
   max-width: 560px;
 }
 [data-storefront-shell] .sf-auth-page {
-  width: min(460px, calc(100% - 32px));
-  margin: 48px auto 64px;
-  padding: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
+  direction: ltr;
+  width: min(1120px, calc(100% - 48px));
+  min-height: 620px;
+  margin: 44px auto 64px;
+  padding: 0;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 22px;
   background: var(--surface);
+  box-shadow: 0 24px 70px rgb(18 29 55 / .12);
+  overflow: hidden;
+}
+[data-storefront-shell] .sf-auth-content {
+  align-self: center;
+  min-width: 0;
+  padding: clamp(28px, 4.5vw, 64px);
+}
+[data-storefront-shell][dir=rtl] .sf-auth-content,
+[data-storefront-shell][dir=rtl] .sf-auth-visual-copy {
+  direction: rtl;
+}
+[data-storefront-shell] .sf-auth-visual {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 620px;
+  align-items: flex-end;
+  padding: clamp(28px, 4.5vw, 60px);
+  overflow: hidden;
+  background: #080e27;
+  color: #fff;
+}
+[data-storefront-shell] .sf-auth-visual::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(8 14 39 / .94) 0%, rgb(8 14 39 / .72) 38%, rgb(8 14 39 / .12) 100%);
+  content: "";
+}
+[data-storefront-shell] .sf-auth-visual > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+}
+[data-storefront-shell] .sf-auth-visual-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 390px;
+}
+[data-storefront-shell] .sf-auth-visual-brand {
+  display: inline-flex;
+  margin-bottom: 18px;
+  padding: 7px 11px;
+  border: 1px solid rgb(255 255 255 / .26);
+  border-radius: 999px;
+  background: rgb(255 255 255 / .1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+[data-storefront-shell] .sf-auth-visual-copy h2 {
+  max-width: 14ch;
+  color: #fff;
+  font-size: clamp(30px, 3.2vw, 46px);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+[data-storefront-shell][dir=rtl] .sf-auth-visual-copy h2 {
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+[data-storefront-shell] .sf-auth-visual-copy p {
+  max-width: 38ch;
+  margin-top: 14px;
+  color: rgb(255 255 255 / .8);
+  font-size: 15px;
+  line-height: 1.75;
 }
 [data-storefront-shell] .sf-auth-page .sf-account-heading {
   margin-bottom: 28px;
@@ -387,12 +464,29 @@
   border-color: var(--accent);
 }
 @media (max-width: 900px) {
+  [data-storefront-shell] .sf-auth-page,
+  [data-storefront-shell] .sf-auth-visual {
+    min-height: 560px;
+  }
   [data-storefront-shell] .sf-account-profile-grid,
   [data-storefront-shell] .sf-content-columns {
     grid-template-columns: minmax(0, 1fr);
   }
   [data-storefront-shell] .sf-content-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 740px) {
+  [data-storefront-shell] .sf-auth-page {
+    display: block;
+    width: min(480px, calc(100% - 32px));
+    min-height: 0;
+  }
+  [data-storefront-shell] .sf-auth-content {
+    padding: 28px;
+  }
+  [data-storefront-shell] .sf-auth-visual {
+    display: none;
   }
 }
 @media (max-width: 640px) {
@@ -422,6 +516,9 @@
   }
   [data-storefront-shell] .sf-auth-page {
     margin-block: 24px 40px;
+    padding: 0;
+  }
+  [data-storefront-shell] .sf-auth-content {
     padding: 24px 20px;
   }
   [data-storefront-shell] .sf-auth-page .sf-account-title {

@@ -119,82 +119,100 @@ export default function LocaleLogin() {
   const result = useActionData<typeof action>();
   const busy = useNavigation().state !== "idle";
   const auth = getMessages(locale, "admin").auth;
+  const shop = getMessages(locale, "home").shop;
   const signup = mode === "sign-up";
   return (
     <section className="sf-auth-page">
-      <AccountHeading
-        title={signup ? auth.signUpTitle : auth.signInTitle}
-        description={signup ? auth.signUpDescription : auth.signInDescription}
-      />
-      <div className="sf-auth-body">
-        <Form method="post" className="grid gap-5">
-          <input type="hidden" name="mode" value={mode} />
-          <input type="hidden" name="redirectTo" value={next} />
-          <label className="grid gap-2 text-sm font-medium">
-            {auth.emailLabel}
-            <input
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              dir="ltr"
-              className={accountField}
-            />
-          </label>
-          <label className="grid gap-2 text-sm font-medium">
-            {auth.passwordLabel}
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={signup ? 8 : 1}
-              maxLength={128}
-              autoComplete={signup ? "new-password" : "current-password"}
-              dir="ltr"
-              className={accountField}
-            />
-            <span className="text-xs text-[var(--ink-muted)]">
-              {signup ? auth.signUpPasswordHint : auth.passwordHint}
-            </span>
-          </label>
-          {result?.error ? (
-            <p role="alert" className="text-sm text-[var(--danger)]">
-              {auth.errors[result.error as keyof typeof auth.errors] ??
-                auth.errors.invalid_input}
-            </p>
-          ) : null}
-          {result?.notice ? (
-            <p role="status" className="text-sm text-[var(--success)]">
-              {auth.notices[result.notice as keyof typeof auth.notices]}
-            </p>
-          ) : null}
-          <button
-            className={accountButton}
-            type="submit"
-            disabled={busy}
-            aria-busy={busy}
-          >
-            {signup ? auth.signUpAction : auth.signInAction}
-          </button>
-        </Form>
-        <Form method="post" className="mt-4 grid">
-          <input type="hidden" name="mode" value="google" />
-          <input type="hidden" name="redirectTo" value={next} />
-          <button type="submit" disabled={busy} className={accountSecondary}>
-            {auth.googleSignInAction}
-          </button>
-        </Form>
-        <div className="sf-auth-links">
-          <Link
-            to={`/${locale}/login?mode=${signup ? "sign-in" : "sign-up"}&next=${encodeURIComponent(next)}`}
-          >
-            {signup ? auth.signInAction : auth.signUpAction}
-          </Link>
-          <Link to={`/${locale}/forgot-password`}>
-            {getMessages(locale, "account").recovery.forgotLink}
-          </Link>
+      <div className="sf-auth-content">
+        <AccountHeading
+          title={signup ? auth.signUpTitle : auth.signInTitle}
+          description={signup ? auth.signUpDescription : auth.signInDescription}
+        />
+        <div className="sf-auth-body">
+          <Form method="post" className="grid gap-5">
+            <input type="hidden" name="mode" value={mode} />
+            <input type="hidden" name="redirectTo" value={next} />
+            <label className="grid gap-2 text-sm font-medium">
+              {auth.emailLabel}
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                dir="ltr"
+                className={accountField}
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-medium">
+              {auth.passwordLabel}
+              <input
+                name="password"
+                type="password"
+                required
+                minLength={signup ? 8 : 1}
+                maxLength={128}
+                autoComplete={signup ? "new-password" : "current-password"}
+                dir="ltr"
+                className={accountField}
+              />
+              <span className="text-xs text-[var(--ink-muted)]">
+                {signup ? auth.signUpPasswordHint : auth.passwordHint}
+              </span>
+            </label>
+            {result?.error ? (
+              <p role="alert" className="text-sm text-[var(--danger)]">
+                {auth.errors[result.error as keyof typeof auth.errors] ??
+                  auth.errors.invalid_input}
+              </p>
+            ) : null}
+            {result?.notice ? (
+              <p role="status" className="text-sm text-[var(--success)]">
+                {auth.notices[result.notice as keyof typeof auth.notices]}
+              </p>
+            ) : null}
+            <button
+              className={accountButton}
+              type="submit"
+              disabled={busy}
+              aria-busy={busy}
+            >
+              {signup ? auth.signUpAction : auth.signInAction}
+            </button>
+          </Form>
+          <Form method="post" className="mt-4 grid">
+            <input type="hidden" name="mode" value="google" />
+            <input type="hidden" name="redirectTo" value={next} />
+            <button type="submit" disabled={busy} className={accountSecondary}>
+              {auth.googleSignInAction}
+            </button>
+          </Form>
+          <div className="sf-auth-links">
+            <Link
+              to={`/${locale}/login?mode=${signup ? "sign-in" : "sign-up"}&next=${encodeURIComponent(next)}`}
+            >
+              {signup ? auth.signInAction : auth.signUpAction}
+            </Link>
+            <Link to={`/${locale}/forgot-password`}>
+              {getMessages(locale, "account").recovery.forgotLink}
+            </Link>
+          </div>
         </div>
       </div>
+      <aside className="sf-auth-visual" aria-labelledby="sf-auth-visual-title">
+        <img
+          src="/storefront/digital-essentials-v2.webp"
+          alt=""
+          width={1600}
+          height={900}
+          fetchPriority="high"
+          decoding="async"
+        />
+        <div className="sf-auth-visual-copy">
+          <span className="sf-auth-visual-brand">GH STORE</span>
+          <h2 id="sf-auth-visual-title">{shop.title}</h2>
+          <p>{shop.description}</p>
+        </div>
+      </aside>
     </section>
   );
 }
