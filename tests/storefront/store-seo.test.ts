@@ -6,10 +6,15 @@ import { normalizePageSeo, resolvePageSeo } from "../../storefront/app/lib/setti
 const settings = { ...EMPTY_PUBLIC_SETTINGS, branding: { nameAr: "متجر تجريبي", nameEn: "Example store", useEverywhere: true }, seo: { ...EMPTY_PUBLIC_SETTINGS.seo, descriptionEn: "Owner description", pages: { "/games": { titleAr: "", titleEn: "Owner catalog", descriptionAr: "", descriptionEn: "Catalog description" } } } };
 const matches = [{ id: "root", loaderData: { seoSettings: settings } }];
 describe("public page SEO", () => {
-  it("reflects the saved home brand and description", () => {
+  it("keeps a descriptive homepage title and honors its saved description", () => {
     const meta = buildStorePageMeta({ locale: "en", title: "Default", description: "Default description" }, matches);
-    expect(meta).toContainEqual({ title: "Example store" });
+    expect(meta).toContainEqual({ title: "Default" });
     expect(meta).toContainEqual({ name: "description", content: "Owner description" });
+  });
+  it("uses store-specific copy when a saved homepage title is only the brand", () => {
+    const saved = [{ id: "root", loaderData: { seoSettings: { ...settings, seo: { ...settings.seo, titleEn: "GH Store" } } } }];
+    expect(buildStorePageMeta({ locale: "en", title: "GH Store | Digital products", description: "Shop" }, saved))
+      .toContainEqual({ title: "GH Store | Digital products" });
   });
   it("honors the owner's localized homepage SEO title before branding", () => {
     const customized = [{ id: "root", loaderData: { seoSettings: {

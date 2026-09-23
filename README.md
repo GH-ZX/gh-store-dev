@@ -146,10 +146,15 @@ keep running the release checklist in `ROADMAP.md` for ongoing hardening.
 
 The active application is `storefront/`. Root `dev`, `build`, `typecheck`,
 `preview`, and deployment commands target React Router. The original Next.js
-source remains in `src/` as a behavior reference; `dev:legacy`, `build:legacy`,
+source remains in `legacy-next-snapshot/` as an inactive behavior reference; `dev:legacy`, `build:legacy`,
 and `typecheck:legacy` are explicit reference commands.
 
 `pnpm test` runs both the original domain regression suite and migrated runtime
 tests. Browser tests use the React Router server; set `E2E_BASE_URL` for an
 already running instance and `PLAYWRIGHT_BROWSER_CHANNEL=chrome` for installed
 Chrome. Keep account credentials in local environment variables.
+
+## Adding suppliers
+
+See [Adding a fulfillment API](docs/operations/adding-providers.md) for adapter
+registration, catalog boundaries, and purchase/reconciliation safety requirements.

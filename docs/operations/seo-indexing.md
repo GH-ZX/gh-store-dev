@@ -71,3 +71,21 @@ property's updated report.
 The schema choices follow Google's
 [organization guidance](https://developers.google.com/search/docs/appearance/structured-data/organization)
 and [product snippet guidance](https://developers.google.com/search/docs/appearance/structured-data/product-snippet).
+
+## Homepage identity and old About search results
+
+`/` permanently redirects to `/ar`; `/about` resolves to `/ar/about`, a separate
+information page with its own canonical URL. The homepage has dedicated Arabic
+and English metadata, an OnlineStore/WebSite identity, and a stable branded
+sharing image at `/storefront/gh-store-social.png`. Its preview no longer depends
+on whichever supplier product is featured. Explicit dashboard SEO titles and
+sharing image overrides still take precedence; a title containing only the brand
+uses the more descriptive default homepage title.
+
+After deployment, inspect `/`, `/ar`, `/en`, and `/ar/about` in Search Console.
+Check Google's selected canonical and last crawl date, request indexing of the
+homepage, and resubmit the sitemap if necessary. A search result pointing to About
+is not by itself evidence of a homepage redirect. Google selects result titles and
+site names automatically and needs to recrawl changed metadata. Cached previews
+in social apps may also need refreshing. Do not redirect or noindex a useful About
+page solely to force the homepage to rank.

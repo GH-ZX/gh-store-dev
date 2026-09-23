@@ -1,42 +1,10 @@
 import { expect, test, type Page } from "./fixtures";
 
-/**
- * The storefront as a visitor meets it.
- *
- * Every case here is something that has actually broken: a document that
- * rendered LTR under Arabic, a carousel that advanced backwards because the
- * library was never told which way reading order runs, a card whose artwork was
- * not a link, a drawer that could not be opened. Unit tests could not have
- * caught any of them — they are all questions about a real browser.
- *
- * Anonymous only. Signing in needs an account, and creating one writes to the
- * project's auth; that belongs to the staging acceptance run.
- */
-
-/**
- * Open the homepage and wait for the carousel to be *interactive*, not merely
- * painted.
- *
- * Waiting on the network is useless here — a dev server holds an HMR socket
- * open and never idles — and waiting on something visible is worse than
- * useless: the whole page server-renders, so every element a test could look
- * for is there long before a click does anything. Clicking then silently does
- * nothing, and the failure reads as a broken component.
- *
- * The honest signal is the carousel's own track: Embla writes a `translate3d`
- * onto it when it activates, and nothing else does. The controls are no use for
- * this — every one of them is server-rendered on purpose, so that a slow
- * connection gets a complete page rather than one that grows controls as it
- * loads.
- */
+/** Anonymous navigation checks; no customer or payment mutations. */
 async function openHome(page: Page, locale: "ar" | "en") {
   await page.goto(`/${locale}`, { waitUntil: "domcontentloaded" });
-  await expect(page.locator('[aria-roledescription="carousel"]')).toBeVisible();
-  await page.waitForFunction(() => {
-    const track = document.querySelector('[aria-roledescription="slide"]')?.parentElement;
-
-    return !!track && track.style.transform.includes("translate3d");
-  });
+  await expect(page.locator(".sf-home-products")).toBeVisible();
+  await page.waitForFunction(() => Object.keys(document.querySelector(".sf-locale-control") ?? {}).some((key) => key.startsWith("__reactProps$")));
 }
 
 test.describe("document direction", () => {
@@ -71,141 +39,19 @@ test.describe("document direction", () => {
   });
 });
 
-test.describe("hero carousel", () => {
-  test("manual arrows are ready with reduced motion", async ({ page, isMobile }) => {
-    test.skip(isMobile, "phones use the product tabs and swipe gestures");
+test.describe("featured products", () => {
+  test("products stay available with reduced motion and keyboard navigation", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     for (const locale of ["ar", "en"] as const) {
       await openHome(page, locale);
-      const carousel = page.locator('[aria-roledescription="carousel"]');
-      const markers = carousel.getByRole("button", { name: /انتقل إلى|Go to/ });
-      if (await markers.count() < 2) test.skip(true, "fewer than two featured products");
-      const next = carousel.getByRole("button", { name: locale === "ar" ? "المنتج التالي" : "Next product", exact: true });
-      const previous = carousel.getByRole("button", { name: locale === "ar" ? "المنتج السابق" : "Previous product", exact: true });
-      await expect(next).toBeEnabled();
-      await next.click();
-      await expect(markers.nth(1)).toHaveAttribute("aria-current", "true");
-      await expect(previous).toBeEnabled();
-      await previous.click();
-      await expect(markers.first()).toHaveAttribute("aria-current", "true");
-    }
-  });
-
-  test("keyboard browsing pauses rotation until the visitor resumes it", async ({ page }) => {
-    for (const locale of ["ar", "en"] as const) {
-      await openHome(page, locale);
-      const carousel = page.locator('[aria-roledescription="carousel"]');
-      const rotation = carousel.locator("[data-carousel-rotation]");
-      if (await rotation.count() === 0) test.skip(true, "fewer than two featured products");
-      const product = carousel.locator('[aria-hidden="false"] a').first();
+      const product = page.locator(".sf-home-products .sf-product-card").first();
+      const destination = await product.getAttribute("href");
       await product.focus();
-      await expect(rotation).toHaveAttribute("aria-pressed", "true");
-      await expect(carousel).toHaveAttribute("aria-live", "polite");
-      await page.locator(".sf-site-header a").first().focus();
-      await expect(rotation).toHaveAttribute("aria-pressed", "true");
-      await rotation.click();
-      await page.mouse.move(0, 0);
-      await expect(rotation).toHaveAttribute("aria-pressed", "false");
-      await expect(carousel).toHaveAttribute("aria-live", "off");
+      await expect(product).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(new URL(destination!, page.url()).href);
+      await expect(page.locator("h1")).toBeVisible();
     }
-  });
-
-  test("a drag advances in reading order and never navigates", async ({ page }) => {
-    for (const locale of ["ar", "en"] as const) {
-      await openHome(page, locale);
-
-      const markers = page.getByRole("button", { name: /انتقل إلى|Go to/ });
-
-      // A store with one featured game has nothing to drag between.
-      if ((await markers.count()) < 2) {
-        test.skip(true, "fewer than two carousel slides in this catalog");
-      }
-
-      const selected = () =>
-        markers.evaluateAll((items) =>
-          items.findIndex((item) => item.getAttribute("aria-current") === "true"),
-        );
-
-      const before = await selected();
-      const viewport = page.locator('[aria-roledescription="carousel"] .gh-sheen');
-      // The discovery categories can place this below the first screen. A
-      // pointer gesture must start on the visible carousel, as a visitor's does.
-      await viewport.scrollIntoViewIfNeeded();
-      const box = await viewport.boundingBox();
-
-      expect(box).not.toBeNull();
-
-      /*
-       * "Next" is a finger moving right in Arabic and left in English: the next
-       * slide sits on the side reading order runs towards, so the track has to
-       * travel the other way to bring it in.
-       */
-      const from = locale === "ar" ? 0.2 : 0.8;
-      const to = locale === "ar" ? 0.8 : 0.2;
-      const y = box!.y + box!.height * 0.4;
-
-      await page.mouse.move(box!.x + box!.width * from, y);
-      await page.mouse.down();
-
-      for (let step = 1; step <= 5; step += 1) {
-        await page.mouse.move(box!.x + box!.width * (from + (to - from) * (step / 5)), y);
-        await page.waitForTimeout(40);
-      }
-
-      await page.mouse.up();
-      await page.waitForTimeout(1200);
-
-      const count = await markers.count();
-
-      expect(await selected()).toBe((before + 1) % count);
-      // The whole slide is a link, so the drag guard is the only thing between a
-      // swipe and a page nobody asked for.
-      expect(new URL(page.url()).pathname).toBe(`/${locale}`);
-    }
-  });
-
-  test("a logo button selects a product, and the artwork opens it", async ({ page }) => {
-    await openHome(page, "ar");
-
-    const markers = page.getByRole("button", { name: /انتقل إلى/ });
-
-    if ((await markers.count()) < 2) {
-      test.skip(true, "fewer than two carousel slides in this catalog");
-    }
-
-    await markers.nth(1).click();
-    await expect(markers.nth(1)).toHaveAttribute("aria-current", "true");
-
-    /*
-     * `aria-current` moves when the slide is *selected*, which is at the start
-     * of the scroll rather than the end. Measuring a slide that is still gliding
-     * gives coordinates it has left by the time the click lands.
-     */
-    await page.waitForFunction(() => {
-      const track = document.querySelector('[aria-roledescription="slide"]')?.parentElement;
-
-      if (!track) {
-        return false;
-      }
-
-      const settled = track.dataset.settledTransform === track.style.transform;
-
-      track.dataset.settledTransform = track.style.transform;
-
-      return settled;
-    }, undefined, { polling: 250 });
-
-    const slide = page.locator('[aria-roledescription="slide"][aria-hidden="false"] a').first();
-    const destination = await slide.getAttribute("href");
-    expect(destination).toMatch(/^\/ar\/[^/]+\/[^/]+$/);
-    const box = await slide.boundingBox();
-
-    expect(box).not.toBeNull();
-
-    // The artwork, well away from the details pill at the bottom.
-    await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height * 0.25);
-
-    await expect(page).toHaveURL(new URL(destination!, page.url()).href);
   });
 });
 
@@ -216,27 +62,16 @@ test.describe("navigation", () => {
   }) => {
     test.skip(!isMobile, "the drawer is a phone control");
 
-    // Through the carousel's hydration signal, because a drawer that has not
-    // hydrated does nothing when clicked and reads as a broken button.
     await openHome(page, "ar");
 
-    /*
-     * Located by its state rather than by its name, because the name is part of
-     * what is being tested: the one trigger both opens and closes, so it is
-     * "menu" while shut and "close" while open. A locator built on the name
-     * would stop matching the moment it worked.
-     */
-    const menu = page.locator("header button[aria-expanded]").first();
+    const menu = page.locator(".sf-menu-trigger");
 
     await expect(menu).toHaveAccessibleName("القائمة");
 
     await menu.click();
-    await expect(menu).toHaveAttribute("aria-expanded", "true");
-    await expect(menu).toHaveAccessibleName("إغلاق");
     await expect(page.getByRole("dialog", { name: "قائمة التنقل" })).toBeVisible();
 
     await page.keyboard.press("Escape");
-    await expect(menu).toHaveAttribute("aria-expanded", "false");
     await expect(menu).toHaveAccessibleName("القائمة");
 
     /*
@@ -244,7 +79,7 @@ test.describe("navigation", () => {
      * search input directly instead of a search shortcut. Click and type after
      * closing the drawer to prove its overlay no longer intercepts touches.
      */
-    const search = page.locator('header [role="combobox"]:visible');
+    const search = page.locator('header input[type="search"]:visible');
 
     await search.click();
     await expect(search).toBeFocused();

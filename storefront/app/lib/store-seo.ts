@@ -21,12 +21,14 @@ export function buildStorePageMeta(
   if (!settings) return buildPageMeta(pageInput);
   const locale = input.locale;
   const home = !input.path || input.path === "/";
+  const savedTitle = (locale === "ar" ? settings.seo.titleAr : settings.seo.titleEn).trim();
+  const brandName = (locale === "ar" ? settings.branding.nameAr : settings.branding.nameEn).trim();
+  // A saved brand-only title is a default, not a descriptive homepage title.
+  const homeTitle = savedTitle && savedTitle !== brandName && savedTitle !== "GH Store"
+    ? savedTitle : input.title;
   const overrides = home
     ? {
-        title:
-          (locale === "ar" ? settings.seo.titleAr : settings.seo.titleEn).trim() ||
-          (locale === "ar" ? settings.branding.nameAr : settings.branding.nameEn).trim() ||
-          input.title,
+        title: homeTitle,
         description:
           (locale === "ar"
             ? settings.seo.descriptionAr

@@ -35,9 +35,9 @@ import type { HomePickCandidates } from "@server/lib/services/admin-website.serv
  *
  * Everything a section says or shows is here: both titles, both subtitles, how
  * many items it holds, whether it is on, and for the three handpicked types,
- * which items. What is not here is the carousel's rotation, which has a card of
- * its own further down the page; the action carries those values over by
- * section id so this form cannot flatten them.
+ * which items. The persisted `carousel` section now selects the homepage product
+ * shelf. Older rotation fields are preserved by section id for compatibility;
+ * they do not affect the static product grid.
  */
 export type HomeLayoutEditorProps = {
   sections: HomeSection[];

@@ -7,7 +7,7 @@ import { useLoaderData, useRouteLoaderData } from "react-router";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { DEFAULT_LOCALE, isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
-import { APP_NAME } from "@/lib/app-config";
+import { buildBrandName } from "@/lib/brand";
 import { createPublicClient } from "@/lib/catalog-queries";
 import { buildOrganizationJsonLd, getSiteUrl } from "@/lib/seo";
 import {
@@ -18,10 +18,10 @@ import {
   getHomeCarousel,
   resolveHomeSections,
 } from "@server/lib/services/home.service";
-import { StorefrontCampaign } from "@/components/home/storefront-campaign";
+import { HomeProductShelf } from "@/components/home/home-product-shelf";
+import "@/styles/storefront-home.css";
 import { HomeDiscovery } from "@/components/home/home-discovery";
 import { getHomeDiscoveryCategories } from "@server/lib/services/home-discovery.service";
-import { HeroCarousel } from "@/components/home/hero-carousel";
 import {
   HomeSections,
   HomeFallbackLinks,
@@ -55,47 +55,19 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     categories,
     sections: await withAdminHomeCosts(sections),
     settings,
-    heroImage: carousel.products[0]?.imageUrl ?? null,
   };
 }
 
-export const links: Route.LinksFunction = () => [
-  {
-    rel: "preload",
-    as: "image",
-    href: "/storefront/digital-essentials-v2-mobile.webp",
-    media: "(max-width: 700px)",
-    fetchPriority: "high",
-  },
-  {
-    rel: "preload",
-    as: "image",
-    href: "/storefront/digital-essentials-v2.webp",
-    media: "(min-width: 701px)",
-    fetchPriority: "high",
-  },
-];
-
 export function meta({ params, matches }: Route.MetaArgs) {
-  const locale =
-    params.locale && isLocale(params.locale) ? params.locale : DEFAULT_LOCALE;
-  const content = getMessages(locale, "content");
-  const homeMatch = matches.find(
-    (match) => match?.id === "routes/locale-home",
-  ) as
-    | { loaderData?: { heroImage?: string | null; siteUrl?: string } }
-    | undefined;
-  const homeData = homeMatch?.loaderData;
-  return buildStorePageMeta(
-    {
-      locale,
-      title: APP_NAME,
-      description: content.about.description,
-      imageUrl: homeData?.heroImage ?? null,
-      siteUrl: homeData?.siteUrl ?? getSiteUrl(),
-    },
-    matches,
-  );
+  const locale = params.locale && isLocale(params.locale) ? params.locale : DEFAULT_LOCALE;
+  const home = getMessages(locale, "home");
+  return buildStorePageMeta({
+    locale,
+    title: home.shop.seoTitle,
+    description: home.shop.seoDescription,
+    imageUrl: "/storefront/gh-store-social.png",
+    imageAlt: "GH Store",
+  }, matches);
 }
 
 export default function LocaleHome() {
@@ -114,34 +86,22 @@ export default function LocaleHome() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(buildOrganizationJsonLd(siteUrl)).replace(
+          __html: JSON.stringify(buildOrganizationJsonLd(siteUrl, settings.branding.useEverywhere ? buildBrandName(settings, locale) : undefined)).replace(
             /</g,
             "\\u003c",
           ),
         }}
       />
       <Section spacing="page" className="sf-home-opening">
-        <StorefrontCampaign locale={locale} />
+        <div className="sf-shop-intro">
+          <div>
+            <h1>{home.shop.title}</h1>
+            <p>{home.shop.description}</p>
+          </div>
+        </div>
         <HomeDiscovery categories={categories} locale={locale} />
         {carousel.products.length > 0 ? (
-          <HeroCarousel
-            liveEdit={liveEdit}
-            products={carousel.products}
-            locale={locale}
-            intervalSeconds={carousel.section?.intervalSeconds ?? 6}
-            autoplay={carousel.section?.autoplay ?? true}
-            loop={carousel.section?.loop ?? true}
-            align={carousel.section?.align ?? "center"}
-            imageFit={carousel.section?.imageFit ?? "cover"}
-            imageAspect={carousel.section?.imageAspect ?? "auto"}
-            imagePositionX={carousel.section?.imagePositionX ?? 50}
-            imagePositionY={carousel.section?.imagePositionY ?? 50}
-            labels={{
-              ...home.carousel,
-              details: common.actions.details,
-              featured: common.badges.featured,
-            }}
-          />
+          <HomeProductShelf products={carousel.products} locale={locale} liveEdit={liveEdit} />
         ) : null}
       </Section>
       {sections.length ? (

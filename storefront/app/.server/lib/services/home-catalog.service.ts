@@ -159,7 +159,7 @@ export async function getCarouselProducts(supabase: SupabaseClient, locale: Loca
     throw new CatalogReadError();
   }
 
-  return data.map((game) => toStoreProduct(game as unknown as ProductRow, locale));
+  return attachPriceFrom(supabase, data.map((product) => toStoreProduct(product as unknown as ProductRow, locale)));
 }
 
 /**

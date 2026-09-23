@@ -118,3 +118,40 @@
 
 /* Unmodified Simple Icons keep their brand colors on a readable neutral tile. */
 :root:not([data-theme=light]) [data-storefront-shell] .sf-featured-tab img[data-logo-source=simpleicons]:is(:not([data-logo-tone]), [data-logo-tone=none]) { background:#f5f6f8; border-radius:5px; padding:3px; }
+
+/* Product discovery comes before promotions. Keep the opening compact on phones. */
+[data-storefront-shell] .sf-home-opening { padding-block: 24px 8px; }
+[data-storefront-shell] .sf-shop-intro h1 { font-size:clamp(22px,2.6vw,34px); font-weight:650; line-height:1.4; color:var(--ink); text-wrap:balance; }
+[data-storefront-shell] .sf-shop-intro p { margin-top:6px; font-size:14px; line-height:1.7; color:var(--ink-muted); }
+[data-storefront-shell] .sf-discovery { margin-top:18px; padding:0; background:transparent; border:0; border-radius:0; }
+[data-storefront-shell] .sf-discovery-heading h2 { font-size:18px; line-height:1.5; font-weight:650; color:var(--ink); }
+[data-storefront-shell] .sf-discovery-heading { gap:12px; }
+[data-storefront-shell] .sf-discovery-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+[data-storefront-shell] .sf-discovery-list li { flex:0 1 auto; }
+[data-storefront-shell] .sf-discovery-link { height:auto; min-height:52px; padding:8px 14px; gap:10px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--surface); }
+[data-storefront-shell] .sf-discovery-link:hover { border-color:var(--accent); background:var(--surface-strong); }
+[data-storefront-shell] .sf-discovery-art { width:28px; height:28px; }
+[data-storefront-shell] .sf-discovery-art>svg { width:22px; height:22px; }
+[data-storefront-shell] .sf-discovery-copy strong { font-size:13px; }
+[data-storefront-shell] .sf-discovery-copy>span { display:none; }
+[data-storefront-shell] .sf-home-products { margin-top:24px; }
+[data-storefront-shell] .sf-home-products .sf-product-grid { margin-top:12px; gap:14px; grid-template-columns:repeat(5,minmax(0,1fr)); }
+[data-storefront-shell] .sf-home-products .sf-product-cover { aspect-ratio: 4 / 3; }
+[data-storefront-shell] .sf-home-products .sf-product-copy { padding:12px; }
+[data-storefront-shell] .sf-home-products .sf-product-title { font-size:15px; }
+[data-storefront-shell] .sf-home-products .sf-product-card-footer { flex-wrap:wrap; gap:6px; }
+@media (max-width: 1000px) {
+  [data-storefront-shell] .sf-home-products .sf-product-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 600px) {
+  [data-storefront-shell] .sf-home-opening { padding-block:16px 0; }
+  [data-storefront-shell] .sf-discovery { margin-top:12px; }
+  [data-storefront-shell] .sf-discovery-list { gap:6px; }
+  [data-storefront-shell] .sf-discovery-link { min-height:44px; padding:7px 10px; gap:7px; }
+  [data-storefront-shell] .sf-discovery-art { width:20px; height:20px; }
+  [data-storefront-shell] .sf-discovery-art>svg { width:20px; height:20px; }
+  [data-storefront-shell] .sf-discovery-copy strong { font-size:12px; }
+  [data-storefront-shell] .sf-home-products { margin-top:16px; }
+  [data-storefront-shell] .sf-home-products .sf-product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  [data-storefront-shell] .sf-discovery-all { font-size:12px; }
+}

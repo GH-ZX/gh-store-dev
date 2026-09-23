@@ -36,11 +36,10 @@ Sam, G2Bulk, and IGDB APIs, and they handle cases a reading of the API docs does
 not reveal. Before building anything that touches a provider, read how echocore
 does it and take that behaviour.
 
-Diverge only where this stack requires it — Next.js App Router instead of Vite
-and React Router, server components and server actions instead of client fetches,
-TypeScript and RLS-first services instead of edge functions for everything — or
-where echocore has a defect worth not repeating. When the shape must change, keep
-the behaviour and say in a comment what was kept and why.
+The active stack is React Router framework mode in `storefront/`, rendered on
+Cloudflare Workers with Supabase. Earlier Next.js stage notes below are historical.
+Preserve provider behavior through typed server services, route loaders/actions,
+and RLS. Where the reference has a defect, fix it and document the evidence.
 
 Never edit `echocore-store`. It is read-only reference.
 

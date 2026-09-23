@@ -5,7 +5,6 @@ import { AdminCard } from "@/components/admin/admin-form";
 import { BrandingForm } from "@/components/admin/branding-form";
 import { ContactChannelsEditor } from "@/components/admin/contact-channels-editor";
 import { HomeLayoutEditor } from "@/components/admin/home-layout-editor";
-import { CarouselForm } from "@/components/admin/carousel-form";
 import { PageSeoEditor } from "@/components/admin/page-seo-editor";
 import { SeoForm } from "@/components/admin/seo-form";
 import { SocialLinksEditor } from "@/components/admin/social-links-editor";
@@ -75,14 +74,6 @@ export default function WebsiteSettingsPage() {
           noteAr={settings.contactNoteAr}
           noteEn={settings.contactNoteEn}
           messages={messages.contact}
-          errors={messages.errors}
-        />
-      </AdminCard>
-
-      <AdminCard title={messages.carousel.title} description={messages.carousel.description} collapsible defaultOpen={false}>
-        <CarouselForm
-          section={settings.sections.find((section) => section.type === "carousel") ?? null}
-          messages={messages.carousel}
           errors={messages.errors}
         />
       </AdminCard>

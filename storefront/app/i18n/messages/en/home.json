@@ -10,7 +10,7 @@
     "shopGiftCards": "Shop gift cards"
   },
   "discovery": {
-    "title": "Find your next digital essential",
+    "title": "Shop by category",
     "description": "Explore products by category.",
     "allProducts": "All products",
     "product": "product",
@@ -79,5 +79,13 @@
   },
   "social": {
     "buttonLabel": "All our links"
+  },
+  "shop": {
+    "title": "Your digital essentials, a tap away.",
+    "description": "Top-ups, gift cards and subscriptions. Pick a product and compare packages.",
+    "featured": "Featured products",
+    "browse": "Browse all products",
+    "seoTitle": "GH Store | Digital Products, Gift Cards & Subscriptions",
+    "seoDescription": "Shop digital products, gift cards, AI subscriptions and game top-ups at GH Store. Compare packages, prices and delivery requirements."
   }
 }

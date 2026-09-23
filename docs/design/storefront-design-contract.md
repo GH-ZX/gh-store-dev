@@ -5,14 +5,16 @@ independently still read as one storefront.
 
 ## Visual language
 
-Deep-space glass. A near-black canvas, ambient mesh glow behind hero areas, glass
-panels with hairline borders, wide geometric headings, and generous whitespace.
-Cyan is the interactive accent, violet is the secondary glow, amber marks a sale.
+A compact digital storefront with readable surfaces, consistent product artwork,
+and clear prices. The header search, category links and featured product grid
+lead the homepage. Products are directly accessible without waiting for a carousel
+or scrolling past campaign banners. Preserve dark and light themes, Arabic RTL
+and English LTR. Use the existing semantic tokens for color and state.
 
 ## Hard rules
 
 - **Never use a raw colour, radius, shadow, or easing value.** Only
-  `var(--token)` from `src/styles/tokens.css`. No `#hex`, no `rgba()`, no
+  `var(--token)` from `storefront/app/styles/tokens.css`. No `#hex`, no `rgba()`, no
   `shadow-md`, no `text-gray-400`.
 - **No harsh shadows and no plain 1px grey borders.** Use `--elevation-*` and
   `--line` / `--line-strong`.
@@ -27,8 +29,10 @@ Cyan is the interactive accent, violet is the secondary glow, amber marks a sale
 - **Touch targets are at least 44px** (`min-h-11`).
 - **No inline locale ternaries in components.** Every string comes from a message
   namespace. Placeholders go through `formatMessage`.
-- **Server Components by default.** Add `"use client"` only for interaction or a
-  browser API, and keep the client component as small as possible.
+- **React Router framework mode.** Route loaders/actions handle server work.
+  Keep credentials and privileged services under `storefront/app/.server/`.
+  The Next.js snapshot is inactive; its Server Component conventions do not
+  describe this runtime.
 
 ## Building blocks — use these, do not re-invent them
 
@@ -42,8 +46,8 @@ Cyan is the interactive accent, violet is the secondary glow, amber marks a sale
 | Horizontal scroll rows | `@/components/ui/rail` (`Rail`, `RailItem`) |
 | Icons | `@/components/ui/icons` |
 | Empty / error / notice / skeleton | `@/components/shared/states` |
-| Game and offer tiles | `@/components/store/game-card`, `offer-card` |
-| Grids and rails of tiles | `@/components/store/collections` (`GameGrid`, `OfferGrid`) |
+| Product and offer tiles | `@/components/store/product-card`, `offer-card` |
+| Grids and rails of tiles | `@/components/store/collections` (`ProductGrid`, `OfferGrid`) |
 | Card label bundles | `@/lib/catalog/labels` |
 | Artwork | `@/components/store/store-image` (`StoreImage`) |
 | Search input | `@/components/search/search-field` |
@@ -58,11 +62,13 @@ Cyan is the interactive accent, violet is the secondary glow, amber marks a sale
 
 ## Data rules
 
-- Pages call services from `src/lib/services/`. No Supabase client in a page.
+- Pages call services from `storefront/app/.server/lib/services/`. No Supabase client in a page.
 - Catch `CatalogReadError` and render `ErrorState`; let anything else throw.
-- `notFound()` for a missing entity, never an empty page.
-- Every page exports `generateMetadata` built with `buildPageMetadata` from
-  `@/lib/seo`, so canonical URLs and language alternates stay consistent.
+- Throw a 404 `Response` for a missing entity; render the route error boundary.
+- Public routes export `meta` built with `buildStorePageMeta` from
+  `@/lib/store-seo`, keeping canonical URLs and language alternates consistent.
+- Homepage metadata uses dedicated localized store copy and a branded social
+  image. Featured products must never define the store identity.
 
 ## Accessibility
 

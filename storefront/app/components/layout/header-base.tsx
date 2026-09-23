@@ -1,6 +1,7 @@
 import { Form, Link, useLocation, useNavigation } from "react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { type Locale } from "@/i18n/config";
+import { getMessages } from "@/i18n/messages";
 import {
   BellIcon,
   CloseIcon,
@@ -418,6 +419,7 @@ export function HeaderMobileDrawer({
   children,
   footer,
 }: HeaderMobileDrawerProps) {
+  const navigation = getMessages(locale, "common").navigation;
   const homeHref = brandHref || `/${locale}`;
 
   return (
@@ -434,7 +436,7 @@ export function HeaderMobileDrawer({
         marginLeft: "auto",
         marginRight: 0,
       }}
-      aria-label="Navigation menu"
+      aria-label={navigation.mobileLabel}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           dialogRef.current?.close();
@@ -450,7 +452,7 @@ export function HeaderMobileDrawer({
           type="button"
           className={headerControlClass}
           onClick={() => dialogRef.current?.close()}
-          aria-label="Close menu"
+          aria-label={navigation.close}
         >
           <CloseIcon />
         </button>

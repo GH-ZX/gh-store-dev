@@ -1,33 +1,10 @@
-import { G2BulkFulfillmentClient } from "@server/providers/g2bulk/client";
-import { classifyProviderStatus } from "@server/providers/g2bulk/fulfillment-schemas";
-import { G2BULK_PROVIDER_NAME } from "@server/providers/g2bulk/mapping";
-import {
-  decideReconciliation,
-  GRACE_MINUTES,
-  minutesSince,
-  type ProviderState,
-} from "@server/lib/orders/reconciliation-policy";
-import { MaxStoreClient } from "@server/providers/maxstore/client";
-import { MAXSTORE_PROVIDER_NAME } from "@server/providers/maxstore/mapping";
-import { classifyOrderStatus as classifyMaxStoreOrder } from "@server/providers/maxstore/schemas";
-import { BatStoreClient } from "@server/providers/batstore/client";
-import { BATSTORE_PROVIDER_NAME } from "@server/providers/batstore/mapping";
-import { classifyOrderStatus as classifyBatStoreOrder } from "@server/providers/batstore/schemas";
+import { decideReconciliation, GRACE_MINUTES, minutesSince, type ProviderState } from "@server/lib/orders/reconciliation-policy";
+import { getFulfillmentProvider } from "./providers";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@server/lib/supabase/service";
 import { log } from "@server/lib/logging/logger";
-import {
-  loadContext,
-  providerIdempotencyKey,
-  readBatStoreToken,
-  readCallbackUrl,
-  readCredentials,
-  readMaxStoreToken,
-} from "./context";
+import { loadContext, providerIdempotencyKey } from "./context";
 import { recordAttempt, setOrderStatus } from "./attempts";
 import { announceOutcome, describe, failAndRefund } from "./settle";
-import { fulfillTopup, fulfillVoucher } from "./g2bulk";
-import { fulfillMaxStore } from "./maxstore";
-import { deliveredItems, fulfillBatStore } from "./batstore";
 import { fulfillStored } from "./stored";
 import type { FulfillmentOutcome, ReconcileOutcome } from "./types";
 
@@ -92,47 +69,15 @@ export async function fulfillOrder(orderId: string): Promise<FulfillmentOutcome>
     return outcome;
   }
 
-  if (context.providerName === MAXSTORE_PROVIDER_NAME) {
-    const apiToken = await readMaxStoreToken();
-
-    if (!apiToken) {
-      return { state: "skipped", reason: "The MaxStore provider is not configured." };
-    }
-
-    const outcome = await fulfillMaxStore(context, apiToken);
-
-    await announceOutcome(context, outcome);
-
-    return outcome;
+  const provider = getFulfillmentProvider(context.providerName);
+  if (!provider) {
+    return { state: "skipped", reason: "No supported supplier is mapped to this order." };
   }
-
-  if (context.providerName === BATSTORE_PROVIDER_NAME) {
-    const apiToken = await readBatStoreToken();
-
-    if (!apiToken) {
-      return { state: "skipped", reason: "The BatStore provider is not configured." };
-    }
-
-    const outcome = await fulfillBatStore(context, apiToken);
-
-    await announceOutcome(context, outcome);
-
-    return outcome;
+  const credentials = await provider.readCredentials();
+  if (!credentials) {
+    return { state: "skipped", reason: "That supplier is not configured." };
   }
-
-  const apiKey = await readCredentials();
-
-  if (!apiKey) {
-    return { state: "skipped", reason: "The G2Bulk provider is not configured." };
-  }
-
-  const client = new G2BulkFulfillmentClient({ apiKey });
-  const outcome =
-    context.offerType === "topup"
-      ? // Only top-ups have a callback: the supplier documents one for game
-        // orders and not for card purchases, which deliver their codes inline.
-        await fulfillTopup(client, context, await readCallbackUrl())
-      : await fulfillVoucher(client, context);
+  const outcome = await provider.fulfill(context, credentials);
 
   await announceOutcome(context, outcome);
 
@@ -145,12 +90,9 @@ export async function fulfillOrder(orderId: string): Promise<FulfillmentOutcome>
  * Checkout gives the supplier about ten seconds and then leaves the order at
  * `fulfilling`; this is what eventually goes back and asks how it turned out.
  *
- * It never buys. The purchase path is reached only from checkout and from an
- * operator's explicit retry, both of which a person is waiting on. A background
- * sweep that could place an order would be one bug away from buying a second
- * time for every order it looked at, so it is not given the option: when there
- * is no supplier order to poll, the answer is a question for a human rather
- * than a purchase or a refund.
+ * Existing attempts are only polled. A paid order with a successful lookup
+ * proving that no attempt exists may enter the idempotent purchase path (bot
+ * orders use this). Failed lookups and ambiguous purchases never trigger a buy.
  */
 export async function reconcileOrder(orderId: string, now = Date.now()): Promise<ReconcileOutcome> {
   if (!hasServiceRoleKey()) {
@@ -163,14 +105,34 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
     return { action: "skipped", reason: "Order not found." };
   }
 
+  if (context.deliveryKind === "manual") {
+    return { action: "skipped", reason: "Manual order — awaiting admin completion." };
+  }
+  if (context.deliveryKind === "stored") {
+    if (context.status !== "paid") return { action: "skipped", reason: "Stored order does not use supplier polling." };
+    const outcome = await fulfillOrder(orderId);
+    return outcome.state === "completed"
+      ? { action: "completed" }
+      : { action: "escalated", reason: "Stored delivery needs attention." };
+  }
+  const adapter = getFulfillmentProvider(context.providerName);
+  if (!adapter) {
+    return { action: "escalated", reason: "No supported supplier is mapped to this order." };
+  }
   const supabase = createSupabaseServiceClient();
-  const provider = context.providerName ?? G2BULK_PROVIDER_NAME;
-  const { data: attempt } = await supabase
+  const provider = context.providerName!;
+  const { data: attempt, error: attemptError } = await supabase
     .from("fulfillment_attempts")
     .select("id, status, external_order_id, created_at")
     .eq("provider", provider)
     .eq("idempotency_key", providerIdempotencyKey(context.orderItemId))
     .maybeSingle();
+
+  // A failed read is not evidence that no purchase was attempted.
+  if (attemptError) {
+    log.warn("fulfilment", "attempt_lookup_failed", { orderId: context.orderId, provider });
+    return { action: "wait", reason: "Unable to verify the previous supplier attempt." };
+  }
 
   if (!attempt) {
     // Nothing was ever attempted, so nothing was bought and nothing is owed to
@@ -228,72 +190,17 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
      * callback — so a sweep that asked the wrong provider would strand every one
      * of its orders at `fulfilling` for ever.
      */
-    const credentials =
-      provider === MAXSTORE_PROVIDER_NAME
-        ? await readMaxStoreToken()
-        : provider === BATSTORE_PROVIDER_NAME
-          ? await readBatStoreToken()
-          : await readCredentials();
+    const credentials = await adapter.readCredentials();
 
     if (!credentials) {
       return { action: "skipped", reason: "That supplier is not configured." };
     }
 
     try {
-      if (provider === MAXSTORE_PROVIDER_NAME) {
-        // Keyed by our own uuid, which is what MaxStore knows the order as.
-        const [result] = await new MaxStoreClient({ apiToken: credentials }).checkOrders([
-          providerIdempotencyKey(context.orderItemId),
-        ]);
-        // MaxStore's own words map straight onto the policy's: `wait` is
-        // pending, and pending never settles an order either way.
-        providerState = result ? classifyMaxStoreOrder(result.status) : null;
-        if (providerState === "completed" && result?.delivery) {
-          const delivery = result.delivery;
-          const items = Array.isArray(delivery)
-            ? delivery.map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
-            : typeof delivery === "string"
-              ? [delivery]
-              : [];
-          deliveredPayload = { items };
-        }
-      } else if (provider === BATSTORE_PROVIDER_NAME) {
-        const result = await new BatStoreClient(credentials).getOrder(attempt.external_order_id);
-        providerState = result ? classifyBatStoreOrder(result) : null;
-        // The account data arrives on the order itself, so the sweep is where it
-        // is first seen for an order the checkout window could not wait for.
-        if (providerState === "completed" && result) {
-          deliveredPayload = deliveredItems(result).payload;
-        }
-      } else {
-        const client = new G2BulkFulfillmentClient({ apiKey: credentials });
-
-        if (context.offerType === "topup") {
-          const status = await client.findGameOrderStatus(attempt.external_order_id);
-
-          providerState = status ? classifyProviderStatus(status.status) : null;
-          refunded = status?.refunded === true;
-        } else {
-          // Voucher delivery is a separate endpoint. The game-order history only
-          // tells us a purchase finished; it does not carry the codes the customer
-          // paid for, so using it here could complete an order with no delivery.
-          const delivery = await client.pollVoucherDelivery(attempt.external_order_id);
-
-          providerState =
-            delivery.state === "delivered"
-              ? "completed"
-              : delivery.state === "failed"
-                ? "failed"
-                : delivery.state === "missing"
-                  ? null
-                  : "pending";
-          refunded = delivery.state === "failed";
-
-          if (providerState === "completed") {
-            deliveredPayload = { items: delivery.items };
-          }
-        }
-      }
+      const result = await adapter.poll(context, credentials, attempt.external_order_id);
+      providerState = result.state;
+      refunded = result.refunded === true;
+      deliveredPayload = result.delivered;
     } catch (error) {
       // An unreachable supplier is not an answer about the order. Record why the
       // check failed and leave the order where it is.
@@ -321,7 +228,6 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
 
   if (decision.action === "complete") {
     const requiresDeliveryPayload =
-      context.deliveryKind === "stored" ||
       context.offerType !== "topup";
 
     if (requiresDeliveryPayload && (!deliveredPayload || deliveredPayload.items.length === 0)) {

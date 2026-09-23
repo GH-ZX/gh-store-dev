@@ -16,10 +16,8 @@ test.afterEach(async ({ page }) => {
 async function openHome(page: Page, locale: "ar" | "en") {
   const response = await page.goto(`/${locale}`, { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBe(200);
-  await expect(page.locator("[data-storefront-shell] .sf-campaigns")).toBeVisible();
-  // Embla's transform is the existing suite's hydration signal. The configured
-  // featured discovery carousel remains part of the redesigned homepage.
-  await page.waitForFunction(() => document.querySelector('[aria-roledescription="slide"]')?.parentElement?.style.transform.includes("translate3d"));
+  await expect(page.locator(".sf-home-products")).toBeVisible();
+  await page.waitForFunction(() => Object.keys(document.querySelector(".sf-locale-control") ?? {}).some((key) => key.startsWith("__reactProps$")));
 }
 
 async function expectFits(page: Page) {
@@ -48,8 +46,8 @@ async function textContrast(page: Page) {
     const shell = getComputedStyle(document.querySelector("[data-storefront-shell]")!);
     const header = getComputedStyle(document.querySelector(".sf-site-header")!);
     const navigation = getComputedStyle(document.querySelector(".sf-category-link")!);
-    const featured = getComputedStyle(document.querySelector(".sf-featured")!);
-    const featuredDetails = getComputedStyle(document.querySelector(".sf-featured-details")!);
+    const featured = getComputedStyle(document.querySelector(".sf-product-card")!);
+    const featuredDetails = getComputedStyle(document.querySelector(".sf-product-cta")!);
     return {
       body: contrast(shell.color, shell.backgroundColor),
       navigation: contrast(navigation.color, header.backgroundColor),
@@ -85,22 +83,16 @@ for (const locale of ["ar", "en"] as const) {
     }
   });
 
-  test(`${locale} campaign artwork and destinations work`, async ({ page }) => {
+  test(`${locale} homepage identity is independent of featured products`, async ({ page }) => {
     await openHome(page, locale);
-    const campaigns = page.locator(".sf-campaigns");
-    await expect(campaigns.getByRole("link")).toHaveCount(3);
-    await expect.poll(() => campaigns.locator("img").evaluateAll((images) => images.every((image) => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
-    const destinations = await campaigns.getByRole("link").evaluateAll((links) => links.map((link) => link.getAttribute("href")));
-    expect(destinations).toEqual([`/${locale}/products`, `/${locale}/ai`, `/${locale}/gift-cards`]);
-    for (const destination of destinations) {
-      const navigation = page.waitForResponse((response) => new URL(response.url()).pathname === `${destination}.data`);
-      await campaigns.locator(`a[href="${destination}"]`).click();
-      expect((await navigation).status(), `campaign destination ${destination}`).toBe(200);
-      await expect(page).toHaveURL(new URL(destination!, page.url()).href);
-      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-      await expectFits(page);
-      await openHome(page, locale);
-    }
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://gh-store.me/${locale}`);
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", "https://gh-store.me/storefront/gh-store-social.png");
+    await expect(page).toHaveTitle(/GH Store/);
+    const graph = await page.locator('script[type="application/ld+json"]').first().textContent();
+    expect(JSON.parse(graph!)).toContainEqual(expect.objectContaining({ "@type": "WebSite", name: "GH Store", url: "https://gh-store.me" }));
+    const image = await page.request.get("/storefront/gh-store-social.png");
+    expect(image.status()).toBe(200);
+    expect(image.headers()["content-type"]).toContain("image/png");
   });
 
   test(`${locale} header search works after navigation and preserves its query across locales`, async ({ page, isMobile }) => {
@@ -110,10 +102,9 @@ for (const locale of ["ar", "en"] as const) {
       await menu.click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.keyboard.press("Escape");
-      await expect(menu).toHaveAttribute("aria-expanded", "false");
       await expect(page.getByRole("dialog")).not.toBeVisible();
     }
-    const search = page.locator(".sf-site-header [role=combobox]:visible");
+    const search = page.locator(".sf-site-header input[type=search]:visible");
     await expect(search).toHaveCount(1);
     await search.fill("steam");
     await search.press("Enter");

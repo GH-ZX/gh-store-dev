@@ -17,13 +17,18 @@ for (const locale of ["en", "ar"] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   });
 
-  test(`${locale}: campaign artwork loads and the opening has no horizontal overflow`, async ({ page }) => {
+  test(`${locale}: products are visible in the first screen and open directly`, async ({ page }) => {
     await page.goto(`/${locale}`, { waitUntil: "domcontentloaded" });
-    const artwork = page.locator(".sf-campaign-primary > img");
-    await expect(artwork).toHaveAttribute("src", "/storefront/digital-essentials-v2.webp");
-    await expect.poll(() => artwork.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    await expect(page.locator(".sf-campaign-cta")).toBeVisible();
+    const product = page.locator(".sf-home-products .sf-product-card").first();
+    await expect(product).toBeVisible();
+    const box = await product.boundingBox();
+    expect(box!.y).toBeLessThan(page.viewportSize()!.height - 120);
+    await expect(page.locator("h1")).toHaveCount(1);
     await expect(page.locator("html")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+    const href = await product.getAttribute("href");
+    await product.click();
+    await expect(page).toHaveURL(new URL(href!, page.url()).href);
+    await expect(page.locator("h1")).toBeVisible();
   });
 }
