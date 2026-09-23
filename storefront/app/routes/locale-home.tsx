@@ -18,7 +18,7 @@ import {
   getHomeCarousel,
   resolveHomeSections,
 } from "@server/lib/services/home.service";
-import { HomeProductShelf } from "@/components/home/home-product-shelf";
+import { HeroCarousel } from "@/components/home/hero-carousel";
 import "@/styles/storefront-home.css";
 import {
   HomeSections,
@@ -95,7 +95,24 @@ export default function LocaleHome() {
           </div>
         </div>
         {carousel.products.length > 0 ? (
-          <HomeProductShelf products={carousel.products} locale={locale} liveEdit={liveEdit} />
+          <HeroCarousel
+            liveEdit={liveEdit}
+            products={carousel.products}
+            locale={locale}
+            intervalSeconds={carousel.section?.intervalSeconds ?? 6}
+            autoplay={carousel.section?.autoplay ?? true}
+            loop={carousel.section?.loop ?? true}
+            align={carousel.section?.align ?? "center"}
+            imageFit={carousel.section?.imageFit ?? "cover"}
+            imageAspect={carousel.section?.imageAspect ?? "auto"}
+            imagePositionX={carousel.section?.imagePositionX ?? 50}
+            imagePositionY={carousel.section?.imagePositionY ?? 50}
+            labels={{
+              ...home.carousel,
+              details: common.actions.details,
+              featured: common.badges.featured,
+            }}
+          />
         ) : null}
       </Section>
       {sections.length ? (

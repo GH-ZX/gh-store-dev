@@ -16,7 +16,7 @@ test.afterEach(async ({ page }) => {
 async function openHome(page: Page, locale: "ar" | "en") {
   const response = await page.goto(`/${locale}`, { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBe(200);
-  await expect(page.locator(".sf-home-products")).toBeVisible();
+  await expect(page.locator(".sf-featured")).toBeVisible();
   await page.waitForFunction(() => Object.keys(document.querySelector(".sf-locale-control") ?? {}).some((key) => key.startsWith("__reactProps$")));
 }
 
@@ -46,8 +46,8 @@ async function textContrast(page: Page) {
     const shell = getComputedStyle(document.querySelector("[data-storefront-shell]")!);
     const header = getComputedStyle(document.querySelector(".sf-site-header")!);
     const navigation = getComputedStyle(document.querySelector(".sf-category-link")!);
-    const featured = getComputedStyle(document.querySelector(".sf-product-card")!);
-    const featuredDetails = getComputedStyle(document.querySelector(".sf-product-cta")!);
+    const featured = getComputedStyle(document.querySelector(".sf-featured")!);
+    const featuredDetails = getComputedStyle(document.querySelector(".sf-featured-details")!);
     return {
       body: contrast(shell.color, shell.backgroundColor),
       navigation: contrast(navigation.color, header.backgroundColor),

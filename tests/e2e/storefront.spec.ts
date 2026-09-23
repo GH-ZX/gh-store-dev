@@ -3,7 +3,7 @@ import { expect, test, type Page } from "./fixtures";
 /** Anonymous navigation checks; no customer or payment mutations. */
 async function openHome(page: Page, locale: "ar" | "en") {
   await page.goto(`/${locale}`, { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".sf-home-products")).toBeVisible();
+  await expect(page.locator(".sf-featured")).toBeVisible();
   await page.waitForFunction(() => Object.keys(document.querySelector(".sf-locale-control") ?? {}).some((key) => key.startsWith("__reactProps$")));
 }
 
@@ -44,7 +44,7 @@ test.describe("featured products", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     for (const locale of ["ar", "en"] as const) {
       await openHome(page, locale);
-      const product = page.locator(".sf-home-products .sf-product-card").first();
+      const product = page.locator('.sf-featured-slide[aria-hidden="false"] .sf-featured-link').first();
       const destination = await product.getAttribute("href");
       await product.focus();
       await expect(product).toBeFocused();

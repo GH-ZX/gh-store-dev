@@ -8,13 +8,13 @@ for (const locale of ["en", "ar"] as const) {
     await expect(headerNavigation).toBeVisible();
     await expect(headerNavigation.locator(`a[href="/${locale}/products"]`)).toBeVisible();
     await expect(headerNavigation.locator(`a[href="/${locale}/games"]`)).toBeVisible();
-    await expect(page.locator(".sf-product-card").first()).toBeVisible();
+    await expect(page.locator('.sf-featured-slide[aria-hidden="false"] .sf-featured-link')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   });
 
   test(`${locale}: products are visible in the first screen and open directly`, async ({ page }) => {
     await page.goto(`/${locale}`, { waitUntil: "domcontentloaded" });
-    const product = page.locator(".sf-home-products .sf-product-card").first();
+    const product = page.locator('.sf-featured-slide[aria-hidden="false"] .sf-featured-link').first();
     await expect(product).toBeVisible();
     const box = await product.boundingBox();
     expect(box!.y).toBeLessThan(page.viewportSize()!.height - 120);
