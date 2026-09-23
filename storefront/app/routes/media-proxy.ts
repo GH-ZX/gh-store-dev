@@ -157,7 +157,7 @@ export async function loader({
       cf: {
         cacheEverything: true,
         cacheTtl: ONE_MONTH,
-        ...(width > 0 ? { image: { width, quality: 70, format: "webp" } } : {}),
+      ...(width > 0 ? { image: { width, quality: 84, format: "webp" } } : {}),
       },
     };
     const upstreamRes = await fetchPublic(targetUrl, init);

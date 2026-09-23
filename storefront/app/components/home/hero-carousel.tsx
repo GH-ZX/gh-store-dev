@@ -205,7 +205,8 @@ export function HeroCarousel({
                     tabIndex={active ? undefined : -1} className="sf-featured-link">
                     <div className="sf-featured-art" data-aspect={imageAspect}>
                       <StoreImage src={product.imageUrl} alt={product.name} fit={imageFit}
-                        focus={{x:imagePositionX,y:imagePositionY}} sizes="96px" />
+                        focus={{x:imagePositionX,y:imagePositionY}}
+                        sizes="(min-width: 1100px) 50vw, 100vw" />
                     </div>
                     <div className="sf-featured-copy">
                       <span className="sf-featured-label">{product.carouselBadge || labels.featured}</span>
