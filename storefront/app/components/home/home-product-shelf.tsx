@@ -18,9 +18,9 @@ export function HomeProductShelf({ products, locale, liveEdit }: {
   const catalog = getMessages(locale, "catalog");
   return (
     <section className="sf-home-products" aria-labelledby="home-products-title">
-      <div className="sf-discovery-heading">
+      <div className="sf-home-products-heading">
         <h2 id="home-products-title">{home.shop.featured}</h2>
-        <Link to={`/${locale}/products`} className="sf-discovery-all">
+        <Link to={`/${locale}/products`} className="sf-home-products-all">
           {common.actions.viewAll}<ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
         </Link>
       </div>

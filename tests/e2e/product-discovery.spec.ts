@@ -1,18 +1,13 @@
 import { expect, test } from "./fixtures";
 
 for (const locale of ["en", "ar"] as const) {
-  test(`${locale}: category discovery leads to real catalog pages and preserves the full catalog route`, async ({ page }) => {
+  test(`${locale}: homepage keeps category navigation in the header`, async ({ page }) => {
     await page.goto(`/${locale}`, { waitUntil: "domcontentloaded" });
-    const discovery = page.locator(".sf-discovery");
-    await expect(discovery).toBeVisible();
-    const links = discovery.locator("li a");
-    expect(await links.count()).toBeGreaterThan(0);
-    expect(await links.count()).toBeLessThanOrEqual(8);
-    await expect(discovery.locator(".sf-discovery-all")).toHaveAttribute("href", `/${locale}/products`);
-    const destination = await links.first().getAttribute("href");
-    await links.first().click();
-    await expect(page).toHaveURL(new RegExp(`${destination}$`));
-    await expect(page.locator("h1")).toBeVisible();
+    await expect(page.locator(".sf-discovery")).toHaveCount(0);
+    const headerNavigation = page.locator(".sf-category-nav");
+    await expect(headerNavigation).toBeVisible();
+    await expect(headerNavigation.locator(`a[href="/${locale}/products"]`)).toBeVisible();
+    await expect(headerNavigation.locator(`a[href="/${locale}/games"]`)).toBeVisible();
     await expect(page.locator(".sf-product-card").first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   });
