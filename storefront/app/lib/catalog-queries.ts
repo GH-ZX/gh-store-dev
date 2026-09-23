@@ -1,3 +1,4 @@
+import { toSearchTokens } from "@/lib/catalog/search";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Locale } from "@/i18n/config";
@@ -249,14 +250,16 @@ export async function searchProducts(
   const query = rawQuery.trim().slice(0, 80);
   if (!query) return { products: [], query: "" };
 
-  const token = `%${query}%`;
-  const { data, error } = await client
+  const tokens = toSearchTokens(query);
+  if (!tokens.length) return { products: [], query };
+  let search = client
     .from("products")
     .select(PRODUCT_SUMMARY_SELECT)
     .eq("is_active", true)
-    .or(`name_ar.ilike.${token},name_en.ilike.${token},slug.ilike.${token}`)
     .order("sort_order", { ascending: true })
     .limit(SEARCH_LIMIT);
+  for (const token of tokens) search = search.ilike("search_text", `%${token}%`);
+  const { data, error } = await search;
 
   if (error) throw error;
   return {

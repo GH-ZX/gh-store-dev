@@ -162,7 +162,7 @@ export function HeaderShell({
           </Link>
         </div>
 
-        {center ? <div className="flex-1 flex justify-center px-4">{center}</div> : null}
+        {center ? <div className="hidden flex-1 justify-center px-4 lg:flex">{center}</div> : null}
 
         <div className="ms-auto shrink-0">{actions}</div>
       </div>

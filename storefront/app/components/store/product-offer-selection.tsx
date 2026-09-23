@@ -1,3 +1,4 @@
+import { OfferTerms } from "@/components/store/offer-terms";
 import { useDeferredValue, useState } from "react";
 import { Link } from "react-router";
 import type { Locale } from "@/i18n/config";
@@ -12,12 +13,13 @@ import { formatNumber, formatPrice } from "@/lib/format/money";
 export function ProductOfferSelection({ locale, product, offers }: {
   locale: Locale; product: StoreProduct; offers: StoreOffer[];
 }) {
-  const [selectedId, setSelectedId] = useState(offers[0]?.id ?? "");
+  const sortedOffers = [...offers].sort((a, b) => a.price - b.price || a.name.localeCompare(b.name, locale));
+  const [selectedId, setSelectedId] = useState(sortedOffers[0]?.id ?? "");
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("");
   const filterQuery = useDeferredValue(query).trim().toLocaleLowerCase(locale);
   const regions = [...new Set(offers.flatMap((offer) => offer.regionCode ? [offer.regionCode] : []))];
-  const visibleOffers = offers.filter((offer) => (!region || offer.regionCode === region) && (!filterQuery || `${offer.name} ${offer.regionCode ?? ""}`.toLocaleLowerCase(locale).includes(filterQuery)));
+  const visibleOffers = sortedOffers.filter((offer) => (!region || offer.regionCode === region) && (!filterQuery || `${offer.name} ${offer.regionCode ?? ""}`.toLocaleLowerCase(locale).includes(filterQuery)));
   // The checkout selection must always be one of the offers the shopper can see.
   const selected = visibleOffers.find((offer) => offer.id === selectedId) ?? visibleOffers[0];
   const common = getMessages(locale, "common");
@@ -46,6 +48,7 @@ export function ProductOfferSelection({ locale, product, offers }: {
           <label className="sf-offer-choice-main">
             <input type="radio" name="selected-offer" value={offer.id} checked={offer.id === selected?.id} onChange={() => setSelectedId(offer.id)} />
             <span className="sf-offer-choice-copy"><strong><bdi>{offer.name}</bdi></strong>
+              <OfferTerms terms={offer.terms} locale={locale} />
               {offer.regionCode ? <small><bdi>{offer.regionCode}</bdi></small> : null}
               <span className="sf-offer-choice-price"><bdi dir="ltr">{formatPrice(offer.price, offer.currency, locale)}</bdi></span>
               {typeof offer.supplierCostUsd === "number" ? <small>{common.price.capital}: <bdi dir="ltr">{formatPrice(offer.supplierCostUsd, "USD", locale)}</bdi></small> : null}

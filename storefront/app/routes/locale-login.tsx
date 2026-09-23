@@ -1,3 +1,5 @@
+import { PasswordInput } from "@/components/password-input";
+import { AuthLayout } from "@/components/auth-layout";
 import {
   data,
   Form,
@@ -120,11 +122,9 @@ export default function LocaleLogin() {
   const result = useActionData<typeof action>();
   const busy = useNavigation().state !== "idle";
   const auth = getMessages(locale, "admin").auth;
-  const shop = getMessages(locale, "home").shop;
   const signup = mode === "sign-up";
   return (
-    <section className="sf-auth-page">
-      <div className="sf-auth-content">
+    <AuthLayout locale={locale}>
         <AccountHeading
           title={signup ? auth.signUpTitle : auth.signInTitle}
           description={signup ? auth.signUpDescription : auth.signInDescription}
@@ -146,9 +146,9 @@ export default function LocaleLogin() {
             </label>
             <label className="grid gap-2 text-sm font-medium">
               {auth.passwordLabel}
-              <input
+              <PasswordInput locale={locale}
                 name="password"
-                type="password"
+
                 required
                 minLength={signup ? 8 : 1}
                 maxLength={128}
@@ -199,22 +199,7 @@ export default function LocaleLogin() {
             </Link>
           </div>
         </div>
-      </div>
-      <aside className="sf-auth-visual" aria-labelledby="sf-auth-visual-title">
-        <img
-          src="/storefront/digital-essentials-v2.webp"
-          alt=""
-          width={1600}
-          height={900}
-          fetchPriority="high"
-          decoding="async"
-        />
-        <div className="sf-auth-visual-copy">
-          <span className="sf-auth-visual-brand">GH STORE</span>
-          <h2 id="sf-auth-visual-title">{shop.title}</h2>
-          <p>{shop.description}</p>
-        </div>
-      </aside>
-    </section>
+
+    </AuthLayout>
   );
 }

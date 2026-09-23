@@ -89,6 +89,13 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="gameId" value={product.id} />
 
+        <TextAreaField
+          name="searchAliases"
+          label={locale === "ar" ? "أسماء بديلة وكلمات البحث" : "Search aliases and tags"}
+          hint={locale === "ar" ? "افصل بفاصلة أو سطر. تُستخدم في بحث المتجر ولا تظهر كحشو كلمات في الصفحة. تتضمن الأسماء المستوردة ويمكنك تعديلها." : "Separate with commas or new lines. Used for store search, never hidden keyword stuffing. Imported aliases are visible here and editable."}
+          defaultValue={(product.searchAliases ?? []).join(", ")}
+          maxLength={16000}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
             label={messages.categoryLabel}
@@ -191,7 +198,7 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
 
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
-            label={messages.imageUrl}
+            label={locale === "ar" ? "الصورة الكبيرة — الكاروسيل وصفحة المنتج" : "Large artwork — carousel & product page"}
             name="imageUrl"
             value={imageUrl}
             onChange={(event) => setImageUrl(event.target.value)}
@@ -201,7 +208,7 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
             spellCheck={false}
           />
           <TextField
-            label={messages.logoUrl}
+            label={locale === "ar" ? "الشعار أو الاسم المصوّر — الكاروسيل" : "Logo / wordmark — carousel identity"}
             name="logoUrl"
             value={logoUrl}
             onChange={(event) => setLogoUrl(event.target.value)}
@@ -209,6 +216,11 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
             dir="ltr"
             inputMode="url"
             spellCheck={false}
+          />
+          <TextField
+            label={locale === "ar" ? "الصورة المصغرة — بطاقات المنتجات" : "Thumbnail — product cards"}
+            hint={locale === "ar" ? "اتركه فارغاً لاستخدام صورة المورد الحالية تلقائياً." : "Leave empty to follow the current provider artwork automatically."}
+            name="thumbnailUrl" defaultValue={product.thumbnailUrl ?? ""} maxLength={600} dir="ltr" inputMode="url"
           />
           <TextField
             label={messages.carouselBadgeAr}

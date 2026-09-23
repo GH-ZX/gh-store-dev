@@ -151,15 +151,18 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
             offer_id: offerId,
           },
         });
-        await fulfillOrder(placed.order_id);
-      } catch (fulfilError) {
-        logFailure("fulfilment", "checkout_fulfilment_threw", fulfilError, {
+      } catch (notificationError) {
+        logFailure("notifications", "checkout_notification_threw", notificationError, {
           orderId: placed.order_id,
         });
         // Intentionally swallowed; the order page shows the real state.
       }
     })(),
   );
+  // Notification outages must never prevent an already-paid order from fulfilling.
+  input.schedule(fulfillOrder(placed.order_id).catch(error => {
+    logFailure("fulfilment", "checkout_fulfilment_threw", error, { orderId: placed.order_id });
+  }));
 
   return {
     ok: true,

@@ -544,6 +544,13 @@ export type Database = {
       }
       offers: {
         Row: {
+          duration_value: number | null
+          duration_unit: string | null
+          warranty_kind: string
+          warranty_value: number | null
+          warranty_unit: string | null
+          terms_source: string
+          terms_review_required: boolean
           created_at: string
           currency: string
           delivery_kind: string
@@ -566,6 +573,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          duration_value?: number | null
+          duration_unit?: string | null
+          warranty_kind?: string
+          warranty_value?: number | null
+          warranty_unit?: string | null
+          terms_source?: string
+          terms_review_required?: boolean
           created_at?: string
           currency?: string
           delivery_kind?: string
@@ -588,6 +602,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          duration_value?: number | null
+          duration_unit?: string | null
+          warranty_kind?: string
+          warranty_value?: number | null
+          warranty_unit?: string | null
+          terms_source?: string
+          terms_review_required?: boolean
           created_at?: string
           currency?: string
           delivery_kind?: string
@@ -884,6 +905,8 @@ export type Database = {
       }
       products: {
         Row: {
+          search_aliases: string[]
+          search_text: string
           carousel_badge_ar: string | null
           carousel_badge_en: string | null
           carousel_color: string | null
@@ -896,6 +919,7 @@ export type Database = {
           description_ar: string | null
           description_en: string | null
           id: string
+          thumbnail_url: string | null
           image_url: string | null
           is_active: boolean
           is_featured: boolean
@@ -912,6 +936,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          search_aliases?: string[]
+          search_text?: string
           carousel_badge_ar?: string | null
           carousel_badge_en?: string | null
           carousel_color?: string | null
@@ -924,6 +950,7 @@ export type Database = {
           description_ar?: string | null
           description_en?: string | null
           id?: string
+          thumbnail_url?: string | null
           image_url?: string | null
           is_active?: boolean
           is_featured?: boolean
@@ -940,6 +967,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          search_aliases?: string[]
+          search_text?: string
           carousel_badge_ar?: string | null
           carousel_badge_en?: string | null
           carousel_color?: string | null
@@ -952,6 +981,7 @@ export type Database = {
           description_ar?: string | null
           description_en?: string | null
           id?: string
+          thumbnail_url?: string | null
           image_url?: string | null
           is_active?: boolean
           is_featured?: boolean
@@ -1237,6 +1267,10 @@ export type Database = {
       }
       recharge_requests: {
         Row: {
+          payment_network: string | null
+          payment_destination: string | null
+          payment_tx_hash: string | null
+          payment_verification: Json | null
           admin_note: string | null
           created_at: string
           exchange_rate: number | null
@@ -1253,6 +1287,10 @@ export type Database = {
           wallet_credit_amount: number | null
         }
         Insert: {
+          payment_network?: string | null
+          payment_destination?: string | null
+          payment_tx_hash?: string | null
+          payment_verification?: Json | null
           admin_note?: string | null
           created_at?: string
           exchange_rate?: number | null
@@ -1269,6 +1307,10 @@ export type Database = {
           wallet_credit_amount?: number | null
         }
         Update: {
+          payment_network?: string | null
+          payment_destination?: string | null
+          payment_tx_hash?: string | null
+          payment_verification?: Json | null
           admin_note?: string | null
           created_at?: string
           exchange_rate?: number | null
@@ -1303,6 +1345,7 @@ export type Database = {
       }
       reviews: {
         Row: {
+          is_verified_purchase: boolean
           admin_note: string | null
           body: string
           created_at: string
@@ -1319,6 +1362,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          is_verified_purchase?: boolean
           admin_note?: string | null
           body: string
           created_at?: string
@@ -1335,6 +1379,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          is_verified_purchase?: boolean
           admin_note?: string | null
           body?: string
           created_at?: string

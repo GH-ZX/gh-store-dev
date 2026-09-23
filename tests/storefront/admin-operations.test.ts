@@ -70,7 +70,8 @@ describe("migrated admin money operations", () => {
         error: null,
       });
     const rpc = vi.fn().mockReturnValue({ maybeSingle });
-    const result = await approveRecharge(client({ rpc }), {
+    const claim = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: { payment_network: null, status: "approved", requested_amount: 15 }, error: null }) };
+    const result = await approveRecharge(client({ rpc, from: vi.fn().mockReturnValue(claim) }), {
       requestId: id,
       creditAmount: 15,
       note: "Confirmed",
@@ -83,6 +84,13 @@ describe("migrated admin money operations", () => {
     expect(result).toEqual({ credited: 15, balance: 20, idempotent: true });
     expect(mocks.notify).not.toHaveBeenCalled();
     expect(mocks.telegram).not.toHaveBeenCalled();
+  });
+
+  it("refuses BEP20 approval without payer ownership confirmation before reading the chain", async () => {
+    const rpc = vi.fn();
+    const query = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: { payment_network: "BEP20", status: "payment_sent" }, error: null }) };
+    await expect(approveRecharge(client({ from: vi.fn().mockReturnValue(query), rpc }), { requestId: id, creditAmount: 15, note: "Confirmed" })).rejects.toThrow("Confirm payer ownership");
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("reports a settled recharge refusal without sending a rejection notification", async () => {

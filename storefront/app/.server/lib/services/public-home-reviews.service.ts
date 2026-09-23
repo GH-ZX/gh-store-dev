@@ -7,6 +7,7 @@ export type StoreReview = {
   rating: number;
   body: string;
   isFeatured: boolean;
+  isVerifiedPurchase?: boolean;
   createdAt: string;
 };
 
@@ -25,7 +26,7 @@ export async function getPublishedReviews(
 ): Promise<StoreReview[]> {
   let query = supabase
     .from("reviews")
-    .select("id, display_name, rating, body, is_featured, created_at")
+    .select("id, display_name, rating, body, is_featured, is_verified_purchase, created_at")
     .eq("status", "approved")
     .order("is_featured", { ascending: false })
     .order("created_at", { ascending: false })
@@ -51,6 +52,7 @@ export async function getPublishedReviews(
     rating: review.rating,
     body: review.body,
     isFeatured: review.is_featured,
+    isVerifiedPurchase: review.is_verified_purchase === true,
     createdAt: review.created_at,
   }));
 }

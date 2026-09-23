@@ -5,7 +5,7 @@ import { OFFER_WITH_PRODUCT_SELECT, toStoreOffer, type OfferRow, type StoreOffer
 import { toSearchTokens, type SearchFilter } from "@/lib/catalog/search";
 import { CatalogReadError } from "@server/lib/services/home-catalog.service";
 
-const PRODUCT_SEARCH_COLUMNS = ["name_ar", "name_en", "slug", "description_ar", "description_en"];
+const PRODUCT_SEARCH_COLUMNS = ["search_text"];
 const OFFER_SEARCH_COLUMNS = ["name_ar", "name_en", "slug", "region_code"];
 const GIFT_CARD_OFFER_TYPES = ["gift_card", "redeem_code"];
 function orIlike(columns: string[], token: string): string {

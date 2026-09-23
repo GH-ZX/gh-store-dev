@@ -24,6 +24,7 @@ export const TIERS = {
   CHECKOUT: { name: "checkout", limit: 12, windowMs: 60_000 },
   AUTH: { name: "auth", limit: 15, windowMs: 60_000 },
   RECHARGE: { name: "recharge", limit: 15, windowMs: 60_000 },
+  METRICS: { name: "metrics", limit: 30, windowMs: 60_000 },
   SEARCH: { name: "search", limit: 60, windowMs: 60_000 },
   MEDIA: { name: "media", limit: 300, windowMs: 60_000 },
   GLOBAL: { name: "global", limit: 300, windowMs: 60_000 },
@@ -196,6 +197,7 @@ export function resolveRateLimitTier(request: Request): RateLimitTier {
   }
 
   // 4. Autocomplete search requests
+  if (path === "/api/store-event") return TIERS.METRICS;
   if (path === "/api/search/suggest") {
     return TIERS.SEARCH;
   }

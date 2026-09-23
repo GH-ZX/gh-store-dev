@@ -531,3 +531,9 @@ body:has(.sf-mobile-drawer[open]) {
 [data-storefront-shell] :is(a, button)[class~="bg-[var(--accent)]"] {
   background-color: var(--sf-button);
 }
+
+@media(max-width:380px) {
+  [data-storefront-shell] .sf-header-main { gap:8px; }
+  [data-storefront-shell] .sf-header-main .sf-brand { font-size:18px; }
+  [data-storefront-shell] .sf-header-actions { gap:4px; }
+}

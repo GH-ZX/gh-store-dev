@@ -1,3 +1,6 @@
+import { StoreMeasurement } from "@/components/store/store-measurement";
+import { getHeaderCategories } from "@server/lib/services/home-discovery.service";
+import { createPublicClient } from "@/lib/catalog-queries";
 import { getMaintenanceNotice } from "@/lib/maintenance";
 import { Section } from "@/components/ui/section";
 import { ButtonLink } from "@/components/ui/button";
@@ -44,9 +47,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const { env } = getCloudflareContext(context);
   const { supabase, jar, isProduction } = createSessionClient(request, env);
   const userId = await getSessionUserId(supabase);
-  const [session, settings] = await Promise.all([
+  const [session, settings, categories] = await Promise.all([
     getSessionSummary(supabase, userId),
     getPublicStoreSettings(supabase),
+    getHeaderCategories(createPublicClient(env), locale),
   ]);
   const [walletPanel, unreadCount] = await Promise.all([
     getHeaderWalletPanel(supabase, session),
@@ -59,6 +63,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     new URL(request.url).pathname,
   );
   const chrome: ChromeData = {
+    categories,
+    posthogEnabled: Boolean(env.POSTHOG_PROJECT_KEY && ["US", "EU"].includes(env.POSTHOG_REGION ?? "")),
     maintenance,
     locale,
     session,
@@ -129,6 +135,7 @@ export default function LocaleLayout() {
       >
         {common.navigation.skipToContent}
       </a>
+      <StoreMeasurement admin={chrome.session?.isAdmin} posthogEnabled={chrome.posthogEnabled} locale={locale} />
       <Header
         locale={locale}
         messages={common}

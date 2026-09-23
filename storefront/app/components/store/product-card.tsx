@@ -1,6 +1,6 @@
+import { ProductArtwork } from "@/components/store/product-artwork";
 import { Link } from "react-router";
 import type { ReactNode } from "react";
-import { StoreImage } from "@/components/store/store-image";
 import { ArrowIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
@@ -36,18 +36,7 @@ export function ProductCard({ product, locale, labels, meta, priority = false, o
       className={cn("sf-product-card", className)}
     >
       <div className="sf-product-cover" data-artwork-fit={artwork.fit}>
-        <StoreImage
-          {...artwork}
-          alt=""
-          fallbackLabel={product.name}
-          category={product.categorySlug}
-          fallbackText={presentation.imageUnavailable}
-          priority={priority}
-          focus={product.carouselFocus}
-          width={640}
-          height={640}
-          sizes="(min-width: 1280px) 296px, (min-width: 1024px) 23vw, (min-width: 640px) 30vw, 176px"
-        />
+        <ProductArtwork product={product} priority={priority} />
         {product.isFeatured ? <span className="sf-product-featured">{labels.featured}</span> : null}
       </div>
       <div className="sf-product-copy">

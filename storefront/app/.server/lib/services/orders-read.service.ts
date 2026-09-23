@@ -1,3 +1,4 @@
+import type { OfferTerms } from "@/lib/catalog/offer-terms";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Locale } from "@/i18n/config";
@@ -94,6 +95,8 @@ export type OrderFulfillment = {
 };
 
 export type MyOrderItem = {
+  terms?: OfferTerms;
+  reorderPath?: string | null;
   id: string;
   name: string;
   unitPrice: number;
@@ -124,6 +127,7 @@ export type MyOrderDetail = {
 };
 
 type RawItem = {
+  metadata?: { offer_terms?: OfferTerms } | null;
   id: string;
   offer_id: string | null;
   name_ar_snapshot: string;
@@ -362,7 +366,7 @@ export async function getMyOrder(
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, payment_status, payment_method, currency, subtotal, discount, total, customer_note, created_at, completed_at, order_items (id, offer_id, name_ar_snapshot, name_en_snapshot, unit_price, quantity, total_price, dynamic_fields)",
+      "id, order_number, status, payment_status, payment_method, currency, subtotal, discount, total, customer_note, created_at, completed_at, order_items (id, offer_id, name_ar_snapshot, name_en_snapshot, unit_price, quantity, total_price, dynamic_fields, metadata)",
     )
     .eq("id", orderId)
     .eq("user_id", userId)
@@ -373,7 +377,7 @@ export async function getMyOrder(
   }
 
   const rawItems: RawItem[] = toRows(data.order_items);
-  const [labels, fulfillment] = await Promise.all([
+  const [labels, fulfillment, currentOffers] = await Promise.all([
     readFieldLabels(
       supabase,
       rawItems.flatMap((item) => (item.offer_id ? [item.offer_id] : [])),
@@ -383,11 +387,22 @@ export async function getMyOrder(
       supabase,
       rawItems.map((item) => item.id),
     ),
+    rawItems.some(item => item.offer_id) ? supabase.from("offers")
+      .select("id,slug,products!inner(slug)")
+      .in("id",rawItems.flatMap(item=>item.offer_id ? [item.offer_id] : []))
+      .eq("is_active",true).eq("products.is_active",true) : Promise.resolve({ data: [], error: null }),
   ]);
+  const reorder = new Map<string,string>();
+  for (const offer of (currentOffers.data ?? []) as unknown as { id: string; slug: string; products: { slug: string } | { slug: string }[] }[]) {
+    const product = Array.isArray(offer.products) ? offer.products[0] : offer.products;
+    if (product) reorder.set(offer.id, `/${locale}/checkout/${encodeURIComponent(product.slug)}/${encodeURIComponent(offer.slug)}`);
+  }
 
   const items: MyOrderItem[] = rawItems.map((item) => ({
     id: item.id,
     name: snapshotName(item, locale),
+    terms: item.metadata?.offer_terms ?? undefined,
+    reorderPath: data.status === "completed" && item.offer_id ? reorder.get(item.offer_id) ?? null : null,
     unitPrice: item.unit_price,
     quantity: item.quantity,
     totalPrice: item.total_price,

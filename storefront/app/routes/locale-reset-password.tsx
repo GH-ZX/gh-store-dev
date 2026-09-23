@@ -1,3 +1,5 @@
+import { PasswordInput } from "@/components/password-input";
+import { AuthLayout } from "@/components/auth-layout";
 import { useEffect, useRef } from "react";
 import {
   data,
@@ -109,7 +111,7 @@ export default function ResetPassword() {
   const auth = getMessages(locale, "admin").auth;
   const canReset = ready || recovery.data?.ready;
   return (
-    <section className="sf-auth-page">
+    <AuthLayout locale={locale}>
       <AccountHeading
         eyebrow={messages.recovery.eyebrow}
         title={messages.recovery.resetTitle}
@@ -130,10 +132,10 @@ export default function ResetPassword() {
           <Form method="post" className="grid gap-5">
             <label className="grid gap-2 text-sm">
               {messages.password.newPassword}
-              <input
+              <PasswordInput locale={locale}
                 className={accountField}
                 name="password"
-                type="password"
+
                 required
                 minLength={8}
                 maxLength={128}
@@ -146,10 +148,10 @@ export default function ResetPassword() {
             </label>
             <label className="grid gap-2 text-sm">
               {messages.password.confirmPassword}
-              <input
+              <PasswordInput locale={locale}
                 className={accountField}
                 name="confirmPassword"
-                type="password"
+
                 required
                 minLength={8}
                 maxLength={128}
@@ -171,6 +173,6 @@ export default function ResetPassword() {
           </div>
         )}
       </div>
-    </section>
+    </AuthLayout>
   );
 }

@@ -1,3 +1,4 @@
+import { offerTermsInputSchema } from "@/lib/catalog/offer-terms";
 
 
 import { revalidatePath } from "@server/compat/cache";
@@ -63,6 +64,7 @@ const optionalNumber = (max: number) =>
   z.union([z.null(), z.coerce.number().int().min(0).max(max)]);
 
 const gameSchema = z.object({
+  searchAliases: z.array(z.string().trim().min(1).max(160)).max(100),
   gameId: z.uuid(),
   categoryId: z.union([z.literal(""), z.uuid()]),
   productKind: z.enum(PRODUCT_KINDS),
@@ -75,6 +77,7 @@ const gameSchema = z.object({
   descriptionEn: optionalText(4000),
   imageUrl: optionalText(600),
   logoUrl: optionalText(600),
+  thumbnailUrl: optionalText(600).optional(),
   carouselBadgeAr: optionalText(80),
   carouselBadgeEn: optionalText(80),
   sortOrder: z.coerce.number().int().min(0).max(100000),
@@ -87,6 +90,7 @@ const gameSchema = z.object({
 });
 
 const offerRowSchema = z.object({
+  terms: offerTermsInputSchema,
   id: z.uuid(),
   nameAr: z.string().trim().min(1).max(160),
   nameEn: z.string().trim().min(1).max(160),
@@ -154,6 +158,7 @@ export async function updateProductAction(
   await requireAdmin();
 
   const parsed = gameSchema.safeParse({
+    searchAliases: (formText(formData, "searchAliases") ?? "").split(/[,،\n]/).map(v => v.trim()).filter(Boolean),
     gameId: formText(formData, "gameId"),
     categoryId: formText(formData, "categoryId") ?? "",
     productKind: formText(formData, "productKind") ?? "other",
@@ -166,6 +171,7 @@ export async function updateProductAction(
     descriptionEn: formText(formData, "descriptionEn") ?? null,
     imageUrl: formText(formData, "imageUrl") ?? null,
     logoUrl: formText(formData, "logoUrl") ?? null,
+    thumbnailUrl: formData.has("thumbnailUrl") ? formText(formData, "thumbnailUrl") ?? null : undefined,
     carouselBadgeAr: formText(formData, "carouselBadgeAr") ?? null,
     carouselBadgeEn: formText(formData, "carouselBadgeEn") ?? null,
     sortOrder: formText(formData, "sortOrder") ?? "0",
@@ -483,6 +489,14 @@ export async function updateOffersAction(
     gameId: formText(formData, "gameId"),
     rows: ids.map((id, index) => ({
       id,
+      terms: {
+        termsSource: formText(formData, `offers.${index}.termsSource`) ?? "automatic",
+        durationValue: formText(formData, `offers.${index}.durationValue`),
+        durationUnit: formText(formData, `offers.${index}.durationUnit`) ?? "month",
+        warrantyKind: formText(formData, `offers.${index}.warrantyKind`) ?? "unknown",
+        warrantyValue: formText(formData, `offers.${index}.warrantyValue`),
+        warrantyUnit: formText(formData, `offers.${index}.warrantyUnit`) ?? "day",
+      },
       nameAr: formText(formData, `offers.${index}.nameAr`),
       nameEn: formText(formData, `offers.${index}.nameEn`),
       descriptionAr: formText(formData, `offers.${index}.descriptionAr`) ?? null,

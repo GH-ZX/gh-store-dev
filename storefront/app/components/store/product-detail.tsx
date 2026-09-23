@@ -1,3 +1,5 @@
+import { ProductArtwork } from "@/components/store/product-artwork";
+import { OfferTerms } from "@/components/store/offer-terms";
 import { Link } from "react-router";
 import type { Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
@@ -5,10 +7,8 @@ import { PackageIcon } from "@/components/ui/icons";
 import { ProductGrid } from "@/components/store/collections";
 import { PurchaseSummary } from "@/components/store/catalog-page";
 import { DescriptionText } from "@/components/store/description-text";
-import { StoreImage } from "@/components/store/store-image";
 import { getProductCardLabels } from "@/lib/catalog/labels";
 import { productPath } from "@/lib/catalog/paths";
-import { getProductArtwork } from "@/lib/catalog/presentation";
 import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import type { RelatedProducts } from "@/lib/catalog/related-products";
@@ -20,15 +20,13 @@ export function ProductDetailHeader({ locale, product, offers, offer }: {
 }) {
   const common = getMessages(locale, "common");
   const catalog = getMessages(locale, "catalog");
-  const presentation = getMessages(locale, "presentation");
   const copy = catalog.productDetail;
   const cheapest = lowestPrice(offers);
-  const artwork = getProductArtwork({ ...product, imageUrl: offer?.imageUrl ?? product.imageUrl });
   const description = (offer?.description || product.description || "").trim().replace(/\s+/g, " ");
   const excerpt = description.length > 200 ? `${description.slice(0, 197).trimEnd()}…` : description;
   return <header className="sf-detail-hero">
     <div className="sf-detail-artwork">
-      <StoreImage {...artwork} alt={offer?.name ?? product.name} category={product.categorySlug} fit="contain" fallbackFit="contain" fallbackLabel={product.name} fallbackText={presentation.imageUnavailable} width={480} priority sizes="(max-width: 719px) 112px, 240px" />
+      <ProductArtwork product={{ ...product, imageUrl: offer?.imageUrl ?? product.imageUrl }} priority large />
     </div>
     <div className="sf-detail-hero-copy">
       <div className="sf-detail-eyebrow"><span>{offer ? copy.offerLabel : copy.productLabel}</span>{product.kind !== "other" ? <span>{catalog.productKinds[product.kind]}</span> : null}</div>
@@ -43,6 +41,7 @@ export function ProductDetailHeader({ locale, product, offers, offer }: {
         </>}
         {offer?.regionCode ? <div><dt>{catalog.offerDetail.regionLabel}</dt><dd><bdi>{offer.regionCode}</bdi></dd></div> : null}
       </dl>
+      {offer ? <OfferTerms terms={offer.terms} locale={locale} /> : null}
     </div>
   </header>;
 }

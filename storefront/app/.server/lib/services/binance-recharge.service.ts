@@ -304,7 +304,7 @@ export async function syncBinanceInvoice(merchantTradeNo: string): Promise<Binan
   const service = createSupabaseServiceClient();
   const { data: invoice } = await service
     .from("binance_invoices")
-    .select("id, merchant_trade_no, recharge_request_id, status, charge_amount")
+    .select("id, merchant_trade_no, recharge_request_id, status, charge_amount, charge_currency")
     .eq("merchant_trade_no", merchantTradeNo)
     .maybeSingle();
 
@@ -354,6 +354,10 @@ export async function syncBinanceInvoice(merchantTradeNo: string): Promise<Binan
    * with no reported figure waits — visibly pending, retried by the sweep —
    * until Binance answers the question properly.
    */
+  if (state.merchantTradeNo !== merchantTradeNo || state.currency !== invoice.charge_currency.toUpperCase() || !state.transactionId) {
+    return { ok: false, reason: "provider" };
+  }
+
   if (state.amount === null || !Number.isFinite(state.amount) || state.amount <= 0) {
     log.warn("payments", "binance_paid_without_amount", {
       merchantTradeNo,

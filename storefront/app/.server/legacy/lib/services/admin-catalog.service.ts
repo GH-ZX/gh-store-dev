@@ -1,3 +1,5 @@
+import { offerTermsUpdate, type offerTermsInputSchema, type OfferTerms } from "@/lib/catalog/offer-terms";
+import type { z } from "zod";
 
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -327,6 +329,8 @@ export async function listAdminProducts({
 
 /** The editable half of a game, shared by the read and the write. */
 export type AdminProductFields = {
+  searchAliases?: string[];
+  thumbnailUrl?: string | null;
   categoryId: string | null;
   productKind: ProductKind;
   nameAr: string;
@@ -359,6 +363,7 @@ export type AdminProduct = AdminProductFields & {
 };
 
 export type AdminProductOffer = {
+  terms?: OfferTerms & { terms_source?: string };
   id: string;
   slug: string;
   nameAr: string;
@@ -385,7 +390,7 @@ export type AdminProductDetail = {
 };
 
 const OFFER_COLUMNS =
-  "id, slug, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, delivery_kind, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
+  "id, slug, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, delivery_kind, duration_value, duration_unit, warranty_kind, warranty_value, warranty_unit, terms_source, terms_review_required, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
 
 export async function getAdminProduct(gameId: string): Promise<AdminProductDetail | null> {
   await requireAdmin();
@@ -398,7 +403,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
   const { data: game, error } = await client
     .from("products")
     .select(
-      "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order, carousel_logo_tone, carousel_color, product_kind",
+      "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, thumbnail_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order, carousel_logo_tone, carousel_color, product_kind, search_aliases",
     )
     .eq("id", gameId)
     .maybeSingle();
@@ -446,6 +451,8 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
       pointsNameEn: game.points_name_en,
       descriptionAr: game.description_ar,
       descriptionEn: game.description_en,
+      searchAliases: game.search_aliases,
+      thumbnailUrl: game.thumbnail_url,
       imageUrl: game.image_url,
       logoUrl: game.logo_url,
       carouselBadgeAr: game.carousel_badge_ar,
@@ -473,6 +480,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
         nameEn: offer.name_en,
         descriptionAr: offer.description_ar,
         descriptionEn: offer.description_en,
+        terms: { duration_value: offer.duration_value, duration_unit: offer.duration_unit, warranty_kind: offer.warranty_kind, warranty_value: offer.warranty_value, warranty_unit: offer.warranty_unit, terms_source: offer.terms_source, terms_review_required: offer.terms_review_required },
         price: offer.price,
         originalPrice: offer.original_price,
         currency: offer.currency,
@@ -526,6 +534,8 @@ export async function updateAdminProduct(gameId: string, fields: AdminProductFie
       points_name_en: fields.pointsNameEn,
       description_ar: fields.descriptionAr,
       description_en: fields.descriptionEn,
+      ...(fields.searchAliases ? { search_aliases: fields.searchAliases } : {}),
+      ...(fields.thumbnailUrl !== undefined ? { thumbnail_url: fields.thumbnailUrl } : {}),
       image_url: fields.imageUrl,
       logo_url: fields.logoUrl,
       carousel_badge_ar: fields.carouselBadgeAr,
@@ -557,6 +567,7 @@ export async function updateAdminProduct(gameId: string, fields: AdminProductFie
 }
 
 export type AdminOfferUpdate = {
+  terms?: z.infer<typeof offerTermsInputSchema>;
   id: string;
   nameAr: string;
   nameEn: string;
@@ -633,6 +644,7 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
         name_en: row.nameEn,
         description_ar: row.descriptionAr,
         description_en: row.descriptionEn,
+        ...(row.terms ? offerTermsUpdate(row.terms) : {}),
         price: row.price,
         original_price: row.originalPrice,
         is_sale: row.isSale,

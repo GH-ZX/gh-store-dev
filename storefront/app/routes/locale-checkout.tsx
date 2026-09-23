@@ -1,3 +1,4 @@
+import { OfferTerms } from "@/components/store/offer-terms";
 import { StoreImage } from "@/components/store/store-image";
 import { formatPrice } from "@/lib/format/money";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
@@ -284,6 +285,7 @@ export default function CheckoutPage() {
             />
           </section>
 
+      <OfferTerms terms={offer.terms} locale={locale} />
           {offer.description ? (
             <section className="sf-commerce-panel">
               <h2 className="text-base font-semibold text-[var(--ink)]">

@@ -1,3 +1,4 @@
+import { AnalyticsPreferences } from "@/components/store/store-measurement";
 import { Form, Link, NavLink, useLocation } from "react-router";
 import { useRef } from "react";
 import { type Locale } from "@/i18n/config";
@@ -49,21 +50,15 @@ export function StorefrontHeader({
       label: messages.navigation.allProducts,
       icon: GridIcon,
     },
-    {
-      href: `/${locale}/games`,
-      label: messages.navigation.games,
-      icon: GamepadIcon,
-    },
-    {
-      href: `/${locale}/gift-cards`,
-      label: messages.navigation.giftCards,
-      icon: CardIcon,
-    },
-    {
-      href: `/${locale}/ai`,
-      label: messages.navigation.aiSubscriptions,
-      icon: SparkIcon,
-    },
+    ...(data.categories ?? [
+      { slug: "games", name: messages.navigation.games },
+      { slug: "gift-cards-codes", name: messages.navigation.giftCards },
+      { slug: "ai", name: messages.navigation.aiSubscriptions },
+    ]).map(category => ({
+      href: `/${locale}/${encodeURIComponent(category.slug)}`,
+      label: category.name,
+      icon: category.slug === "games" ? GamepadIcon : category.slug === "ai" ? SparkIcon : category.slug.includes("cards") || category.slug.includes("vouchers") ? CardIcon : GridIcon,
+    })),
     {
       href: `/${locale}/sale`,
       label: messages.navigation.offers,
@@ -377,6 +372,7 @@ export function StorefrontFooter({
             </nav>
           ))}
         </div>
+        {data.posthogEnabled ? <AnalyticsPreferences locale={locale} /> : null}
         <div className="sf-footer-bottom">
           <p>
             © {data.year} {data.brandName}. {messages.footer.rights}

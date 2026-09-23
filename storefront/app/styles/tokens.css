@@ -26,6 +26,11 @@
   --ink-muted: #8598ac;
   --ink-faint: #6a7d92;
 
+  /* Stable surfaces for third-party brand marks and campaign artwork. */
+  --brand-logo-surface: #f7f8fb;
+  --brand-logo-ink: #101623;
+  --carousel-scrim: rgba(3, 8, 22, 0.8);
+
   /* Brand */
   --accent: #5ad8ff;
   --accent-strong: #a7ecff;

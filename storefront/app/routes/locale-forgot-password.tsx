@@ -1,3 +1,4 @@
+import { AuthLayout } from "@/components/auth-layout";
 import {
   data,
   Form,
@@ -54,7 +55,7 @@ export default function ForgotPassword() {
   const messages = getMessages(locale, "account");
   const auth = getMessages(locale, "admin").auth;
   return (
-    <section className="sf-auth-page">
+    <AuthLayout locale={locale}>
       <AccountHeading
         eyebrow={messages.recovery.eyebrow}
         title={messages.recovery.requestTitle}
@@ -83,6 +84,6 @@ export default function ForgotPassword() {
           {auth.signInAction}
         </Link>
       </Form>
-    </section>
+    </AuthLayout>
   );
 }

@@ -73,7 +73,7 @@ export default function LocaleSearch() {
     <p className="sf-catalog-muted sf-search-feedback" role="status" aria-atomic="true">
       {pending ? common.states.loading : query ? <>{search.resultsLabel} <strong><bdi>{query}</bdi></strong></> : null}
     </p>
-    <div aria-busy={pending} className="sf-search-results">
+    <div aria-busy={pending} data-search-empty={query && !products.length && !offers.length ? "" : undefined} className="sf-search-results">
       {!query ? <>
         <div className="sf-search-prompt">
           <SearchIcon className="size-6" />

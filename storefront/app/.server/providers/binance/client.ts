@@ -66,6 +66,8 @@ export type BinanceOrder = {
 };
 
 export type BinanceOrderState = {
+  currency: string | null;
+  merchantTradeNo: string | null;
   status: string;
   /** Binance's own trade number, when it has one. */
   transactionId: string | null;
@@ -214,14 +216,16 @@ export class BinanceClient {
     });
 
     return {
+      currency: typeof data.currency === "string" ? data.currency.toUpperCase() : null,
+      merchantTradeNo: typeof data.merchantTradeNo === "string" ? data.merchantTradeNo : null,
       status: typeof data.status === "string" ? data.status : "UNKNOWN",
       transactionId: typeof data.transactionId === "string" ? data.transactionId : null,
       // Binance serialises amounts as strings.
       amount:
-        typeof data.amount === "number"
-          ? data.amount
-          : typeof data.amount === "string" && data.amount.trim() !== "" && Number.isFinite(Number(data.amount))
-            ? Number(data.amount)
+        typeof data.orderAmount === "number"
+          ? data.orderAmount
+          : typeof data.orderAmount === "string" && data.orderAmount.trim() !== "" && Number.isFinite(Number(data.orderAmount))
+            ? Number(data.orderAmount)
             : null,
     };
   }

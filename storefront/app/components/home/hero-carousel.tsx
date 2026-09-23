@@ -1,5 +1,7 @@
 "use client";
 
+import { CarouselBrand } from "@/components/home/carousel-brand";
+
 import { Link, useRevalidator } from "react-router";
 
 import useEmblaCarousel from "embla-carousel-react";
@@ -10,7 +12,6 @@ import { ArrowIcon, ChevronIcon, CloseIcon, PauseIcon, PencilIcon, PlayIcon } fr
 import type { Locale } from "@/i18n/config";
 import type { AdminMessages } from "@/i18n/messages";
 import type { StoreProduct } from "@/lib/catalog/product-mapper";
-import { resolveImageSource } from "@/lib/images";
 import { cn } from "@/lib/cn";
 import { formatMessage } from "@/i18n/format";
 import { reorderCarouselProducts } from "@/lib/admin-actions";
@@ -197,21 +198,21 @@ export function HeroCarousel({
           <div className="sf-featured-track">
             {products.map((product, index) => {
               const active = index === selected;
+              const cardArtwork = product.kind !== "game" || product.imageUrl?.includes("api.g2bulk.com/images/");
               return (
                 <div key={product.id} className="sf-featured-slide" role="group"
                   aria-roledescription="slide" aria-hidden={!active}
                   aria-label={formatMessage(labels.slideLabel, { index: index + 1, total }, locale)}>
                   <Link to={`/${locale}/${product.categorySlug}/${product.slug}`}
-                    tabIndex={active ? undefined : -1} className="sf-featured-link">
-                    <div className="sf-featured-art" data-aspect={imageAspect}>
-                      <StoreImage src={product.imageUrl} alt={product.name} fit={imageFit}
-                        focus={{x:imagePositionX,y:imagePositionY}}
-                        sizes="(min-width: 1100px) 50vw, 100vw" />
+                    tabIndex={active ? undefined : -1} className="sf-featured-link" data-kind={product.kind} aria-label={formatMessage(labels.goToProduct, { name: product.name }, locale)}>
+                    <div className="sf-featured-art" data-aspect={imageAspect} data-imported-cover={cardArtwork ? "true" : undefined} aria-hidden="true">
+                      {product.imageUrl ? <StoreImage src={product.imageUrl} alt="" fit={imageFit}
+                        focus={{x:imagePositionX,y:imagePositionY}} width={cardArtwork ? 640 : 1536}
+                        sizes={cardArtwork ? "(max-width: 700px) 36vw, 320px" : "(min-width: 1400px) 1280px, 100vw"} priority={index === 0} /> : null}
                     </div>
                     <div className="sf-featured-copy">
-                      <span className="sf-featured-label">{product.carouselBadge || labels.featured}</span>
-                      <h3 dir="auto">{product.name}</h3>
-                      {product.description ? <p>{product.description}</p> : null}
+                      {product.carouselBadge ? <span className="sf-featured-label">{product.carouselBadge}</span> : null}
+                      <div className="sf-featured-identity"><CarouselBrand product={product} priority={index === 0} /></div>
                       <span className="sf-featured-details">{labels.details}<ArrowIcon direction="end" className="size-4 rtl:rotate-180" /></span>
                     </div>
                   </Link>
@@ -232,8 +233,7 @@ export function HeroCarousel({
         {products.map((product,index)=><div key={product.id} className="sf-featured-tab-wrap">
           <button type="button" onClick={()=>emblaApi?.scrollTo(index)} aria-current={index===selected?"true":undefined}
             aria-label={formatMessage(labels.goToProduct,{name:product.name},locale)} className="sf-featured-tab">
-            <img src={resolveImageSource(product.logoUrl||product.imageUrl,128)??undefined} data-logo-image={product.logoUrl ? "true" : undefined} data-logo-tone={product.logoUrl ? product.carouselLogoTone : undefined} data-logo-source={/^https?:\/\/cdn\.simpleicons\.org\//i.test(product.logoUrl || product.imageUrl || "") ? "simpleicons" : undefined} alt="" loading="lazy" decoding="async" />
-            <span dir="auto">{product.name}</span>
+            <CarouselBrand product={product} />
           </button>
           {reorderMode ? <div className="sf-featured-reorder">
             <button type="button" disabled={index===0} onClick={()=>moveProduct(index,"left")} aria-label={locale==="ar"?"تحريك للخلف":"Move earlier"}><ChevronIcon direction="start" className="size-4"/></button>

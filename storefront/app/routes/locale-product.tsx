@@ -1,3 +1,4 @@
+import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import { CatalogPage } from "@/components/store/catalog-page";
 import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import { withAdminOfferCosts } from "@server/lib/services/catalog-admin-costs.service";
@@ -60,6 +61,7 @@ export function meta({ params, matches }: Route.MetaArgs) {
     | {
         loaderData?: {
           product?: StoreProduct;
+          offers?: StoreOffer[];
           category?: string;
           siteUrl?: string;
         };
@@ -82,6 +84,14 @@ export function meta({ params, matches }: Route.MetaArgs) {
       },
       matches,
     ),
+    ...(product && match?.loaderData?.offers?.length ? [{ "script:ld+json": {
+      "@context": "https://schema.org", "@type": "ItemList",
+      name: product.name,
+      itemListElement: match.loaderData.offers.map((offer,index)=>({
+        "@type": "ListItem", position: index+1, name: offer.name,
+        url: `${siteUrl}${productPath(locale,product)}/${encodeURIComponent(offer.slug)}`,
+      })),
+    } }] : []),
     ...(product ? [{ "script:ld+json": buildBreadcrumbJsonLd({ locale, siteUrl, items: [
       { name: common.navigation.home, path: "" },
       { name: product.categoryName ?? common.navigation.allProducts, path: `/${encodeURIComponent(product.categorySlug)}` },

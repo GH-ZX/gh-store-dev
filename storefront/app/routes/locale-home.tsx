@@ -1,3 +1,5 @@
+import { getHomeDiscovery } from "@server/lib/services/home-discovery.service";
+import { HomeQuickBuy, HomeCategoryShowcases } from "@/components/home/home-discovery";
 import { withAdminHomeCosts } from "@server/lib/services/catalog-admin-costs.service";
 import { buildStorePageMeta } from "@/lib/store-seo";
 export { CatalogErrorBoundary as ErrorBoundary } from "@/components/store/catalog-error-boundary";
@@ -39,16 +41,18 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     getHomeLayout(client),
     getPublicStoreSettings(client),
   ]);
-  const [carousel, sections] = await Promise.all([
+  const [carousel, sections, discovery] = await Promise.all([
     getHomeCarousel(client, locale, layout),
     resolveHomeSections(client, locale, layout, {
       hasSocialLinks: settings.socialLinks.length > 0,
     }),
+    getHomeDiscovery(client, locale),
   ]);
   return {
     locale,
     siteUrl,
     carousel,
+    discovery,
     sections: await withAdminHomeCosts(sections),
     settings,
   };
@@ -67,7 +71,7 @@ export function meta({ params, matches }: Route.MetaArgs) {
 }
 
 export default function LocaleHome() {
-  const { locale, siteUrl, carousel, sections, settings } = useLoaderData<typeof loader>();
+  const { locale, siteUrl, carousel, sections, settings, discovery } = useLoaderData<typeof loader>();
   const chrome = useRouteLoaderData("routes/locale-layout") as
     ChromeData | undefined;
   const liveEdit = chrome?.session?.isAdmin
@@ -115,6 +119,7 @@ export default function LocaleHome() {
           />
         ) : null}
       </Section>
+      <HomeQuickBuy discovery={discovery} locale={locale} />
       {sections.length ? (
         <HomeSections
           liveEdit={liveEdit}
@@ -130,6 +135,7 @@ export default function LocaleHome() {
           <HomeFallbackLinks locale={locale} common={common} />
         </Section>
       )}
+      <HomeCategoryShowcases discovery={discovery} locale={locale} exclude={sections.flatMap(section => section.kind === "games" ? section.games.map(product => product.categorySlug) : [])} />
     </>
   );
   return liveEdit ? (

@@ -52,6 +52,9 @@ export async function getRechargeConfig(supabase: SupabaseClient): Promise<Recha
 }
 
 export type MyRechargeRequestDetail = MyRechargeRequest & {
+  paymentNetwork?: string | null;
+  paymentDestination?: string | null;
+  paymentTxHash?: string | null;
   exchangeRate: number | null;
   resolvedAt: string | null;
 };
@@ -64,7 +67,7 @@ export async function getMyRechargeRequest(
   const { data, error } = await supabase
     .from("recharge_requests")
     .select(
-      "id, reference, requested_amount, wallet_credit_amount, requested_currency, payment_method, status, admin_note, exchange_rate, reviewed_at, created_at",
+      "id, reference, requested_amount, wallet_credit_amount, requested_currency, payment_method, status, admin_note, exchange_rate, reviewed_at, created_at, payment_network, payment_destination, payment_tx_hash",
     )
     .eq("id", id)
     .eq("user_id", userId)
@@ -84,6 +87,9 @@ export async function getMyRechargeRequest(
     status: data.status as RechargeRequestStatus,
     adminNote: data.admin_note,
     createdAt: data.created_at,
+    paymentNetwork: data.payment_network,
+    paymentDestination: data.payment_destination,
+    paymentTxHash: data.payment_tx_hash,
     exchangeRate: data.exchange_rate,
     resolvedAt: data.reviewed_at,
   };

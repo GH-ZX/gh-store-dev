@@ -168,8 +168,8 @@ export async function loader({
       });
     }
 
-    const upstreamType = upstreamRes.headers.get("content-type") || "image/jpeg";
-    const contentType = width > 0 ? "image/webp" : upstreamType;
+    // Cloudflare can pass SVGs and originals through unchanged.
+    const contentType = upstreamRes.headers.get("content-type") || "application/octet-stream";
     const length = Number(upstreamRes.headers.get("content-length") ?? "0");
 
     if (!contentType.toLowerCase().startsWith("image/") || length > MAX_BYTES) {
@@ -183,6 +183,7 @@ export async function loader({
       "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
       "Access-Control-Allow-Origin": "*",
       "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; sandbox",
     });
 
     // Upstream length describes the original; a resized body is smaller.

@@ -33,6 +33,8 @@ export type ChromeWalletPanel = {
 export type ChromeSocialLink =
   import("@/lib/settings/public-settings").SocialLink;
 export type ChromeData = {
+  categories?: { slug: string; name: string }[];
+  posthogEnabled?: boolean;
   locale: Locale;
   session: ChromeSession;
   walletPanel: ChromeWalletPanel;

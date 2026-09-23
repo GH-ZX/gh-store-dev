@@ -1,5 +1,7 @@
 "use client";
 
+import { OfferTermsEditor } from "@/components/admin/offer-terms-editor";
+
 import { useActionState, useEffect, useRef } from "react";
 import {
   AdminCard,
@@ -124,6 +126,7 @@ export function OfferRowsForm({
                 className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4"
               >
                 <input type="hidden" name="offerIds" value={offer.id} />
+                <OfferTermsEditor locale={locale} prefix={`offers.${index}`} terms={offer.terms} />
 
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <span className="font-mono text-xs text-[var(--ink-faint)]" dir="ltr">

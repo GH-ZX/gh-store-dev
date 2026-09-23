@@ -15,9 +15,9 @@ export type CatalogArtwork = {
 };
 
 /** Preserve configured artwork. Only game scenery is cropped to fill a card. */
-export function getProductArtwork(product: Pick<StoreProduct, "imageUrl" | "logoUrl" | "kind" | "carouselLogoTone">): CatalogArtwork {
-  const src = product.imageUrl || product.logoUrl || null;
-  const fallbackSrc = src === product.imageUrl && product.logoUrl !== src ? product.logoUrl : null;
+export function getProductArtwork(product: Pick<StoreProduct, "imageUrl" | "logoUrl" | "kind" | "carouselLogoTone" | "thumbnailUrl">, role: "large" | "thumbnail" = "large"): CatalogArtwork {
+  const src = (role === "thumbnail" ? product.thumbnailUrl : null) || product.imageUrl || product.logoUrl || null;
+  const fallbackSrc = [product.imageUrl, product.logoUrl].find(candidate => candidate && candidate !== src) ?? null;
   const isLogo = Boolean(src && src === product.logoUrl);
   return {
     src,

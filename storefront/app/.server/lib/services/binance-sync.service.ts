@@ -35,7 +35,7 @@ export async function syncBinanceInvoice(
 
   const { data: invoice } = await service
     .from("binance_invoices")
-    .select("id, merchant_trade_no, recharge_request_id, status, charge_amount")
+    .select("id, merchant_trade_no, recharge_request_id, status, charge_amount, charge_currency")
     .eq("merchant_trade_no", merchantTradeNo)
     .maybeSingle();
 
@@ -46,6 +46,7 @@ export async function syncBinanceInvoice(
   const row = invoice as unknown as {
     recharge_request_id: string;
     status: string;
+    charge_currency: string;
   };
 
   if (["credited", "failed", "expired", "cancelled"].includes(row.status)) {
@@ -75,6 +76,10 @@ export async function syncBinanceInvoice(
       });
     }
     return { ok: true, status: state.status, credited: false };
+  }
+
+  if (state.merchantTradeNo !== merchantTradeNo || state.currency !== row.charge_currency.toUpperCase() || !state.transactionId) {
+    return { ok: false, reason: "provider" };
   }
 
   if (state.amount === null || !Number.isFinite(state.amount) || state.amount <= 0) {

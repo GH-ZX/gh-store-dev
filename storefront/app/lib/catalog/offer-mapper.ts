@@ -1,3 +1,4 @@
+import { readableOfferName, type OfferTerms } from "@/lib/catalog/offer-terms";
 import type { Locale } from "@/i18n/config";
 import { UNCATEGORIZED_PRODUCT_PATH } from "@/lib/catalog/paths";
 import { catalogDescriptionText } from "@/lib/catalog/description";
@@ -14,7 +15,7 @@ type OfferProductRelation = {
   categories?: { slug: string } | { slug: string }[] | null;
 };
 
-export type OfferRow = {
+export type OfferRow = OfferTerms & {
   id: string;
   slug: string;
   offer_type: string;
@@ -41,6 +42,7 @@ export type StoreOfferProduct = {
 };
 
 export type StoreOffer = {
+  terms?: OfferTerms;
   id: string;
   slug: string;
   offerType: "topup" | "gift_card" | "redeem_code";
@@ -67,7 +69,7 @@ export type StoreOffer = {
 
 /** Columns every offer read selects. */
 export const OFFER_SELECT =
-  "id, slug, offer_type, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, region_code, sale_image_url";
+  "id, slug, offer_type, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, region_code, sale_image_url, duration_value, duration_unit, warranty_kind, warranty_value, warranty_unit, terms_review_required";
 
 /** Offer columns plus the parent game fields needed to build an offer link. */
 export const OFFER_WITH_PRODUCT_SELECT = `${OFFER_SELECT}, products!inner (slug, name_ar, name_en, image_url, logo_url, points_name_ar, points_name_en, categories!products_category_id_fkey(slug))`;
@@ -116,10 +118,11 @@ export function toStoreOffer(row: OfferRow, locale: Locale): StoreOffer {
   const catSlug = (Array.isArray(cat) ? cat[0]?.slug : (cat && typeof cat === "object" && "slug" in cat ? cat.slug : null)) ?? UNCATEGORIZED_PRODUCT_PATH;
 
   return {
+    terms: { duration_value: row.duration_value, duration_unit: row.duration_unit, warranty_kind: row.warranty_kind, warranty_value: row.warranty_value, warranty_unit: row.warranty_unit, terms_review_required: row.terms_review_required },
     id: row.id,
     slug: row.slug,
     offerType,
-    name: displayName(isArabic ? row.name_ar : row.name_en, pointsName),
+    name: readableOfferName(displayName(isArabic ? row.name_ar : row.name_en, pointsName), row),
     description: catalogDescriptionText(isArabic ? row.description_ar : row.description_en),
     price: row.price,
     originalPrice: row.original_price,

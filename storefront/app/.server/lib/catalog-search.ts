@@ -57,6 +57,9 @@ export function parseSearchParams(input: unknown): ParsedSearchParams {
 export function toSearchTokens(query: string): string[] {
   const cleaned = query
     .toLowerCase()
+    .replace(/[ـًٌٍَُِّْٰ]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ى/g, "ي")
     .replace(/[,()"'\\%_*]/g, " ")
     .trim();
 

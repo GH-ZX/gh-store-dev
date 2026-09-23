@@ -1,3 +1,4 @@
+import { OfferTerms } from "@/components/store/offer-terms";
 import type { ReactNode } from "react";
 import { useId } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -94,6 +95,7 @@ export function PurchaseSummary({ locale, product, offer }: { locale: Locale; pr
     {offer ? <>
       <div className="sf-purchase-item"><div className="sf-purchase-art"><StoreImage {...artwork} fit="contain" fallbackFit="contain" fallbackLabel={product.name} fallbackText={presentation.imageUnavailable} alt="" width={128} height={128} sizes="64px" /></div><div><span><bdi>{product.name}</bdi></span><strong><bdi>{offer.name}</bdi></strong>{offer.regionCode ? <small><bdi>{offer.regionCode}</bdi></small> : null}</div></div>
       {offer.originalPrice !== null && offer.originalPrice > offer.price ? <p className="sf-purchase-original">{locale === "ar" ? "السعر السابق" : "Original price"} <del><bdi dir="ltr">{formatPrice(offer.originalPrice, offer.currency, locale)}</bdi></del></p> : null}
+      <OfferTerms terms={offer.terms} locale={locale} />
       <div className="sf-purchase-total" aria-live="polite"><span>{locale === "ar" ? "الإجمالي" : "Total"}</span><strong><bdi dir="ltr">{formatPrice(offer.price, offer.currency, locale)}</bdi></strong></div>
       {typeof offer.supplierCostUsd === "number" ? <p className="sf-catalog-muted">{common.price.capital}: <bdi dir="ltr">{formatPrice(offer.supplierCostUsd, "USD", locale)}</bdi></p> : null}
       <Link className="sf-catalog-primary" to={`/${locale}/checkout/${encodeURIComponent(product.slug)}/${encodeURIComponent(offer.slug)}`}>{locale === "ar" ? "المتابعة إلى إتمام الطلب" : "Continue to checkout"}</Link>

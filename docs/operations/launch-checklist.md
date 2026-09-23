@@ -17,7 +17,7 @@ Ordered so each step unblocks the next.
 
 ## 2. Catalog content pass
 
-- [ ] Every published game/offer has real bilingual names (no supplier codes
+- [ ] Every published product/offer has real bilingual names (no supplier codes
       like `0106`, no instruction text as descriptions).
 - [ ] Prices confirmed per package; sale prices intentional.
 - [ ] Delivery type correct per offer (top-up vs redeem code vs gift card).
@@ -59,9 +59,9 @@ Ordered so each step unblocks the next.
 
 - [ ] Search Console: verify the domain, submit `https://gh-store.me/sitemap.xml`,
       put the token into `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`.
-- [ ] Analytics: set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=gh-store.me` as a build env
-      var (Workers Builds settings or `.env.local`) — the script renders itself
-      when present and not at all when absent.
+- [ ] Optional PostHog: configure Worker bindings `POSTHOG_PROJECT_KEY` and
+      `POSTHOG_REGION` (`US`/`EU`), redeploy and opt in through footer Analytics
+      preferences to verify events. See the [upgrade guide](../store-upgrade/operating-guide.md).
 
 ## 6. Trust layer
 
@@ -95,26 +95,15 @@ Ordered so each step unblocks the next.
 - [ ] Run the rollback drill from `docs/operations/incident-response.md` once,
       before there is traffic to protect.
 
-## 9. Performance: arm the incremental cache
+## 9. Performance
 
-Prepared in the repository and waiting on two resources that must exist first.
-The Worker already caches anonymous HTML for sixty seconds; the incremental
-cache is the layer beneath it — it stops every render of a cacheable page from
-paying the Singapore round-trips again.
+The active application is React Router on Cloudflare Workers. Do not activate the
+legacy Next/OpenNext incremental-cache resources for this app.
 
-- [ ] `pnpm exec wrangler r2 bucket create gh-store-inc-cache`
-- [ ] `pnpm exec wrangler d1 create gh-store-tag-cache` — paste the returned
-      `database_id` into the `d1_databases` block in `wrangler.jsonc`.
-- [ ] Uncomment, in the same commit: the `r2_buckets` block and the `d1_databases`
-      block in `wrangler.jsonc`; the `incrementalCache` and `memoryQueue` lines
-      and the `tagCache: d1NextTagCache` line in `open-next.config.ts` (import
-      paths are in that file's comments).
-- [ ] `pnpm check` — `scripts/validate-production-config.mjs` refuses the
-      half-armed state (a binding without its override, or the reverse), so a
-      mistake surfaces before a deploy does.
-- [ ] Deploy, then verify: load a page twice and check
-      `wrangler tail` for a drop in `get_public_store_settings` calls, and the
-      R2 dashboard for data landing in the bucket.
+- [ ] Verify anonymous page cache behavior and that authenticated responses stay private.
+- [ ] Check real mobile navigation and Core Web Vitals once customers arrive.
+- [ ] Check category navigation (60-second cache), discovery shelves (30 seconds),
+      responsive artwork and lazy loading after catalog changes.
 
 ## 10. Deploy discipline
 

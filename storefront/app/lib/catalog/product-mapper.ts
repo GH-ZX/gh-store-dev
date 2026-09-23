@@ -14,6 +14,7 @@ export type ProductRow = {
   points_name_en: string | null;
   image_url: string | null;
   logo_url: string | null;
+  thumbnail_url?: string | null;
   is_featured: boolean;
   product_kind: string | null;
   carousel_badge_ar?: string | null;
@@ -41,6 +42,7 @@ export type StoreProduct = {
   pointsName: string | null;
   imageUrl: string | null;
   logoUrl: string | null;
+  thumbnailUrl?: string | null;
   isFeatured: boolean;
   carouselBadge: string | null;
   /** Background-position percentages for hero artwork, so faces stay in frame. */
@@ -59,7 +61,7 @@ export type StoreProduct = {
 
 /** Columns every product read selects, so a mapped product renders the same everywhere. */
 export const PRODUCT_SELECT =
-  "id, slug, name_ar, name_en, description_ar, description_en, points_name_ar, points_name_en, image_url, logo_url, is_featured, product_kind, carousel_badge_ar, carousel_badge_en, carousel_focus_x, carousel_focus_y, carousel_color, carousel_logo_tone, categories!products_category_id_fkey(slug, name_en, name_ar)";
+  "id, slug, name_ar, name_en, description_ar, description_en, points_name_ar, points_name_en, image_url, logo_url, thumbnail_url, is_featured, product_kind, carousel_badge_ar, carousel_badge_en, carousel_focus_x, carousel_focus_y, carousel_color, carousel_logo_tone, categories!products_category_id_fkey(slug, name_en, name_ar)";
 
 function focusPercentage(value: number | null | undefined): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -99,6 +101,7 @@ export function toStoreProduct(row: ProductRow, locale: Locale): StoreProduct {
     pointsName: isArabic ? row.points_name_ar : row.points_name_en,
     imageUrl: row.image_url,
     logoUrl: row.logo_url,
+    thumbnailUrl: row.thumbnail_url ?? null,
     isFeatured: row.is_featured,
     carouselBadge: (isArabic ? row.carousel_badge_ar : row.carousel_badge_en) ?? null,
     carouselFocus: {

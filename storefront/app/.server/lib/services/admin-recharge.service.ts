@@ -1,3 +1,4 @@
+import { verifyBep20Transfer } from "@server/payments/bep20";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@server/types/database";
 type Client = SupabaseClient<Database>;
@@ -21,6 +22,9 @@ import type { RechargeRequestStatus } from "@server/lib/services/recharge.servic
 const SETTLED: RechargeRequestStatus[] = ["approved", "rejected", "expired", "cancelled"];
 
 export type AdminRechargeRequest = {
+  paymentNetwork?: string | null;
+  paymentTxHash?: string | null;
+  paymentDestination?: string | null;
   id: string;
   reference: string;
   requestedAmount: number;
@@ -42,6 +46,9 @@ type RequestProfile = {
 };
 
 type RequestRow = {
+  payment_network?: string | null;
+  payment_tx_hash?: string | null;
+  payment_destination?: string | null;
   id: string;
   reference: string;
   requested_amount: number;
@@ -62,6 +69,9 @@ function toRequest(row: RequestRow): AdminRechargeRequest {
   return {
     id: row.id,
     reference: row.reference,
+    paymentNetwork: row.payment_network,
+    paymentTxHash: row.payment_tx_hash,
+    paymentDestination: row.payment_destination,
     requestedAmount: row.requested_amount,
     creditedAmount: row.wallet_credit_amount,
     currency: row.requested_currency,
@@ -85,7 +95,7 @@ export type RechargeQueues = {
 };
 
 const REQUEST_SELECT =
-  "id, reference, requested_amount, wallet_credit_amount, requested_currency, payment_method, status, admin_note, created_at, reviewed_at, user_id, profiles!recharge_requests_user_id_fkey (id, email, full_name, username)";
+  "id, reference, requested_amount, wallet_credit_amount, requested_currency, payment_method, status, admin_note, created_at, reviewed_at, user_id, payment_network, payment_tx_hash, payment_destination, profiles!recharge_requests_user_id_fkey (id, email, full_name, username)";
 
 /** Every recharge request one customer made, newest first. */
 export async function listCustomerRecharges(supabase: Client, userId: string, limit = 20): Promise<AdminRechargeRequest[]> {
@@ -111,7 +121,7 @@ export async function getRechargeQueues(supabase: Client): Promise<RechargeQueue
    * foreign key picks the requester rather than whoever reviewed it.
    */
   const select =
-    "id, reference, requested_amount, wallet_credit_amount, requested_currency, payment_method, status, admin_note, created_at, reviewed_at, user_id, profiles!recharge_requests_user_id_fkey (id, email, full_name, username)";
+    "id, reference, requested_amount, wallet_credit_amount, requested_currency, payment_method, status, admin_note, created_at, reviewed_at, user_id, payment_network, payment_tx_hash, payment_destination, profiles!recharge_requests_user_id_fkey (id, email, full_name, username)";
 
   const [open, settled, settings] = await Promise.all([
     supabase
@@ -185,9 +195,28 @@ export async function approveRecharge(supabase: Client, input: {
   requestId: string;
   creditAmount: number | null;
   note: string | null;
+  payerVerified?: boolean;
 }): Promise<{ credited: number; balance: number; idempotent: boolean }> {
   await requireAdminId(supabase);
   
+
+  const { data: claim, error: claimError } = await supabase.from("recharge_requests")
+    .select("payment_network,payment_tx_hash,payment_destination,created_at,requested_amount,status")
+    .eq("id", input.requestId).maybeSingle();
+  if (claimError || !claim) throw new RechargeNotFoundError();
+  if (claim.payment_network === "BEP20" && claim.status !== "approved") {
+    if (!input.payerVerified || !input.note || input.note.trim().length < 5) throw new Error("Confirm payer ownership and record the verification in the note. A public transaction hash alone does not identify the payer.");
+    if (!claim.payment_tx_hash || !claim.payment_destination) throw new Error("Customer must submit the BEP20 transaction hash first.");
+    const verification = await verifyBep20Transfer({ txHash: claim.payment_tx_hash, destination: claim.payment_destination, createdAt: claim.created_at });
+    const credit = input.creditAmount ?? claim.requested_amount;
+    if (credit > verification.received_amount) throw new Error(`Only ${verification.received_amount} USDT was received. Adjust the credit amount.`);
+    const { data: result, error } = await (supabase as SupabaseClient).rpc("approve_verified_bep20_recharge", { p_request_id: input.requestId, p_tx_hash: claim.payment_tx_hash, p_credit_amount: credit, p_verification: verification, p_note: input.note }).maybeSingle();
+    if (error) raiseFor(error.message);
+    const approved = result as { credited: number; balance: number; idempotent: boolean } | null;
+    if (!approved) throw new Error("Approval returned no result");
+    if (!approved.idempotent) await notifyRechargeOutcome(supabase, input.requestId, "approved", approved.credited, input.note);
+    return approved;
+  }
 
   const { data, error } = await supabase
     .rpc("approve_recharge_request", {

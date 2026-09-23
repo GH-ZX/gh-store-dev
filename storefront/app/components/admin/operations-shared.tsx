@@ -428,6 +428,7 @@ export function RechargeRows({
             )}
           </div>
 
+          {row.paymentNetwork === "BEP20" ? <div className="grid gap-2 text-xs"><p>BEP20 · {row.paymentDestination}</p>{row.paymentTxHash ? <a className="break-all text-[var(--accent)] underline" href={`https://bscscan.com/tx/${encodeURIComponent(row.paymentTxHash)}`} target="_blank" rel="noreferrer">{row.paymentTxHash}</a> : <p>{ar ? "بانتظار معرّف المعاملة من العميل" : "Awaiting customer transaction hash"}</p>}</div> : null}
           {row.adminNote && (
             <p className="rounded-lg bg-[var(--surface-inset)] p-2.5 text-xs text-[var(--ink-soft)] whitespace-pre-wrap border border-[var(--line)]">
               {row.adminNote}
@@ -437,6 +438,7 @@ export function RechargeRows({
           {review && (
             <Form method="post" className="grid gap-3 sm:grid-cols-2 pt-2 border-t border-[var(--line)]">
               <Hidden name="requestId" value={row.id} />
+              {row.paymentNetwork === "BEP20" ? <label className="sm:col-span-2 flex items-start gap-3 text-sm"><input type="checkbox" name="payerVerified" className="mt-1" /><span>{ar ? "تحققت من أن التحويل لهذا العميل، وسجلت الدليل في الملاحظة. سيفحص النظام الشبكة والعملة والعنوان والمبلغ والتأكيدات قبل إضافة الرصيد." : "I verified this transfer belongs to this customer and recorded the evidence in the note. The server will check network, token, destination, amount and confirmations before crediting."}</span></label> : null}
               <Field
                 label={
                   ar ? "المبلغ المضاف (اختياري)" : "Credit amount (optional)"

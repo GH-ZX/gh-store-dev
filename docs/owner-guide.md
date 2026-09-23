@@ -1,15 +1,17 @@
 # GH-Store Owner Guide
 
-GH-Store is a bilingual digital gaming store for game top-ups, redeem codes, and digital cards.
+GH Store is a bilingual digital products store for top-ups, subscriptions, software, accounts, vouchers and services.
 
 ## Customer Journey
 
 1. A customer creates an account or signs in.
-2. The customer browses games, offers, and gift cards.
+2. The customer browses products and offers, or selects an offer through homepage quick buy.
 3. The customer adds balance through manual or automatic recharge.
 4. The customer purchases a UID top-up or redeem code.
 5. GH-Store fulfills the order through the configured provider.
 6. The customer receives a status update, delivery details, and an invoice.
+
+See the [September upgrade operating guide](store-upgrade/operating-guide.md) for search aliases, warranty terms, artwork roles, quick buy, USDT and PostHog.
 
 ## Getting Started
 
@@ -24,7 +26,7 @@ GH-Store is a bilingual digital gaming store for game top-ups, redeem codes, and
 |-----------|------|--------|
 | Provider keys and catalog import | Dashboard -> Providers and API | Available |
 | Store overview | Dashboard -> Home | Available |
-| Games and offers editing | Dashboard -> Catalog | Available |
+| Products and offers editing | Dashboard -> Catalog | Available |
 | Orders and delivery | Dashboard -> Orders | Available |
 | Failed-order refund policy | Dashboard -> Providers and API -> Order operations | Available |
 | Wallet recharge | Dashboard -> Recharges / Payments | Available |

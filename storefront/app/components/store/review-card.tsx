@@ -44,7 +44,7 @@ export function ReviewCard({ review, locale, labels, className }: ReviewCardProp
 
       <figcaption className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-4">
         <span className="text-sm font-semibold text-[var(--ink)]">{review.displayName}</span>
-        {review.isFeatured ? <Badge tone="accent">{labels.verified}</Badge> : null}
+        {review.isVerifiedPurchase ? <Badge tone="accent">{labels.verified}</Badge> : null}
       </figcaption>
     </figure>
   );

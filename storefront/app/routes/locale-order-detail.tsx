@@ -1,3 +1,4 @@
+import { OfferTerms } from "@/components/store/offer-terms";
 import { OrderRefresh } from "@/components/checkout/order-refresh";
 import { OrderStatusPanel } from "@/components/checkout/order-status";
 import { ReviewForm } from "@/components/reviews/review-form";
@@ -96,6 +97,8 @@ function ItemCard({
         </p>
       </div>
 
+      <OfferTerms terms={item.terms} locale={locale} />
+      {item.reorderPath ? <Link className="my-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--accent)]" to={item.reorderPath}>{locale === "ar" ? "شراء مرة أخرى · مراجعة السعر الحالي" : "Buy again · review current price"}</Link> : null}
       <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5">
         <div className="flex items-baseline gap-1.5">
           <dt className="text-xs text-[var(--ink-faint)]">

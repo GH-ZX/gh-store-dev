@@ -2,6 +2,7 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
 export default [
   index("routes/root-index.tsx"),
+  route("api/store-event", "routes/api-store-event.ts"),
   route("sitemap.xml", "routes/sitemap-xml.ts"),
   route("robots.txt", "routes/robots-txt.ts"),
   route("api/search/suggest", "routes/api-search-suggest.ts"),

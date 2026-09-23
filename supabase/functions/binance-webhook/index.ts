@@ -320,7 +320,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   const { data: invoice, error: invoiceError } = await supabase
     .from("binance_invoices")
-    .select("merchant_trade_no, recharge_request_id, status, charge_amount, user_id")
+    .select("merchant_trade_no, recharge_request_id, status, charge_amount, charge_currency, user_id")
     .eq("merchant_trade_no", merchantTradeNo)
     .maybeSingle();
 
@@ -374,7 +374,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
    * itself. An amount Binance did not report leaves the invoice pending; the
    * store's sweep keeps asking until there is a figure to settle against.
    */
-  const paidAmount = toNumber(order?.amount);
+  if (text(order?.merchantTradeNo) !== merchantTradeNo || text(order?.currency)?.toUpperCase() !== invoice.charge_currency.toUpperCase() || !text(order?.transactionId)) {
+    return json({ returnCode: "FAIL", returnMessage: "invoice_mismatch" }, 503);
+  }
+  const paidAmount = toNumber(order?.orderAmount);
 
   if (paidAmount === null) {
     return acknowledge();

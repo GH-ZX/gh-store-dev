@@ -102,3 +102,16 @@
   [data-storefront-shell] .sf-detail-related-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 }
 @media (max-width: 719px) and (max-height: 699px) { [data-storefront-shell] .sf-detail-mobile-selection { position: static; } }
+
+[data-storefront-shell] .sf-offer-terms { display: grid; gap: 6px; margin-top: 10px; font-size: 12px; line-height: 1.6; }
+[data-storefront-shell] .sf-offer-terms > div { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+[data-storefront-shell] .sf-offer-terms dt { color: var(--ink-muted); }
+[data-storefront-shell] .sf-offer-terms dd { margin: 0; font-weight: 600; }
+
+[data-storefront-shell] .sf-detail-hero { grid-template-columns: minmax(280px, .8fr) minmax(0, 1.2fr); }
+[data-storefront-shell] .sf-detail-artwork { aspect-ratio: 3 / 2; }
+[data-storefront-shell] .sf-detail-artwork .sf-product-stage img { padding: 0; }
+@media (max-width: 719px) {
+  [data-storefront-shell] .sf-detail-hero { grid-template-columns: 1fr; gap: 20px; }
+  [data-storefront-shell] .sf-detail-artwork { width: 100%; height: auto; max-height: 250px; aspect-ratio: 3 / 2; }
+}

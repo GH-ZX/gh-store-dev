@@ -40,3 +40,7 @@ the generic catalog entity, and only where the rename stays localized:
   every import/caller so it still type-checks and passes tests.
 
 <!-- END:product-terminology -->
+
+## Active store upgrade handoff
+
+Read `docs/store-upgrade/README.md` for completed work, migration status and release gates before continuing this upgrade. The user requests **no screenshots or image inspection**; verify with code, DOM and functional checks.

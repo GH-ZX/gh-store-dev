@@ -258,6 +258,7 @@ export async function actDashboardOperations(args: ActionFunctionArgs) {
           : null;
         await approveRecharge(supabase, {
           requestId: id("requestId"),
+          payerVerified: form.get("payerVerified") === "on",
           creditAmount,
           note: text("note") || null,
         });

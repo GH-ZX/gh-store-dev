@@ -1,3 +1,4 @@
+import { CopyAddress } from "@/components/recharge/copy-address";
 
 import { useEffect } from "react";
 import { useRevalidator } from "react-router";
@@ -172,12 +173,15 @@ export function RechargeRequestPanel({
         <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">{messages.referenceHint}</p>
       </div>
 
-      {request.status === "pending" && method ? (
+      {(request.status === "pending" || request.status === "payment_sent") && method ? (
         <div className="grid gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5">
           <h2 className="text-sm font-semibold text-[var(--ink)]">{messages.instructionsTitle}</h2>
-          {method.account ? <p className="break-all font-mono text-sm text-[var(--ink)]" dir="ltr">{method.account}</p> : null}
+          {request.paymentNetwork === "BEP20" ? <p className="text-sm font-semibold">USDT · BEP20 (BNB Smart Chain)</p> : null}
+          {request.paymentDestination || method.account ? <CopyAddress value={request.paymentDestination || method.account || ""} locale={locale} /> : null}
+          {request.paymentNetwork === "BEP20" ? <p className="text-sm text-[var(--ink-muted)]">{locale === "ar" ? "أرسل USDT على BEP20 فقط. 1 USDT مستلم = 1 دولار رصيد. رسوم السحب لا تدخل في الرصيد. لا ترسل BNB أو على شبكة أخرى. تُراجع الدفعة قبل إضافة الرصيد." : "Send USDT on BEP20 only. 1 USDT received = $1 wallet credit. Withdrawal fees are not credited. Do not send BNB or use another network. Payment is reviewed before crediting."}</p> : null}
           {getMethodInstructions(method, locale) ? <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--ink-muted)]" dir="auto">{getMethodInstructions(method, locale)}</p> : null}
           <form onSubmit={markPaidSubmit} className="grid gap-3">
+            {request.paymentNetwork === "BEP20" ? <label className="grid gap-2 text-sm">{locale === "ar" ? "معرّف المعاملة (TxID)" : "Transaction hash (TxID)"}<input name="txHash" dir="ltr" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 font-mono text-sm" required pattern="0x[0-9a-fA-F]{64}" maxLength={66} defaultValue={request.paymentTxHash ?? ""} placeholder="0x…" autoComplete="off" /><span className="text-xs text-[var(--ink-muted)]">{locale === "ar" ? "انسخه من سجل السحب. يمكنك تصحيحه قبل الموافقة. إرسال المعرف لا يعني تأكيد الدفع." : "Copy it from your withdrawal history. You can correct it before approval. Submitting a hash does not confirm payment."}</span></label> : null}
             <FormResult error={paidState.error ? messages.errors[paidState.error as keyof typeof messages.errors] ?? messages.errors.unknown : null} />
             <Button type="submit" disabled={markingPaid} aria-busy={markingPaid}>
               {markingPaid ? requestMessages.markingPaid : messages.markPaidAction}
