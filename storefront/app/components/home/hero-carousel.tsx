@@ -211,8 +211,8 @@ export function HeroCarousel({
                       <span className="sf-featured-label">{product.carouselBadge || labels.featured}</span>
                       <h3 dir="auto">{product.name}</h3>
                       {product.description ? <p>{product.description}</p> : null}
+                      <span className="sf-featured-details">{labels.details}<ArrowIcon direction="end" className="size-4 rtl:rotate-180" /></span>
                     </div>
-                    <span className="sf-featured-details">{labels.details}<ArrowIcon direction="end" className="size-4 rtl:rotate-180" /></span>
                   </Link>
                   {liveEdit && active ? <div className="sf-featured-edit"><ProductEditor
                     gameId={product.id} gameSlug={product.slug} label={product.name} locale={locale} messages={liveEdit}/></div> : null}
