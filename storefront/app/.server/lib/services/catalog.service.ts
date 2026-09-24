@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Locale } from "@/i18n/config";
 import { PRODUCT_SELECT, toStoreProduct, type ProductRow, type StoreProduct } from "@/lib/catalog/product-mapper";
 import { OFFER_WITH_PRODUCT_SELECT, toStoreOffer, type OfferRow, type StoreOffer } from "@/lib/catalog/offer-mapper";
+import { GIFT_CARD_CATEGORY_SLUG } from "@/lib/catalog/paths";
 import { toSearchTokens, type SearchFilter } from "@/lib/catalog/search";
 import { CatalogReadError } from "@server/lib/services/home-catalog.service";
 
@@ -18,6 +19,7 @@ export type CatalogSearchResult = {
 };
 
 const SEARCH_RESULT_LIMIT = 48;
+const SEARCH_FILTER_SCAN_LIMIT = 1000;
 /** Matched products whose offers are pulled into the offer results. */
 const SEARCH_PRODUCT_FANOUT_LIMIT = 20;
 
@@ -29,19 +31,39 @@ const SEARCH_PRODUCT_FANOUT_LIMIT = 20;
  * separate id lookup: two simple queries beat one query whose result type depends
  * on a runtime-built select string.
  */
-async function productIdsSellingOfferTypes(supabase: SupabaseClient, types: string[]): Promise<Set<string>> {
-  const { data, error } = await supabase
-    .from("offers")
-    .select("product_id")
-    .eq("is_active", true)
-    .in("offer_type", types);
+async function productIdsSellingOfferTypes(supabase: SupabaseClient, types: string[], categoryId?: string): Promise<Set<string>> {
+  const result = categoryId
+    ? await supabase
+        .from("offers")
+        .select("product_id, products!inner(category_id)")
+        .eq("is_active", true)
+        .eq("products.category_id", categoryId)
+        .in("offer_type", types)
+    : await supabase
+        .from("offers")
+        .select("product_id")
+        .eq("is_active", true)
+        .in("offer_type", types);
+  const { error } = result;
+  const data = (result.data ?? []) as Array<{ product_id?: string | null } | null>;
 
   if (error) {
     throw new CatalogReadError();
   }
 
   // Product-only offers (no game) cannot narrow a product search.
-  return new Set(data.flatMap((row) => (row.product_id ? [row.product_id] : [])));
+  return new Set(data.flatMap((row) => (row?.product_id ? [row.product_id] : [])));
+}
+
+async function giftCardCategoryId(supabase: SupabaseClient): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", GIFT_CARD_CATEGORY_SLUG)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (error) throw new CatalogReadError();
+  return typeof data?.id === "string" ? data.id : null;
 }
 
 /**
@@ -77,7 +99,7 @@ export async function searchCatalog(
     .select(PRODUCT_SELECT)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
-    .limit(SEARCH_RESULT_LIMIT);
+    .limit(filter === "all" ? SEARCH_RESULT_LIMIT : SEARCH_FILTER_SCAN_LIMIT);
 
   for (const token of tokens) {
     productsQuery = productsQuery.or(orIlike(PRODUCT_SEARCH_COLUMNS, token));
@@ -92,18 +114,23 @@ export async function searchCatalog(
   let matchedProducts = matchedProductRows;
 
   if (filter === "topup" || filter === "gift_card") {
-    const sellingIds = await productIdsSellingOfferTypes(
-      supabase,
-      filter === "topup" ? ["topup"] : GIFT_CARD_OFFER_TYPES,
-    );
+    const categoryId = filter === "gift_card" ? await giftCardCategoryId(supabase) : undefined;
+    const sellingIds = categoryId === null
+      ? new Set<string>()
+      : await productIdsSellingOfferTypes(
+          supabase,
+          filter === "topup" ? ["topup"] : GIFT_CARD_OFFER_TYPES,
+          categoryId,
+        );
     matchedProducts = matchedProducts.filter((product) => sellingIds.has(product.id));
   }
+  if (filter !== "all") matchedProducts = matchedProducts.slice(0, SEARCH_RESULT_LIMIT);
 
   if (!wantsOffers) {
     return { games: matchedProducts.map((product) => toStoreProduct(product as unknown as ProductRow, locale)), offers: [] };
   }
 
-  const matchedProductIds = matchedProductRows.slice(0, SEARCH_PRODUCT_FANOUT_LIMIT).map((product) => product.id);
+  const matchedProductIds = matchedProducts.slice(0, SEARCH_PRODUCT_FANOUT_LIMIT).map((product) => product.id);
   const productIdClause = matchedProductIds.length > 0 ? `,product_id.in.(${matchedProductIds.join(",")})` : "";
 
   let offersQuery = supabase

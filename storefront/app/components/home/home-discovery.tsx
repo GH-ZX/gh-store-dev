@@ -3,10 +3,10 @@ import { useId, useState } from "react";
 import { Link } from "react-router";
 import type { Locale } from "@/i18n/config";
 import type { HomeDiscovery } from "@server/lib/services/home-discovery.service";
-import { getProductCardLabels } from "@/lib/catalog/labels";
+import { getProductCardLabels, getOfferCardLabels } from "@/lib/catalog/labels";
 import { getMessages } from "@/i18n/messages";
 import { Section, SectionHeader } from "@/components/ui/section";
-import { ProductGrid } from "@/components/store/collections";
+import { ProductGrid, OfferGrid } from "@/components/store/collections";
 import { OfferTerms } from "@/components/store/offer-terms";
 import { StoreImage } from "@/components/store/store-image";
 import { getProductArtwork } from "@/lib/catalog/presentation";
@@ -52,6 +52,6 @@ export function HomeCategoryShowcases({ discovery, locale, exclude }: { discover
   const catalog = getMessages(locale, "catalog");
   return discovery.groups.filter(group => !exclude.includes(group.slug)).map(group => <Section spacing="tight" className="sf-discovery-section" key={group.slug}>
     <SectionHeader title={group.name} viewAllHref={`/${locale}/${encodeURIComponent(group.slug)}`} viewAllLabel={locale === "ar" ? "عرض الكل" : "View all"} />
-    <div className="mt-5"><ProductGrid games={group.products} locale={locale} layout="rail" railLabel={group.name} labels={getProductCardLabels(common, catalog)} /></div>
+    <div className="mt-5">{group.products.length === 1 && group.offers.length > 1 ? <OfferGrid offers={group.offers} locale={locale} layout="rail" railLabel={group.name} labels={getOfferCardLabels(common, catalog)} /> : <ProductGrid games={group.products} locale={locale} layout="rail" railLabel={group.name} labels={getProductCardLabels(common, catalog)} />}</div>
   </Section>);
 }

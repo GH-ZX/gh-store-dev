@@ -41,18 +41,24 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     getHomeLayout(client),
     getPublicStoreSettings(client),
   ]);
-  const [carousel, sections, discovery] = await Promise.all([
+  const [carousel, sections] = await Promise.all([
     getHomeCarousel(client, locale, layout),
     resolveHomeSections(client, locale, layout, {
       hasSocialLinks: settings.socialLinks.length > 0,
     }),
-    getHomeDiscovery(client, locale),
   ]);
+  const excludedSlugs = sections.flatMap(section => section.kind === "games"
+    ? section.games.map(product => product.categorySlug)
+    : section.kind === "offers" && section.section.type === "gift_cards"
+      ? section.offers.flatMap(offer => offer.game ? [offer.game.categorySlug] : [])
+      : []);
+  const discovery = await getHomeDiscovery(client, locale, { excludeSlugs: excludedSlugs });
   return {
     locale,
     siteUrl,
     carousel,
     discovery,
+    excludedSlugs,
     sections: await withAdminHomeCosts(sections),
     settings,
   };
@@ -71,7 +77,7 @@ export function meta({ params, matches }: Route.MetaArgs) {
 }
 
 export default function LocaleHome() {
-  const { locale, siteUrl, carousel, sections, settings, discovery } = useLoaderData<typeof loader>();
+  const { locale, siteUrl, carousel, sections, settings, discovery, excludedSlugs } = useLoaderData<typeof loader>();
   const chrome = useRouteLoaderData("routes/locale-layout") as
     ChromeData | undefined;
   const liveEdit = chrome?.session?.isAdmin
@@ -135,7 +141,7 @@ export default function LocaleHome() {
           <HomeFallbackLinks locale={locale} common={common} />
         </Section>
       )}
-      <HomeCategoryShowcases discovery={discovery} locale={locale} exclude={sections.flatMap(section => section.kind === "games" ? section.games.map(product => product.categorySlug) : [])} />
+      <HomeCategoryShowcases discovery={discovery} locale={locale} exclude={excludedSlugs} />
     </>
   );
   return liveEdit ? (

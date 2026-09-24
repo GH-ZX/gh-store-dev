@@ -74,7 +74,7 @@ const publicSettingsSchema = z.object({
       title_en: z.string().trim().max(160).optional(),
       description_ar: z.string().trim().max(320).optional(),
       description_en: z.string().trim().max(320).optional(),
-      og_image_url: safeUrl.optional(),
+      og_image_url: safeUrl.optional().catch(undefined),
       // Per-page overrides ride along in the same column, keyed by route path.
       pages: z.unknown().optional(),
     })

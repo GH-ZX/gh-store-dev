@@ -1,12 +1,14 @@
+import { getPosthogSettings } from "@server/lib/services/experience-settings.service";
 import type { StoreEvent } from "@/lib/analytics/events";
 /** Explicit anonymous events only. Never forward request headers, URL or client IP. */
-export async function capturePosthog(env: Record<string, string | undefined>, event: StoreEvent, sessionId: string) {
-  if (!env.POSTHOG_PROJECT_KEY || !["US", "EU"].includes(env.POSTHOG_REGION ?? "")) return;
-  const host = env.POSTHOG_REGION === "EU" ? "https://eu.i.posthog.com" : "https://us.i.posthog.com";
+export async function capturePosthog(event: StoreEvent, sessionId: string) {
   try {
+    const settings = await getPosthogSettings();
+    if (!settings.enabled) return;
+    const host = settings.region === "EU" ? "https://eu.i.posthog.com" : "https://us.i.posthog.com";
     const result = await fetch(`${host}/i/v0/e/`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ api_key: env.POSTHOG_PROJECT_KEY, event: `store_${event}`, distinct_id: sessionId,
+      body: JSON.stringify({ api_key: settings.project_key, event: `store_${event}`, distinct_id: sessionId,
         properties: { $process_person_profile: false, $geoip_disable: true, $ip: null, source: "gh-store" } }),
       signal: AbortSignal.timeout(3000),
     });

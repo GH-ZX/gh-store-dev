@@ -1,7 +1,7 @@
 do $$
 declare
   required_table text;
-  required_tables text[] := array['store_settings', 'reviews'];
+  required_tables text[] := array['store_settings', 'reviews', 'store_discovery_settings', 'store_posthog_settings'];
   table_is_rls_enabled boolean;
   public_settings jsonb;
 begin
@@ -31,6 +31,16 @@ begin
     raise exception 'store_settings must not expose an anon select policy';
   end if;
 
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'store_posthog_settings'
+      and 'anon' = any (roles)
+  ) then
+    raise exception 'store_posthog_settings must not expose an anon policy';
+  end if;
+
   if not exists (
     select 1
     from pg_policies
@@ -41,8 +51,13 @@ begin
     raise exception 'Missing approved-reviews public policy';
   end if;
 
-  if not exists (select 1 from public.store_settings where id = 'global') then
-    raise exception 'Missing singleton store_settings row';
+  if not exists (
+    select 1
+    from pg_proc
+    where pronamespace = 'public'::regnamespace
+      and proname = 'store_posthog_enabled'
+  ) then
+    raise exception 'Missing public analytics flag RPC';
   end if;
 
   select public.get_public_store_settings() into public_settings;

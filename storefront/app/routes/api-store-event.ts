@@ -26,8 +26,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
   }
   if (!EVENTS.has(event)) return new Response(null,{status:400});
   if (sessionId) {
-    const { env, ctx } = getCloudflareContext(context);
-    ctx.waitUntil(capturePosthog(env, event as StoreEvent, sessionId));
+    const { ctx } = getCloudflareContext(context);
+    ctx.waitUntil(capturePosthog(event as StoreEvent, sessionId));
   }
   if (hasServiceRoleKey()) {
     await (createSupabaseServiceClient() as SupabaseClient).rpc("count_store_event",{p_event:event});

@@ -1,6 +1,7 @@
+import { normalizePublicSettings as normalizeServerSettings } from "@server/lib/settings/public-settings";
 import { describe, expect, it } from "vitest";
 import { buildStorePageMeta } from "../../storefront/app/lib/store-seo";
-import { EMPTY_PUBLIC_SETTINGS } from "../../storefront/app/lib/settings/public-settings";
+import { EMPTY_PUBLIC_SETTINGS, normalizePublicSettings } from "../../storefront/app/lib/settings/public-settings";
 import { normalizePageSeo, resolvePageSeo } from "../../storefront/app/lib/settings/page-seo";
 
 const settings = { ...EMPTY_PUBLIC_SETTINGS, branding: { nameAr: "متجر تجريبي", nameEn: "Example store", useEverywhere: true }, seo: { ...EMPTY_PUBLIC_SETTINGS.seo, descriptionEn: "Owner description", pages: { "/games": { titleAr: "", titleEn: "Owner catalog", descriptionAr: "", descriptionEn: "Catalog description" } } } };
@@ -50,4 +51,23 @@ describe("public page SEO", () => {
     expect(resolvePageSeo(pages, "/best-sellers", "en", fallback).title).toBe("Popular digital offers");
     expect(resolvePageSeo(pages, "/about", "en", fallback).description).toBe("Get to know GH Store");
   });
+});
+
+
+it("keeps valid metadata and branding when an optional SEO image is malformed", () => {
+  const settings = normalizePublicSettings({ branding: { name_en: "GH Store", use_everywhere: true }, seo: { title_en: "Store products", description_en: "Compare digital offers", og_image_url: "/invalid-relative-image.png" } });
+  expect(settings.seo.titleEn).toBe("Store products");
+  expect(settings.seo.descriptionEn).toBe("Compare digital offers");
+  expect(settings.branding.useEverywhere).toBe(true);
+  expect(settings.seo.ogImageUrl).toBeNull();
+});
+
+it("preserves every dashboard page override through the server settings normalizer", () => {
+  const pages = Object.fromEntries(["/products", "/about", "/best-sellers"].map(path => [path, { title_en: `Saved ${path}`, description_en: "Store description" }]));
+  const server = normalizeServerSettings({ seo: { pages } });
+  for (const path of ["/products", "/about", "/best-sellers"] as const) {
+    expect(server.seo.pages[path]?.titleEn).toBe(`Saved ${path}`);
+    const meta = buildStorePageMeta({ locale: "en", path, title: "Fallback", description: "Fallback" }, [{ id: "root", loaderData: { seoSettings: server } }]);
+    expect(meta).toContainEqual({ title: `Saved ${path}` });
+  }
 });

@@ -66,7 +66,7 @@ describe("parseRechargeMethodsInput", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.methods[0].id).toBe("bybit");
+      expect(result.methods[0].id).toBe("BEP20");
     }
   });
 
@@ -79,7 +79,7 @@ describe("parseRechargeMethodsInput", () => {
   it("round-trips through normalizeRechargeConfig so only enabled methods reach customers", () => {
     const result = parseRechargeMethodsInput(
       JSON.stringify([
-        { ...BYBIT_METHOD_TEMPLATE, enabled: true, account: "0xBEP20Address" },
+        { ...BYBIT_METHOD_TEMPLATE, enabled: true, account: `0x${"a".repeat(40)}` },
         { ...BYBIT_METHOD_TEMPLATE, id: "bank" },
       ]),
     );
@@ -92,7 +92,7 @@ describe("parseRechargeMethodsInput", () => {
     const config = normalizeRechargeConfig({ methods: result.methods });
     const [bybit, bank] = config.methods;
 
-    expect(bybit).toMatchObject({ id: "bybit", enabled: true, account: "0xBEP20Address" });
+    expect(bybit).toMatchObject({ id: "BEP20", enabled: true, account: `0x${"a".repeat(40)}` });
     // A method left disabled is carried but never surfaced.
     expect(bank.enabled).toBe(false);
     expect(config.methods.length).toBe(2);
@@ -102,7 +102,7 @@ describe("parseRechargeMethodsInput", () => {
     const config = normalizeRechargeConfig({ methods: [BYBIT_METHOD_TEMPLATE] });
 
     expect(config.methods[0].enabled).toBe(false);
-    expect(config.methods[0].labelEn).toBe("Bybit (USDT)");
+    expect(config.methods[0].labelEn).toBe("Bybit (USDT · BEP20)");
     expect(config.methods[0].labelAr).not.toBe(config.methods[0].labelEn);
   });
 });

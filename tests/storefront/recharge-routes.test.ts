@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   submit: vi.fn(), samOptions: vi.fn(), binanceOptions: vi.fn(),
   startSam: vi.fn(), startBinance: vi.fn(), detail: vi.fn(), wallet: vi.fn(),
   paymentInvoice: vi.fn(), markPaid: vi.fn(), samInvoice: vi.fn(), binanceInvoice: vi.fn(),
-  client: {},
+  client: { rpc: vi.fn() },
 }));
 
 vi.mock("@/lib/cloudflare-context", () => ({ getCloudflareContext: () => ({ env: {} }) }));
@@ -45,7 +45,7 @@ const requestId = "123e4567-e89b-12d3-a456-426614174000";
 const method = { id: "transfer", labelEn: "Bank transfer", labelAr: "تحويل", account: "TRANSFER-ACCOUNT", instructionsEn: "Include the reference.", instructionsAr: "أضف المرجع.", enabled: true };
 function args(path: string, form?: Record<string, string>) {
   return {
-    request: new Request(`https://store.example${path}`, form ? { method: "POST", body: new URLSearchParams(form) } : {}),
+    request: new Request(`https://store.example${path}`, form ? { method: "POST", headers: { Origin: "https://store.example" }, body: new URLSearchParams(form) } : {}),
     params: { locale: "en", requestId, invoiceId: "sam-existing" }, context: {},
   } as never;
 }
@@ -194,5 +194,22 @@ describe("recharge history and payment confirmation", () => {
   it("shows a failed confirmation as an error rather than a false success", async () => {
     mocks.markPaid.mockResolvedValue(false);
     expect(payload(await detailAction(args(`/en/recharge/${requestId}`, { intent: "markRechargePaid" }))).error).toBe("not_found");
+  });
+});
+
+
+describe("BEP20 transfer submission", () => {
+  it("requires payer acknowledgement before submitting transfer evidence", async () => {
+    mocks.detail.mockResolvedValue({ paymentNetwork: "BEP20" });
+    const result = await detailAction(args(`/en/recharge/${requestId}`, { intent: "markRechargePaid", txHash: "0x" + "a".repeat(64) }));
+    expect(payload(result).error).toBe("invalid_input");
+    expect(mocks.client.rpc).not.toHaveBeenCalled();
+  });
+  it("accepts a valid hash with acknowledgement through the ownership-checking RPC", async () => {
+    mocks.detail.mockResolvedValue({ paymentNetwork: "BEP20" });
+    mocks.client.rpc.mockResolvedValue({ error: null });
+    const result = await detailAction(args(`/en/recharge/${requestId}`, { intent: "markRechargePaid", txHash: "0x" + "a".repeat(64), payerConfirmed: "yes" }));
+    expect(payload(result).error).toBeNull();
+    expect(mocks.client.rpc).toHaveBeenCalledWith("submit_recharge_transfer", { p_request_id: requestId, p_tx_hash: "0x" + "a".repeat(64) });
   });
 });

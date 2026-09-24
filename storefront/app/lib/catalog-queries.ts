@@ -2,13 +2,14 @@ import { toSearchTokens } from "@/lib/catalog/search";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Locale } from "@/i18n/config";
-import { UNCATEGORIZED_PRODUCT_PATH } from "@/lib/catalog/paths";
+import { GIFT_CARD_CATEGORY_SLUG, UNCATEGORIZED_PRODUCT_PATH } from "@/lib/catalog/paths";
 import {
   normalizeOfferInputFields,
   resolveCheckoutFieldKeys,
 } from "@/lib/catalog/checkout-fields";
 import {
   OFFER_SELECT,
+  OFFER_WITH_CATEGORY_SELECT,
   OFFER_WITH_PRODUCT_SELECT,
   toStoreOffer,
   type OfferRow,
@@ -473,7 +474,7 @@ export async function getOfferRail(
 ): Promise<StoreOffer[]> {
   let query = client
     .from("offers")
-    .select(OFFER_WITH_PRODUCT_SELECT)
+    .select(rail === "gift-cards" ? OFFER_WITH_CATEGORY_SELECT : OFFER_WITH_PRODUCT_SELECT)
     .eq("is_active", true)
     .eq("products.is_active", true)
     .order("sort_order", { ascending: true })
@@ -482,7 +483,7 @@ export async function getOfferRail(
 
   query =
     rail === "gift-cards"
-      ? query.in("offer_type", ["gift_card", "redeem_code"])
+      ? query.in("offer_type", ["gift_card", "redeem_code"]).eq("products.categories.slug", GIFT_CARD_CATEGORY_SLUG)
       : query.eq("is_sale", true);
 
   const { data, error } = await query;

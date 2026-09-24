@@ -126,7 +126,7 @@ async function resolveSection(
     case "gift_cards": {
       const offers = await safely(
         section.type,
-        () => getOffersByType(client, locale, "gift_card", section.limit),
+        () => getOffersByType(client, locale, "gift_card", section.limit, section.categoryIds),
         [],
       );
       return offers.length > 0 ? { kind: "offers", section, offers } : null;

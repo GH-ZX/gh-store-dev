@@ -126,3 +126,17 @@
 @media print {
   [data-storefront-shell] .sf-invoice { padding: 0; }
 }
+
+/* Payment instructions stay ahead of reference details on small screens. */
+.sf-usdt-request { display:grid; gap:20px; grid-template-areas:"network" "progress" "status" "instructions" "reference" "summary" "updates" "refresh"; }
+.sf-usdt-request > .sf-usdt-network { grid-area:network; }
+.sf-usdt-request > .sf-usdt-progress { grid-area:progress; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; text-align:center; font-size:14px; }
+.sf-usdt-request > .sf-usdt-status { grid-area:status; }
+.sf-usdt-request > .sf-usdt-reference { grid-area:reference; }
+.sf-usdt-request > .sf-usdt-instructions { grid-area:instructions; min-width:0; }
+.sf-usdt-request > .sf-usdt-summary { grid-area:summary; }
+.sf-usdt-request > .sf-usdt-updates { grid-area:updates; }
+.sf-usdt-request > .sf-usdt-refresh { grid-area:refresh; }
+@media(min-width:900px) {
+  .sf-usdt-request { grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); grid-template-areas:"network network" "progress progress" "instructions status" "instructions reference" "summary summary" "updates refresh"; align-items:start; }
+}

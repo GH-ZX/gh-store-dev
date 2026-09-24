@@ -1,3 +1,4 @@
+import { UsdtNetwork } from "@/components/recharge/usdt-network";
 import { useCommerceAction } from "@/components/commerce/use-commerce-action";
 
 import { useState } from "react";
@@ -15,6 +16,7 @@ import {
 import {
   getMethodInstructions,
   getMethodLabel,
+  isBep20MethodId,
   type RechargeConfig,
 } from "@/lib/recharge-settings";
 
@@ -121,13 +123,14 @@ export function RechargeForm({ locale, messages, config, initialAmount, returnTo
         />
       </div>
 
+      {method && isBep20MethodId(method.id) ? <UsdtNetwork locale={locale} /> : null}
       {method ? (
         <div className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
             <InfoIcon className="size-4 text-[var(--accent)]" />
             {messages.instructionsTitle}
           </p>
-          {method.account ? (
+          {method.account && !isBep20MethodId(method.id) ? (
             <p className="mt-3 break-all font-mono text-sm text-[var(--ink)]" dir="ltr">
               {method.account}
             </p>
@@ -140,6 +143,7 @@ export function RechargeForm({ locale, messages, config, initialAmount, returnTo
         </div>
       ) : null}
 
+      {method && isBep20MethodId(method.id) ? <p className="text-sm text-[var(--ink-muted)]">{locale === "ar" ? "أنشئ طلب التعبئة أولاً. سيظهر عنوان الاستلام في الخطوة التالية. لا يُضاف الرصيد قبل مراجعة التحويل." : "Create your recharge request first. The receiving address appears in the next step. Credit is added after transfer review."}</p> : null}
       <FormResult error={error} />
 
       <div>

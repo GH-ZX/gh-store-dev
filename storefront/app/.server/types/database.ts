@@ -1521,6 +1521,63 @@ export type Database = {
           },
         ]
       }
+      store_discovery_settings: {
+        Row: {
+          category_count: number
+          hide_empty_categories: boolean
+          id: boolean
+          offers_per_product: number
+          products_per_category: number
+          quick_buy_count: number
+          updated_at: string
+        }
+        Insert: {
+          category_count?: number
+          hide_empty_categories?: boolean
+          id?: boolean
+          offers_per_product?: number
+          products_per_category?: number
+          quick_buy_count?: number
+          updated_at?: string
+        }
+        Update: {
+          category_count?: number
+          hide_empty_categories?: boolean
+          id?: boolean
+          offers_per_product?: number
+          products_per_category?: number
+          quick_buy_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      store_posthog_settings: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          project_id: string
+          project_key: string
+          region: string
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          project_id?: string
+          project_key?: string
+          region?: string
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          project_id?: string
+          project_key?: string
+          region?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_settings: {
         Row: {
           branding: Json
@@ -1959,6 +2016,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      store_posthog_enabled: { Args: never; Returns: boolean }
       admin_adjust_wallet: {
         Args: {
           p_amount: number
@@ -1983,6 +2041,21 @@ export type Database = {
           p_credit_amount?: number
           p_note?: string
           p_request_id: string
+        }
+        Returns: {
+          balance: number
+          credited: number
+          idempotent: boolean
+        }[]
+      }
+      approve_verified_bep20_recharge_admin: {
+        Args: {
+          p_actor: string
+          p_credit_amount: number
+          p_note: string
+          p_request_id: string
+          p_tx_hash: string
+          p_verification: Json
         }
         Returns: {
           balance: number

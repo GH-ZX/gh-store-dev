@@ -1,5 +1,14 @@
 # Store upgrade — September 2026
 
+## Current status — reopened after owner feedback
+
+The owner rejected the latest homepage/carousel. The previous checkboxes record implementation and deployment, not completion of every requested outcome. Read [the request audit](request-audit.md) before continuing. This audit found sparse/duplicate shelves, empty category navigation, incomplete catalog artwork, and active products without offers. Code follow-up now scopes gift cards, excludes empty navigation, filters offerless products from homepage suggestions, and hardens BEP20 method handling; migrations `20260924190000`–`20260924200000` are applied and recorded.
+
+- [ ] Homepage/carousel design accepted by the owner
+- [x] Resolve single-product voucher shelf (ten offers), duplicate gift-card shelves and empty header category
+- [ ] Complete artwork coverage and customer-facing product naming
+- [ ] Reconcile nine active products without active offers
+
 ## Handoff rules
 
 - User requests no screenshots or image inspection. Use code, DOM, network and automated checks.
@@ -25,15 +34,17 @@
 
 ## Release checklist
 
-- [x] Homepage catalog breadth and suggested-product quick buy
+- [x] Homepage catalog breadth and suggested-product quick buy — ten voucher offers, scoped gift cards, available-product shelves, working offer selection
 - [x] Header categories loaded from catalog, including future categories
 - [x] Three editable artwork roles: carousel logo, large image, card thumbnail
 - [x] Optional PostHog integration and owner setup instructions (inactive until configured)
-- [x] Apply quality/review, artwork and search-index migrations 20260924130000–20260924150000
+- [x] Apply quality/review, artwork and search-index migrations 20260924130000–20260924160000
+- [x] Apply experience-settings and gift-card scope migrations 20260924170000–20260924180000
+- [x] Apply BEP20 method hardening migrations 20260924190000–20260924200000 after review
 - [x] Merchant, catalog consolidation, provider onboarding and launch operating guide
 - [x] Final typecheck, tests, production build and functional checks without screenshots
 - [x] Deploy first storefront release and Binance webhook
-- [x] Refine carousel with logo/wordmark identity; verify and deploy
+- [ ] Refine carousel with logo/wordmark identity — deployed, but design rejected by owner
 - [x] Commit and push the completed release
 
 ## Owner-dependent follow-up
@@ -56,8 +67,24 @@ Months remain calendar months. Warranty is unknown, none, fixed or full term; co
 
 ## Final live catalog check
 
-81 products; 81 with search aliases; zero uncategorized. Seven upgrade migrations applied. Warranties parsed: 6 none, 7 full term, 4 fixed; 24 ambiguous offers require review. Other unknown warranties are not guessed. No supplier prices or product records were deleted.
+81 products; 81 with search aliases; zero uncategorized. Thirteen upgrade migrations are applied through 20260924220000. Warranties parsed: 6 none, 7 full term, 4 fixed; 24 ambiguous offers require review. Other unknown warranties are not guessed. No supplier prices or product records were deleted.
 
 ## Latest homepage refinement
 
-The carousel uses configured logos/wordmarks in the main panel and bottom navigation; duplicate product headings/descriptions are removed. Accessible names remain, and failed/missing logos fall back to text. Gemini/ChatGPT have local SVG marks; a missing CapCut entry reuses the configured logo. Imported card art is bounded over the generated background. The narrow English header overflow is fixed. Latest production version: `947e99d8-7722-456b-ab15-0423d366371f`. Both locales passed 360px production DOM/keyboard checks with six logos and zero fallback names. No screenshots or image inspection.
+The carousel uses configured logos/wordmarks in the main panel and bottom navigation; duplicate product headings/descriptions are removed. Accessible names remain, and failed/missing logos fall back to text. Gemini/ChatGPT have local SVG marks; a missing CapCut entry reuses the configured logo. Imported card art is bounded over the generated background. The narrow English header overflow is fixed. Latest production version: `bdb4923f-f047-4480-b76f-ded813c378fb`. Both locales passed 360px production DOM/keyboard checks with six logos and zero fallback names. No screenshots or image inspection.
+
+
+## Combined Codex / OpenCode follow-up
+
+- [x] Reviewed and retained OpenCode's catalog scope and BEP20 approval protections
+- [x] USDT/BEP20 asset and network marks, progress, amount/address instructions, transfer acknowledgement and transaction link
+- [x] Existing recharge instructions survive a disabled method using the saved destination
+- [x] Database-admin controls for discovery counts, empty navigation and PostHog; payment settings linked
+- [x] PostHog key masked, enabled flag public only, forwarding fails closed if DB configuration is unavailable
+- [x] Arabic/English dashboard SEO populated, existing owner edits preserved
+- [x] Fixed server/dashboard page SEO allowlist divergence and malformed-image fallback
+- [x] Help copy updated for products and mixed automatic/manual fulfillment; optional analytics disclosure added
+- [ ] PostHog project API key entered and real event delivery confirmed
+- [ ] Full original wishlist complete — remaining artwork, naming/terms, supplier reconciliation, carousel acceptance and owner-dependent checks are still open in request-audit.md
+
+The current work does not claim every original request is finished. Do not check off those remaining items merely because a release passes tests.

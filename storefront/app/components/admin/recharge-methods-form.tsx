@@ -155,7 +155,7 @@ export function RechargeMethodsForm({
                     dir="ltr"
                     required
                     maxLength={40}
-                    placeholder="bybit"
+                    placeholder="BEP20"
                     className="font-mono"
                   />
                   <TextField

@@ -7,9 +7,10 @@ type Client = SupabaseClient<Database>;
 import { requireAdminId } from "@server/lib/auth/guards";
 import { notify } from "@server/lib/services/notification.service";
 import { enqueueTelegramAlert } from "@server/lib/services/telegram-alerts.service";
-import { normalizeRechargeConfig, type RechargeConfig } from "@server/lib/settings/recharge-settings";
+import { normalizeRechargeConfig, rechargeMethodsInputSchema, type RechargeConfig } from "@server/lib/settings/recharge-settings";
 import type { Json } from "@server/types/database";
 import type { RechargeRequestStatus } from "@server/lib/services/recharge.service";
+import { createSupabaseServiceClient } from "@server/lib/supabase/service";
 
 /**
  * Recharge administration.
@@ -197,8 +198,7 @@ export async function approveRecharge(supabase: Client, input: {
   note: string | null;
   payerVerified?: boolean;
 }): Promise<{ credited: number; balance: number; idempotent: boolean }> {
-  await requireAdminId(supabase);
-  
+  const admin = await requireAdminId(supabase);
 
   const { data: claim, error: claimError } = await supabase.from("recharge_requests")
     .select("payment_network,payment_tx_hash,payment_destination,created_at,requested_amount,status")
@@ -210,7 +210,7 @@ export async function approveRecharge(supabase: Client, input: {
     const verification = await verifyBep20Transfer({ txHash: claim.payment_tx_hash, destination: claim.payment_destination, createdAt: claim.created_at });
     const credit = input.creditAmount ?? claim.requested_amount;
     if (credit > verification.received_amount) throw new Error(`Only ${verification.received_amount} USDT was received. Adjust the credit amount.`);
-    const { data: result, error } = await (supabase as SupabaseClient).rpc("approve_verified_bep20_recharge", { p_request_id: input.requestId, p_tx_hash: claim.payment_tx_hash, p_credit_amount: credit, p_verification: verification, p_note: input.note }).maybeSingle();
+    const { data: result, error } = await (createSupabaseServiceClient() as SupabaseClient).rpc("approve_verified_bep20_recharge_admin", { p_request_id: input.requestId, p_tx_hash: claim.payment_tx_hash, p_credit_amount: credit, p_verification: verification, p_note: input.note, p_actor: admin.id }).maybeSingle();
     if (error) raiseFor(error.message);
     const approved = result as { credited: number; balance: number; idempotent: boolean } | null;
     if (!approved) throw new Error("Approval returned no result");
@@ -378,7 +378,7 @@ export async function saveRechargeSettings(supabase: Client, update: {
       : {};
 
   if (update.methods !== undefined) {
-    base.manual_methods = update.methods;
+    base.manual_methods = rechargeMethodsInputSchema.parse(update.methods);
   }
 
   if (update.minAmount !== undefined) {

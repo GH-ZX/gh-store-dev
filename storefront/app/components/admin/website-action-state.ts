@@ -76,6 +76,7 @@ export type SectionPickKind = "games" | "categories" | "offers" | "reviews";
 const SECTION_PICK_KINDS: Partial<Record<HomeSectionType, SectionPickKind>> = {
   product_picks: "games",
   category: "categories",
+  gift_cards: "categories",
   offer_picks: "offers",
   customer_reviews: "reviews",
 };

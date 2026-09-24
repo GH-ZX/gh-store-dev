@@ -1,3 +1,4 @@
+import { getAdminExperienceSettings } from "@server/lib/services/experience-settings.service";
 import { Link } from "react-router";
 import { getStoreHealth } from "@server/lib/services/store-health.service";
 import { useLoaderData, useRevalidator } from "react-router";
@@ -38,13 +39,19 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     getCatalogReadiness(),
     getStoreHealth().catch(() => null),
   ]);
-  return { locale, stats, attention, kpis, earnings, series, latest, wallets, readiness, health, updatedAt: new Date().toISOString() };
+  const experience = await getAdminExperienceSettings().catch(() => null);
+  return { experience, locale, stats, attention, kpis, earnings, series, latest, wallets, readiness, health, updatedAt: new Date().toISOString() };
 }
 
 export default function DashboardIndex() {
   const data = useLoaderData<typeof loader>();
   const { state, revalidate } = useRevalidator();
   return <div className="space-y-8"><DashboardOverview data={data} refreshing={state === "loading"} onRefresh={() => { void revalidate(); }} />
+    {data.experience ? <section className="admin-card space-y-3"><h2 className="text-lg font-semibold">PostHog · {data.experience.posthog.enabled ? (data.locale === "ar" ? "مفعّل" : "Enabled") : (data.locale === "ar" ? "غير مفعّل" : "Disabled")}</h2>
+      <p>{data.locale === "ar" ? "الإعدادات محفوظة في قاعدة البيانات. التفعيل لا يؤكد وصول الأحداث؛ تحقق من مشروعك بعد زيارة بموافقة التحليلات." : "Settings are stored in the database. Enabled does not confirm delivery; check your project after a consented visit."}</p>
+      <Link className="underline" to={`/${data.locale}/dashboard/website#posthog-settings`}>{data.locale === "ar" ? "إعدادات التحليلات" : "Analytics settings"}</Link>
+      {data.experience.posthog.project_id ? <a className="ms-4 underline" href={`https://${data.experience.posthog.region === "EU" ? "eu" : "us"}.posthog.com/project/${data.experience.posthog.project_id}`} target="_blank" rel="noreferrer">{data.locale === "ar" ? "فتح PostHog" : "Open PostHog"}</a> : null}
+    </section> : <section className="admin-card">{data.locale === "ar" ? "إعدادات التحليلات غير متاحة حالياً" : "Analytics settings temporarily unavailable"}</section>}
     <section className="admin-card space-y-4"><h2 className="text-lg font-semibold">{data.locale === "ar" ? "رحلة التسوق · آخر 7 أيام" : "Shopping journey · last 7 days"}</h2><p className="text-sm text-[var(--ink-muted)]">{data.locale === "ar" ? "عدادات إجمالية دون هويات أو كلمات البحث. هذه زيارات صفحات وليست أعداد عملاء فريدين. قارنها ببيانات المبيعات والأرباح أعلاه." : "Aggregate counts without identities or search terms. These are page views, not unique customers. Compare them with sales and profit above."}</p>
     {data.health?.counts ? <dl className="grid grid-cols-2 gap-4 sm:grid-cols-5">{["catalog_view","product_view","search","checkout_view","recharge_view"].map((event,i)=><div key={event}><dt className="text-xs text-[var(--ink-muted)]">{(data.locale === "ar" ? ["التصفح","المنتجات","البحث","إتمام الطلب","التعبئة"] : ["Browsing","Products","Search","Checkout","Recharge"])[i]}</dt><dd className="text-2xl font-bold">{data.health?.counts?.[event] ?? 0}</dd></div>)}</dl> : <p>{data.locale === "ar" ? "القياسات غير متاحة حالياً" : "Measurements currently unavailable"}</p>}
     </section>

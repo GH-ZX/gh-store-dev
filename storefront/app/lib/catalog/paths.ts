@@ -2,6 +2,7 @@ import type { Locale } from "@/i18n/config";
 
 /** Active items without a category still belong in the generic product catalog. */
 export const UNCATEGORIZED_PRODUCT_PATH = "products";
+export const GIFT_CARD_CATEGORY_SLUG = "gift-cards-codes";
 
 export function productPath(
   locale: Locale,

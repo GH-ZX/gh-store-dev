@@ -237,8 +237,10 @@ export async function getHomePickCandidates(): Promise<HomePickCandidates> {
   const [games, categories, offers, reviews] = await Promise.all([
     client
       .from("products")
-      .select("id, name_ar, name_en, image_url, logo_url")
+      .select("id, name_ar, name_en, image_url, logo_url, offers!inner(id)")
       .eq("is_active", true)
+      .eq("offers.is_active", true)
+      .limit(1, { referencedTable: "offers" })
       .order("sort_order", { ascending: true })
       .order("name_en", { ascending: true })
       .limit(PICK_CANDIDATE_LIMIT),

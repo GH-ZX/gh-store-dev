@@ -5,12 +5,12 @@
     "description": "Quick answers about top-ups, delivery, and payment in GH Store.",
     "items": [
       {
-        "question": "How do I top up my game?",
-        "answer": "Pick the game, then the package, enter your in-game account details, and pay from your wallet balance. Fulfilment starts as soon as the order is confirmed."
+        "question": "How do I buy a product?",
+        "answer": "Choose a product and offer, then check its duration, warranty and region. Enter the required details, pay using your wallet and track the order in your account."
       },
       {
         "question": "How long does delivery take?",
-        "answer": "Most orders are fulfilled automatically within minutes. When the supplier is busy an order may move to processing, and the update appears on your order page without any action from you."
+        "answer": "Delivery depends on the product and supplier. Some orders are automatic and others need manual processing. Check the offer instructions, track your order status and contact support if you need help."
       },
       {
         "question": "How do I add balance to my wallet?",
@@ -45,11 +45,11 @@
       },
       {
         "title": "Choose a package",
-        "description": "Browse games and cards, then enter your in-game account details."
+        "description": "Browse products, choose an offer, check its duration, warranty and region, and enter the required details."
       },
       {
         "title": "Receive your order",
-        "description": "The order is fulfilled automatically and your top-up or code appears on the order page."
+        "description": "Track status and delivery details on your order page. Fulfilment is automatic or processed manually depending on the product."
       }
     ],
     "assuranceHeading": "What every order guarantees",
@@ -65,7 +65,7 @@
     "title": "We are here to help.",
     "description": "Reach us on whichever channel suits you and we will get back to you shortly.",
     "channelsHeading": "Contact channels",
-    "orderNote": "To speed things up, include your order number, the game, and your account ID.",
+    "orderNote": "Include your order or recharge reference and product name so support can follow up. Do not send your password.",
     "emptyTitle": "Open a support request",
     "emptyDescription": "Sign in to contact GH Store support and keep your conversation linked to your orders."
   },
@@ -93,6 +93,10 @@
       {
         "heading": "Your rights",
         "body": "You can ask for a copy of your data or have it corrected at any time. When you ask us to close your account we remove your personal details — name, email, and in-game account data — and keep the financial record without identity, for accounting reasons. Contact support to arrange it."
+      },
+      {
+        "heading": "Optional analytics",
+        "body": "We use aggregate store event counts without customer identities. When PostHog is enabled and you opt in through Analytics preferences in the footer, we send generic events with a random session ID. We do not send search terms, form contents or payment details, and we do not record your screen. You can withdraw consent in those preferences."
       }
     ]
   },

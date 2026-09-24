@@ -73,6 +73,7 @@ export const OFFER_SELECT =
 
 /** Offer columns plus the parent game fields needed to build an offer link. */
 export const OFFER_WITH_PRODUCT_SELECT = `${OFFER_SELECT}, products!inner (slug, name_ar, name_en, image_url, logo_url, points_name_ar, points_name_en, categories!products_category_id_fkey(slug))`;
+export const OFFER_WITH_CATEGORY_SELECT = `${OFFER_SELECT}, products!inner (slug, name_ar, name_en, image_url, logo_url, points_name_ar, points_name_en, categories!products_category_id_fkey!inner(slug))`;
 
 function firstRelation(
   value: OfferProductRelation | OfferProductRelation[] | null | undefined,

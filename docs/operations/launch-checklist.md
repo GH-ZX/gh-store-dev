@@ -58,10 +58,12 @@ Ordered so each step unblocks the next.
 ## 5. SEO and analytics
 
 - [ ] Search Console: verify the domain, submit `https://gh-store.me/sitemap.xml`,
-      put the token into `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`.
-- [ ] Optional PostHog: configure Worker bindings `POSTHOG_PROJECT_KEY` and
-      `POSTHOG_REGION` (`US`/`EU`), redeploy and opt in through footer Analytics
-      preferences to verify events. See the [upgrade guide](../store-upgrade/operating-guide.md).
+      use Google's DNS verification record for the domain property.
+- [ ] Optional PostHog: after the experience-settings migration is applied,
+      configure the project API key and region in Dashboard → Website → PostHog,
+      then opt in through footer Analytics preferences to verify events.
+      Configuration is database-backed and unavailable settings disable forwarding. See the [upgrade
+      guide](../store-upgrade/operating-guide.md).
 
 ## 6. Trust layer
 

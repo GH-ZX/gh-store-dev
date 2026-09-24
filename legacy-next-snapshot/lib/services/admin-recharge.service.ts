@@ -3,7 +3,7 @@ import "server-only";
 import { requireAdmin } from "@/lib/auth/guards";
 import { notify } from "@/lib/services/notification.service";
 import { enqueueTelegramAlert } from "@/lib/services/telegram-alerts.service";
-import { normalizeRechargeConfig, type RechargeConfig } from "@/lib/settings/recharge-settings";
+import { normalizeRechargeConfig, rechargeMethodsInputSchema, type RechargeConfig } from "@/lib/settings/recharge-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 import type { RechargeRequestStatus } from "@/lib/services/recharge.service";
@@ -347,7 +347,7 @@ export async function saveRechargeSettings(update: {
       : {};
 
   if (update.methods !== undefined) {
-    base.manual_methods = update.methods;
+    base.manual_methods = rechargeMethodsInputSchema.parse(update.methods);
   }
 
   if (update.minAmount !== undefined) {

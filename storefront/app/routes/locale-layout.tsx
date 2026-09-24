@@ -1,3 +1,4 @@
+import { getPosthogEnabled } from "@server/lib/services/experience-settings.service";
 import { StoreMeasurement } from "@/components/store/store-measurement";
 import { getHeaderCategories } from "@server/lib/services/home-discovery.service";
 import { createPublicClient } from "@/lib/catalog-queries";
@@ -64,7 +65,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   );
   const chrome: ChromeData = {
     categories,
-    posthogEnabled: Boolean(env.POSTHOG_PROJECT_KEY && ["US", "EU"].includes(env.POSTHOG_REGION ?? "")),
+    posthogEnabled: await getPosthogEnabled(createPublicClient(env)),
     maintenance,
     locale,
     session,

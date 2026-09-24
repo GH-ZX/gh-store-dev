@@ -53,12 +53,15 @@ describe("restored public catalog data", () => {
 
   it("narrows product search by active gift-card and redeem-code offers", async () => {
     const { client, queries } = mockClient([
-      { data: [product("topup"), product("voucher")] }, { data: [{ product_id: "voucher" }] },
+      { data: [product("topup"), product("voucher")] },
+      { data: { id: "gift-category" } },
+      { data: [{ product_id: "voucher" }] },
     ]);
     const result = await searchCatalog(client, "en", "item", "gift_card");
     expect(result.games.map((row) => row.id)).toEqual(["voucher"]);
     expect(result.offers).toEqual([]);
-    expect(queries[1].calls).toContainEqual(["in", ["offer_type", ["gift_card", "redeem_code"]]]);
+    expect(queries[2].calls).toContainEqual(["in", ["offer_type", ["gift_card", "redeem_code"]]]);
+    expect(queries[2].calls).toContainEqual(["eq", ["products.category_id", "gift-category"]]);
   });
 
   it("includes uncategorized active items under products while keeping assigned sitemap categories", async () => {
@@ -124,6 +127,13 @@ describe("restored public catalog data", () => {
     await getCategoryPage(category.client, "en", "ai", 1);
     expect(category.queries[1].calls.find(([name]) => name === "select")?.[1][0]).toContain("categories!products_category_id_fkey!inner(");
     expect(category.queries[1].calls).toContainEqual(["eq", ["categories.slug", "ai"]]);
+  });
+
+  it("scopes the gift-card rail with an inner category join", async () => {
+    const { client, queries } = mockClient([{ data: [], count: 0 }]);
+    await getOfferRailPage(client, "en", "gift-cards", 1);
+    expect(queries[0].calls.find(([name]) => name === "select")?.[1][0]).toContain("categories!products_category_id_fkey!inner(");
+    expect(queries[0].calls).toContainEqual(["eq", ["products.categories.slug", "gift-cards-codes"]]);
   });
 
   it("paginates all sale offers instead of truncating the collection to a rail", async () => {

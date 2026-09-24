@@ -1,3 +1,5 @@
+import { getAdminExperienceSettings, saveExperienceSettings } from "@server/lib/services/experience-settings.service";
+import { ExperienceSettings } from "@/components/admin/experience-settings";
 import { useLoaderData, type LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
 import { isLocale } from "@/i18n/config";
 import { runWebsiteAction, requireWebsiteAdmin } from "@server/website-route";
@@ -17,15 +19,25 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   if (!locale || !isLocale(locale)) throw new Response("Not Found", { status: 404 });
   await requireWebsiteAdmin(request, locale);
   const [settings, candidates] = await Promise.all([getWebsiteSettings(), getHomePickCandidates()]);
-  return { locale, settings, candidates };
+  return { locale, settings, candidates, experience: await getAdminExperienceSettings() };
 }
 
-export async function action({ request }: ActionFunctionArgs) { return runWebsiteAction(request); }
+export async function action({ request }: ActionFunctionArgs) {
+  if (request.method !== "POST") throw new Response("Method Not Allowed", { status: 405 });
+  if (request.headers.get("origin") !== new URL(request.url).origin) throw new Response("Forbidden", { status: 403 });
+  const form = await request.clone().formData();
+  if (["saveDiscovery", "savePosthog"].includes(String(form.get("intent")))) {
+    const locale = new URL(request.url).pathname.split("/")[1] === "en" ? "en" : "ar";
+    await requireWebsiteAdmin(request, locale);
+    return saveExperienceSettings(form);
+  }
+  return runWebsiteAction(request);
+}
 
 export function meta() { return [{ name: "robots", content: "noindex, nofollow" }]; }
 
 export default function WebsiteSettingsPage() {
-  const { locale, settings, candidates } = useLoaderData<typeof loader>();
+  const { locale, settings, candidates, experience } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "admin").website;
   return (
     <div className="space-y-6">
@@ -42,6 +54,7 @@ export default function WebsiteSettingsPage() {
         </p>
       </div>
 
+      <ExperienceSettings settings={experience} locale={locale} />
       <AdminCard title={messages.branding.title} description={messages.branding.description}>
         <BrandingForm
           branding={settings.branding}

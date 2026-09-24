@@ -24,7 +24,7 @@ An empty thumbnail follows the current supplier image, then logo. Existing API a
 
 ## USDT operating procedure
 
-BEP20 requests snapshot the destination address. Customers submit a transaction hash and can correct it before review. Admin approval checks BSC chain 56, the allowlisted USDT contract, success, actual transfer logs to the saved address, canonical block and at least 20 confirmations. Only received funds can be credited; dust is rounded down to wallet cents. Approved transaction hashes are unique, and crediting plus ledger updates remain atomic/idempotent.
+Use a manual method whose id is exactly `BEP20` for the on-chain rail; any legacy on-chain row is disabled by the hardening migration until reviewed. BEP20 requests snapshot the destination address. Customers submit a transaction hash and can correct it before review. Admin approval checks BSC chain 56, the allowlisted USDT contract, success, actual transfer logs to the saved address, canonical block and at least 20 confirmations. Only received funds can be credited; dust is rounded down to wallet cents. Approved transaction hashes are unique, and crediting plus ledger updates remain atomic/idempotent.
 
 A transaction hash is public: confirm that the claimant actually paid, using the authenticated customer's withdrawal record or other trustworthy payer evidence. Record the verification in the admin note and check the ownership box. Do not approve merely because a hash appears on an explorer. Existing historical credits that never stored a hash cannot be retroactively matched automatically. Wrong network/token, partial payment or an old transfer goes to support; never invent a successful transfer to clear a queue. A chain RPC outage leaves the request uncredited for retry.
 
@@ -34,7 +34,7 @@ Sources: [Binance query v2 contract](https://developers.binance.com/en/docs/prod
 
 ## PostHog
 
-The store has anonymous daily event totals in its dashboard, independent of PostHog. Optional PostHog adds within-session funnels for visitors who opt in through footer Analytics preferences. Configure Cloudflare Worker bindings `POSTHOG_PROJECT_KEY` (project token, not personal API key) and `POSTHOG_REGION` (`US` or `EU`), then deploy. Never place a personal API key in source code. Without both bindings, no PostHog events are sent and the optional control is hidden.
+The store has anonymous daily event totals in its dashboard, independent of PostHog. Optional PostHog adds within-session funnels for visitors who opt in through footer Analytics preferences. After the experience-settings migration is applied, configure it in Dashboard → Website → PostHog with the project API key and region; the key stays behind admin RLS. The database is the source of truth; a missing setting or database failure disables forwarding. Legacy Worker bindings no longer enable it. Never place a personal API key in source code. Without a configured project, no PostHog events are sent and the optional control stays disabled.
 
 Use the event sequence `store_catalog_view` → `store_product_view` or `store_quick_buy` → `store_checkout_view`. Also track `store_search`, `store_search_empty` and `store_recharge_view`. The API sends only event names and a random per-tab session ID after consent. No email, user ID, search text, URL, account form contents, wallet address, payment evidence or delivered codes; no autocapture or replay. DNT/GPC opts out. Withdrawal deletes the local session ID. No cross-session retention or revenue attribution is claimed: the store's paid-order/profit reports remain the revenue authority. Event counts can include bots and repeat views and are not unique-customer counts.
 
@@ -54,3 +54,12 @@ Use the event sequence `store_catalog_view` → `store_product_view` or `store_q
 Run a designated small test with a spending limit through each enabled supplier/payment rail. Confirm Google/email sign-in, password reset, a real recharge, offer input validation, delivery, support and one refund. Automated tests did not purchase or deposit money. Check the reconciliation heartbeat, failure queue, supplier balances, backups and owner alerts. See [launch checklist](../operations/launch-checklist.md) and [incident response](../operations/incident-response.md).
 
 The compact package selector takes inspiration from [Hesap's catalog flow](https://hesap.com.tr/); store content and assets are GH Store's own configured catalog.
+
+
+## Dashboard SEO setup completed
+
+Arabic and English homepage metadata and fourteen page entries are populated in `store_settings.seo` (migrations 20260924210000 and 20260924220000). Non-empty owner overrides were preserved. See [the copy](seo-settings.json); all values remain editable in Dashboard → Website → SEO / Page SEO. The share image uses the existing absolute GH Store image URL.
+
+Saved Products/About/Best Sellers metadata now survives the server normalizer, which shares the dashboard route allowlist. A malformed optional social image no longer discards all public settings. Internal search remains noindex. This completes site-side metadata configuration; Search Console ownership and Google's selected canonical still require checking in the Google account.
+
+References: [Google title links](https://developers.google.com/search/docs/appearance/title-link), [Google site names](https://developers.google.com/search/docs/appearance/site-names). No claim of Google recrawl or ranking improvement is made.

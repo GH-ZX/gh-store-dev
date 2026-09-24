@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Locale } from "@/i18n/config";
 import { PRODUCT_SELECT, toStoreProduct, type ProductRow, type StoreProduct } from "@/lib/catalog/product-mapper";
-import { OFFER_WITH_PRODUCT_SELECT, toStoreOffer, type OfferRow, type StoreOffer } from "@/lib/catalog/offer-mapper";
+import { OFFER_WITH_CATEGORY_SELECT, OFFER_WITH_PRODUCT_SELECT, toStoreOffer, type OfferRow, type StoreOffer } from "@/lib/catalog/offer-mapper";
+import { GIFT_CARD_CATEGORY_SLUG } from "@/lib/catalog/paths";
 import { cached } from "@server/lib/cache";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@server/lib/supabase/service";
 
@@ -48,8 +49,8 @@ export async function getActiveProducts(supabase: SupabaseClient, locale: Locale
 
   let query = supabase
     .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("is_active", true)
+    .select(`${PRODUCT_SELECT}, offers!inner(id)`)
+    .eq("is_active", true).eq("offers.is_active", true).limit(1, { referencedTable: "offers" })
     .order("sort_order", { ascending: true })
     .order("name_en", { ascending: true });
 
@@ -67,7 +68,7 @@ export async function getActiveProducts(supabase: SupabaseClient, locale: Locale
     throw new CatalogReadError();
   }
 
-  return attachPriceFrom(supabase, data.map((game) => toStoreProduct(game as unknown as ProductRow, locale)));
+  return attachPriceFrom(supabase, data.map((product) => toStoreProduct(product as unknown as ProductRow, locale)));
 }
 
 export async function getProductsByCategories(supabase: SupabaseClient,
@@ -81,8 +82,8 @@ export async function getProductsByCategories(supabase: SupabaseClient,
 
   let query = supabase
     .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("is_active", true)
+    .select(`${PRODUCT_SELECT}, offers!inner(id)`)
+    .eq("is_active", true).eq("offers.is_active", true).limit(1, { referencedTable: "offers" })
     .in("category_id", categoryIds)
     .order("sort_order", { ascending: true })
     .order("name_en", { ascending: true });
@@ -97,19 +98,19 @@ export async function getProductsByCategories(supabase: SupabaseClient,
     throw new CatalogReadError();
   }
 
-  return attachPriceFrom(supabase, data.map((game) => toStoreProduct(game as unknown as ProductRow, locale)));
+  return attachPriceFrom(supabase, data.map((product) => toStoreProduct(product as unknown as ProductRow, locale)));
 }
 
 /**
- * The cheapest active offer per game, for the tile's "from" price line.
+ * The cheapest active offer per product, for the tile's "from" price line.
  *
- * One small query over active offers rather than a join in every game read: the
+ * One small query over active offers rather than a join in every product read: the
  * number is decorative — a teaser, never a charged figure — so a failed read
- * returns the games untouched instead of failing the page.
+ * returns the products untouched instead of failing the page.
  */
-async function attachPriceFrom(supabase: SupabaseClient, games: StoreProduct[]): Promise<StoreProduct[]> {
-  if (games.length === 0) {
-    return games;
+async function attachPriceFrom(supabase: SupabaseClient, products: StoreProduct[]): Promise<StoreProduct[]> {
+  if (products.length === 0) {
+    return products;
   }
 
   const { data, error } = await supabase
@@ -118,29 +119,29 @@ async function attachPriceFrom(supabase: SupabaseClient, games: StoreProduct[]):
     .eq("is_active", true)
     .in(
       "product_id",
-      games.map((game) => game.id),
+      products.map((product) => product.id),
     );
 
   if (error || !data) {
-    return games;
+    return products;
   }
 
-  const minByGame = new Map<string, number>();
+  const minByProduct = new Map<string, number>();
 
   for (const row of data) {
     if (typeof row.product_id !== "string" || typeof row.price !== "number") {
       continue;
     }
 
-    const current = minByGame.get(row.product_id);
+    const current = minByProduct.get(row.product_id);
 
     if (current === undefined || row.price < current) {
-      minByGame.set(row.product_id, row.price);
+      minByProduct.set(row.product_id, row.price);
     }
   }
 
-  return games.map((game) =>
-    minByGame.has(game.id) ? { ...game, priceFrom: minByGame.get(game.id) } : game,
+  return products.map((product) =>
+    minByProduct.has(product.id) ? { ...product, priceFrom: minByProduct.get(product.id) } : product,
   );
 }
 
@@ -148,8 +149,8 @@ async function attachPriceFrom(supabase: SupabaseClient, games: StoreProduct[]):
 export async function getCarouselProducts(supabase: SupabaseClient, locale: Locale, limit: number): Promise<StoreProduct[]> {
   const { data, error } = await supabase
     .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("is_active", true)
+    .select(`${PRODUCT_SELECT}, offers!inner(id)`)
+    .eq("is_active", true).eq("offers.is_active", true).limit(1, { referencedTable: "offers" })
     .eq("show_in_carousel", true)
     .order("carousel_order", { ascending: true, nullsFirst: false })
     .order("sort_order", { ascending: true })
@@ -163,7 +164,7 @@ export async function getCarouselProducts(supabase: SupabaseClient, locale: Loca
 }
 
 /**
- * Games picked by id for a custom homepage section.
+ * Products picked by id for a custom homepage section.
  *
  * Results follow the admin's id order rather than the database order, and ids
  * that are missing or no longer active are skipped instead of rendering a hole.
@@ -175,19 +176,19 @@ export async function getProductsByIds(supabase: SupabaseClient, locale: Locale,
 
   const { data, error } = await supabase
     .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("is_active", true)
+    .select(`${PRODUCT_SELECT}, offers!inner(id)`)
+    .eq("is_active", true).eq("offers.is_active", true).limit(1, { referencedTable: "offers" })
     .in("id", ids);
 
   if (error) {
     throw new CatalogReadError();
   }
 
-  const byId = new Map(data.map((game) => [game.id, toStoreProduct(game as unknown as ProductRow, locale)]));
+  const byId = new Map(data.map((product) => [product.id, toStoreProduct(product as unknown as ProductRow, locale)]));
 
   const ordered = ids
     .map((id) => byId.get(id))
-    .filter((game): game is StoreProduct => game !== undefined);
+    .filter((product): product is StoreProduct => product !== undefined);
 
   return attachPriceFrom(supabase, ordered);
 }
@@ -197,16 +198,21 @@ export async function getOffersByType(supabase: SupabaseClient,
   locale: Locale,
   offerType: "gift_card" | "redeem_code",
   limit?: number,
+  categoryIds: string[] = [],
 ): Promise<StoreOffer[]> {
   const types = offerType === "gift_card" ? GIFT_CARD_OFFER_TYPES : [offerType];
+  const scoped = offerType === "gift_card" || categoryIds.length > 0;
   let query = supabase
     .from("offers")
-    .select(OFFER_WITH_PRODUCT_SELECT)
+    .select(scoped ? OFFER_WITH_CATEGORY_SELECT : OFFER_WITH_PRODUCT_SELECT)
     .in("offer_type", types)
     .eq("is_active", true)
     .eq("products.is_active", true)
     .order("sort_order", { ascending: true })
     .order("price", { ascending: true });
+
+  if (categoryIds.length) query = query.in("products.category_id", categoryIds);
+  else if (offerType === "gift_card") query = query.eq("products.categories.slug", GIFT_CARD_CATEGORY_SLUG);
 
   if (limit !== undefined) {
     query = query.limit(limit);
@@ -308,10 +314,10 @@ export async function getOfferRailPage(
     return { offers: offers.slice(from, from + pageSize), total: offers.length, page: safePage, pageSize };
   }
   let query = supabase.from("offers")
-    .select(OFFER_WITH_PRODUCT_SELECT, { count: "exact" })
+    .select(rail === "gift-cards" ? OFFER_WITH_CATEGORY_SELECT : OFFER_WITH_PRODUCT_SELECT, { count: "exact" })
     .eq("is_active", true)
     .eq("products.is_active", true);
-  if (rail === "gift-cards") query = query.in("offer_type", GIFT_CARD_OFFER_TYPES);
+  if (rail === "gift-cards") query = query.in("offer_type", GIFT_CARD_OFFER_TYPES).eq("products.categories.slug", GIFT_CARD_CATEGORY_SLUG);
   if (rail === "sale") query = query.eq("is_sale", true);
   query = query.order("sort_order", { ascending: true }).order("price", { ascending: true });
   const { data, error, count } = await query.range(from, from + pageSize - 1);

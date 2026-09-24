@@ -84,6 +84,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       isProduction,
     );
   }
+  if (request.method !== "POST" || request.headers.get("origin") !== new URL(request.url).origin) throw new Response("Forbidden", { status: 403 });
   const form = await request.formData();
   if (form.get("intent") !== "markRechargePaid" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(requestId)) {
     return data({ error: "invalid_input" }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
@@ -92,7 +93,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   let marked = false;
   if (detail?.paymentNetwork === "BEP20") {
     const hash = String(form.get("txHash") ?? "").trim();
-    if (!/^0x[0-9a-f]{64}$/i.test(hash)) return data({ error: "invalid_input" }, { status: 400 });
+    if (!/^0x[0-9a-f]{64}$/i.test(hash) || form.get("payerConfirmed") !== "yes") return data({ error: "invalid_input" }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
     const { error } = await supabase.rpc("submit_recharge_transfer", { p_request_id: requestId, p_tx_hash: hash });
     marked = !error;
   } else if (detail) {

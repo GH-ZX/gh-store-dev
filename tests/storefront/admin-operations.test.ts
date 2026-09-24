@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   telegram: vi.fn(),
   audit: vi.fn(),
   service: vi.fn(),
+  verify: vi.fn(),
   fulfill: vi.fn(),
 }));
 vi.mock("@server/lib/auth/guards", () => ({ requireAdminId: mocks.admin }));
@@ -25,6 +26,7 @@ vi.mock("@server/lib/supabase/service", () => ({
   hasServiceRoleKey: () => true,
 }));
 vi.mock("@server/fulfillment/index", () => ({ fulfillOrder: mocks.fulfill }));
+vi.mock("@server/payments/bep20", () => ({ verifyBep20Transfer: mocks.verify }));
 vi.mock("@server/lib/logging/logger", () => ({
   log: { warn: vi.fn() },
   logOutcome: vi.fn(),
@@ -90,6 +92,20 @@ describe("migrated admin money operations", () => {
     const rpc = vi.fn();
     const query = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: { payment_network: "BEP20", status: "payment_sent" }, error: null }) };
     await expect(approveRecharge(client({ from: vi.fn().mockReturnValue(query), rpc }), { requestId: id, creditAmount: 15, note: "Confirmed" })).rejects.toThrow("Confirm payer ownership");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("uses the service-only verified approval RPC after checking the chain", async () => {
+    const txHash = `0x${"a".repeat(64)}`;
+    const destination = `0x${"b".repeat(40)}`;
+    const rpc = vi.fn();
+    const query = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: { payment_network: "BEP20", payment_tx_hash: txHash, payment_destination: destination, status: "payment_sent", requested_amount: 15, created_at: new Date().toISOString() }, error: null }) };
+    const serviceRpc = vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: { credited: 15, balance: 15, idempotent: false }, error: null }) });
+    mocks.verify.mockResolvedValue({ received_amount: 15 });
+    mocks.service.mockReturnValue({ rpc: serviceRpc });
+    const result = await approveRecharge(client({ from: vi.fn().mockReturnValue(query), rpc }), { requestId: id, creditAmount: 15, note: "Confirmed", payerVerified: true });
+    expect(result).toMatchObject({ credited: 15, balance: 15 });
+    expect(serviceRpc).toHaveBeenCalledWith("approve_verified_bep20_recharge_admin", expect.objectContaining({ p_actor: "admin", p_tx_hash: txHash }));
     expect(rpc).not.toHaveBeenCalled();
   });
 

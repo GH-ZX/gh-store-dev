@@ -1,6 +1,22 @@
 import { z } from "zod";
 import type { Locale } from "@/i18n/config";
 
+export const BEP20_METHOD_ID = "BEP20";
+const LEGACY_BEP20_METHOD_IDS = new Set(["bybit", "usdt", "usdt-bep20", "bep20-usdt"]);
+const BEP20_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+
+export function isBep20MethodId(id: string): boolean {
+  return id.trim().toUpperCase() === BEP20_METHOD_ID;
+}
+
+export function isLegacyBep20MethodId(id: string): boolean {
+  return LEGACY_BEP20_METHOD_IDS.has(id.trim().toLowerCase());
+}
+
+export function isValidBep20Address(value: string | null | undefined): value is string {
+  return typeof value === "string" && BEP20_ADDRESS_PATTERN.test(value.trim());
+}
+
 /**
  * Recharge configuration, normalized.
  *
@@ -36,11 +52,13 @@ export const rechargeMethodsInputSchema = z
       instructions_ar: z.string().trim().max(600).default(""),
       instructions_en: z.string().trim().max(600).default(""),
       enabled: z.boolean(),
-    }),
+    }).refine(method => !method.enabled || !isBep20MethodId(method.id) || isValidBep20Address(method.account), { message: "BEP20 requires a valid receiving address", path: ["account"] })
+      .refine(method => !method.enabled || !isValidBep20Address(method.account) || isBep20MethodId(method.id), { message: "On-chain recharge methods must use the BEP20 method id", path: ["id"] })
+      .refine(method => !method.enabled || !isLegacyBep20MethodId(method.id), { message: "Use the BEP20 method id for on-chain transfers", path: ["id"] }),
   )
   .max(20)
   .refine(
-    (methods) => methods.length === new Set(methods.map((method) => method.id)).size,
+    (methods) => methods.length === new Set(methods.map((method) => method.id.toLowerCase())).size,
     { message: "Method ids must be unique." },
   );
 
@@ -100,6 +118,9 @@ export function normalizeRechargeConfig(value: unknown): RechargeConfig {
     }
 
     const data = method.data;
+    if (data.enabled === true && (isLegacyBep20MethodId(data.id) || (isBep20MethodId(data.id) && !isValidBep20Address(data.account)))) {
+      return [];
+    }
     const fallbackLabel = data.label_en || data.label_ar || data.id;
 
     return [
@@ -171,20 +192,20 @@ export function parseRechargeMethodsInput(
  * references.
  */
 export const BYBIT_METHOD_TEMPLATE: RechargeMethodInput = {
-  id: "bybit",
-  label_ar: "بايبيت (USDT)",
-  label_en: "Bybit (USDT)",
+  id: BEP20_METHOD_ID,
+  label_ar: "بايبيت (USDT · BEP20)",
+  label_en: "Bybit (USDT · BEP20)",
   account: "",
   instructions_ar:
-    "١- افتح تطبيق بايبيت واختر إرسال/سحب USDT عبر شبكة BEP20 (BSC).\n" +
-    "٢- أرسل المبلغ إلى عنوان المحفظة أعلاه، أو استخدم Bybit Pay إلى UID المتجر: (ضع UID المتجر هنا).\n" +
-    "٣- اكتب رقم المرجع (مثل RC-XXXXXXXXXX) في خانة الملاحظة.\n" +
-    "٤- 1 USDT ≈ 1 دولار. بعد الإرسال راسلنا حتى نؤكد وصول المبلغ خلال دقائق.",
+    "١- افتح محفظتك أو تطبيق التداول واختر إرسال USDT عبر شبكة BEP20 (BNB Smart Chain).\n" +
+    "٢- أرسل المبلغ المطلوب إلى عنوان الاستلام الظاهر في الخطوة التالية.\n" +
+    "٣- احتفظ بمعرّف المعاملة (TxID) من سجل السحب.\n" +
+    "٤- أرسل المعرّف في GH Store، ثم ستتم مراجعة التحويل قبل إضافة الرصيد.",
   instructions_en:
-    "1. Open Bybit and choose to send/withdraw USDT on the BEP20 (BSC) network.\n" +
-    "2. Send the amount to the wallet address above, or use a Bybit Pay transfer to the store UID: (put the store UID here).\n" +
-    "3. Put your reference (e.g. RC-XXXXXXXXXX) in the note.\n" +
-    "4. 1 USDT ≈ 1 USD. After sending, message us so we confirm the payment within minutes.",
+    "1. Open your wallet or exchange app and choose to send USDT on BEP20 (BNB Smart Chain).\n" +
+    "2. Send the requested amount to the receiving address shown in the next step.\n" +
+    "3. Keep the transaction hash (TxID) from your withdrawal history.\n" +
+    "4. Submit the hash in GH Store; the transfer is reviewed before credit is added.",
   enabled: false,
 };
 
@@ -200,15 +221,17 @@ export function getPaymentMethodLabel(
   locale: "ar" | "en",
   manualMethods: RechargeMethod[] = [],
 ): string {
-  switch (id) {
-    case "shamcash":
+  switch (id.toUpperCase()) {
+    case "BEP20":
+      return locale === "ar" ? "USDT · BEP20" : "USDT · BEP20";
+    case "SHAMCASH":
       return locale === "ar" ? "شام كاش" : "ShamCash";
-    case "syriatel":
+    case "SYRIATEL":
       return locale === "ar" ? "سيريتل كاش" : "Syriatel Cash";
-    case "binance":
+    case "BINANCE":
       return locale === "ar" ? "USDT · بينانس باي" : "USDT · Binance Pay";
     default: {
-      const method = manualMethods.find((candidate) => candidate.id === id);
+      const method = manualMethods.find((candidate) => candidate.id.toLowerCase() === id.toLowerCase());
 
       return method ? getMethodLabel(method, locale) : id;
     }
