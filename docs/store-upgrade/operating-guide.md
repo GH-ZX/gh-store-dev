@@ -10,7 +10,7 @@ Keep a product as the service/brand and its offers as the genuinely comparable p
 
 ## Homepage and imagery
 
-The existing carousel stays. Header categories come from active database categories. Suggested purchases show one available product from each category before filling remaining slots, up to six. Choices are sorted by current price, with up to twelve offers per card and a link to every offer. Quick buy opens checkout, where prices, required fields and wallet balance are checked again. It never purchases on the first click. New category shelves fill gaps in the configured homepage sections; empty shelves disappear. Discovery is cached for 30 seconds, category navigation for 60 seconds.
+The home page puts the available quick-buy choices before the brand carousel so a shopper sees products sooner. The carousel stays in place with product logos/wordmarks. Header categories come from active database categories. Suggested purchases show one available product from each category before filling remaining slots, up to six. Choices are sorted by current price, with up to twelve offers per card and a link to every offer. Quick buy opens checkout, where prices, required fields and wallet balance are checked again. It never purchases on the first click. New category shelves fill gaps in the configured homepage sections; empty shelves disappear. Discovery is cached for 30 seconds, category navigation for 60 seconds.
 
 Product editor artwork fields:
 

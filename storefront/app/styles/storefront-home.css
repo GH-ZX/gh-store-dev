@@ -1,4 +1,6 @@
 [data-storefront-shell] .sf-home-opening { padding-block: 24px 8px; }
+[data-storefront-shell] .sf-home-carousel { padding-block: 0 16px; }
+[data-storefront-shell] .sf-home-carousel .sf-featured { margin-top: 0; }
 [data-storefront-shell] .sf-campaigns { display:grid; grid-template-columns:minmax(0,2.15fr) minmax(0,1fr); gap:16px; }
 [data-storefront-shell] .sf-campaign-primary { position:relative; min-height:310px; overflow:hidden; border-radius:12px; background:#080e27; color:#fff; }
 [data-storefront-shell] .sf-campaign-primary>img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
@@ -59,7 +61,7 @@
 @media (max-width: 700px) {
 }
 
-/* Compact purchase cards expose products immediately below the retained carousel. */
+/* Compact purchase cards put a real product choice before the brand carousel. */
 .sf-discovery-heading { display:flex; align-items:end; justify-content:space-between; gap:1rem; }
 .sf-discovery-heading p { color:var(--accent); font-size:.8rem; font-weight:700; margin-bottom:.4rem; }
 .sf-discovery-heading h2 { font-size:clamp(1.3rem,3vw,1.9rem); font-weight:750; line-height:1.3; max-width:38rem; }
