@@ -96,8 +96,10 @@ export async function searchCatalog(
 
   let productsQuery = supabase
     .from("products")
-    .select(PRODUCT_SELECT)
+    .select(`${PRODUCT_SELECT}, offers!inner(id)`)
     .eq("is_active", true)
+    .eq("offers.is_active", true)
+    .limit(1, { referencedTable: "offers" })
     .order("sort_order", { ascending: true })
     .limit(filter === "all" ? SEARCH_RESULT_LIMIT : SEARCH_FILTER_SCAN_LIMIT);
 
