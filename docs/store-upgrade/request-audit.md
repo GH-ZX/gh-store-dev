@@ -2,7 +2,7 @@
 
 This audit follows the owner's explicit messages and the live implementation. The original assistant's numbered twenty-suggestion list is not available in the supplied conversation or saved upgrade notes; do not claim an exact item-by-item reconciliation of those numbers.
 
-The owner rejected the latest homepage/carousel design. Deployed, typechecked and tested does **not** mean the design request is complete. No storefront code or production settings were changed during this audit. No screenshots or image inspection were used.
+The owner rejected the latest homepage/carousel design. Deployed, typechecked and tested does **not** mean the design request is complete. This audit now includes a follow-up for supplier availability; no screenshots or image inspection were used.
 
 ## Live findings
 
@@ -32,12 +32,15 @@ The owner rejected the latest homepage/carousel design. Deployed, typechecked an
 | USDT hardening | BEP20 chain/recipient/token/confirmation checks, claim evidence, duplicate-credit protection; Binance binding fixes | Still manual payer confirmation/approval; no new automatic per-invoice processor or unique-address flow; real deposit/refund/customer-support acceptance checks |
 | Analytics/PostHog | Aggregate counts; optional consent-based PostHog integration | PostHog inactive pending project token/region; no live PostHog acceptance, purchase/revenue funnel attribution or cross-session retention tracking |
 | Performance/customer experience | Cached discovery/navigation, responsive asset handling, functional mobile checks, buy-again links | Measured real-user/Core Web Vitals baseline, complete real-customer purchase journey, user feedback and further mobile polish |
+| Supplier stock visibility | Catalog/search/related/home lists require an active offer; direct product URLs show an unavailable message; BatStore zero/missing stock is parked and can recover after restock | Availability is current only through the last manual provider sync; reconcile the nine already offerless products against supplier data |
 
 ## Next work, in order
 
 - [ ] Settle the homepage/carousel direction with the owner before another redesign.
 - [x] Fix voucher merchandising: show the ten actual voucher offers for the single-product category. Other single discounted offers may still form a small sale shelf.
 - [x] Deduplicate gift-card sections, remove empty navigation destinations and exclude offerless products from purchase-oriented suggestions/shelves.
+- [x] Hide offerless products in all customer browse/search lists; direct product links show unavailable and checkout still rejects inactive offers.
+- [x] Align BatStore import with its stock picker and remember stock-sync parking so restocked offers can return without overriding a later admin decision.
 - [ ] Audit and populate the three artwork roles across the full catalog, keeping useful API assets.
 - [ ] Clean customer product naming and resolve active ambiguous terms with supplier evidence.
 - [ ] Reconcile the nine products without active offers and review similar-product groups.

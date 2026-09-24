@@ -88,6 +88,12 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function asMetadata(value: Json | null | undefined): Record<string, Json> {
+  return value !== null && value !== undefined && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, Json>
+    : {};
+}
+
 function describeError(error: unknown): string {
   if (error instanceof BatStoreError) {
     return error.message;
@@ -269,12 +275,16 @@ async function importOneProduct(
     supplierCostUsd: product.priceUsd,
     markupPercent: options.markupPercent,
   });
-  // For direct stock products, availability requires stock > 0.
-  // For on-demand/account/subscription products (e.g. Gemini 18m, Office 365),
-  // BatStore fulfills on demand, so availability does not require warehouse stock > 0.
-  const available = isDirect
-    ? (product.stock ?? 0) > 0
-    : product.stock === null || product.stock === undefined || product.stock >= 0;
+  // The provider's catalogue picker already treats missing/zero inventory as
+  // unavailable. Keep import and customer visibility on the same contract for
+  // every delivery type; a missing stock count is unknown, not proof of stock.
+  const reportedStock = product.stock !== null && Number.isFinite(product.stock) ? product.stock : null;
+  const available = reportedStock !== null && reportedStock > 0;
+  const availabilityStatus = available
+    ? "in_stock"
+    : reportedStock === null
+      ? "unknown"
+      : "out_of_stock";
 
   const { data: existingOffers } = await supabase
     .from("offers")
@@ -283,12 +293,12 @@ async function importOneProduct(
 
   const offers = existingOffers ?? [];
   const offerIds = offers.map((offer) => offer.id);
-  const byProductId = new Map<string, { offerId: string; pricingMode: string | null }>();
+  const byProductId = new Map<string, { offerId: string; pricingMode: string | null; metadata: Json | null }>();
 
   if (offerIds.length > 0) {
     const { data: mappings } = await supabase
       .from("provider_offer_mappings")
-      .select("offer_id, external_product_id, pricing_mode")
+      .select("offer_id, external_product_id, pricing_mode, metadata")
       .eq("provider_name", BATSTORE_PROVIDER_NAME)
       .in("offer_id", offerIds);
 
@@ -297,6 +307,7 @@ async function importOneProduct(
         byProductId.set(mapping.external_product_id, {
           offerId: mapping.offer_id,
           pricingMode: mapping.pricing_mode,
+          metadata: mapping.metadata,
         });
       }
     }
@@ -307,13 +318,18 @@ async function importOneProduct(
   if (existing) {
     const current = offers.find((offer) => offer.id === existing.offerId);
     const refreshPrice = (existing.pricingMode ?? "default") === "default" && !current?.is_sale;
+    const previousMetadata = asMetadata(existing.metadata);
+    const wasParkedByStockSync = previousMetadata.parked_by_stock_sync === true;
+    const reactivateAfterRestock = available && current?.is_active === false && wasParkedByStockSync;
+    const isActive = available
+      ? (reactivateAfterRestock ? true : current?.is_active ?? true)
+      : false;
 
-    await supabase
+    const { error: offerUpdateError } = await supabase
       .from("offers")
       .update({
         ...(refreshPrice ? { price } : {}),
-        // Warehouse stock out disables offer; on-demand/accounts stay available.
-        ...(available ? { is_active: current?.is_active ?? true } : { is_active: false }),
+        is_active: isActive,
         ...(product.description?.trim()
           ? {
               description_ar: product.description.trim(),
@@ -324,12 +340,32 @@ async function importOneProduct(
         updated_at: nowIso(),
       })
       .eq("id", existing.offerId);
+    if (offerUpdateError) {
+      throw new Error(`Updating the supplier offer failed: ${offerUpdateError.message}`);
+    }
 
-    await supabase
+    const { error: mappingUpdateError } = await supabase
       .from("provider_offer_mappings")
-      .update({ supplier_cost_usd: product.priceUsd, updated_at: nowIso() })
+      .update({
+        supplier_cost_usd: product.priceUsd,
+        metadata: {
+          ...previousMetadata,
+          product_id: product.id,
+          price_usd: product.priceUsd,
+          delivery_type: product.deliveryType,
+          is_test: product.isTest,
+          stock: reportedStock,
+          availability_status: availabilityStatus,
+          parked_by_stock_sync: available ? false : (current?.is_active === true || wasParkedByStockSync),
+          synced_at: nowIso(),
+        },
+        updated_at: nowIso(),
+      })
       .eq("offer_id", existing.offerId)
       .eq("provider_name", BATSTORE_PROVIDER_NAME);
+    if (mappingUpdateError) {
+      throw new Error(`Updating the supplier availability record failed: ${mappingUpdateError.message}`);
+    }
 
     return { productId: product.id, name: product.name, status };
   }
@@ -363,6 +399,9 @@ async function importOneProduct(
     price_usd: product.priceUsd,
     delivery_type: product.deliveryType,
     is_test: product.isTest,
+    stock: reportedStock,
+    availability_status: availabilityStatus,
+    parked_by_stock_sync: options.publish && !available,
     synced_at: nowIso(),
   };
 

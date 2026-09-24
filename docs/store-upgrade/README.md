@@ -6,6 +6,8 @@ The owner rejected the latest homepage/carousel. The previous checkboxes record 
 
 - [ ] Homepage/carousel design accepted by the owner
 - [x] Resolve single-product voucher shelf (ten offers), duplicate gift-card shelves and empty header category
+- [x] Hide products with no active supplier offers from all customer browse/search lists; direct product URLs show an unavailable state
+- [x] BatStore zero/missing-stock offers are parked by sync and restored after restock unless an admin edits the offer
 - [ ] Complete artwork coverage and customer-facing product naming
 - [ ] Reconcile nine active products without active offers
 
@@ -46,6 +48,8 @@ The owner rejected the latest homepage/carousel. The previous checkboxes record 
 - [x] Deploy first storefront release and Binance webhook
 - [ ] Refine carousel with logo/wordmark identity — deployed, but design rejected by owner
 - [x] Commit and push the completed release
+
+- [ ] Release the provider availability and customer catalog filter follow-up; verify the production deploy
 
 ## Owner-dependent follow-up
 

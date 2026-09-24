@@ -76,16 +76,20 @@ export async function getHomeData(
   const [carouselRes, gridRes] = await Promise.all([
     client
       .from("products")
-      .select(PRODUCT_SUMMARY_SELECT)
+      .select(`${PRODUCT_SUMMARY_SELECT}, offers!inner(id)`)
       .eq("is_active", true)
+      .eq("offers.is_active", true)
+      .limit(1, { referencedTable: "offers" })
       .eq("show_in_carousel", true)
       .order("carousel_order", { ascending: true, nullsFirst: false })
       .order("sort_order", { ascending: true })
       .limit(CAROUSEL_LIMIT),
     client
       .from("products")
-      .select(PRODUCT_SUMMARY_SELECT)
+      .select(`${PRODUCT_SUMMARY_SELECT}, offers!inner(id)`)
       .eq("is_active", true)
+      .eq("offers.is_active", true)
+      .limit(1, { referencedTable: "offers" })
       .order("sort_order", { ascending: true })
       .order("name_en", { ascending: true })
       .limit(GRID_LIMIT),
@@ -184,7 +188,7 @@ export async function getProductDetail(
 
 const PAGE_SIZE = 24;
 
-/** The games category, with active offers supplying each product's starting price. */
+/** Products in the games category that have at least one active offer. */
 export async function getCatalogPage(
   client: SupabaseClient,
   locale: Locale,
@@ -195,8 +199,10 @@ export async function getCatalogPage(
 
   const { data, error, count } = await client
     .from("products")
-    .select(PRODUCT_SUMMARY_SELECT.replace("categories!products_category_id_fkey(", "categories!products_category_id_fkey!inner("), { count: "exact" })
+    .select(`${PRODUCT_SUMMARY_SELECT.replace("categories!products_category_id_fkey(", "categories!products_category_id_fkey!inner(")}, offers!inner(id)`, { count: "exact" })
     .eq("is_active", true)
+    .eq("offers.is_active", true)
+    .limit(1, { referencedTable: "offers" })
     .eq("categories.slug", "games")
     .eq("categories.is_active", true)
     .order("sort_order", { ascending: true })
@@ -255,8 +261,10 @@ export async function searchProducts(
   if (!tokens.length) return { products: [], query };
   let search = client
     .from("products")
-    .select(PRODUCT_SUMMARY_SELECT)
+    .select(`${PRODUCT_SUMMARY_SELECT}, offers!inner(id)`)
     .eq("is_active", true)
+    .eq("offers.is_active", true)
+    .limit(1, { referencedTable: "offers" })
     .order("sort_order", { ascending: true })
     .limit(SEARCH_LIMIT);
   for (const token of tokens) search = search.ilike("search_text", `%${token}%`);
@@ -522,8 +530,10 @@ export async function getCategoryPage(
       .maybeSingle(),
     client
       .from("products")
-      .select(PRODUCT_SUMMARY_SELECT.replace("categories!products_category_id_fkey(", "categories!products_category_id_fkey!inner("), { count: "exact" })
+      .select(`${PRODUCT_SUMMARY_SELECT.replace("categories!products_category_id_fkey(", "categories!products_category_id_fkey!inner(")}, offers!inner(id)`, { count: "exact" })
       .eq("is_active", true)
+      .eq("offers.is_active", true)
+      .limit(1, { referencedTable: "offers" })
       .eq("categories.slug", categorySlug)
       .order("sort_order", { ascending: true })
       .order("name_en", { ascending: true })
@@ -590,8 +600,10 @@ export async function getAllProductsPage(
 
   const { data, error, count } = await client
     .from("products")
-    .select(PRODUCT_SUMMARY_SELECT, { count: "exact" })
+    .select(`${PRODUCT_SUMMARY_SELECT}, offers!inner(id)`, { count: "exact" })
     .eq("is_active", true)
+    .eq("offers.is_active", true)
+    .limit(1, { referencedTable: "offers" })
     .order("sort_order", { ascending: true })
     .order("name_en", { ascending: true })
     .range(from, from + PAGE_SIZE - 1);

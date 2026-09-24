@@ -8,9 +8,10 @@ import { toSearchTokens } from "@/lib/catalog/search";
 import { PRODUCT_KINDS, type ProductKind } from "@/lib/catalog/product-kind-mapper";
 import { recordAudit } from "@server/legacy/lib/services/admin-audit.service";
 import { createSupabaseServerClient } from "@server/lib/supabase/server";
+import { BATSTORE_PROVIDER_NAME } from "@server/providers/batstore/mapping";
 import { G2BULK_PROVIDER_NAME } from "@server/providers/g2bulk/mapping";
 import { MAXSTORE_PROVIDER_NAME } from "@server/providers/maxstore/mapping";
-import type { Database } from "@server/types/database";
+import type { Database, Json } from "@server/types/database";
 import { offerPricingMapping, supplierCost } from "@server/lib/offer-pricing";
 
 /**
@@ -619,7 +620,7 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
 
   const { data: mappings, error: mappingsError } = await client
     .from("provider_offer_mappings")
-    .select("offer_id, provider_name")
+    .select("offer_id, provider_name, metadata")
     .in(
       "offer_id",
       writable.map((row) => row.id),
@@ -629,10 +630,10 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
     throw new Error(`Reading offer mappings failed: ${mappingsError.message}`);
   }
 
-  const mapped = new Map<string, string>();
+  const mapped = new Map<string, { providerName: string; metadata: unknown }>();
   for (const mapping of mappings) {
     if (mapped.has(mapping.offer_id)) throw new Error("A package has multiple supplier mappings. Resolve them before repricing.");
-    mapped.set(mapping.offer_id, mapping.provider_name);
+    mapped.set(mapping.offer_id, { providerName: mapping.provider_name, metadata: mapping.metadata });
   }
   const updatedAt = new Date().toISOString();
 
@@ -661,15 +662,25 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
 
     // Pricing mode lives on the provider mapping, so a manually added offer has
     // nothing to write.
-    if (!mapped.has(row.id)) {
+    const mapping = mapped.get(row.id);
+    if (!mapping) {
       continue;
     }
 
+    const metadata = mapping.metadata && typeof mapping.metadata === "object" && !Array.isArray(mapping.metadata)
+      ? mapping.metadata as Record<string, unknown>
+      : {};
+    const clearStockPark = mapping.providerName === BATSTORE_PROVIDER_NAME && metadata.parked_by_stock_sync === true;
+
     const { error: mappingError } = await client
       .from("provider_offer_mappings")
-      .update({ pricing_mode: row.pricingMode, updated_at: updatedAt })
+      .update({
+        pricing_mode: row.pricingMode,
+        ...(clearStockPark ? { metadata: { ...metadata, parked_by_stock_sync: false } as Json } : {}),
+        updated_at: updatedAt,
+      })
       .eq("offer_id", row.id)
-      .eq("provider_name", mapped.get(row.id)!);
+      .eq("provider_name", mapping.providerName);
 
     if (mappingError) {
       throw new Error(`Saving a package's pricing mode failed: ${mappingError.message}`);
