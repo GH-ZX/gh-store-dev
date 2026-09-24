@@ -8,6 +8,7 @@ The owner rejected the latest homepage/carousel. The previous checkboxes record 
 - [x] Resolve single-product voucher shelf (ten offers), duplicate gift-card shelves and empty header category
 - [x] Hide products with no active supplier offers from all customer browse/search lists; direct product URLs show an unavailable state
 - [x] BatStore zero/missing-stock offers are parked by sync and restored after restock unless an admin edits the offer
+- [x] Put available quick-buy products before the logo carousel; confirm Arabic/English layout at 375, 768 and 1280px without screenshots
 - [ ] Complete artwork coverage and customer-facing product naming
 - [ ] Reconcile nine active products without active offers
 
@@ -75,7 +76,7 @@ Months remain calendar months. Warranty is unknown, none, fixed or full term; co
 
 ## Latest homepage refinement
 
-The carousel uses configured logos/wordmarks in the main panel and bottom navigation; duplicate product headings/descriptions are removed. Accessible names remain, and failed/missing logos fall back to text. Gemini/ChatGPT have local SVG marks; a missing CapCut entry reuses the configured logo. Imported card art is bounded over the generated background. The narrow English header overflow is fixed. Latest production version: `bdb4923f-f047-4480-b76f-ded813c378fb`. Both locales passed 360px production DOM/keyboard checks with six logos and zero fallback names. No screenshots or image inspection.
+The carousel uses configured logos/wordmarks in the main panel and bottom navigation; duplicate product headings/descriptions are removed. Accessible names remain, and failed/missing logos fall back to text. Gemini/ChatGPT have local SVG marks; a missing CapCut entry reuses the configured logo. Imported card art is bounded over the generated background. The narrow English header overflow is fixed. The current home page puts six available quick-buy cards before six logo carousel slides. Production DOM checks in Arabic and English at 375, 768 and 1280px showed no horizontal overflow; all six slides and logos remained present. Latest production version: `a816468f-edeb-4c35-9dd3-fbc66437b039`. The carousel's visual direction is still not marked owner-accepted. No screenshots or image inspection.
 
 
 ## Combined Codex / OpenCode follow-up

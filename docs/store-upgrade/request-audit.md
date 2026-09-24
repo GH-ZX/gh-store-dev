@@ -19,7 +19,7 @@ The owner rejected the latest homepage/carousel design. Deployed, typechecked an
 
 | Request | Implemented | Still incomplete |
 | --- | --- | --- |
-| Homepage that gets shoppers to products quickly | Six quick-buy cards, extra catalog shelves, expanded category header | Owner-approved design; single-item sections; duplicate collections; empty navigation; merchandising only buyable products; balancing mobile page length |
+| Homepage that gets shoppers to products quickly | Six available quick-buy cards now appear before the six-logo carousel; extra catalog shelves; expanded category header | Owner feedback rejected the prior carousel look; this reorder improves product access but does not claim its art direction is accepted; continue the full-artwork and mobile-balance pass |
 | Carousel using product logos/wordmarks | Logo-based panels/tabs, accessible labels, text fallback; Gemini/ChatGPT/CapCut missing entries filled | Design rejected by owner; broader logo coverage; coherent banners rather than relying on the same generated background and existing provider covers |
 | Three artwork roles for the full catalog | Editable logo, large image and thumbnail fields; one generated background; API-image fallback | Full per-product asset pass; 44 missing logo entries and two missing large-image entries; no individually populated thumbnail overrides; no complete collection of product-specific generated hero assets |
 | Modern sign-in, sign-up, forgot/reset pages | Shared responsive layout, Google mark, password visibility, recovery paths retained | Owner acceptance and real Google/email/reset delivery checks |
