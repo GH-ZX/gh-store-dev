@@ -49,7 +49,7 @@ The owner rejected the latest homepage/carousel. The previous checkboxes record 
 - [ ] Refine carousel with logo/wordmark identity — deployed, but design rejected by owner
 - [x] Commit and push the completed release
 
-- [ ] Release the provider availability and customer catalog filter follow-up; verify the production deploy
+- [x] Release provider availability and customer catalog filters; confirm English and Arabic browse, search and direct out-of-stock pages in production DOM
 
 ## Owner-dependent follow-up
 
@@ -90,5 +90,9 @@ The carousel uses configured logos/wordmarks in the main panel and bottom naviga
 - [x] Help copy updated for products and mixed automatic/manual fulfillment; optional analytics disclosure added
 - [ ] PostHog project API key entered and real event delivery confirmed
 - [ ] Full original wishlist complete — remaining artwork, naming/terms, supplier reconciliation, carousel acceptance and owner-dependent checks are still open in request-audit.md
+
+## Provider stock visibility follow-up
+
+All customer product-list queries, including the separate search service, now require at least one active offer. Direct product URLs with no active offer keep their page and show the unavailable state. BatStore import uses its stock count consistently with the provider picker, records stock status, parks zero/unknown inventory, and can reactivate its own parked offers after restock. An administrator saving the offer clears that automatic-restock marker. No supplier import or price update was run against the live catalog. Production deployment `60eae5cd-f283-4d20-9343-46eb4515731b` was checked by fetching English and Arabic product grids, Services pages, Proton VPN search results and its direct product page; all returned HTTP 200 and the expected visibility/copy. No screenshots or image inspection were used.
 
 The current work does not claim every original request is finished. Do not check off those remaining items merely because a release passes tests.
