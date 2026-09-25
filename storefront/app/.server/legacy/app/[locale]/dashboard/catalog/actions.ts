@@ -9,6 +9,7 @@ import { requireAdmin } from "@server/lib/auth/guards";
 import { createSupabaseServiceClient } from "@server/lib/supabase/service";
 import { createSupabaseServerClient } from "@server/lib/supabase/server";
 import { formFlag, formText, formTextList } from "@/lib/forms/form-data";
+import { logFailure } from "@server/lib/logging/logger";
 import {
   createAdminProduct,
   createAdminOffer,
@@ -75,18 +76,18 @@ const gameSchema = z.object({
   pointsNameEn: optionalText(80),
   descriptionAr: optionalText(4000),
   descriptionEn: optionalText(4000),
-  imageUrl: optionalText(600),
-  logoUrl: optionalText(600),
-  thumbnailUrl: optionalText(600).optional(),
-  carouselBadgeAr: optionalText(80),
-  carouselBadgeEn: optionalText(80),
+  imageUrl: optionalText(2000),
+  logoUrl: optionalText(2000),
+  thumbnailUrl: optionalText(2000).optional(),
+  carouselBadgeAr: optionalText(160),
+  carouselBadgeEn: optionalText(160),
   sortOrder: z.coerce.number().int().min(0).max(100000),
   isActive: z.boolean(),
   isFeatured: z.boolean(),
   showInCarousel: z.boolean(),
   carouselOrder: optionalNumber(100000),
   carouselLogoTone: z.union([z.null(), z.literal("light"), z.literal("dark")]),
-  carouselColor: optionalText(9),
+  carouselColor: optionalText(32),
 });
 
 const offerRowSchema = z.object({
@@ -157,13 +158,26 @@ export async function updateProductAction(
 ): Promise<CatalogActionState> {
   await requireAdmin();
 
+  const rawNameAr = formText(formData, "nameAr");
+  const rawNameEn = formText(formData, "nameEn");
+  const nameAr = rawNameAr || rawNameEn || "";
+  const nameEn = rawNameEn || rawNameAr || "";
+
+  const rawTone = formText(formData, "carouselLogoTone");
+  const carouselLogoTone =
+    rawTone === "light" || rawTone === "dark" ? rawTone : null;
+
   const parsed = gameSchema.safeParse({
-    searchAliases: (formText(formData, "searchAliases") ?? "").split(/[,،\n]/).map(v => v.trim()).filter(Boolean),
+    searchAliases: (formText(formData, "searchAliases") ?? "")
+      .split(/[,،\n]/)
+      .map((v) => v.trim().slice(0, 160))
+      .filter(Boolean)
+      .slice(0, 100),
     gameId: formText(formData, "gameId"),
     categoryId: formText(formData, "categoryId") ?? "",
     productKind: formText(formData, "productKind") ?? "other",
-    nameAr: formText(formData, "nameAr"),
-    nameEn: formText(formData, "nameEn"),
+    nameAr,
+    nameEn,
     slug: formText(formData, "slug"),
     pointsNameAr: formText(formData, "pointsNameAr") ?? null,
     pointsNameEn: formText(formData, "pointsNameEn") ?? null,
@@ -179,11 +193,17 @@ export async function updateProductAction(
     isFeatured: formFlag(formData, "isFeatured"),
     showInCarousel: formFlag(formData, "showInCarousel"),
     carouselOrder: formText(formData, "carouselOrder") ?? null,
-    carouselLogoTone: formText(formData, "carouselLogoTone") ?? null,
+    carouselLogoTone,
     carouselColor: formText(formData, "carouselColor") ?? null,
   });
 
   if (!parsed.success) {
+    logFailure(
+      "admin.catalog",
+      "update_product_validation_failed",
+      new Error("Validation failed"),
+      { issues: parsed.error.issues },
+    );
     return failed("invalid_input");
   }
 
@@ -547,13 +567,24 @@ export async function createProductAction(
 ): Promise<CatalogActionState> {
   await requireAdmin();
 
+  const rawNameAr = formText(formData, "nameAr");
+  const rawNameEn = formText(formData, "nameEn");
+  const nameAr = rawNameAr || rawNameEn || "";
+  const nameEn = rawNameEn || rawNameAr || "";
+
   const parsed = createGameSchema.safeParse({
-    nameAr: formText(formData, "nameAr"),
-    nameEn: formText(formData, "nameEn"),
+    nameAr,
+    nameEn,
     slug: formText(formData, "slug"),
   });
 
   if (!parsed.success) {
+    logFailure(
+      "admin.catalog",
+      "create_product_validation_failed",
+      new Error("Validation failed"),
+      { issues: parsed.error.issues },
+    );
     return failed("invalid_input");
   }
 

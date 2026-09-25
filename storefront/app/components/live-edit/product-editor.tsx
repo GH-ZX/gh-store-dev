@@ -135,20 +135,19 @@ export function ProductEditor({
               defaultValue={game.nameEn}
               maxLength={160}
               dir="ltr"
-              required
             />
 
             <TextAreaField
               label={messages.descriptionAr}
               name="description_ar"
               defaultValue={game.descriptionAr}
-              maxLength={600}
+              maxLength={4000}
             />
             <TextAreaField
               label={messages.descriptionEn}
               name="description_en"
               defaultValue={game.descriptionEn}
-              maxLength={600}
+              maxLength={4000}
               dir="ltr"
             />
 
@@ -156,7 +155,7 @@ export function ProductEditor({
               label={messages.imageUrl}
               name="image_url"
               defaultValue={game.imageUrl}
-              maxLength={600}
+              maxLength={2000}
               dir="ltr"
               inputMode="url"
             />
@@ -164,7 +163,7 @@ export function ProductEditor({
               label={messages.logoUrl}
               name="logo_url"
               defaultValue={game.logoUrl}
-              maxLength={600}
+              maxLength={2000}
               dir="ltr"
               inputMode="url"
             />
@@ -200,7 +199,7 @@ export function ProductEditor({
               hint={messages.carouselColorHint}
               name="carousel_color"
               defaultValue={game.carouselColor}
-              maxLength={9}
+              maxLength={32}
               dir="ltr"
               spellCheck={false}
             />

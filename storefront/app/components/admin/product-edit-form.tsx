@@ -134,7 +134,6 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
             label={messages.nameEn}
             name="nameEn"
             defaultValue={product.nameEn}
-            required
             maxLength={160}
             dir="ltr"
           />
@@ -202,7 +201,7 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
             name="imageUrl"
             value={imageUrl}
             onChange={(event) => setImageUrl(event.target.value)}
-            maxLength={600}
+            maxLength={2000}
             dir="ltr"
             inputMode="url"
             spellCheck={false}
@@ -212,7 +211,7 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
             name="logoUrl"
             value={logoUrl}
             onChange={(event) => setLogoUrl(event.target.value)}
-            maxLength={600}
+            maxLength={2000}
             dir="ltr"
             inputMode="url"
             spellCheck={false}
@@ -220,19 +219,19 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
           <TextField
             label={locale === "ar" ? "الصورة المصغرة — بطاقات المنتجات" : "Thumbnail — product cards"}
             hint={locale === "ar" ? "اتركه فارغاً لاستخدام صورة المورد الحالية تلقائياً." : "Leave empty to follow the current provider artwork automatically."}
-            name="thumbnailUrl" defaultValue={product.thumbnailUrl ?? ""} maxLength={600} dir="ltr" inputMode="url"
+            name="thumbnailUrl" defaultValue={product.thumbnailUrl ?? ""} maxLength={2000} dir="ltr" inputMode="url"
           />
           <TextField
             label={messages.carouselBadgeAr}
             name="carouselBadgeAr"
             defaultValue={product.carouselBadgeAr ?? ""}
-            maxLength={80}
+            maxLength={160}
           />
           <TextField
             label={messages.carouselBadgeEn}
             name="carouselBadgeEn"
             defaultValue={product.carouselBadgeEn ?? ""}
-            maxLength={80}
+            maxLength={160}
             dir="ltr"
           />
           <TextField
@@ -261,7 +260,7 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
             hint={messages.carouselColorHint}
             name="carouselColor"
             defaultValue={product.carouselColor ?? ""}
-            maxLength={9}
+            maxLength={32}
             dir="ltr"
             spellCheck={false}
             type="text"

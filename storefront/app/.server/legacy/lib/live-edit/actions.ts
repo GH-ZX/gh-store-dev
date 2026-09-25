@@ -195,16 +195,16 @@ const gamePresentationSchema = z.object({
   game_id: z.string().trim().min(1),
   name_ar: z.string().trim().min(1).max(160),
   name_en: z.string().trim().min(1).max(160),
-  description_ar: z.string().trim().max(600).optional(),
-  description_en: z.string().trim().max(600).optional(),
-  image_url: z.string().trim().max(600).optional(),
-  logo_url: z.string().trim().max(600).optional(),
-  carousel_badge_ar: localizedText,
-  carousel_badge_en: localizedText,
+  description_ar: z.string().trim().max(4000).optional(),
+  description_en: z.string().trim().max(4000).optional(),
+  image_url: z.string().trim().max(2000).optional(),
+  logo_url: z.string().trim().max(2000).optional(),
+  carousel_badge_ar: z.string().trim().max(160).optional(),
+  carousel_badge_en: z.string().trim().max(160).optional(),
   is_featured: z.boolean(),
   show_in_carousel: z.boolean(),
   carousel_logo_tone: z.union([z.literal(""), z.literal("light"), z.literal("dark")]),
-  carousel_color: localizedText,
+  carousel_color: z.string().trim().max(32).optional(),
 });
 
 /**
@@ -221,10 +221,24 @@ export async function saveProductPresentationAction(
 ): Promise<LiveEditState> {
   await requireAdmin();
 
+  const rawNameAr = formText(formData, "name_ar");
+  const rawNameEn = formText(formData, "name_en");
+  const nameAr = rawNameAr || rawNameEn || "";
+  const nameEn = rawNameEn || rawNameAr || "";
+
+  const rawLogoTone = formText(formData, "carousel_logo_tone");
+  const carouselLogoTone =
+    rawLogoTone === "light" || rawLogoTone === "dark" ? rawLogoTone : "";
+
+  const gameId =
+    formText(formData, "game_id") ??
+    formText(formData, "gameId") ??
+    formText(formData, "id");
+
   const parsed = gamePresentationSchema.safeParse({
-    game_id: formText(formData, "game_id"),
-    name_ar: formText(formData, "name_ar"),
-    name_en: formText(formData, "name_en"),
+    game_id: gameId,
+    name_ar: nameAr,
+    name_en: nameEn,
     description_ar: formText(formData, "description_ar"),
     description_en: formText(formData, "description_en"),
     image_url: formText(formData, "image_url"),
@@ -233,11 +247,17 @@ export async function saveProductPresentationAction(
     carousel_badge_en: formText(formData, "carousel_badge_en"),
     is_featured: formFlag(formData, "is_featured"),
     show_in_carousel: formFlag(formData, "show_in_carousel"),
-    carousel_logo_tone: formText(formData, "carousel_logo_tone") ?? "",
-    carousel_color: formText(formData, "carousel_color") ?? "",
+    carousel_logo_tone: carouselLogoTone,
+    carousel_color: formText(formData, "carousel_color"),
   });
 
   if (!parsed.success) {
+    logFailure(
+      "admin.live-edit",
+      "game_presentation_validation_failed",
+      new Error("Validation failed"),
+      { issues: parsed.error.issues },
+    );
     return failure("invalid_input");
   }
 
