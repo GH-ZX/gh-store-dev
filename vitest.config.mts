@@ -24,6 +24,8 @@ export default defineConfig({
        * the money logic behind it.
        */
       "server-only": `${root}tests/stubs/server-only.ts`,
+      "next/headers": `${root}tests/mocks/next-headers.ts`,
+      "next/server": `${root}tests/mocks/next-server.ts`,
     },
   },
 });

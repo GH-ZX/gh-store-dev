@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { broadcastSiteAlert } from "@/lib/realtime-alerts";
 import { toast } from "@/components/ui/toaster";
 import { BellIcon, SparkIcon } from "@/components/ui/icons";
 import { inputClass, primaryButtonClass } from "./operations-shared";
@@ -53,6 +52,7 @@ export function BroadcastAlertPanel({ locale }: BroadcastAlertPanelProps) {
 
     setSending(true);
     try {
+      const { broadcastSiteAlert } = await import("@/lib/realtime-alerts");
       const ok = await broadcastSiteAlert({
         title,
         message,

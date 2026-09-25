@@ -1,19 +1,14 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import tseslint from "typescript-eslint";
+import reactHooks from "eslint-plugin-react-hooks";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
+export default tseslint.config(
+  ...tseslint.configs.recommended,
   {
+    plugins: {
+      "react-hooks": reactHooks,
+    },
     rules: {
-      /*
-       * A leading underscore marks a parameter that is intentionally unused.
-       * React fixes some signatures for us — `useActionState` always passes the
-       * previous state and the form data, even to an action that needs neither —
-       * and naming those `_state` / `_formData` says so more clearly than a
-       * scattering of disable comments.
-       */
+      ...reactHooks.configs.recommended.rules,
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
@@ -22,30 +17,27 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "@typescript-eslint/no-empty-object-type": "off",
+    },
+    linterOptions: {
+      reportUnusedDisableDirectives: "off",
     },
   },
   {
-    files: ["storefront/**/*.{ts,tsx}"],
-    rules: { "@next/next/no-img-element": "off" },
-  },
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "storefront/node_modules/**",
-    "storefront/build/**",
-    "storefront/.react-router/**",
-    "storefront/.wrangler/**",
-    "storefront/worker-configuration.d.ts",
-    "out/**",
-    "build/**",
-    ".open-next/**",
-    ".wrangler/**",
-    "next-env.d.ts",
-    // Deno, with its own imports and globals. Checked by the Supabase CLI.
-    "supabase/functions/**",
-    "legacy-next-snapshot/**",
-  ]),
-]);
-
-export default eslintConfig;
+    ignores: [
+      ".next/**",
+      "storefront/node_modules/**",
+      "storefront/build/**",
+      "storefront/.react-router/**",
+      "storefront/.wrangler/**",
+      "storefront/worker-configuration.d.ts",
+      "out/**",
+      "build/**",
+      ".open-next/**",
+      ".wrangler/**",
+      "next-env.d.ts",
+      "supabase/functions/**",
+      "legacy-next-snapshot/**",
+    ],
+  }
+);
