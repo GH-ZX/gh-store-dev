@@ -12,6 +12,7 @@ function BrandImage({ product, priority }: { product: StoreProduct; priority: bo
   if (!source || failed) return <span className="sf-carousel-brand-fallback" dir="auto">{product.name}</span>;
   return <span className="sf-carousel-brand" aria-hidden="true">
     <img src={source} alt="" loading={priority ? "eager" : "lazy"} decoding="async"
-      onError={() => setFailed(true)} data-monochrome={product.carouselLogoTone || !/simpleicons\.org|\/storefront\/brands\//i.test(product.logoUrl ?? "") ? "true" : undefined} />
+      onError={() => setFailed(true)} data-logo-tone={product.carouselLogoTone ?? undefined}
+      data-monochrome={product.carouselLogoTone || !/simpleicons\.org|\/storefront\/brands\//i.test(product.logoUrl ?? "") ? "true" : undefined} />
   </span>;
 }

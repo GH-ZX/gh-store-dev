@@ -105,7 +105,6 @@ export default function LocaleHome() {
           </div>
         </div>
       </Section>
-      <HomeQuickBuy discovery={discovery} locale={locale} />
       {carousel.products.length > 0 ? (
         <Section spacing="tight" className="sf-home-carousel">
           <HeroCarousel
@@ -128,6 +127,7 @@ export default function LocaleHome() {
           />
         </Section>
       ) : null}
+      <HomeQuickBuy discovery={discovery} locale={locale} />
       {sections.length ? (
         <HomeSections
           liveEdit={liveEdit}
