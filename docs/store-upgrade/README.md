@@ -72,7 +72,15 @@ Months remain calendar months. Warranty is unknown, none, fixed or full term; co
 
 ## Final live catalog check
 
-81 products; 81 with search aliases; zero uncategorized. Thirteen upgrade migrations are applied through 20260924220000. Warranties parsed: 6 none, 7 full term, 4 fixed; 24 ambiguous offers require review. Other unknown warranties are not guessed. No supplier prices or product records were deleted.
+81 products; 81 with search aliases; zero uncategorized. Fifteen upgrade migrations are applied through 20260926100000. Warranties parsed: 6 none, 7 full term, 4 fixed; 24 ambiguous offers require review. Other unknown warranties are not guessed. No supplier prices or product records were deleted.
+
+## Terms review resolution
+
+Migration `20260926090000` adds a third `terms_source`, `unstated`, for an offer whose supplier genuinely publishes no terms. It clears `terms_review_required` while claiming no duration and no warranty, and records `terms_reviewed_at`, `terms_reviewed_by` and a mandatory `terms_review_note`. Previously the only way out of the queue was a manual override, which forced terms the supplier never stated. `enrich_offer_terms` is re-issued so a resolved offer is never re-parsed, and `refresh_product_offer_terms` already swept only automatic offers, so a resolution survives a product rename. The order snapshot is deliberately untouched.
+
+Migration `20260926100000` adds `products.logo_surface_color`, so an admin can recolour the carousel logo tile. An empty value keeps the shared brand surface.
+
+Both were applied on 2026-09-26 by moving `20260911120000`, `20260911121000` and `20260911122000` out of the migrations directory, pushing only the two reviewed files, and restoring them. Those three remain absent from remote history, so the next `supabase db push` will still offer to insert them and must not be run with `--include-all`. Verified after applying: all five new columns queryable, every existing row null, 20 offers carry `terms_review_required` and 19 of them are active. `storefront/app/.server/types/database.ts` was hand-edited for the new columns; regenerate with `supabase gen types` to confirm.
 
 ## Latest homepage refinement
 
