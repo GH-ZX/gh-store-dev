@@ -512,6 +512,7 @@ export async function updateOffersAction(
       id,
       terms: {
         termsSource: formText(formData, `offers.${index}.termsSource`) ?? "automatic",
+        termsReviewNote: formText(formData, `offers.${index}.termsReviewNote`),
         durationValue: formText(formData, `offers.${index}.durationValue`),
         durationUnit: formText(formData, `offers.${index}.durationUnit`) ?? "month",
         warrantyKind: formText(formData, `offers.${index}.warrantyKind`) ?? "unknown",

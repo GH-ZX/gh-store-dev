@@ -364,7 +364,7 @@ export type AdminProduct = AdminProductFields & {
 };
 
 export type AdminProductOffer = {
-  terms?: OfferTerms & { terms_source?: string };
+  terms?: OfferTerms & { terms_source?: string; terms_review_note?: string | null; terms_reviewed_at?: string | null };
   id: string;
   slug: string;
   nameAr: string;
@@ -391,7 +391,7 @@ export type AdminProductDetail = {
 };
 
 const OFFER_COLUMNS =
-  "id, slug, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, delivery_kind, duration_value, duration_unit, warranty_kind, warranty_value, warranty_unit, terms_source, terms_review_required, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
+  "id, slug, name_ar, name_en, description_ar, description_en, price, original_price, currency, is_sale, is_active, sort_order, offer_type, delivery_kind, duration_value, duration_unit, warranty_kind, warranty_value, warranty_unit, terms_source, terms_review_required, terms_review_note, terms_reviewed_at, provider_offer_mappings(provider_name, supplier_cost_usd, pricing_mode)";
 
 export async function getAdminProduct(gameId: string): Promise<AdminProductDetail | null> {
   await requireAdmin();
@@ -481,7 +481,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
         nameEn: offer.name_en,
         descriptionAr: offer.description_ar,
         descriptionEn: offer.description_en,
-        terms: { duration_value: offer.duration_value, duration_unit: offer.duration_unit, warranty_kind: offer.warranty_kind, warranty_value: offer.warranty_value, warranty_unit: offer.warranty_unit, terms_source: offer.terms_source, terms_review_required: offer.terms_review_required },
+        terms: { duration_value: offer.duration_value, duration_unit: offer.duration_unit, warranty_kind: offer.warranty_kind, warranty_value: offer.warranty_value, warranty_unit: offer.warranty_unit, terms_source: offer.terms_source, terms_review_required: offer.terms_review_required, terms_review_note: offer.terms_review_note ?? null, terms_reviewed_at: offer.terms_reviewed_at ?? null },
         price: offer.price,
         originalPrice: offer.original_price,
         currency: offer.currency,
@@ -591,7 +591,7 @@ export type AdminOfferUpdate = {
  * admin's edits are still worth keeping.
  */
 export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]): Promise<void> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   if (!UUID_PATTERN.test(gameId)) {
     throw new ProductNotFoundError();
@@ -645,7 +645,8 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
         name_en: row.nameEn,
         description_ar: row.descriptionAr,
         description_en: row.descriptionEn,
-        ...(row.terms ? offerTermsUpdate(row.terms) : {}),
+        // Who resolved the terms is part of the audit trail, not the form.
+        ...(row.terms ? offerTermsUpdate(row.terms, admin.id) : {}),
         price: row.price,
         original_price: row.originalPrice,
         is_sale: row.isSale,

@@ -551,6 +551,9 @@ export type Database = {
           warranty_unit: string | null
           terms_source: string
           terms_review_required: boolean
+          terms_reviewed_at: string | null
+          terms_reviewed_by: string | null
+          terms_review_note: string | null
           created_at: string
           currency: string
           delivery_kind: string
@@ -580,6 +583,9 @@ export type Database = {
           warranty_unit?: string | null
           terms_source?: string
           terms_review_required?: boolean
+          terms_reviewed_at?: string | null
+          terms_reviewed_by?: string | null
+          terms_review_note?: string | null
           created_at?: string
           currency?: string
           delivery_kind?: string
@@ -609,6 +615,9 @@ export type Database = {
           warranty_unit?: string | null
           terms_source?: string
           terms_review_required?: boolean
+          terms_reviewed_at?: string | null
+          terms_reviewed_by?: string | null
+          terms_review_note?: string | null
           created_at?: string
           currency?: string
           delivery_kind?: string
