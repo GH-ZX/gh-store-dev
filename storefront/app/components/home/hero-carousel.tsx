@@ -212,7 +212,7 @@ export function HeroCarousel({
                     </div>
                     <div className="sf-featured-copy">
                       {product.carouselBadge ? <span className="sf-featured-label">{product.carouselBadge}</span> : null}
-                      <div className="sf-featured-identity" data-logo-tone={product.carouselLogoTone ?? undefined}><CarouselBrand product={product} priority={index === 0} /></div>
+                      <div className="sf-featured-identity"><CarouselBrand product={product} priority={index === 0} /></div>
                       <span className="sf-featured-details">{labels.details}<ArrowIcon direction="end" className="size-4 rtl:rotate-180" /></span>
                     </div>
                   </Link>
@@ -232,8 +232,7 @@ export function HeroCarousel({
       {total > 1 ? <div className="sf-featured-tabs" role="group" aria-label={labels.regionLabel}>
         {products.map((product,index)=><div key={product.id} className="sf-featured-tab-wrap">
           <button type="button" onClick={()=>emblaApi?.scrollTo(index)} aria-current={index===selected?"true":undefined}
-            aria-label={formatMessage(labels.goToProduct,{name:product.name},locale)} className="sf-featured-tab"
-            data-logo-tone={product.carouselLogoTone ?? undefined}>
+            aria-label={formatMessage(labels.goToProduct,{name:product.name},locale)}             className="sf-featured-tab">
             <CarouselBrand product={product} />
           </button>
           {reorderMode ? <div className="sf-featured-reorder">

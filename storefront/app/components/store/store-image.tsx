@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArtworkPlaceholder } from "@/components/store/artwork-placeholder";
 import { getImageAttempts, type ArtworkFit, type LogoTone } from "@/lib/catalog/presentation";
+import { logoInkStyle } from "@/lib/catalog/logo-ink";
 import { cn } from "@/lib/cn";
 
 export type StoreImageProps = {
@@ -25,6 +26,9 @@ export type StoreImageProps = {
   /** Opt-in monochrome treatment for an explicit logo, never ordinary artwork. */
   logoTone?: LogoTone;
   fallbackLogoTone?: LogoTone;
+  /** Explicit ink colour for an explicit logo; the surrounding surface is untouched. */
+  logoInk?: string | null;
+  fallbackLogoInk?: string | null;
 };
 
 /** The source key resets failed attempts when navigation replaces the artwork. */
@@ -59,9 +63,11 @@ function ImageWithFallback({
   category,
   logoTone,
   fallbackLogoTone,
+  logoInk,
+  fallbackLogoInk,
 }: StoreImageProps) {
   const [attemptIndex, setAttemptIndex] = useState(0);
-  const attempts = getImageAttempts({ src, fallbackSrc, width, fit, fallbackFit, logoTone, fallbackLogoTone });
+  const attempts = getImageAttempts({ src, fallbackSrc, width, fit, fallbackFit, logoTone, fallbackLogoTone, logoInk, fallbackLogoInk });
   const attempt = attempts[attemptIndex];
 
   if (!attempt) {
@@ -90,8 +96,9 @@ function ImageWithFallback({
     sizes={sizes}
     data-artwork-fit={attempt.fit}
     data-logo-tone={attempt.logoTone || undefined}
+    data-logo-ink={attempt.logoInk || undefined}
     className={cn("sf-store-image size-full bg-[var(--surface-inset)]", attempt.fit === "contain" ? "object-contain" : "object-cover", className)}
-    style={focus && attempt.fit === "cover" ? { objectPosition: `${focus.x}% ${focus.y}%` } : undefined}
+    style={logoInkStyle({ src: attempt.src, ink: attempt.logoInk, fit: attempt.fit, focus })}
     onError={() => setAttemptIndex((current) => current + 1)}
   />;
 }

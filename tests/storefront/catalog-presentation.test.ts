@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { artworkMonogram, getImageAttempts, getOfferArtwork, getProductArtwork } from "@/lib/catalog/presentation";
+import { artworkMonogram, getImageAttempts, getOfferArtwork, getProductArtwork, toLogoInk } from "@/lib/catalog/presentation";
 
 describe("catalog artwork choices", () => {
-  const product = { imageUrl: "/product.webp", logoUrl: "/logo.svg", kind: "game" as const, carouselLogoTone: "light" as const };
+  const product = { imageUrl: "/product.webp", logoUrl: "/logo.svg", kind: "game" as const, carouselLogoTone: "light" as const, carouselColor: null };
 
   it("fills game scenery without applying the logo's monochrome setting to it", () => {
     expect(getProductArtwork(product)).toEqual({
       src: "/product.webp", fit: "cover", logoTone: null,
       fallbackSrc: "/logo.svg", fallbackFit: "contain", fallbackLogoTone: "light",
+      logoInk: null, fallbackLogoInk: null,
     });
   });
 
@@ -19,6 +20,7 @@ describe("catalog artwork choices", () => {
     expect(getProductArtwork({ ...product, imageUrl: null })).toEqual({
       src: "/logo.svg", fit: "contain", logoTone: "light",
       fallbackSrc: null, fallbackFit: "contain", fallbackLogoTone: null,
+      logoInk: null, fallbackLogoInk: null,
     });
   });
 
@@ -35,6 +37,38 @@ describe("catalog artwork choices", () => {
   });
 });
 
+describe("logo ink is independent of the tile surface", () => {
+  const product = { imageUrl: "/product.webp", logoUrl: "/logo.svg", kind: "service" as const, carouselLogoTone: "light" as const, carouselColor: null };
+
+  it("reads a plain hex ink colour and rejects anything else", () => {
+    expect(toLogoInk("#1F6FEB")).toBe("#1f6feb");
+    expect(toLogoInk("fff")).toBe("#ffffff");
+    expect(toLogoInk(" #1f6feb ")).toBe("#1f6feb");
+    for (const invalid of ["", "   ", null, undefined, "red", "#12345", "rgb(0,0,0)", "#1f6feb; background:url(x)"]) {
+      expect(toLogoInk(invalid)).toBeNull();
+    }
+  });
+
+  it("colours the logo mark itself and never the surrounding artwork", () => {
+    expect(getProductArtwork({ ...product, carouselColor: "#1F6FEB" })).toEqual({
+      src: "/product.webp", fit: "contain", fallbackSrc: "/logo.svg", fallbackFit: "contain",
+      logoTone: null, fallbackLogoTone: null, logoInk: null, fallbackLogoInk: "#1f6feb",
+    });
+    expect(getProductArtwork({ ...product, imageUrl: null, carouselColor: "#1F6FEB" })).toMatchObject({
+      src: "/logo.svg", fit: "contain", logoInk: "#1f6feb", logoTone: null,
+    });
+  });
+
+  it("keeps the tone as the only ink control when no colour is chosen", () => {
+    expect(getProductArtwork({ ...product, imageUrl: null })).toMatchObject({ logoInk: null, logoTone: "light" });
+    expect(getProductArtwork({ ...product, imageUrl: null, carouselColor: "not-a-colour" })).toMatchObject({ logoInk: null, logoTone: "light" });
+  });
+
+  it("never offers artwork an ink colour", () => {
+    expect(getOfferArtwork({ imageUrl: "/voucher.webp", game: { logoUrl: "/logo.svg" }, offerType: "topup" })).toMatchObject({ logoInk: null, fallbackLogoInk: null });
+  });
+});
+
 describe("bounded image recovery", () => {
   const source = "https://store.supabase.co/storage/v1/object/public/catalog/product.png";
 
@@ -43,8 +77,8 @@ describe("bounded image recovery", () => {
     expect(attempts).toHaveLength(3);
     expect(attempts[0].srcSet).toContain("/storage/v1/render/image/public/catalog/product.png?width=320&quality=75 320w");
     expect(attempts[0].srcSet).not.toContain("format=webp");
-    expect(attempts[1]).toEqual({ src: source, fit: "cover", logoTone: null });
-    expect(attempts[2]).toEqual({ src: "/logo.svg", fit: "contain", logoTone: null });
+    expect(attempts[1]).toEqual({ src: source, fit: "cover", logoTone: null, logoInk: null });
+    expect(attempts[2]).toEqual({ src: "/logo.svg", fit: "contain", logoTone: null, logoInk: null });
   });
 
   it("bounds supplier image widths and keeps an original proxy attempt", () => {
@@ -63,7 +97,7 @@ describe("bounded image recovery", () => {
   });
 
   it("uses the alternate immediately when the primary is missing", () => {
-    expect(getImageAttempts({ src: null, fallbackSrc: "/logo.svg", fallbackLogoTone: "dark" })).toEqual([{ src: "/logo.svg", srcSet: undefined, fit: "contain", logoTone: "dark" }]);
+    expect(getImageAttempts({ src: null, fallbackSrc: "/logo.svg", fallbackLogoTone: "dark" })).toEqual([{ src: "/logo.svg", srcSet: undefined, fit: "contain", logoTone: "dark", logoInk: null }]);
     expect(getImageAttempts({ src: null })).toEqual([]);
   });
 

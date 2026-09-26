@@ -1,4 +1,5 @@
 import { parseRechargeMethodsInput } from "@/lib/recharge-settings";
+import { toLogoInk } from "@/lib/catalog/presentation";
 import { saveRechargeSettings } from "@server/lib/services/admin-recharge.service";
 import { createSupabaseServerClient } from "@server/lib/supabase/server";
 
@@ -287,7 +288,7 @@ export async function saveProductPresentationAction(
       showInCarousel: input.show_in_carousel,
       carouselLogoTone:
         input.carousel_logo_tone === "" ? null : input.carousel_logo_tone,
-      carouselColor: input.carousel_color ? input.carousel_color : null,
+      carouselColor: toLogoInk(input.carousel_color),
     });
   } catch (error) {
     if (error instanceof ProductNotFoundError) {

@@ -12,20 +12,35 @@ export type CatalogArtwork = {
   fallbackFit: ArtworkFit;
   logoTone: LogoTone;
   fallbackLogoTone: LogoTone;
+  /** Explicit ink colour for the logo silhouette. The tile keeps its own surface. */
+  logoInk: string | null;
+  fallbackLogoInk: string | null;
 };
 
+/** A logo keeps its own surface; only the mark's ink is recoloured. */
+export function toLogoInk(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const hex = value.trim().replace(/^#/, "");
+  if (/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex) === false) return null;
+  const full = hex.length === 3 ? [...hex].map((char) => char + char).join("") : hex;
+  return `#${full.toLowerCase()}`;
+}
+
 /** Preserve configured artwork. Only game scenery is cropped to fill a card. */
-export function getProductArtwork(product: Pick<StoreProduct, "imageUrl" | "logoUrl" | "kind" | "carouselLogoTone" | "thumbnailUrl">, role: "large" | "thumbnail" = "large"): CatalogArtwork {
+export function getProductArtwork(product: Pick<StoreProduct, "imageUrl" | "logoUrl" | "kind" | "carouselLogoTone" | "thumbnailUrl" | "carouselColor">, role: "large" | "thumbnail" = "large"): CatalogArtwork {
   const src = (role === "thumbnail" ? product.thumbnailUrl : null) || product.imageUrl || product.logoUrl || null;
   const fallbackSrc = [product.imageUrl, product.logoUrl].find(candidate => candidate && candidate !== src) ?? null;
   const isLogo = Boolean(src && src === product.logoUrl);
+  const ink = toLogoInk(product.carouselColor);
   return {
     src,
     fit: product.kind === "game" && !isLogo ? "cover" : "contain",
     fallbackSrc,
     fallbackFit: "contain",
-    logoTone: isLogo ? product.carouselLogoTone : null,
-    fallbackLogoTone: fallbackSrc ? product.carouselLogoTone : null,
+    logoTone: ink ? null : isLogo ? product.carouselLogoTone : null,
+    fallbackLogoTone: ink ? null : fallbackSrc ? product.carouselLogoTone : null,
+    logoInk: isLogo ? ink : null,
+    fallbackLogoInk: fallbackSrc ? ink : null,
   };
 }
 
@@ -40,6 +55,8 @@ export function getOfferArtwork(offer: Pick<StoreOffer, "imageUrl" | "game" | "o
     fallbackFit: fallbackSrc === offer.game?.logoUrl || offer.offerType !== "topup" ? "contain" : "cover",
     logoTone: null,
     fallbackLogoTone: null,
+    logoInk: null,
+    fallbackLogoInk: null,
   };
 }
 
@@ -48,6 +65,7 @@ export type ImageAttempt = {
   srcSet?: string;
   fit: ArtworkFit;
   logoTone: LogoTone;
+  logoInk?: string | null;
 };
 
 const RESPONSIVE_WIDTHS = [160, 240, 320, 384, 480, 640, 960, 1280, 1536];
@@ -82,6 +100,8 @@ export function getImageAttempts({
   fallbackFit = "contain",
   logoTone = null,
   fallbackLogoTone = null,
+  logoInk = null,
+  fallbackLogoInk = null,
 }: {
   src: string | null;
   fallbackSrc?: string | null;
@@ -90,6 +110,8 @@ export function getImageAttempts({
   fallbackFit?: ArtworkFit;
   logoTone?: LogoTone;
   fallbackLogoTone?: LogoTone;
+  logoInk?: string | null;
+  fallbackLogoInk?: string | null;
 }): ImageAttempt[] {
   const primary = src || fallbackSrc || null;
   if (!primary) return [];
@@ -98,13 +120,14 @@ export function getImageAttempts({
     : 1536;
   const primaryFit = src ? fit : fallbackFit;
   const primaryTone = src ? logoTone : fallbackLogoTone;
+  const primaryInk = src ? logoInk : fallbackLogoInk;
   const original = resolveImageSource(primary)!;
   const srcSet = responsiveSources(primary, maximumWidth);
   const optimized = srcSet ? resolveImageSource(primary, maximumWidth)! : original;
-  const attempts: ImageAttempt[] = [{ src: optimized, srcSet, fit: primaryFit, logoTone: primaryTone }];
-  if (srcSet || optimized !== original) attempts.push({ src: original, fit: primaryFit, logoTone: primaryTone });
+  const attempts: ImageAttempt[] = [{ src: optimized, srcSet, fit: primaryFit, logoTone: primaryTone, logoInk: primaryInk }];
+  if (srcSet || optimized !== original) attempts.push({ src: original, fit: primaryFit, logoTone: primaryTone, logoInk: primaryInk });
   if (fallbackSrc && fallbackSrc !== primary) {
-    attempts.push({ src: resolveImageSource(fallbackSrc)!, fit: fallbackFit, logoTone: fallbackLogoTone });
+    attempts.push({ src: resolveImageSource(fallbackSrc)!, fit: fallbackFit, logoTone: fallbackLogoTone, logoInk: fallbackLogoInk });
   }
   return attempts;
 }

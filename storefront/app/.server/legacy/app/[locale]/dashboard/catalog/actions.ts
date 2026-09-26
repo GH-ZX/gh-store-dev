@@ -1,4 +1,5 @@
 import { offerTermsInputSchema } from "@/lib/catalog/offer-terms";
+import { toLogoInk } from "@/lib/catalog/presentation";
 
 
 import { revalidatePath } from "@server/compat/cache";
@@ -194,7 +195,7 @@ export async function updateProductAction(
     showInCarousel: formFlag(formData, "showInCarousel"),
     carouselOrder: formText(formData, "carouselOrder") ?? null,
     carouselLogoTone,
-    carouselColor: formText(formData, "carouselColor") ?? null,
+    carouselColor: toLogoInk(formText(formData, "carouselColor")),
   });
 
   if (!parsed.success) {
