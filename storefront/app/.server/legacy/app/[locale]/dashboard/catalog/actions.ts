@@ -1,5 +1,5 @@
 import { offerTermsInputSchema } from "@/lib/catalog/offer-terms";
-import { toLogoInk } from "@/lib/catalog/presentation";
+import { toHexColor } from "@/lib/catalog/presentation";
 
 
 import { revalidatePath } from "@server/compat/cache";
@@ -89,6 +89,7 @@ const gameSchema = z.object({
   carouselOrder: optionalNumber(100000),
   carouselLogoTone: z.union([z.null(), z.literal("light"), z.literal("dark")]),
   carouselColor: optionalText(32),
+  logoSurfaceColor: optionalText(7),
 });
 
 const offerRowSchema = z.object({
@@ -195,7 +196,8 @@ export async function updateProductAction(
     showInCarousel: formFlag(formData, "showInCarousel"),
     carouselOrder: formText(formData, "carouselOrder") ?? null,
     carouselLogoTone,
-    carouselColor: toLogoInk(formText(formData, "carouselColor")),
+    carouselColor: toHexColor(formText(formData, "carouselColor")),
+    logoSurfaceColor: toHexColor(formText(formData, "logoSurfaceColor")),
   });
 
   if (!parsed.success) {

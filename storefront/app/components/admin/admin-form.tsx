@@ -51,6 +51,44 @@ export function TextField({ label, hint, fieldClassName, className, ...props }: 
   );
 }
 
+/**
+ * A hex colour with a swatch, kept as one text input so the value is validated
+ * on the server rather than by a picker that can only offer exact colours.
+ * The swatch previews the colour; clearing the field returns the shared default.
+ */
+export function ColorField({
+  label,
+  hint,
+  fieldClassName,
+  ...props
+}: TextFieldProps) {
+  return (
+    <FieldShell label={label} hint={hint} className={fieldClassName}>
+      <span className="flex items-center gap-2">
+        <input
+          type="color"
+          aria-hidden="true"
+          tabIndex={-1}
+          defaultValue={normalizeHex(props.defaultValue) || "#ffffff"}
+          className="h-11 w-12 shrink-0 cursor-pointer rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] p-1"
+          onChange={(event) => {
+            const target = event.currentTarget.form?.elements.namedItem(props.name as string) as HTMLInputElement | null;
+            if (target && target !== event.currentTarget) target.value = event.currentTarget.value;
+          }}
+        />
+        <input className={CONTROL_CLASSES} dir="ltr" spellCheck={false} placeholder="#ffffff" {...props} />
+      </span>
+    </FieldShell>
+  );
+}
+
+function normalizeHex(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const hex = value.trim().replace(/^#/, "");
+  if (!/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) return null;
+  return `#${hex.length === 3 ? [...hex].map((char) => char + char).join("") : hex}`;
+}
+
 export type TextAreaFieldProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label: string;
   hint?: string;

@@ -100,6 +100,7 @@
 [data-storefront-shell][dir=rtl] .sf-featured-link::after { background:linear-gradient(270deg,var(--carousel-scrim),transparent 82%); }
 [data-storefront-shell] .sf-featured-copy { display:flex; flex-direction:column; align-items:flex-start; gap:22px; max-width:65%; padding:38px clamp(24px,5vw,68px); }
 [data-storefront-shell] .sf-featured-identity { display:flex; align-items:center; justify-content:center; width:clamp(160px,22vw,290px); height:110px; padding:20px 24px; border-radius:var(--radius-inner); background:var(--brand-logo-surface); box-shadow:var(--elevation-1); }
+/* An admin-chosen tile colour is an inline background, so it needs no rule here. */
 [data-storefront-shell] .sf-carousel-brand { display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
 [data-storefront-shell] .sf-carousel-brand img { width:auto; height:auto; max-width:100%; max-height:100%; object-fit:contain; }
 [data-storefront-shell] .sf-carousel-brand img[data-monochrome=true] { filter:brightness(0); }

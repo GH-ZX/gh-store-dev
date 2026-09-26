@@ -352,6 +352,7 @@ export type AdminProductFields = {
   carouselOrder: number | null;
   carouselLogoTone: LogoTone | null;
   carouselColor: string | null;
+  logoSurfaceColor: string | null;
 };
 
 export type AdminProduct = AdminProductFields & {
@@ -404,7 +405,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
   const { data: game, error } = await client
     .from("products")
     .select(
-      "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, thumbnail_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order, carousel_logo_tone, carousel_color, product_kind, search_aliases",
+      "id, category_id, slug, name_ar, name_en, points_name_ar, points_name_en, description_ar, description_en, image_url, logo_url, thumbnail_url, carousel_badge_ar, carousel_badge_en, sort_order, is_active, is_featured, show_in_carousel, carousel_order, carousel_logo_tone, carousel_color, logo_surface_color, product_kind, search_aliases",
     )
     .eq("id", gameId)
     .maybeSingle();
@@ -465,6 +466,7 @@ export async function getAdminProduct(gameId: string): Promise<AdminProductDetai
       carouselOrder: game.carousel_order,
       carouselLogoTone: toLogoTone(game.carousel_logo_tone),
       carouselColor: game.carousel_color,
+      logoSurfaceColor: game.logo_surface_color,
       providerName: providerInfo.get(gameId)?.providerName ?? null,
       providerCode: providerInfo.get(gameId)?.providerCode ?? null,
       providerUrl: providerInfo.get(gameId)?.externalUrl ?? null,
@@ -548,6 +550,7 @@ export async function updateAdminProduct(gameId: string, fields: AdminProductFie
       carousel_order: fields.carouselOrder,
       carousel_logo_tone: fields.carouselLogoTone,
       carousel_color: fields.carouselColor,
+      logo_surface_color: fields.logoSurfaceColor,
       updated_at: new Date().toISOString(),
     })
     .eq("id", gameId)

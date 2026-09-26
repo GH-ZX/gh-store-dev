@@ -212,7 +212,7 @@ export function HeroCarousel({
                     </div>
                     <div className="sf-featured-copy">
                       {product.carouselBadge ? <span className="sf-featured-label">{product.carouselBadge}</span> : null}
-                      <div className="sf-featured-identity"><CarouselBrand product={product} priority={index === 0} /></div>
+                      <div className="sf-featured-identity" style={product.logoSurfaceColor ? { backgroundColor: product.logoSurfaceColor } : undefined}><CarouselBrand product={product} priority={index === 0} /></div>
                       <span className="sf-featured-details">{labels.details}<ArrowIcon direction="end" className="size-4 rtl:rotate-180" /></span>
                     </div>
                   </Link>

@@ -2,6 +2,7 @@ import type { Locale } from "@/i18n/config";
 import type { ProductKind } from "@/lib/catalog/product-kind-mapper";
 import { UNCATEGORIZED_PRODUCT_PATH } from "@/lib/catalog/paths";
 import { catalogDescriptionText } from "@/lib/catalog/description";
+import { toHexColor } from "@/lib/catalog/presentation";
 
 export type ProductRow = {
   id: string;
@@ -51,6 +52,8 @@ export type StoreProduct = {
   carouselColor: string | null;
   /** Duotone recolor for the carousel logo: "light" (white), "dark" (black), or null to keep the original. */
   carouselLogoTone: "light" | "dark" | null;
+  /** Optional hex override for the carousel logo tile; null keeps the shared brand surface. */
+  logoSurfaceColor: string | null;
   /**
    * Cheapest active offer, when the caller enriched the game with prices.
    * Optional because the mapper itself stays row-pure; a tile without it
@@ -109,6 +112,7 @@ export function toStoreProduct(row: ProductRow, locale: Locale): StoreProduct {
       y: focusPercentage(row.carousel_focus_y),
     },
     carouselColor: row.carousel_color ?? null,
+    logoSurfaceColor: toHexColor(row.logo_surface_color),
     carouselLogoTone:
       row.carousel_logo_tone === "light" || row.carousel_logo_tone === "dark"
         ? row.carousel_logo_tone

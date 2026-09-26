@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { artworkMonogram, getImageAttempts, getOfferArtwork, getProductArtwork, toLogoInk } from "@/lib/catalog/presentation";
+import { artworkMonogram, getImageAttempts, getOfferArtwork, getProductArtwork, toHexColor } from "@/lib/catalog/presentation";
 
 describe("catalog artwork choices", () => {
   const product = { imageUrl: "/product.webp", logoUrl: "/logo.svg", kind: "game" as const, carouselLogoTone: "light" as const, carouselColor: null };
@@ -41,11 +41,11 @@ describe("logo ink is independent of the tile surface", () => {
   const product = { imageUrl: "/product.webp", logoUrl: "/logo.svg", kind: "service" as const, carouselLogoTone: "light" as const, carouselColor: null };
 
   it("reads a plain hex ink colour and rejects anything else", () => {
-    expect(toLogoInk("#1F6FEB")).toBe("#1f6feb");
-    expect(toLogoInk("fff")).toBe("#ffffff");
-    expect(toLogoInk(" #1f6feb ")).toBe("#1f6feb");
+    expect(toHexColor("#1F6FEB")).toBe("#1f6feb");
+    expect(toHexColor("fff")).toBe("#ffffff");
+    expect(toHexColor(" #1f6feb ")).toBe("#1f6feb");
     for (const invalid of ["", "   ", null, undefined, "red", "#12345", "rgb(0,0,0)", "#1f6feb; background:url(x)"]) {
-      expect(toLogoInk(invalid)).toBeNull();
+      expect(toHexColor(invalid)).toBeNull();
     }
   });
 
@@ -62,6 +62,19 @@ describe("logo ink is independent of the tile surface", () => {
   it("keeps the tone as the only ink control when no colour is chosen", () => {
     expect(getProductArtwork({ ...product, imageUrl: null })).toMatchObject({ logoInk: null, logoTone: "light" });
     expect(getProductArtwork({ ...product, imageUrl: null, carouselColor: "not-a-colour" })).toMatchObject({ logoInk: null, logoTone: "light" });
+  });
+
+  it("validates a tile colour the same way, so a bad value never reaches a style", () => {
+    const base = { imageUrl: "/product.webp", logoUrl: "/logo.svg", kind: "service" as const, carouselLogoTone: null, carouselColor: null };
+    for (const value of ["#0b1220", "#FFF", "0b1220", " #0b1220 "]) {
+      expect(toHexColor(value)).toMatch(/^#[0-9a-f]{6}$/);
+    }
+    // A five-digit hex and an injected declaration are both refused.
+    for (const value of ["", "  ", null, undefined, "black", "rgb(0,0,0)", "#0b122", "#0b1220;z", "url(x)"]) {
+      expect(toHexColor(value)).toBeNull();
+    }
+    // A tile colour never changes the mark's own ink.
+    expect(getProductArtwork({ ...base, carouselColor: "#1f6feb" })).toMatchObject({ logoInk: null, fallbackLogoInk: "#1f6feb" });
   });
 
   it("never offers artwork an ink colour", () => {

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import {
   AdminCard,
   CheckboxField,
+  ColorField,
   FormResult,
   SelectField,
   TextAreaField,
@@ -264,6 +265,13 @@ export function ProductEditForm({ locale, messages, errors, categories, product 
             dir="ltr"
             spellCheck={false}
             type="text"
+          />
+          <ColorField
+            label={locale === "ar" ? "لون خلفية شعار الكاروسيل" : "Carousel logo tile colour"}
+            hint={locale === "ar" ? "لون الحاوية خلف الشعار في الكاروسيل. اتركه فارغًا لاستخدام لون المتجر الافتراضي." : "The container behind the carousel logo. Leave empty to use the store default."}
+            name="logoSurfaceColor"
+            defaultValue={product.logoSurfaceColor ?? ""}
+            maxLength={7}
           />
         </div>
 

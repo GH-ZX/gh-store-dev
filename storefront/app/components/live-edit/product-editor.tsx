@@ -2,7 +2,7 @@ import type { ProductPresentation } from "@server/legacy/lib/live-edit/actions";
 
 import { Link } from "react-router";
 import { useActionState, useState } from "react";
-import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/admin/admin-form";
+import { CheckboxField, ColorField, SelectField, TextAreaField, TextField } from "@/components/admin/admin-form";
 import { EditPanel, EditResult, EditTrigger } from "@/components/live-edit/edit-panel";
 import { useLiveEdit } from "@/components/live-edit/live-edit-mode";
 import { Button } from "@/components/ui/button";
@@ -202,6 +202,14 @@ export function ProductEditor({
               maxLength={32}
               dir="ltr"
               spellCheck={false}
+            />
+
+            <ColorField
+              label={locale === "ar" ? "لون خلفية شعار الكاروسيل" : "Carousel logo tile colour"}
+              hint={locale === "ar" ? "لون الحاوية خلف الشعار في الكاروسيل. اتركه فارغًا لاستخدام لون المتجر الافتراضي." : "The container behind the carousel logo. Leave empty to use the store default."}
+              name="logo_surface_color"
+              defaultValue={game.logoSurfaceColor}
+              maxLength={7}
             />
 
             <CheckboxField

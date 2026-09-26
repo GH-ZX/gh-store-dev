@@ -1,5 +1,5 @@
 import { parseRechargeMethodsInput } from "@/lib/recharge-settings";
-import { toLogoInk } from "@/lib/catalog/presentation";
+import { toHexColor } from "@/lib/catalog/presentation";
 import { saveRechargeSettings } from "@server/lib/services/admin-recharge.service";
 import { createSupabaseServerClient } from "@server/lib/supabase/server";
 
@@ -142,6 +142,7 @@ export type ProductPresentation = {
   showInCarousel: boolean;
   carouselLogoTone: string;
   carouselColor: string;
+  logoSurfaceColor: string;
 };
 
 export type LoadProductPresentationResult =
@@ -179,6 +180,7 @@ export async function loadProductPresentationAction(
         showInCarousel: game.showInCarousel,
         carouselLogoTone: game.carouselLogoTone ?? "",
         carouselColor: game.carouselColor ?? "",
+      logoSurfaceColor: game.logoSurfaceColor ?? "",
       },
     };
   } catch (error) {
@@ -206,6 +208,7 @@ const gamePresentationSchema = z.object({
   show_in_carousel: z.boolean(),
   carousel_logo_tone: z.union([z.literal(""), z.literal("light"), z.literal("dark")]),
   carousel_color: z.string().trim().max(32).optional(),
+  logo_surface_color: z.string().trim().max(7).optional(),
 });
 
 /**
@@ -250,6 +253,7 @@ export async function saveProductPresentationAction(
     show_in_carousel: formFlag(formData, "show_in_carousel"),
     carousel_logo_tone: carouselLogoTone,
     carousel_color: formText(formData, "carousel_color"),
+    logo_surface_color: formText(formData, "logo_surface_color"),
   });
 
   if (!parsed.success) {
@@ -288,7 +292,8 @@ export async function saveProductPresentationAction(
       showInCarousel: input.show_in_carousel,
       carouselLogoTone:
         input.carousel_logo_tone === "" ? null : input.carousel_logo_tone,
-      carouselColor: toLogoInk(input.carousel_color),
+      carouselColor: toHexColor(input.carousel_color),
+      logoSurfaceColor: toHexColor(input.logo_surface_color),
     });
   } catch (error) {
     if (error instanceof ProductNotFoundError) {

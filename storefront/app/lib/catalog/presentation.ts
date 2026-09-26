@@ -17,8 +17,12 @@ export type CatalogArtwork = {
   fallbackLogoInk: string | null;
 };
 
-/** A logo keeps its own surface; only the mark's ink is recoloured. */
-export function toLogoInk(value: string | null | undefined): string | null {
+/**
+ * A logo keeps its own surface; only the mark's ink is recoloured. The same
+ * plain-hex rule governs the ink colour and the tile colour, so both are
+ * rejected rather than passed through into a style attribute.
+ */
+export function toHexColor(value: string | null | undefined): string | null {
   if (!value) return null;
   const hex = value.trim().replace(/^#/, "");
   if (/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex) === false) return null;
@@ -31,7 +35,7 @@ export function getProductArtwork(product: Pick<StoreProduct, "imageUrl" | "logo
   const src = (role === "thumbnail" ? product.thumbnailUrl : null) || product.imageUrl || product.logoUrl || null;
   const fallbackSrc = [product.imageUrl, product.logoUrl].find(candidate => candidate && candidate !== src) ?? null;
   const isLogo = Boolean(src && src === product.logoUrl);
-  const ink = toLogoInk(product.carouselColor);
+  const ink = toHexColor(product.carouselColor);
   return {
     src,
     fit: product.kind === "game" && !isLogo ? "cover" : "contain",

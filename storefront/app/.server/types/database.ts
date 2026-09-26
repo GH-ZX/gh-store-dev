@@ -919,6 +919,7 @@ export type Database = {
           carousel_badge_ar: string | null
           carousel_badge_en: string | null
           carousel_color: string | null
+          logo_surface_color: string | null
           carousel_logo_tone: string | null
           carousel_focus_x: number
           carousel_focus_y: number
@@ -950,6 +951,7 @@ export type Database = {
           carousel_badge_ar?: string | null
           carousel_badge_en?: string | null
           carousel_color?: string | null
+          logo_surface_color?: string | null
           carousel_logo_tone?: string | null
           carousel_focus_x?: number
           carousel_focus_y?: number
@@ -981,6 +983,7 @@ export type Database = {
           carousel_badge_ar?: string | null
           carousel_badge_en?: string | null
           carousel_color?: string | null
+          logo_surface_color?: string | null
           carousel_logo_tone?: string | null
           carousel_focus_x?: number
           carousel_focus_y?: number
