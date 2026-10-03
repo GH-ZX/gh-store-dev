@@ -24,6 +24,7 @@ export type ProductRow = {
   carousel_focus_y?: number | null;
   carousel_color?: string | null;
   carousel_logo_tone?: string | null;
+  logo_surface_color?: string | null;
   categories?:
     | { slug: string; name_en?: string | null; name_ar?: string | null }
     | { slug: string; name_en?: string | null; name_ar?: string | null }[]

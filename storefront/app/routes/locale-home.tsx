@@ -20,7 +20,7 @@ import {
   getHomeCarousel,
   resolveHomeSections,
 } from "@server/lib/services/home.service";
-import { HeroCarousel } from "@/components/home/hero-carousel";
+import { HeroCarouselCinematic } from "@/components/home/hero-carousel-cinematic";
 import "@/styles/storefront-home.css";
 import {
   HomeSections,
@@ -106,26 +106,20 @@ export default function LocaleHome() {
         </div>
       </Section>
       {carousel.products.length > 0 ? (
-        <Section spacing="tight" className="sf-home-carousel">
-          <HeroCarousel
-            liveEdit={liveEdit}
-            products={carousel.products}
-            locale={locale}
-            intervalSeconds={carousel.section?.intervalSeconds ?? 6}
-            autoplay={carousel.section?.autoplay ?? true}
-            loop={carousel.section?.loop ?? true}
-            align={carousel.section?.align ?? "center"}
-            imageFit={carousel.section?.imageFit ?? "cover"}
-            imageAspect={carousel.section?.imageAspect ?? "auto"}
-            imagePositionX={carousel.section?.imagePositionX ?? 50}
-            imagePositionY={carousel.section?.imagePositionY ?? 50}
-            labels={{
-              ...home.carousel,
-              details: common.actions.details,
-              featured: common.badges.featured,
-            }}
-          />
-        </Section>
+        <HeroCarouselCinematic
+          liveEdit={liveEdit}
+          products={carousel.products}
+          locale={locale}
+          intervalSeconds={carousel.section?.intervalSeconds ?? 5}
+          autoplay={carousel.section?.autoplay ?? true}
+          loop={carousel.section?.loop ?? true}
+          labels={{
+            ...home.carousel,
+            details: common.actions.details,
+            featured: common.badges.featured,
+            fromPrice: locale === "ar" ? "تبدأ من" : "From",
+          }}
+        />
       ) : null}
       <HomeQuickBuy discovery={discovery} locale={locale} />
       {sections.length ? (

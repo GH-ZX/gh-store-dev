@@ -120,6 +120,12 @@
 [data-storefront-shell] .sf-featured-tab { display:flex; width:100%; height:68px; align-items:center; justify-content:center; padding:15px 20px; border:2px solid transparent; border-radius:var(--radius-control); background:var(--surface-strong); cursor:pointer; transition:border-color var(--duration-fast),box-shadow var(--duration-fast); }
 [data-storefront-shell] .sf-featured-tab .sf-carousel-brand img[data-monochrome=true]:not([data-logo-tone]) { filter:brightness(0) invert(1); }
 [data-theme="light"] [data-storefront-shell] .sf-featured-tab .sf-carousel-brand img[data-monochrome=true]:not([data-logo-tone]) { filter:brightness(0); }
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"]:not([data-logo-tone]),
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"] { filter:brightness(0) invert(1) !important; }
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="dark"] { filter:brightness(0) !important; }
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-ink] { filter:none !important; }
 [data-storefront-shell] .sf-featured-tab .sf-carousel-brand-fallback { font-size:12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 [data-storefront-shell] .sf-featured-tab[aria-current=true] { border-color:var(--accent); box-shadow:inset 0 -3px 0 var(--accent); }
 [data-storefront-shell] .sf-featured-tab:hover { border-color:var(--accent); }

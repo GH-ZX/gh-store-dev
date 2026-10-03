@@ -1,0 +1,784 @@
+/* ==========================================================================
+   Hero Carousel: Agency Masterpiece (Awwwards-Tier Mobile-First)
+   - 100% Vivid, Un-darkened Artwork on Top
+   - Machined Double-Bezel Hardware Architecture
+   - Dedicated Action & Content Tray Down Below
+   - Swiper-grade Momentum Physics & Embla Precision Snapping
+   - Ambient Aura Glow & Button-in-Button Micro-Interactions
+   ========================================================================== */
+
+.cinematic-hero {
+  position: relative;
+  width: 100%;
+  max-width: var(--page-max, 1400px);
+  margin-inline: auto;
+  padding-block: 6px 16px;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   Viewport & Track: Rock-solid Embla Architecture
+   ========================================================================== */
+
+.cinematic-viewport-wrapper {
+  position: relative;
+  width: 100%;
+  padding-block: 6px 12px;
+}
+
+/* Embla requires overflow: hidden on its ref container */
+.cinematic-viewport {
+  width: 100%;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y pinch-zoom;
+}
+
+.cinematic-viewport:active {
+  cursor: grabbing;
+}
+
+.cinematic-track {
+  display: flex;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  margin-inline-start: -10px;
+}
+
+/* Slide item: Measured precisely by Embla. NO transforms on this root container! */
+.cinematic-slide {
+  flex: 0 0 91%;
+  max-width: 880px;
+  min-width: 0;
+  padding-inline-start: 12px;
+  padding-block: 18px 24px;
+  outline: none;
+}
+
+@media (min-width: 640px) {
+  .cinematic-slide {
+    flex: 0 0 85%;
+    padding-inline-start: 16px;
+    padding-block: 24px 30px;
+  }
+  .cinematic-track {
+    margin-inline-start: -16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .cinematic-slide {
+    flex: 0 0 78%;
+    max-width: 1160px;
+    padding-inline-start: 22px;
+    padding-block: 28px 36px;
+  }
+  .cinematic-track {
+    margin-inline-start: -22px;
+  }
+}
+
+/* ==========================================================================
+   Inner Card Stage: Depth, Ambient Glow, Staging Scale
+   ========================================================================== */
+
+.cinematic-card-stage {
+  position: relative;
+  width: 100%;
+  transform: scale(0.95);
+  opacity: 0.68;
+  transition:
+    transform 450ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 450ms ease;
+  cursor: pointer;
+}
+
+.cinematic-slide.is-active .cinematic-card-stage {
+  transform: scale(1);
+  opacity: 1;
+  z-index: 2;
+  cursor: pointer;
+}
+
+.cinematic-slide.is-peeking:hover .cinematic-card-stage {
+  opacity: 0.88;
+  transform: scale(0.97);
+}
+
+/* Dynamic Ambient Glow behind active card */
+.cinematic-card-glow {
+  position: absolute;
+  inset: -20px -14px;
+  border-radius: 40px;
+  background: radial-gradient(circle at 50% 50%, var(--slide-accent, var(--accent)) 0%, transparent 70%);
+  opacity: 0;
+  filter: blur(48px);
+  pointer-events: none;
+  transition: opacity 650ms ease;
+  z-index: 0;
+}
+
+.cinematic-slide.is-active .cinematic-card-glow {
+  opacity: 0.42;
+}
+
+/* ==========================================================================
+   The Double-Bezel Hardware Card
+   ========================================================================== */
+
+.cinematic-card-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: 26px;
+  overflow: hidden;
+  background: var(--surface-strong, #0e1929);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 32px 80px -20px rgba(0, 0, 0, 0.90),
+    0 4px 16px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition:
+    border-color var(--duration-fast, 180ms) ease,
+    box-shadow var(--duration-fast, 180ms) ease;
+}
+
+@media (max-width: 640px) {
+  .cinematic-card-shell {
+    border-radius: 22px;
+  }
+}
+
+.cinematic-slide.is-active:hover .cinematic-card-shell {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 42px 96px -24px rgba(0, 0, 0, 0.95),
+    0 0 0 1px rgba(90, 216, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Top Media Section: 100% Pure, Crisp Artwork */
+.cinematic-card-media {
+  position: relative;
+  width: 100%;
+  height: clamp(360px, 36vw, 490px);
+  overflow: hidden;
+  background: var(--surface-inset, #050d18);
+}
+
+@media (max-width: 640px) {
+  .cinematic-card-media {
+    height: clamp(270px, 72vw, 360px);
+  }
+}
+
+.cinematic-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1; /* 100% untouched original brightness! No dark veil! */
+  transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cinematic-slide.is-active:hover .cinematic-card-img {
+  transform: scale(1.028);
+}
+
+/* Floating Glass Badges in top corner */
+.cinematic-media-tags {
+  position: absolute;
+  top: 14px;
+  inset-inline-start: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cinematic-glass-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.cinematic-glass-tag--accent {
+  background: rgba(3, 8, 16, 0.78);
+  color: var(--slide-accent, var(--accent, #5ad8ff));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.cinematic-glass-tag--subtle {
+  background: rgba(3, 8, 16, 0.65);
+  color: var(--ink-soft, #c2d2e2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Admin Live Edit Pencil */
+.cinematic-edit-badge {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+  z-index: 10;
+}
+
+/* ==========================================================================
+   Down Action Tray (Clean Content & CTA Panel strictly BELOW the image)
+   ========================================================================== */
+
+.cinematic-card-tray {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  background: rgba(8, 14, 24, 0.42);
+  border-top: none;
+  box-shadow: none;
+  overflow: hidden;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  transition:
+    background-color var(--duration-fast, 180ms) ease,
+    border-color var(--duration-fast, 180ms) ease;
+}
+
+@media (max-width: 640px) {
+  .cinematic-card-tray {
+    padding: 8px 14px;
+    gap: 10px;
+  }
+}
+
+/* Directional Ambient Artwork Blur Flow - High Optical Transparency */
+.cinematic-tray-glass-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  -webkit-mask-image: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.88) 60%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  mask-image: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.88) 60%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+[dir="rtl"] .cinematic-tray-glass-bg,
+[data-storefront-shell][dir="rtl"] .cinematic-tray-glass-bg {
+  -webkit-mask-image: linear-gradient(
+    225deg,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.88) 60%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  mask-image: linear-gradient(
+    225deg,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.88) 60%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+.cinematic-tray-glass-img {
+  position: absolute;
+  inset: -48px;
+  width: calc(100% + 96px);
+  height: calc(100% + 96px);
+  object-fit: cover;
+  filter: blur(42px) saturate(145%);
+  opacity: 0.82;
+  pointer-events: none;
+}
+
+/* Light, Gentle Vignette for High Text Contrast without Masking Blur */
+.cinematic-tray-glass-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(6, 11, 20, 0.12) 0%,
+    rgba(6, 11, 20, 0.42) 100%
+  );
+  pointer-events: none;
+}
+
+/* Left / Leading Info (Emblem + Title + Price + Star Rating) */
+.cinematic-tray-info {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cinematic-tray-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 22px;
+  max-width: 36px;
+  height: 28px;
+  padding: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .cinematic-tray-logo {
+    min-width: 18px;
+    max-width: 30px;
+    height: 24px;
+  }
+}
+
+.cinematic-tray-logo .sf-carousel-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.cinematic-tray-logo .sf-carousel-brand img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition:
+    transform var(--duration-fast, 180ms) ease,
+    filter var(--duration-fast, 180ms) ease;
+}
+
+.cinematic-slide.is-active:hover .cinematic-tray-logo .sf-carousel-brand img {
+  transform: scale(1.08);
+}
+
+/* Luminous White for Monochrome and Black logos on the dark glossy tray */
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"],
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"],
+.cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"],
+.cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
+.cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
+.cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"] {
+  filter: brightness(0) invert(1) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6)) !important;
+}
+
+/* When admin explicitly set dark logo tone */
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="dark"],
+.cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="dark"] {
+  filter: brightness(0) !important;
+}
+
+/* When custom ink color is specified (via product.carouselColor) */
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-ink],
+.cinematic-tray-logo .sf-carousel-brand img[data-logo-ink] {
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5)) !important;
+}
+
+.cinematic-tray-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cinematic-tray-title {
+  margin: 0;
+  font-size: clamp(14px, 1.8vw, 16.5px);
+  font-weight: 850;
+  line-height: 1.25;
+  color: var(--ink, #f4f8fc);
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
+}
+
+.cinematic-tray-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  line-height: 1.2;
+}
+
+.cinematic-price-box {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1.2;
+}
+
+.cinematic-price-label {
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--ink-muted, #8598ac);
+  text-transform: uppercase;
+}
+
+.cinematic-price-val {
+  font-size: 14px;
+  font-weight: 850;
+  color: var(--slide-accent, var(--accent, #5ad8ff));
+  line-height: 1.2;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+.cinematic-desc-preview {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-muted, #8598ac);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Luxury Star Rating Trust Badge */
+.cinematic-star-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5.5px;
+  border-radius: var(--radius-pill, 999px);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.08);
+}
+
+.cinematic-star-val {
+  font-size: 10.5px;
+  font-weight: 850;
+  color: #fbbf24;
+  line-height: 1;
+}
+
+/* Compact Sleek Action Button (replaces large, bulky button) */
+.cinematic-tray-action {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.cinematic-compact-action {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--slide-accent, var(--accent, #5ad8ff));
+  color: var(--accent-ink, #04121c);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    var(--glow-accent, 0 6px 18px -4px rgba(90, 216, 255, 0.45)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition:
+    transform var(--duration-fast, 180ms) ease,
+    filter var(--duration-fast, 180ms) ease,
+    box-shadow var(--duration-fast, 180ms) ease;
+  cursor: pointer;
+}
+
+.cinematic-compact-action:hover {
+  transform: scale(1.08);
+  filter: brightness(1.1);
+  box-shadow:
+    var(--glow-accent, 0 8px 22px -4px rgba(90, 216, 255, 0.6)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.cinematic-compact-action:active {
+  transform: scale(0.92);
+}
+
+@media (max-width: 640px) {
+  .cinematic-compact-action {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* ==========================================================================
+   Clean, Borderless Control Dock Below the Cards
+   ========================================================================== */
+
+.cinematic-dock-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 14px;
+  padding-inline: 16px;
+}
+
+.cinematic-dock {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.cinematic-dock-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  border: none;
+  color: var(--ink-soft, #c2d2e2);
+  cursor: pointer;
+  transition: all var(--duration-fast, 180ms) ease;
+}
+
+.cinematic-dock-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink, #f4f8fc);
+  transform: scale(1.12);
+}
+
+.cinematic-dock-btn:active {
+  transform: scale(0.92);
+}
+
+.cinematic-dock-btn--toggle {
+  color: var(--ink-muted, #8598ac);
+}
+
+.cinematic-dock-btn--toggle:hover {
+  color: var(--ink, #f4f8fc);
+}
+
+/* Slide Counter */
+.cinematic-counter {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-muted, #8598ac);
+  padding-inline: 4px;
+}
+
+.cinematic-counter-cur {
+  color: var(--ink, #f4f8fc);
+}
+
+.cinematic-counter-sep {
+  opacity: 0.4;
+}
+
+/* Interactive Pill Dots with Filling Countdown */
+.cinematic-pills-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 4px;
+}
+
+.cinematic-pill-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill, 999px);
+  background: rgba(255, 255, 255, 0.22);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    width 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
+    background-color var(--duration-fast, 180ms) ease;
+}
+
+.cinematic-pill-dot:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.cinematic-pill-dot.is-active {
+  width: 38px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.cinematic-pill-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--accent, #5ad8ff);
+  box-shadow: 0 0 10px rgba(90, 216, 255, 0.6);
+  transition: width 50ms linear;
+}
+
+/* ==========================================================================
+   Admin Toolbar & Reorder Suite for Authenticated Administrators
+   ========================================================================== */
+
+.cinematic-admin-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-card, 16px);
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(90, 216, 255, 0.22);
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.cinematic-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cinematic-admin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #fbbf24;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+}
+
+.cinematic-admin-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink, #f4f8fc);
+  letter-spacing: -0.01em;
+}
+
+.cinematic-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cinematic-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft, #c2d2e2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all var(--duration-fast, 180ms) ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.cinematic-admin-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.cinematic-admin-btn--active {
+  background: var(--accent, #5ad8ff);
+  color: var(--accent-ink, #04121c);
+  border-color: var(--accent, #5ad8ff);
+  box-shadow: 0 0 14px -2px rgba(90, 216, 255, 0.5);
+}
+
+.cinematic-admin-btn--active:hover {
+  background: var(--accent, #5ad8ff);
+  color: var(--accent-ink, #04121c);
+  filter: brightness(1.08);
+}
+
+/* Floating Reorder Actions on the Card */
+.cinematic-reorder-actions {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill, 999px);
+  background: rgba(8, 14, 24, 0.92);
+  border: 1.5px solid var(--accent, #5ad8ff);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.cinematic-reorder-move-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink, #fff);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.cinematic-reorder-move-btn:hover:not(:disabled) {
+  background: var(--accent, #5ad8ff);
+  color: var(--accent-ink, #04121c);
+  border-color: var(--accent, #5ad8ff);
+  transform: scale(1.05);
+}
+
+.cinematic-reorder-move-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cinematic-reorder-pos-badge {
+  font-size: 12px;
+  font-weight: 850;
+  color: var(--accent, #5ad8ff);
+  padding-inline: 4px;
+  letter-spacing: 0.04em;
+}

@@ -17,4 +17,9 @@ export default defineConfig({
   optimizeDeps: {
     include: ["@supabase/supabase-js", "embla-carousel-react", "sonner", "zod"],
   },
+  server: {
+    host: true,
+    port: 5173,
+    allowedHosts: true,
+  },
 });

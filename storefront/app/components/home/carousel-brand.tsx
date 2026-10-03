@@ -14,11 +14,16 @@ function BrandImage({ product, priority }: { product: StoreProduct; priority: bo
   if (!source || failed) return <span className="sf-carousel-brand-fallback" dir="auto">{product.name}</span>;
   // An explicit ink colour recolours the mark only; the tile keeps its shared surface.
   const ink = toHexColor(product.carouselColor);
+  const isMonochrome =
+    !ink &&
+    (Boolean(product.carouselLogoTone) ||
+      /roblox/i.test(product.logoUrl ?? "") ||
+      !/simpleicons\.org|\/storefront\/brands\//i.test(product.logoUrl ?? ""));
   return <span className="sf-carousel-brand" aria-hidden="true">
     <img src={source} alt="" loading={priority ? "eager" : "lazy"} decoding="async"
       onError={() => setFailed(true)} data-logo-tone={ink ? undefined : product.carouselLogoTone ?? undefined}
       data-logo-ink={ink ?? undefined}
-      data-monochrome={!ink && (product.carouselLogoTone || !/simpleicons\.org|\/storefront\/brands\//i.test(product.logoUrl ?? "")) ? "true" : undefined}
+      data-monochrome={isMonochrome ? "true" : undefined}
       style={logoInkStyle({ src: source, ink })} />
   </span>;
 }

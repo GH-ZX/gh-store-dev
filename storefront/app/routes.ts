@@ -14,6 +14,7 @@ export default [
   route("auth/callback", "routes/auth-callback.ts"),
   route(":locale", "routes/locale-layout.tsx", [
     index("routes/locale-home.tsx"),
+    route("carousel-test", "routes/locale-carousel-test.tsx"),
     route("dashboard", "routes/dashboard-layout.tsx", [
       index("routes/dashboard-index.tsx"),
       route("logs", "routes/dashboard-logs.tsx"),
