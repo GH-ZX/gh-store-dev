@@ -125,17 +125,19 @@ export function SubmitButton({
   children,
   name,
   value,
+  disabled,
 }: {
   children: ReactNode;
   name?: string;
   value?: string;
+  disabled?: boolean;
 }) {
   const busy = useNavigation().state !== "idle";
   return (
     <button
       type="submit"
       className={accountButton}
-      disabled={busy}
+      disabled={busy || disabled}
       aria-busy={busy}
       name={name}
       value={value}

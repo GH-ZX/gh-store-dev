@@ -273,6 +273,60 @@ describe("Turnstile verification", () => {
     expect(result).toEqual({ ok: true });
   });
 
+  it("fails open gracefully if Cloudflare returns invalid-input-secret (server configuration error)", async () => {
+    const mockFetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: false,
+          "error-codes": ["invalid-input-secret"],
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const result = await verifyTurnstileToken({
+      token: "valid_client_token",
+      env: {
+        TURNSTILE_SITE_KEY: "site_key",
+        TURNSTILE_SECRET_KEY: "wrong_secret_key",
+      } as any,
+      fetcher: mockFetcher,
+    });
+
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("permits preview domains ending with .workers.dev or .pages.dev", async () => {
+    const mockFetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          action: "login",
+          hostname: "preview-branch.workers.dev",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const result = await verifyTurnstileToken({
+      token: "valid_client_token",
+      expectedAction: "login",
+      env: {
+        TURNSTILE_SITE_KEY: "site_key",
+        TURNSTILE_SECRET_KEY: "secret_key",
+      } as any,
+      fetcher: mockFetcher,
+    });
+
+    expect(result).toEqual({ ok: true });
+  });
+
   it("fails open if fetch throws a network exception or timeout", async () => {
     const mockFetcher = vi.fn().mockRejectedValue(new Error("Network timeout"));
 

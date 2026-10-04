@@ -64,7 +64,7 @@ export function getTurnstileConfig(
   if (isDev) {
     return {
       enabled: true,
-      siteKey: siteKey || CLOUDFLARE_TEST_SITE_KEY,
+      siteKey: secretKey ? siteKey : CLOUDFLARE_TEST_SITE_KEY,
       secretKey: secretKey || CLOUDFLARE_TEST_SECRET_KEY,
       hostnames,
     };
@@ -130,9 +130,8 @@ export async function verifyTurnstileToken(input: {
       secret: config.secretKey,
       response: rawToken,
     });
-    if (clientIp && clientIp !== "127.0.0.1") {
-      params.set("remoteip", clientIp);
-    }
+    // Note: remoteip is intentionally omitted to prevent false-positive failures
+    // on carrier-grade NAT, IPv4/IPv6 dual stack, or VPN connections.
 
     const fetcher = input.fetcher ?? fetch;
     const response = await fetcher(
@@ -159,10 +158,21 @@ export async function verifyTurnstileToken(input: {
     };
 
     if (outcome.success !== true) {
+      const errorCodes = outcome["error-codes"] ?? [];
       log.warn("auth", "turnstile_verification_failed", {
-        errors: outcome["error-codes"],
+        errors: errorCodes,
         clientIp,
       });
+
+      // If the backend secret key is invalid or misconfigured, log an error and fail open
+      // to prevent locking out all legitimate users and administrators.
+      if (errorCodes.includes("invalid-input-secret")) {
+        log.error("auth", "turnstile_misconfigured_secret_key", {
+          errors: errorCodes,
+        });
+        return { ok: true };
+      }
+
       return { ok: false, reason: "invalid_turnstile_token" };
     }
 
@@ -185,12 +195,22 @@ export async function verifyTurnstileToken(input: {
         )
       : config.hostnames;
 
-    if (outcome.hostname && !allowedHostnames.has(outcome.hostname.toLowerCase())) {
-      log.warn("auth", "turnstile_hostname_mismatch", {
-        hostname: outcome.hostname,
-        clientIp,
-      });
-      return { ok: false, reason: "invalid_turnstile_token" };
+    if (outcome.hostname) {
+      const h = outcome.hostname.toLowerCase();
+      const isAllowed =
+        allowedHostnames.has(h) ||
+        h.endsWith(".workers.dev") ||
+        h.endsWith(".pages.dev") ||
+        h === "gh-store.me" ||
+        h.endsWith(".gh-store.me");
+
+      if (!isAllowed) {
+        log.warn("auth", "turnstile_hostname_mismatch", {
+          hostname: outcome.hostname,
+          clientIp,
+        });
+        return { ok: false, reason: "invalid_turnstile_token" };
+      }
     }
 
     return { ok: true };

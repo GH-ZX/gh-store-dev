@@ -76,6 +76,7 @@ export type TurnstileProps = {
   resetKey?: unknown;
   onSuccess?: (token: string) => void;
   onError?: () => void;
+  onTokenChange?: (token: string) => void;
   className?: string;
 };
 
@@ -87,11 +88,17 @@ export function Turnstile({
   resetKey,
   onSuccess,
   onError,
+  onTokenChange,
   className,
 }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const [token, setToken] = useState("");
+
+  const updateToken = (newToken: string) => {
+    setToken(newToken);
+    onTokenChange?.(newToken);
+  };
 
   // If Turnstile is unconfigured or disabled, render nothing
   if (!siteKey) {
@@ -126,18 +133,18 @@ export function Turnstile({
               "response-field": false,
               callback: (newToken: string) => {
                 if (!isCancelled) {
-                  setToken(newToken);
+                  updateToken(newToken);
                   onSuccess?.(newToken);
                 }
               },
               "expired-callback": () => {
                 if (!isCancelled) {
-                  setToken("");
+                  updateToken("");
                 }
               },
               "error-callback": () => {
                 if (!isCancelled) {
-                  setToken("");
+                  updateToken("");
                   onError?.();
                 }
               },
@@ -163,6 +170,7 @@ export function Turnstile({
       })
       .catch(() => {
         // Fail gracefully if Turnstile script is blocked by an adblocker
+        onError?.();
       });
 
     return () => {
@@ -186,7 +194,7 @@ export function Turnstile({
       } catch {
         // Ignore
       }
-      setToken("");
+      updateToken("");
     }
   }, [resetKey]);
 
@@ -199,12 +207,7 @@ export function Turnstile({
         name="cf-turnstile-response"
         value={token}
       />
-      <div
-        ref={containerRef}
-        className="cf-turnstile"
-        data-sitekey={siteKey}
-        data-action={action}
-      />
+      <div ref={containerRef} />
     </div>
   );
 }

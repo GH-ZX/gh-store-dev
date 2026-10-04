@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AuthLayout } from "@/components/auth-layout";
 import {
   data,
@@ -79,6 +80,11 @@ export default function ForgotPassword() {
   const result = useActionData<typeof action>();
   const messages = getMessages(locale, "account");
   const auth = getMessages(locale, "admin").auth;
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileBlocked, setTurnstileBlocked] = useState(false);
+  const turnstilePending =
+    Boolean(turnstileSiteKey) && !turnstileToken && !turnstileBlocked;
+
   return (
     <AuthLayout locale={locale}>
       <AccountHeading
@@ -86,7 +92,15 @@ export default function ForgotPassword() {
         title={messages.recovery.requestTitle}
         description={messages.recovery.requestDescription}
       />
-      <Form method="post" className="sf-auth-body grid gap-5">
+      <Form
+        method="post"
+        className="sf-auth-body grid gap-5"
+        onSubmit={(e) => {
+          if (turnstilePending) {
+            e.preventDefault();
+          }
+        }}
+      >
         <label className="grid gap-2 text-sm">
           {auth.emailLabel}
           <input
@@ -109,8 +123,12 @@ export default function ForgotPassword() {
           action="reset_password"
           locale={locale}
           resetKey={result?.error}
+          onTokenChange={setTurnstileToken}
+          onError={() => setTurnstileBlocked(true)}
         />
-        <SubmitButton>{messages.recovery.requestAction}</SubmitButton>
+        <SubmitButton disabled={turnstilePending}>
+          {messages.recovery.requestAction}
+        </SubmitButton>
         <Link className="text-center text-sm" to={`/${locale}/login`}>
           {auth.signInAction}
         </Link>

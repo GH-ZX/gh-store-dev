@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { PasswordInput } from "@/components/password-input";
 import { AuthLayout } from "@/components/auth-layout";
 import {
@@ -151,6 +152,9 @@ export default function LocaleLogin() {
   const busy = useNavigation().state !== "idle";
   const auth = getMessages(locale, "admin").auth;
   const signup = mode === "sign-up";
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileBlocked, setTurnstileBlocked] = useState(false);
+  const turnstilePending = Boolean(turnstileSiteKey) && !turnstileToken && !turnstileBlocked;
   return (
     <AuthLayout locale={locale}>
         <AccountHeading
@@ -158,7 +162,15 @@ export default function LocaleLogin() {
           description={signup ? auth.signUpDescription : auth.signInDescription}
         />
         <div className="sf-auth-body">
-          <Form method="post" className="grid gap-5">
+          <Form
+            method="post"
+            className="grid gap-5"
+            onSubmit={(e) => {
+              if (turnstilePending) {
+                e.preventDefault();
+              }
+            }}
+          >
             <input type="hidden" name="mode" value={mode} />
             <input type="hidden" name="redirectTo" value={next} />
             <label className="grid gap-2 text-sm font-medium">
@@ -204,11 +216,13 @@ export default function LocaleLogin() {
               action={signup ? "signup" : "login"}
               locale={locale}
               resetKey={result?.error}
+              onTokenChange={setTurnstileToken}
+              onError={() => setTurnstileBlocked(true)}
             />
             <button
               className={accountButton}
               type="submit"
-              disabled={busy}
+              disabled={busy || turnstilePending}
               aria-busy={busy}
             >
               {signup ? auth.signUpAction : auth.signInAction}
