@@ -376,7 +376,6 @@ async function importCategoryOffers(
         .from("offers")
         .update({
           ...(refreshPrice ? { price } : {}),
-          ...(product.description ? { description_ar: product.description, description_en: product.description } : {}),
           // Availability is the provider's to decide; an operator's own
           // deactivation is not overridden into `true` by a sync.
           ...(product.available ? {} : { is_active: false }),

@@ -243,17 +243,11 @@ async function importOneProduct(
     status = "created";
   } else {
     // A re-import re-homes the product under the category the operator just
-    // picked; names and artwork stay as the editor left them.
+    // picked; names, descriptions, and artwork stay as the editor left them.
     const { error } = await supabase
       .from("products")
       .update({
         category_id: selection.categoryId,
-        ...(product.description?.trim()
-          ? {
-              description_ar: product.description.trim(),
-              description_en: product.description.trim(),
-            }
-          : {}),
         updated_at: nowIso(),
       })
       .eq("id", gameId);
@@ -330,12 +324,6 @@ async function importOneProduct(
       .update({
         ...(refreshPrice ? { price } : {}),
         is_active: isActive,
-        ...(product.description?.trim()
-          ? {
-              description_ar: product.description.trim(),
-              description_en: product.description.trim(),
-            }
-          : {}),
         delivery_kind: isDirect ? "direct" : "account",
         updated_at: nowIso(),
       })
