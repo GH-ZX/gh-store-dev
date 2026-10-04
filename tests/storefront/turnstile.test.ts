@@ -55,6 +55,18 @@ describe("Turnstile configuration", () => {
     expect(config.siteKey).toBe("");
     expect(config.secretKey).toBe("");
   });
+
+  it("explicitly disables Turnstile when TURNSTILE_ENABLED is set to false", () => {
+    const config = getTurnstileConfig({
+      TURNSTILE_ENABLED: "false",
+      TURNSTILE_SITE_KEY: "custom_site_key",
+      TURNSTILE_SECRET_KEY: "custom_secret_key",
+    } as any);
+
+    expect(config.enabled).toBe(false);
+    expect(config.siteKey).toBe("");
+    expect(config.secretKey).toBe("");
+  });
 });
 
 describe("Client IP resolution", () => {

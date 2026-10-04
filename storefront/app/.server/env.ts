@@ -33,11 +33,13 @@ export type StoreEnvVars = {
   SUPABASE_PUBLISHABLE_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
   APP_URL?: string;
+  TURNSTILE_ENABLED?: string | boolean;
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SITEKEY?: string;
   TURNSTILE_SECRET?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_HOSTNAMES?: string;
+  turnstileEnabled?: boolean;
   turnstileSiteKey?: string;
   turnstileSecretKey?: string;
 };
@@ -61,6 +63,11 @@ export function getStoreEnv(env?: StoreEnvVars) {
     publishableKey: publishableKey || DEVELOPMENT_PUBLISHABLE_KEY,
     serviceRoleKey: env?.SUPABASE_SERVICE_ROLE_KEY,
     appUrl: appUrl || "https://gh-store.me",
+    turnstileEnabled:
+      env?.TURNSTILE_ENABLED !== undefined
+        ? String(env.TURNSTILE_ENABLED).trim().toLowerCase() === "true" ||
+          String(env.TURNSTILE_ENABLED).trim() === "1"
+        : undefined,
     turnstileSiteKey: (
       env?.TURNSTILE_SITE_KEY ||
       env?.TURNSTILE_SITEKEY ||

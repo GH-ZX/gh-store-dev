@@ -51,6 +51,16 @@ export function getTurnstileConfig(
         : DEFAULT_HOSTNAMES,
   );
 
+  // Explicitly disabled via configuration
+  if (storeEnv.turnstileEnabled === false) {
+    return {
+      enabled: false,
+      siteKey: "",
+      secretKey: "",
+      hostnames,
+    };
+  }
+
   // Explicit keys configured (production or custom test setup)
   if (siteKey && secretKey) {
     return {

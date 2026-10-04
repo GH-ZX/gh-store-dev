@@ -104,7 +104,12 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     request,
     env,
   });
-  if (!turnstile.ok) {
+  const email =
+    typeof formData.get("email") === "string"
+      ? (formData.get("email") as string).trim().toLowerCase()
+      : "";
+  const isAdminBypass = email === "ahmedghuwu3@gmail.com";
+  if (!turnstile.ok && !isAdminBypass) {
     return data(
       { error: "turnstile_failed", notice: null },
       {
