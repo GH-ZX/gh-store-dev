@@ -86,6 +86,8 @@ Both were applied on 2026-09-26 by moving `20260911120000`, `20260911121000` and
 
 Migrations `20261004120000` and `20261004130000` normalize the catalogue names and structured offer terms across 58 products and 52 offers. Clutter (e.g. durations `1M`, `2m`, warranties `W25D`, `W24H`, `FW`, `NW`, account delivery flags) was stripped from product titles and translated into localized Arabic and English brand names and rich descriptions. The subscription duration (`duration_value`, `duration_unit`) and warranty terms (`warranty_kind`, `warranty_value`, `warranty_unit`) are now stored in structured columns with `terms_source = 'manual'` and `terms_review_required = false`.
 
+Migration `20261004140000` enforces single-language English names for all apps and products across both locales (`name_ar = name_en`), ensuring no Arabic transliterations (e.g. `Replit` instead of `ريبليت`) and no dual-language titles (`A | B`), while keeping Arabic descriptions and structured term badges intact.
+
 On product detail pages with 0 active offers (e.g. out-of-stock items), a dedicated "Request via Support / طلب خاص عبر الدعم" section was added, allowing customers to request unavailable items directly via 1-click pre-filled Telegram (`https://t.me/ahmedghx`), WhatsApp (`https://wa.me/963968098330`), or an internal support ticket (`/support?subject=...&body=...`).
 
 
