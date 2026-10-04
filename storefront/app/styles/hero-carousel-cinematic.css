@@ -383,11 +383,11 @@
 }
 
 /* Luminous White for Monochrome and Black logos on the dark glossy tray */
-[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"],
+[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"]:not([data-logo-tone]),
 [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
 [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
 [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"],
-.cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"],
+.cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"]:not([data-logo-tone]),
 .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
 .cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
 .cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"] {
@@ -781,4 +781,244 @@
   color: var(--accent, #5ad8ff);
   padding-inline: 4px;
   letter-spacing: 0.04em;
+}
+
+/* ==========================================================================
+   Light Mode (data-theme="light") Adaptations
+   - Frosted Glass Tray with High Optical Luminance & Blur
+   - Crisp, High-Contrast Typography & Accents
+   - Sophisticated Diffused Elevation Shadows
+   - Pure Black / Ink Brand Logos
+   - Polished Admin Suite & Reordering Controls
+   ========================================================================== */
+
+/* Ambient Stage Glow: Softer and more subtle on light canvas */
+[data-theme="light"] .cinematic-slide.is-active .cinematic-card-glow {
+  opacity: 0.22;
+  filter: blur(56px);
+}
+
+/* Double-Bezel Hardware Card Shell in Light Mode */
+[data-theme="light"] .cinematic-card-shell {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, rgba(13, 28, 46, 0.14));
+  box-shadow:
+    0 20px 48px -16px rgba(13, 28, 46, 0.16),
+    0 4px 14px rgba(13, 28, 46, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="light"] .cinematic-slide.is-active:hover .cinematic-card-shell {
+  border-color: var(--line-strong, rgba(13, 28, 46, 0.28));
+  box-shadow:
+    0 28px 64px -18px rgba(13, 28, 46, 0.22),
+    0 0 0 1px var(--accent-line, rgba(6, 96, 123, 0.32)),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+[data-theme="light"] .cinematic-card-media {
+  background: var(--surface-strong, #eef4f9);
+}
+
+/* Floating Glass Badges in top corner */
+[data-theme="light"] .cinematic-glass-tag--accent {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--slide-accent, var(--accent, #06607b));
+  border: 1px solid rgba(13, 28, 46, 0.12);
+  box-shadow: 0 4px 14px rgba(13, 28, 46, 0.1);
+}
+
+[data-theme="light"] .cinematic-glass-tag--subtle {
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink-soft, #33475d);
+  border: 1px solid rgba(13, 28, 46, 0.1);
+}
+
+/* Admin Live Edit Pencil */
+.cinematic-edit-badge button {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="light"] .cinematic-edit-badge button {
+  box-shadow: 0 4px 14px rgba(13, 28, 46, 0.14);
+}
+
+/* Down Action Tray: Luminous, Frosted Glass with Artwork Bleed */
+[data-theme="light"] .cinematic-card-tray {
+  background: rgba(255, 255, 255, 0.68);
+  border-top: none;
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+}
+
+[data-theme="light"] .cinematic-tray-glass-img {
+  opacity: 0.52;
+  filter: blur(38px) saturate(135%);
+}
+
+[data-theme="light"] .cinematic-tray-glass-sheen {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.58) 100%
+  );
+}
+
+/* Brand Logos in Light Mode Tray */
+[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"],
+[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
+[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="dark"],
+[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
+[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"],
+[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"],
+[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
+[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="dark"],
+[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
+[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"] {
+  filter: brightness(0) drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8)) !important;
+}
+
+/* Tray Typography & Details */
+[data-theme="light"] .cinematic-tray-title {
+  color: var(--ink, #0d1c2e);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .cinematic-price-label {
+  color: var(--ink-muted, #52657b);
+}
+
+[data-theme="light"] .cinematic-price-val {
+  color: var(--slide-accent, var(--accent, #06607b));
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .cinematic-desc-preview {
+  color: var(--ink-muted, #52657b);
+}
+
+[data-theme="light"] .cinematic-star-badge {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+}
+
+[data-theme="light"] .cinematic-star-val {
+  color: #d97706;
+}
+
+[data-theme="light"] .cinematic-compact-action {
+  background: var(--slide-accent, var(--accent, #06607b));
+  color: var(--accent-ink, #ffffff);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 4px 14px -2px rgba(6, 96, 123, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="light"] .cinematic-compact-action:hover {
+  box-shadow:
+    0 6px 18px -2px rgba(6, 96, 123, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+/* Minimalist Control Dock in Light Mode */
+[data-theme="light"] .cinematic-dock-btn {
+  color: var(--ink-muted, #52657b);
+}
+
+[data-theme="light"] .cinematic-dock-btn:hover {
+  background: rgba(13, 28, 46, 0.06);
+  color: var(--ink, #0d1c2e);
+}
+
+[data-theme="light"] .cinematic-dock-btn--toggle {
+  color: var(--ink-faint, #647689);
+}
+
+[data-theme="light"] .cinematic-dock-btn--toggle:hover {
+  color: var(--ink, #0d1c2e);
+}
+
+[data-theme="light"] .cinematic-counter {
+  color: var(--ink-muted, #52657b);
+}
+
+[data-theme="light"] .cinematic-counter-cur {
+  color: var(--ink, #0d1c2e);
+}
+
+[data-theme="light"] .cinematic-pill-dot {
+  background: rgba(13, 28, 46, 0.15);
+}
+
+[data-theme="light"] .cinematic-pill-dot:hover {
+  background: rgba(13, 28, 46, 0.28);
+}
+
+[data-theme="light"] .cinematic-pill-dot.is-active {
+  background: rgba(13, 28, 46, 0.08);
+}
+
+[data-theme="light"] .cinematic-pill-fill {
+  background: var(--accent, #06607b);
+  box-shadow: 0 1px 6px rgba(6, 96, 123, 0.35);
+}
+
+/* Admin Toolbar & Reorder Suite in Light Mode */
+[data-theme="light"] .cinematic-admin-bar {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line-strong, rgba(13, 28, 46, 0.22));
+  box-shadow:
+    0 10px 30px -10px rgba(13, 28, 46, 0.12),
+    0 2px 6px rgba(13, 28, 46, 0.04);
+}
+
+[data-theme="light"] .cinematic-admin-title {
+  color: var(--ink, #0d1c2e);
+}
+
+[data-theme="light"] .cinematic-admin-btn {
+  color: var(--ink-soft, #33475d);
+  background: rgba(13, 28, 46, 0.04);
+  border: 1px solid var(--line, rgba(13, 28, 46, 0.14));
+}
+
+[data-theme="light"] .cinematic-admin-btn:hover {
+  color: var(--ink, #0d1c2e);
+  background: rgba(13, 28, 46, 0.08);
+  border-color: var(--line-strong, rgba(13, 28, 46, 0.24));
+}
+
+[data-theme="light"] .cinematic-admin-btn--active {
+  background: var(--accent, #06607b);
+  color: #ffffff;
+  border-color: var(--accent, #06607b);
+  box-shadow: 0 2px 10px rgba(6, 96, 123, 0.35);
+}
+
+[data-theme="light"] .cinematic-admin-btn--active:hover {
+  background: var(--accent-strong, #044a5e);
+  color: #ffffff;
+}
+
+[data-theme="light"] .cinematic-reorder-actions {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid var(--accent, #06607b);
+  box-shadow: 0 12px 36px rgba(13, 28, 46, 0.22);
+}
+
+[data-theme="light"] .cinematic-reorder-move-btn {
+  background: rgba(13, 28, 46, 0.06);
+  color: var(--ink, #0d1c2e);
+  border: 1px solid var(--line-strong, rgba(13, 28, 46, 0.22));
+}
+
+[data-theme="light"] .cinematic-reorder-move-btn:hover:not(:disabled) {
+  background: var(--accent, #06607b);
+  color: #ffffff;
+  border-color: var(--accent, #06607b);
+}
+
+[data-theme="light"] .cinematic-reorder-pos-badge {
+  color: var(--accent, #06607b);
 }
