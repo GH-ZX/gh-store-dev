@@ -28,6 +28,11 @@ import {
   accountField,
   accountSecondary,
 } from "@/components/account-ui";
+import { Turnstile } from "@/components/turnstile";
+import {
+  getTurnstileConfig,
+  verifyTurnstileToken,
+} from "@server/lib/auth/turnstile";
 import type { Route } from "./+types/locale-login";
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
@@ -39,11 +44,13 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const next = safeRedirectTarget(url.searchParams.get("next")) ?? `/${locale}`;
   if (await getSessionUserId(supabase))
     return withSessionCookies(redirect(next), jar, isProduction);
+  const turnstileConfig = getTurnstileConfig(env);
   return data(
     {
       locale,
       next,
       mode: url.searchParams.get("mode") === "sign-up" ? "sign-up" : "sign-in",
+      turnstileSiteKey: turnstileConfig.siteKey,
     },
     { headers: sessionCookieHeaders(jar, isProduction) },
   );
@@ -85,6 +92,24 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       },
     );
   }
+  const turnstileToken =
+    typeof formData.get("cf-turnstile-response") === "string"
+      ? (formData.get("cf-turnstile-response") as string)
+      : null;
+  const turnstile = await verifyTurnstileToken({
+    token: turnstileToken,
+    request,
+    env,
+  });
+  if (!turnstile.ok) {
+    return data(
+      { error: "turnstile_failed", notice: null },
+      {
+        status: 400,
+        headers: sessionCookieHeaders(session.jar, session.isProduction),
+      },
+    );
+  }
   const result = await (formData.get("mode") === "sign-up" ? signUp : signIn)(
     request,
     env,
@@ -118,7 +143,8 @@ export function meta({ params }: Route.MetaArgs) {
   });
 }
 export default function LocaleLogin() {
-  const { locale, next, mode } = useLoaderData<typeof loader>();
+  const { locale, next, mode, turnstileSiteKey } =
+    useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
   const busy = useNavigation().state !== "idle";
   const auth = getMessages(locale, "admin").auth;
@@ -171,6 +197,11 @@ export default function LocaleLogin() {
                 {auth.notices[result.notice as keyof typeof auth.notices]}
               </p>
             ) : null}
+            <Turnstile
+              siteKey={turnstileSiteKey}
+              locale={locale}
+              resetKey={result?.error}
+            />
             <button
               className={accountButton}
               type="submit"

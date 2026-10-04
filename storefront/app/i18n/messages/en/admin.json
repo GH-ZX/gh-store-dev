@@ -22,7 +22,8 @@
       "oauth_failed": "We could not connect to Google. Try again.",
       "signup_failed": "We could not create the account. Try another email or again later.",
       "weak_password": "That password does not meet the policy. Use at least 8 characters, with letters and numbers.",
-      "too_many_attempts": "Too many attempts. Wait a little, then try again."
+      "too_many_attempts": "Too many attempts. Wait a little, then try again.",
+      "turnstile_failed": "Security check failed. Please verify the challenge and try again."
     },
     "notices": {
       "confirm_email": "We sent a confirmation email. Open the link to activate the account.",

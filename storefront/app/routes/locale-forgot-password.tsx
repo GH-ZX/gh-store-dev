@@ -19,22 +19,46 @@ import {
   SubmitButton,
   accountField,
 } from "@/components/account-ui";
-export function loader({ params }: LoaderFunctionArgs) {
+import { Turnstile } from "@/components/turnstile";
+import {
+  getTurnstileConfig,
+  verifyTurnstileToken,
+} from "@server/lib/auth/turnstile";
+
+export function loader({ params, context }: LoaderFunctionArgs) {
   if (!isLocale(params.locale ?? ""))
     throw new Response("Not Found", { status: 404 });
-  return { locale: params.locale as "en" | "ar" };
+  const { env } = getCloudflareContext(context);
+  const turnstileConfig = getTurnstileConfig(env);
+  return {
+    locale: params.locale as "en" | "ar",
+    turnstileSiteKey: turnstileConfig.siteKey,
+  };
 }
 export async function action({ request, context, params }: ActionFunctionArgs) {
   const locale = params.locale ?? "";
   if (!isLocale(locale)) throw new Response("Not Found", { status: 404 });
+  const { env } = getCloudflareContext(context);
   const form = await request.formData();
+
+  const turnstile = await verifyTurnstileToken({
+    token:
+      typeof form.get("cf-turnstile-response") === "string"
+        ? (form.get("cf-turnstile-response") as string)
+        : null,
+    request,
+    env,
+  });
+  if (!turnstile.ok) {
+    return data({ error: "turnstile_failed", sent: false }, { status: 400 });
+  }
+
   const parsed = z
     .email()
     .max(320)
     .safeParse(String(form.get("email") ?? "").trim());
   if (!parsed.success)
     return data({ error: "invalid_input", sent: false }, { status: 400 });
-  const { env } = getCloudflareContext(context);
   const { supabase, jar, isProduction } = createSessionClient(request, env);
   const callback = new URL("/auth/callback", request.url);
   callback.searchParams.set("locale", locale);
@@ -50,7 +74,7 @@ export async function action({ request, context, params }: ActionFunctionArgs) {
 }
 export const meta = () => [{ name: "robots", content: "noindex, nofollow" }];
 export default function ForgotPassword() {
-  const { locale } = useLoaderData<typeof loader>();
+  const { locale, turnstileSiteKey } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
   const messages = getMessages(locale, "account");
   const auth = getMessages(locale, "admin").auth;
@@ -78,6 +102,11 @@ export default function ForgotPassword() {
           messages={messages}
           error={result?.error}
           notice={result?.sent ? messages.recovery.requestSent : null}
+        />
+        <Turnstile
+          siteKey={turnstileSiteKey}
+          locale={locale}
+          resetKey={result?.error}
         />
         <SubmitButton>{messages.recovery.requestAction}</SubmitButton>
         <Link className="text-center text-sm" to={`/${locale}/login`}>
