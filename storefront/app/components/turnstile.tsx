@@ -70,6 +70,7 @@ function loadTurnstileScript(): Promise<void> {
 
 export type TurnstileProps = {
   siteKey?: string | null;
+  action?: string;
   locale?: string;
   theme?: "auto" | "light" | "dark";
   resetKey?: unknown;
@@ -80,6 +81,7 @@ export type TurnstileProps = {
 
 export function Turnstile({
   siteKey,
+  action,
   locale = "ar",
   theme = "auto",
   resetKey,
@@ -117,7 +119,7 @@ export function Turnstile({
           if (isCancelled || !containerRef.current || !window.turnstile) return;
 
           try {
-            const widgetId = window.turnstile.render(containerRef.current, {
+            const options: Record<string, unknown> = {
               sitekey: siteKey,
               theme,
               language: locale === "ar" ? "ar" : "en",
@@ -139,7 +141,14 @@ export function Turnstile({
                   onError?.();
                 }
               },
-            });
+            };
+            if (action) {
+              options.action = action;
+            }
+            const widgetId = window.turnstile.render(
+              containerRef.current,
+              options as any,
+            );
             widgetIdRef.current = widgetId;
           } catch {
             // Safe fallback if render fails
@@ -167,7 +176,7 @@ export function Turnstile({
         widgetIdRef.current = null;
       }
     };
-  }, [siteKey, locale, theme]);
+  }, [siteKey, locale, theme, action]);
 
   // When resetKey changes (e.g. form error returned), reset widget and clear token
   useEffect(() => {
@@ -190,7 +199,12 @@ export function Turnstile({
         name="cf-turnstile-response"
         value={token}
       />
-      <div ref={containerRef} />
+      <div
+        ref={containerRef}
+        className="cf-turnstile"
+        data-sitekey={siteKey}
+        data-action={action}
+      />
     </div>
   );
 }

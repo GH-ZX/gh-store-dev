@@ -20,6 +20,17 @@ describe("Turnstile configuration", () => {
     expect(config.secretKey).toBe("custom_secret_key");
   });
 
+  it("handles alternative TURNSTILE_SECRET and TURNSTILE_SITEKEY aliases", () => {
+    const config = getTurnstileConfig({
+      TURNSTILE_SITEKEY: "site_alias",
+      TURNSTILE_SECRET: "secret_alias",
+    } as any);
+
+    expect(config.enabled).toBe(true);
+    expect(config.siteKey).toBe("site_alias");
+    expect(config.secretKey).toBe("secret_alias");
+  });
+
   it("handles camelCase config keys from getStoreEnv", () => {
     const config = getTurnstileConfig({
       turnstileSiteKey: "site_123",
@@ -81,8 +92,7 @@ describe("Turnstile verification", () => {
         turnstileSecretKey: "",
       } as any,
     });
-    // In vitest import.meta.env.DEV might be true or false depending on mode,
-    // so let's test with explicit mock fetcher when enabled:
+    expect(result).toEqual({ ok: true });
   });
 
   it("rejects immediately with missing_turnstile_token when token is missing", async () => {
@@ -100,16 +110,41 @@ describe("Turnstile verification", () => {
     });
   });
 
+  it("rejects token exceeding maximum allowed length of 2048 chars", async () => {
+    const oversizedToken = "a".repeat(2049);
+    const result = await verifyTurnstileToken({
+      token: oversizedToken,
+      env: {
+        TURNSTILE_SITE_KEY: "site_key",
+        TURNSTILE_SECRET_KEY: "secret_key",
+      } as any,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "missing_turnstile_token",
+    });
+  });
+
   it("verifies valid token successfully with Cloudflare siteverify", async () => {
     const mockFetcher = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({
+          success: true,
+          action: "login",
+          hostname: "gh-store.me",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
 
     const result = await verifyTurnstileToken({
       token: "valid_token_xyz",
+      expectedAction: "login",
+      expectedHostnames: ["gh-store.me"],
       clientIp: "198.51.100.5",
       env: {
         TURNSTILE_SITE_KEY: "site_key",
@@ -123,7 +158,72 @@ describe("Turnstile verification", () => {
     const [url, init] = mockFetcher.mock.calls[0];
     expect(url).toBe("https://challenges.cloudflare.com/turnstile/v0/siteverify");
     expect(init.method).toBe("POST");
-    expect(init.body).toBeInstanceOf(FormData);
+    expect(init.headers).toEqual({
+      "Content-Type": "application/x-www-form-urlencoded",
+    });
+  });
+
+  it("rejects when outcome action does not match expected action", async () => {
+    const mockFetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          action: "signup",
+          hostname: "gh-store.me",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const result = await verifyTurnstileToken({
+      token: "valid_token_xyz",
+      expectedAction: "login", // expected login, but outcome says signup
+      env: {
+        TURNSTILE_SITE_KEY: "site_key",
+        TURNSTILE_SECRET_KEY: "secret_key",
+      } as any,
+      fetcher: mockFetcher,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "invalid_turnstile_token",
+    });
+  });
+
+  it("rejects when outcome hostname is not in allowed hostnames", async () => {
+    const mockFetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          action: "login",
+          hostname: "evil.example",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const result = await verifyTurnstileToken({
+      token: "valid_token_xyz",
+      expectedAction: "login",
+      expectedHostnames: ["gh-store.me"],
+      env: {
+        TURNSTILE_SITE_KEY: "site_key",
+        TURNSTILE_SECRET_KEY: "secret_key",
+      } as any,
+      fetcher: mockFetcher,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "invalid_turnstile_token",
+    });
   });
 
   it("rejects invalid token with invalid_turnstile_token", async () => {

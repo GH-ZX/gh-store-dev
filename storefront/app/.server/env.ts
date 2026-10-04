@@ -34,7 +34,10 @@ export type StoreEnvVars = {
   SUPABASE_SERVICE_ROLE_KEY?: string;
   APP_URL?: string;
   TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SITEKEY?: string;
+  TURNSTILE_SECRET?: string;
   TURNSTILE_SECRET_KEY?: string;
+  TURNSTILE_HOSTNAMES?: string;
   turnstileSiteKey?: string;
   turnstileSecretKey?: string;
 };
@@ -58,8 +61,17 @@ export function getStoreEnv(env?: StoreEnvVars) {
     publishableKey: publishableKey || DEVELOPMENT_PUBLISHABLE_KEY,
     serviceRoleKey: env?.SUPABASE_SERVICE_ROLE_KEY,
     appUrl: appUrl || "https://gh-store.me",
-    turnstileSiteKey: (env?.TURNSTILE_SITE_KEY || env?.turnstileSiteKey)?.trim(),
-    turnstileSecretKey: (env?.TURNSTILE_SECRET_KEY || env?.turnstileSecretKey)?.trim(),
+    turnstileSiteKey: (
+      env?.TURNSTILE_SITE_KEY ||
+      env?.TURNSTILE_SITEKEY ||
+      env?.turnstileSiteKey
+    )?.trim(),
+    turnstileSecretKey: (
+      env?.TURNSTILE_SECRET ||
+      env?.TURNSTILE_SECRET_KEY ||
+      env?.turnstileSecretKey
+    )?.trim(),
+    turnstileHostnames: env?.TURNSTILE_HOSTNAMES?.trim(),
     isProduction: production,
   } as const;
 }

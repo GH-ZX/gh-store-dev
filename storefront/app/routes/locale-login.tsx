@@ -92,12 +92,14 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       },
     );
   }
+  const actionName = formData.get("mode") === "sign-up" ? "signup" : "login";
   const turnstileToken =
     typeof formData.get("cf-turnstile-response") === "string"
       ? (formData.get("cf-turnstile-response") as string)
       : null;
   const turnstile = await verifyTurnstileToken({
     token: turnstileToken,
+    expectedAction: actionName,
     request,
     env,
   });
@@ -199,6 +201,7 @@ export default function LocaleLogin() {
             ) : null}
             <Turnstile
               siteKey={turnstileSiteKey}
+              action={signup ? "signup" : "login"}
               locale={locale}
               resetKey={result?.error}
             />

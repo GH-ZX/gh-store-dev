@@ -46,6 +46,7 @@ export async function action({ request, context, params }: ActionFunctionArgs) {
       typeof form.get("cf-turnstile-response") === "string"
         ? (form.get("cf-turnstile-response") as string)
         : null,
+    expectedAction: "reset_password",
     request,
     env,
   });
@@ -105,6 +106,7 @@ export default function ForgotPassword() {
         />
         <Turnstile
           siteKey={turnstileSiteKey}
+          action="reset_password"
           locale={locale}
           resetKey={result?.error}
         />

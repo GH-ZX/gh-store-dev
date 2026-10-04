@@ -37,7 +37,8 @@
 	"vars": {
 		"SUPABASE_URL": "https://njlzgfddfnnqujaodbta.supabase.co",
 		"SUPABASE_PUBLISHABLE_KEY": "sb_publishable_gtOxP1au24qFXwzVppy0vw_oFWaSIH2",
-		"APP_URL": "https://gh-store.me"
+		"APP_URL": "https://gh-store.me",
+		"TURNSTILE_SITE_KEY": "0x4AAAAAAFNJHqXib7egSfhv"
 	},
 	// Keep the workers.dev URL alive as a test address; declaring custom
 	// domains switches it off otherwise.
