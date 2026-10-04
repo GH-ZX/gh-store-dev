@@ -27,7 +27,7 @@ export function ProductOfferSelection({ locale, product, offers }: {
   const copy = catalog.productDetail;
   const hasFilters = Boolean(query || region);
   function clearFilters() { setQuery(""); setRegion(""); }
-  if (offers.length === 0) return <NoProductOffers locale={locale} />;
+  if (offers.length === 0) return <NoProductOffers locale={locale} product={product} />;
 
   return <div className="sf-product-layout sf-detail-layout">
     <section className="sf-offers-panel sf-detail-selection" aria-labelledby="choose-offer-heading">

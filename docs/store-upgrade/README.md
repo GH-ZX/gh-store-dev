@@ -82,6 +82,13 @@ Migration `20260926100000` adds `products.logo_surface_color`, so an admin can r
 
 Both were applied on 2026-09-26 by moving `20260911120000`, `20260911121000` and `20260911122000` out of the migrations directory, pushing only the two reviewed files, and restoring them. Those three remain absent from remote history, so the next `supabase db push` will still offer to insert them and must not be run with `--include-all`. Verified after applying: all five new columns queryable, every existing row null, 20 offers carry `terms_review_required` and 19 of them are active. `storefront/app/.server/types/database.ts` was hand-edited for the new columns; regenerate with `supabase gen types` to confirm.
 
+## Catalog Title & Offer Terms Normalization (2026-10-04)
+
+Migrations `20261004120000` and `20261004130000` normalize the catalogue names and structured offer terms across 58 products and 52 offers. Clutter (e.g. durations `1M`, `2m`, warranties `W25D`, `W24H`, `FW`, `NW`, account delivery flags) was stripped from product titles and translated into localized Arabic and English brand names and rich descriptions. The subscription duration (`duration_value`, `duration_unit`) and warranty terms (`warranty_kind`, `warranty_value`, `warranty_unit`) are now stored in structured columns with `terms_source = 'manual'` and `terms_review_required = false`.
+
+On product detail pages with 0 active offers (e.g. out-of-stock items), a dedicated "Request via Support / طلب خاص عبر الدعم" section was added, allowing customers to request unavailable items directly via 1-click pre-filled Telegram (`https://t.me/ahmedghx`), WhatsApp (`https://wa.me/963968098330`), or an internal support ticket (`/support?subject=...&body=...`).
+
+
 ## Latest homepage refinement
 
 The carousel uses configured logos/wordmarks in the main panel and bottom navigation; duplicate product headings/descriptions are removed. Accessible names remain, and failed/missing logos fall back to text. Gemini/ChatGPT have local SVG marks; a missing CapCut entry reuses the configured logo. Imported card art is bounded over the generated background. The narrow English header overflow is fixed. The current home page puts six available quick-buy cards before six logo carousel slides. Production DOM checks in Arabic and English at 375, 768 and 1280px showed no horizontal overflow; all six slides and logos remained present. Latest production version: `a816468f-edeb-4c35-9dd3-fbc66437b039`. The carousel's visual direction is still not marked owner-accepted. No screenshots or image inspection.

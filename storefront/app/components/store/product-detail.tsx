@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import type { Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { PackageIcon } from "@/components/ui/icons";
+import { TelegramIcon, WhatsAppIcon } from "@/components/ui/brand-icons";
 import { ProductGrid } from "@/components/store/collections";
 import { PurchaseSummary } from "@/components/store/catalog-page";
 import { DescriptionText } from "@/components/store/description-text";
@@ -65,12 +66,37 @@ export function ProductInformation({ locale, product, offer }: {
   </div>;
 }
 
-export function NoProductOffers({ locale }: { locale: Locale }) {
+export function NoProductOffers({ locale, product }: { locale: Locale; product?: StoreProduct }) {
   const copy = getMessages(locale, "catalog").productDetail;
+  const isAr = locale === "ar";
+  const productName = product?.name ?? "";
+  const requestText = isAr
+    ? `مرحباً، أود الاستفسار عن توفر منتج "${productName}"`
+    : `Hello, I'd like to ask about availability for "${productName}"`;
+
+  const telegramUrl = `https://t.me/ahmedghx?text=${encodeURIComponent(requestText)}`;
+  const whatsappUrl = `https://wa.me/963968098330?text=${encodeURIComponent(requestText)}`;
+  const ticketSubject = isAr ? `طلب توفير منتج: ${productName}` : `Product Request: ${productName}`;
+  const supportTicketUrl = `/${locale}/support?subject=${encodeURIComponent(ticketSubject)}&body=${encodeURIComponent(requestText)}`;
+
   return <section className="sf-detail-unavailable" aria-labelledby="no-product-offers">
     <span className="sf-detail-empty-icon"><PackageIcon /></span>
-    <div><h2 id="no-product-offers">{copy.noOffersHeading}</h2><p>{copy.noOffersDescription}</p>
-      <div className="sf-detail-empty-actions"><Link className="sf-catalog-primary" to={`/${locale}/products`}>{copy.browseProducts}</Link><Link className="sf-detail-secondary" to={`/${locale}/contact`}>{copy.contactSupport}</Link></div>
+    <div>
+      <h2 id="no-product-offers">{copy.noOffersHeading}</h2>
+      <p>{copy.noOffersDescription}</p>
+      <div className="sf-detail-empty-actions">
+        <a className="sf-catalog-primary inline-flex items-center gap-2" href={telegramUrl} target="_blank" rel="noopener noreferrer">
+          <TelegramIcon className="size-4 shrink-0" />
+          <span>{copy.requestViaTelegram}</span>
+        </a>
+        <a className="sf-detail-secondary inline-flex items-center gap-2" href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+          <WhatsAppIcon className="size-4 shrink-0" />
+          <span>{copy.requestViaWhatsApp}</span>
+        </a>
+        <Link className="sf-detail-secondary" to={supportTicketUrl}>{copy.requestViaTicket}</Link>
+        <Link className="sf-detail-secondary" to={`/${locale}/contact`}>{copy.contactSupport}</Link>
+        <Link className="sf-detail-secondary" to={`/${locale}/products`}>{copy.browseProducts}</Link>
+      </div>
     </div>
   </section>;
 }

@@ -44,6 +44,9 @@ describe("product detail presentation", () => {
     const markup = renderToStaticMarkup(createElement(ProductOfferSelection, { locale, product, offers: [] }));
     expect(markup).toContain(`href="/${locale}/products"`);
     expect(markup).toContain(`href="/${locale}/contact"`);
+    expect(markup).toContain("t.me/ahmedghx");
+    expect(markup).toContain("wa.me/963968098330");
+    expect(markup).toContain(`href="/${locale}/support?subject=`);
     expect(markup).not.toContain("/checkout/");
     expect(markup).not.toContain("purchase-summary-heading");
   });

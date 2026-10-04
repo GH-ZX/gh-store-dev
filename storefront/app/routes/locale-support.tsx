@@ -5,6 +5,7 @@ import {
   redirect,
   useActionData,
   useLoaderData,
+  useSearchParams,
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "react-router";
@@ -90,6 +91,9 @@ export const meta = () => [{ name: "robots", content: "noindex, nofollow" }];
 export default function Support() {
   const { locale, threads, conversation, selected } =
     useLoaderData<typeof loader>();
+  const [searchParams] = useSearchParams();
+  const prefillSubject = searchParams.get("subject") ?? "";
+  const prefillBody = searchParams.get("body") ?? "";
   const result = useActionData<typeof action>();
   const messages = getMessages(locale, "account").support;
   const roles = getMessages(locale, "admin").support.roles;
@@ -234,6 +238,7 @@ export default function Support() {
                     className={accountField}
                     name="subject"
                     maxLength={200}
+                    defaultValue={prefillSubject}
                     required
                   />
                 </label>
@@ -244,6 +249,7 @@ export default function Support() {
                     rows={6}
                     name="body"
                     maxLength={4000}
+                    defaultValue={prefillBody}
                     required
                   />
                   <span className="text-xs text-[var(--ink-muted)]">
