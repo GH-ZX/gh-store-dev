@@ -15,6 +15,7 @@ import {
   SyncIcon,
   UserIcon,
   WalletIcon,
+  TagIcon,
 } from "@/components/ui/icons";
 import {
   HeaderShell,
@@ -44,6 +45,7 @@ const PAGE_ICONS: Record<string, IconComponent> = {
   support: SupportIcon,
   payments: WalletIcon,
   operations: ScrollIcon,
+  coupons: TagIcon,
 };
 
 export interface AdminHeaderProps {

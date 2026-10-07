@@ -25,6 +25,7 @@ export default [
       route("customers", "routes/dashboard-customers.tsx"),
       route("payments", "routes/dashboard-payments.tsx"),
       route("recharges", "routes/dashboard-recharges.tsx"),
+      route("coupons", "routes/dashboard-coupons.tsx"),
       route("orders/:orderId", "routes/dashboard-order-detail.tsx"),
       route("orders", "routes/dashboard-orders.tsx"),
       route("catalog", "routes/dashboard-catalog.tsx"),

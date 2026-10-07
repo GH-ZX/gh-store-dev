@@ -25,6 +25,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "orders", href: "/orders" },
       { key: "payments", href: "/payments" },
       { key: "recharges", href: "/recharges" },
+      { key: "coupons", href: "/coupons" },
     ],
   },
   {
