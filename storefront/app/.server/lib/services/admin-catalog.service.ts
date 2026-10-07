@@ -1088,6 +1088,7 @@ export async function listAdminCategories(
   const { data, error } = await client
     .from("categories")
     .select("id, slug, name_ar, name_en")
+    .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
   if (error) {

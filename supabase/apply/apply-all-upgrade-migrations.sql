@@ -2841,9 +2841,7 @@ update public.products
    select id from public.categories where slug in ('games-vouchers', 'games-instant-recharge')
  );
 
-update public.categories
-   set is_active = false,
-       updated_at = timezone('utc', now())
+delete from public.categories
  where slug in ('games-vouchers', 'games-instant-recharge');
 
 update public.store_settings
