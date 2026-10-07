@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { data, Form, useActionData, useLoaderData, useNavigation } from "react-router";
+import { data, Form, Link, useActionData, useLoaderData, useNavigation } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { createSessionClient, getSessionUserId, redirectToLogin, sessionCookieHeaders, withSessionCookies } from "@server/session";
 import { getSessionSummary } from "@server/lib/services/session.service";
-import { listCoupons, createCoupon, setCouponActive, type Coupon, type CouponType } from "@server/lib/services/coupon.service";
-import { TagIcon, PlusIcon, CheckIcon, CloseIcon } from "@/components/ui/icons";
+import { listCoupons, createCoupon, setCouponActive, deleteCoupon, type Coupon, type CouponType } from "@server/lib/services/coupon.service";
+import { TagIcon, PlusIcon, CheckIcon, CloseIcon, TrashIcon } from "@/components/ui/icons";
 import { Badge } from "@/components/ui/badge";
 import { AdminCard, TextField, SelectField, TextAreaField } from "@/components/admin/admin-form";
 import { buttonClassName } from "@/components/ui/button";
@@ -68,6 +68,12 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const isActive = formData.get("isActive") === "true";
     const ok = await setCouponActive(supabase, couponId, isActive);
     return data({ ok, message: ok ? "status_updated" : "failed" }, { headers: sessionCookieHeaders(jar, isProduction) });
+  }
+
+  if (intent === "delete") {
+    const couponId = String(formData.get("id") ?? "");
+    const ok = await deleteCoupon(supabase, couponId);
+    return data({ ok, message: ok ? "coupon_deleted" : "failed" }, { headers: sessionCookieHeaders(jar, isProduction) });
   }
 
   if (intent === "create") {
@@ -320,9 +326,12 @@ export default function DashboardCoupons() {
                   <tr key={coupon.id} className="transition-colors hover:bg-[var(--surface-strong)]/40">
                     {/* Code & Note */}
                     <td className="px-4 py-3.5">
-                      <div className="font-mono font-bold text-base tracking-wider text-[var(--accent)]">
+                      <Link
+                        to={`/${locale}/dashboard/coupons/${coupon.id}`}
+                        className="font-mono font-bold text-base tracking-wider text-[var(--accent)] hover:underline inline-flex items-center gap-1.5"
+                      >
                         {coupon.code}
-                      </div>
+                      </Link>
                       {coupon.adminNote ? (
                         <p className="mt-0.5 text-xs text-[var(--ink-muted)] max-w-xs truncate" title={coupon.adminNote}>
                           {coupon.adminNote}
@@ -390,23 +399,59 @@ export default function DashboardCoupons() {
                       )}
                     </td>
 
-                    {/* Toggle Action */}
+                    {/* Actions */}
                     <td className="px-4 py-3.5 whitespace-nowrap text-end">
-                      <Form method="post" className="inline-block">
-                        <input type="hidden" name="intent" value="toggleActive" />
-                        <input type="hidden" name="id" value={coupon.id} />
-                        <input type="hidden" name="isActive" value={coupon.isActive ? "false" : "true"} />
-
-                        <button
-                          type="submit"
+                      <div className="inline-flex items-center gap-1.5">
+                        <Link
+                          to={`/${locale}/dashboard/coupons/${coupon.id}`}
                           className={buttonClassName({
-                            variant: coupon.isActive ? "secondary" : "primary",
+                            variant: "secondary",
                             size: "sm",
                           })}
                         >
-                          {coupon.isActive ? copy.deactivate : copy.activate}
-                        </button>
-                      </Form>
+                          {copy.edit}
+                        </Link>
+
+                        <Form method="post" className="inline-block">
+                          <input type="hidden" name="intent" value="toggleActive" />
+                          <input type="hidden" name="id" value={coupon.id} />
+                          <input type="hidden" name="isActive" value={coupon.isActive ? "false" : "true"} />
+
+                          <button
+                            type="submit"
+                            className={buttonClassName({
+                              variant: coupon.isActive ? "ghost" : "primary",
+                              size: "sm",
+                            })}
+                          >
+                            {coupon.isActive ? copy.deactivate : copy.activate}
+                          </button>
+                        </Form>
+
+                        <Form
+                          method="post"
+                          className="inline-block"
+                          onSubmit={(e) => {
+                            if (!window.confirm(copy.deleteConfirm)) {
+                              e.preventDefault();
+                            }
+                          }}
+                        >
+                          <input type="hidden" name="intent" value="delete" />
+                          <input type="hidden" name="id" value={coupon.id} />
+
+                          <button
+                            type="submit"
+                            title={copy.delete}
+                            className={buttonClassName({
+                              variant: "dangerGhost",
+                              size: "sm",
+                            })}
+                          >
+                            <TrashIcon className="size-3.5" />
+                          </button>
+                        </Form>
+                      </div>
                     </td>
                   </tr>
                 );

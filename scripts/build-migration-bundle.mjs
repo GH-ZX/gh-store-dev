@@ -43,6 +43,7 @@ const UPGRADE_MIGRATIONS = [
   "20261010120000_repeat_purchase_reminders.sql",
   "20261010140000_consolidate_categories.sql",
   "20261010150000_split_services_category.sql",
+  "20261010160000_coupon_safety_and_permissions.sql",
 ];
 
 const banner = `-- ===========================================================================

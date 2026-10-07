@@ -98,7 +98,9 @@ export type CouponCart = {
 
 export type CouponPreview = { discount: number; total: number };
 
-/** The store's flat markup is applied to cost, so a discount may consume it and no more. */
+export const MINIMUM_STORE_MARGIN_RATE = 0.02; // 2% safety margin of product price
+
+/** The store's markup is applied to cost, but a discount must preserve at least a 2% safety margin of the product price. */
 export function discountCeiling(
   unitPrice: number,
   quantity: number,
@@ -117,7 +119,9 @@ export function discountCeiling(
     return 0;
   }
 
-  return round2(Math.max(amount - supplierCostUsd, 0) * units);
+  // Safety margin: preserve at least 2% of the product price
+  const minRequiredMargin = round2(amount * MINIMUM_STORE_MARGIN_RATE);
+  return round2(Math.max(amount - supplierCostUsd - minRequiredMargin, 0) * units);
 }
 
 export function round2(value: number): number {
@@ -772,6 +776,32 @@ export async function setCouponActive(
   });
 
   return true;
+}
+
+export async function deleteCoupon(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  const actor = await requireAdminId(supabase);
+  const service = createSupabaseServiceClient();
+
+  // Delete redemptions if any to avoid foreign key restrict errors
+  await service.from("coupon_redemptions").delete().eq("coupon_id", id);
+  const { error } = await service.from("coupons").delete().eq("id", id);
+
+  if (error) {
+    return { ok: false, reason: error.message };
+  }
+
+  await recordAudit({
+    actorId: actor.id,
+    action: "coupon_deleted",
+    entityType: "coupon",
+    entityId: id,
+    values: {},
+  });
+
+  return { ok: true };
 }
 
 /** How many times the signed-in customer has already used a code. */

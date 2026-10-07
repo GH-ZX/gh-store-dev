@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   userId: vi.fn(),
   summary: vi.fn(),
   client: {},
+  deleteCoupon: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("@/lib/cloudflare-context", () => ({
@@ -34,6 +35,7 @@ vi.mock("@server/lib/services/coupon.service", () => ({
   listCoupons: vi.fn().mockResolvedValue([]),
   createCoupon: vi.fn().mockResolvedValue({ ok: true, id: "new-coupon-id" }),
   setCouponActive: vi.fn().mockResolvedValue(true),
+  deleteCoupon: mocks.deleteCoupon,
 }));
 
 import { DASHBOARD_NAV_GROUPS } from "../../storefront/app/lib/admin-dashboard/navigation";
@@ -96,5 +98,28 @@ describe("admin coupons dashboard navigation", () => {
 
     expect(result.data.coupons).toEqual([]);
     expect(result.data.locale).toBe("en");
+  });
+
+  it("deletes a coupon via action intent=delete", async () => {
+    mocks.userId.mockResolvedValue("admin-1");
+    mocks.summary.mockResolvedValue({ isAdmin: true });
+
+    const formData = new FormData();
+    formData.append("intent", "delete");
+    formData.append("id", "coupon-xyz");
+    const request = new Request("https://store.example/en/dashboard/coupons", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = (await action({
+      params: { locale: "en" },
+      request,
+      context: {},
+    } as any)) as any;
+
+    expect(mocks.deleteCoupon).toHaveBeenCalledWith(mocks.client, "coupon-xyz");
+    expect(result.data.ok).toBe(true);
+    expect(result.data.message).toBe("coupon_deleted");
   });
 });
