@@ -41,6 +41,16 @@ export type FulfillmentContext = {
    */
   providerName: string | null;
   /**
+   * What the supplier will charge for this order, from the offer's supplier
+   * mapping. Null when the offer is unmapped or the cost was never imported.
+   *
+   * Advisory only, and read at load time rather than at purchase time: it is
+   * used to tell the owner how much to recharge after a supplier refused for
+   * lack of funds, never to make a purchase decision. The purchase path re-reads
+   * the live cost immediately before buying, as it always has.
+   */
+  requiredSupplierCostUsd: number | null;
+  /**
    * `direct` goods need nothing from the buyer — stock delivered as codes,
    * accounts or activation links. `account` goods land on an identifier the
    * buyer supplied at checkout.
@@ -82,6 +92,7 @@ export async function loadContext(orderId: string): Promise<FulfillmentContext |
   let catalogueName: string | null = null;
   let externalProductId: string | null = null;
   let providerName: string | null = null;
+  let requiredSupplierCostUsd: number | null = null;
   let deliveryKind: "account" | "direct" | "manual" | "stored" = "account";
 
   if (item.offer_id) {
@@ -92,13 +103,15 @@ export async function loadContext(orderId: string): Promise<FulfillmentContext |
      */
     const { data: offerMapping } = await supabase
       .from("provider_offer_mappings")
-      .select("provider_name, external_catalogue_name, external_product_id, offer_id")
+      .select("provider_name, external_catalogue_name, external_product_id, offer_id, supplier_cost_usd")
       .eq("offer_id", item.offer_id)
       .maybeSingle();
 
     providerName = offerMapping?.provider_name ?? null;
     catalogueName = offerMapping?.external_catalogue_name ?? null;
     externalProductId = offerMapping?.external_product_id ?? null;
+    requiredSupplierCostUsd =
+      typeof offerMapping?.supplier_cost_usd === "number" ? offerMapping.supplier_cost_usd : null;
 
     const { data: offer } = await supabase
       .from("offers")
@@ -138,6 +151,7 @@ export async function loadContext(orderId: string): Promise<FulfillmentContext |
     externalProductId,
     paymentMethod: data.payment_method,
     providerName,
+    requiredSupplierCostUsd,
     deliveryKind,
     status: data.status,
   };

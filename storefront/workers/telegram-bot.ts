@@ -51,6 +51,8 @@ type AlertRow = {
 type ChatLink = {
   chat_id: number | string;
   language_code: string | null;
+  /** True once Telegram has told us this customer stopped the bot. */
+  blocked?: boolean;
 };
 
 function botLog(event: string, fields: Record<string, unknown> = {}): void {
@@ -208,13 +210,13 @@ async function fetchPendingAlerts(env: BotEnv, limit: number): Promise<AlertRow[
 
 /** The linked chat for a customer, when they have linked one. */
 async function chatLinkForUser(env: BotEnv, userId: string): Promise<ChatLink | null> {
-  const { ok, json } = await supabaseJson(env, `telegram_chat_links?user_id=eq.${userId}&select=chat_id,language_code`);
+  const { ok, json } = await supabaseJson(env, `telegram_chat_links?user_id=eq.${userId}&select=chat_id,language_code,delivery_status`);
 
   if (!ok || !Array.isArray(json) || json.length === 0) {
     return null;
   }
 
-  const row = json[0] as { chat_id?: unknown; language_code?: unknown };
+  const row = json[0] as { chat_id?: unknown; language_code?: unknown; delivery_status?: unknown };
   const chatId = typeof row.chat_id === "number" ? row.chat_id : typeof row.chat_id === "string" ? Number(row.chat_id) : NaN;
 
   if (!Number.isFinite(chatId)) {
@@ -224,7 +226,74 @@ async function chatLinkForUser(env: BotEnv, userId: string): Promise<ChatLink | 
   return {
     chat_id: chatId,
     language_code: typeof row.language_code === "string" && row.language_code ? row.language_code : null,
+    blocked: row.delivery_status === "blocked",
   };
+}
+
+/**
+ * Record how a customer send actually went.
+ *
+ * The point of this column is that a chat which stopped the bot is *known* to
+ * have stopped it, so the next drain skips it instead of retrying a delivvery
+ * Telegram will refuse every five minutes forever. A successful send clears
+ * the mark, so a customer who unblocks the bot is reachable again.
+ */
+async function markChatDelivery(
+  env: BotEnv,
+  userId: string,
+  status: "ok" | "blocked",
+  error?: string,
+): Promise<void> {
+  await supabaseJson(env, `telegram_chat_links?user_id=eq.${userId}`, {
+    method: "PATCH",
+    body: {
+      delivery_status: status,
+      last_delivery_at: new Date().toISOString(),
+      last_delivery_error: status === "ok" ? null : (error ?? "blocked"),
+    },
+  });
+}
+
+/**
+ * Send one message and say whether Telegram refused it permanently.
+ *
+ * `telegram()` collapses every failure into `false`, which is right for the
+ * owner's queue — a retry is cheap there. A customer chat is different: a 403
+ * means the customer stopped the bot, and retrying that is pure noise. This
+ * variant keeps the status so the caller can tell the two apart.
+ */
+async function sendTextDetailed(
+  chatId: string,
+  text: string,
+  token: string,
+  keyboard?: unknown,
+): Promise<{ ok: boolean; status: number; description: string }> {
+  try {
+    const response = await fetch(`${TG_API}/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text.slice(0, 4000),
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        ...(keyboard ? { reply_markup: keyboard } : {}),
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
+
+    return {
+      ok: response.ok && payload?.ok === true,
+      status: response.status,
+      description: payload?.description ?? "",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      description: error instanceof Error ? error.message : "Unknown",
+    };
+  }
 }
 
 async function markAlert(env: BotEnv, id: string, status: "sent" | "failed"): Promise<void> {
@@ -233,6 +302,34 @@ async function markAlert(env: BotEnv, id: string, status: "sent" | "failed"): Pr
     body: {
       status,
       ...(status === "sent" ? { sent_at: new Date().toISOString() } : {}),
+      last_attempted_at: new Date().toISOString(),
+    },
+  });
+}
+
+/**
+ * Write the per-recipient delivery record for a customer send.
+ *
+ * `telegram_alerts` is the delivery queue; `telegram_broadcast_recipients` is
+ * the owner's record of who got the message. One row per customer per
+ * broadcast, upserted `on_conflict` so a retry updates rather than duplicates.
+ */
+async function markBroadcastRecipient(
+  env: BotEnv,
+  broadcastId: string,
+  userId: string,
+  status: "sent" | "failed" | "skipped",
+  error: string | null,
+): Promise<void> {
+  await supabaseJson(env, "telegram_broadcast_recipients?on_conflict=broadcast_id,user_id", {
+    method: "POST",
+    headers: { prefer: "resolution=merge-duplicates,return=minimal" },
+    body: {
+      broadcast_id: broadcastId,
+      user_id: userId,
+      status,
+      error: error ?? null,
+      sent_at: status === "sent" ? new Date().toISOString() : null,
       last_attempted_at: new Date().toISOString(),
     },
   });
@@ -388,6 +485,28 @@ function customerAlertText(row: AlertRow, locale: "ar" | "en"): string {
   const orderLink = `https://gh-store.me/${locale}/orders/${encodeURIComponent(String(p.order_id ?? ""))}`;
 
   switch (row.type) {
+    /*
+     * The customer paid and the order is parked waiting on the store's supplier
+     * wallet. Nothing about that is theirs to fix or to know, so the message
+     * says only what is certain: confirmed, queued, no action needed.
+     */
+    case "order_queued":
+      return locale === "ar"
+        ? [
+            "⏳ <b>طلبك مؤكد وقيد التجهيز</b>",
+            `الطلب: <b>${escapeHtml(p.order_number ?? row.id)}</b>`,
+            "طلبك مؤكد وهو الآن في قائمة التجهيز، وسيُسلَّم قريبًا.",
+            "لا حاجة لأي إجراء منك. إن احتجت مساعدة فتواصل مع الدعم.",
+            `الطلب: ${orderLink}`,
+          ].join("\n")
+        : [
+            "⏳ <b>Your order is confirmed and being prepared</b>",
+            `Order: <b>${escapeHtml(p.order_number ?? row.id)}</b>`,
+            "Your order is confirmed and queued for delivery, and it will be delivered shortly.",
+            "You do not need to do anything. Support is available if you need help.",
+            `Order: ${orderLink}`,
+          ].join("\n");
+
     case "order_delivered":
       return locale === "ar"
         ? [
@@ -494,6 +613,82 @@ function customerAlertText(row: AlertRow, locale: "ar" | "en"): string {
             "Wallet: https://gh-store.me/en/wallet",
           ].join("\n");
 
+    /*
+     * Restock and price-drop alerts. The payload carries both languages
+     * because the alert is queued once per interested customer and rendered
+     * in whichever language that customer linked with.
+     */
+    case "price_drop": {
+      const name = locale === "ar" ? textValue(p.name_ar) : textValue(p.name_en);
+      const fallback = textValue(p.name_en) ?? textValue(p.name_ar) ?? textValue(p.offer_id) ?? "—";
+      const label = escapeHtml(name ?? fallback);
+      const link = textValue(p.href);
+
+      if (p.kind === "restock") {
+        return locale === "ar"
+          ? ["📦 <b>عاد للمخزون</b>", `<b>${label}</b>`, link ? `اطلب الآن: ${escapeHtml(link)}` : ""]
+              .filter(Boolean)
+              .join("\n")
+          : ["📦 <b>Back in stock</b>", `<b>${label}</b>`, link ? `Order now: ${escapeHtml(link)}` : ""]
+              .filter(Boolean)
+              .join("\n");
+      }
+
+      const oldPrice = p.old_price !== undefined ? money(p.old_price) : "—";
+      const newPrice = p.new_price !== undefined ? money(p.new_price) : "—";
+
+      return locale === "ar"
+        ? [
+            "🔻 <b>انخفض السعر</b>",
+            `<b>${label}</b>`,
+            `كان ${oldPrice} وأصبح <b>${newPrice}</b>`,
+            link ? `اطلب الآن: ${escapeHtml(link)}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n")
+        : [
+            "🔻 <b>Price drop</b>",
+            `<b>${label}</b>`,
+            `Was ${oldPrice}, now <b>${newPrice}</b>`,
+            link ? `Order now: ${escapeHtml(link)}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n");
+    }
+
+    /*
+     * Repeat-purchase reminder. The copy was written when the reminder was
+     * queued, so the worker does not join products or invent a sentence.
+     */
+    case "repeat_reminder": {
+      const title = locale === "ar" ? textValue(p.title_ar) : textValue(p.title_en);
+      const body = locale === "ar" ? textValue(p.body_ar) : textValue(p.body_en);
+      const link = textValue(p.href);
+
+      return [
+        `🔁 <b>${escapeHtml(title ?? (locale === "ar" ? "وقت التجديد" : "Time to renew"))}</b>`,
+        body ? escapeHtml(body) : "",
+        link ? `↩️ ${escapeHtml(link)}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    /** Owner-composed copy, already written, already in both languages. */
+    case "owner_message": {
+      const title = locale === "ar" ? textValue(p.title_ar) : textValue(p.title_en);
+      const body = locale === "ar" ? textValue(p.body_ar) : textValue(p.body_en);
+      const link = textValue(p.href);
+
+      return [
+        `📣 <b>${escapeHtml(title ?? (locale === "ar" ? "رسالة من المتجر" : "A message from the store"))}</b>`,
+        body ? escapeHtml(body) : "",
+        link ? `🔗 ${escapeHtml(link)}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+
     default:
       return locale === "ar" ? `📢 ${escapeHtml(row.type)}` : `📢 ${escapeHtml(row.type)}`;
   }
@@ -505,8 +700,11 @@ function customerLocale(languageCode: string | null): "ar" | "en" {
 
 // ─── Delivery ───────────────────────────────────────────────────────────────
 
-export async function deliverTelegramAlerts(env: BotEnv): Promise<void> {
-  const { telegram } = await readSettings(env);
+export async function deliverTelegramAlerts(
+  env: BotEnv,
+  cachedSettings?: { telegram: TelegramSettings },
+): Promise<void> {
+  const { telegram } = cachedSettings ?? (await readSettings(env));
 
   if (telegram.enabled === false) {
     return;
@@ -542,18 +740,51 @@ export async function deliverTelegramAlerts(env: BotEnv): Promise<void> {
         continue;
       }
 
-      const sent = await sendText(
+      if (link.blocked) {
+        /*
+         * The customer stopped the bot. Retrying is not a delivery attempt, it
+         * is noise: mark the alert so it leaves the queue and record the state
+         * on the link, which is what the customer list shows.
+         */
+        await markAlert(env, alert.id, "sent");
+        botLog("customer_chat_blocked", { id: alert.id, type: alert.type, userId: alert.user_id });
+        continue;
+      }
+
+      const outcome = await sendTextDetailed(
         String(link.chat_id),
         customerAlertText(alert, customerLocale(link.language_code)),
         token,
       );
 
-      if (sent) {
+      if (outcome.ok) {
         await markAlert(env, alert.id, "sent");
-      } else {
-        await markAlert(env, alert.id, "failed");
-        botLog("alert_failed", { id: alert.id, type: alert.type, userId: alert.user_id });
+        await markChatDelivery(env, alert.user_id, "ok");
+        continue;
       }
+
+      /*
+       * 403 is Telegram's "the user blocked the bot". It is the one failure
+       * that must not be retried forever, so it is recorded on the link and
+       * the alert is closed rather than left pending. Any other failure is a
+       * transient send error and is left `failed` for the next drain.
+       */
+      const blocked = outcome.status === 403 || outcome.description.toLowerCase().includes("blocked");
+
+      if (blocked) {
+        await markAlert(env, alert.id, "sent");
+        await markChatDelivery(env, alert.user_id, "blocked", outcome.description);
+        botLog("customer_chat_blocked", { id: alert.id, type: alert.type, userId: alert.user_id, status: outcome.status });
+        continue;
+      }
+
+      await markAlert(env, alert.id, "failed");
+      botLog("alert_failed", {
+        id: alert.id,
+        type: alert.type,
+        userId: alert.user_id,
+        status: outcome.status,
+      });
       continue;
     }
 
@@ -572,6 +803,199 @@ export async function deliverTelegramAlerts(env: BotEnv): Promise<void> {
   }
 }
 
+/**
+ * The customer broadcast drain.
+ *
+ * A broadcast is an owner-composed message aimed at a named audience, and it
+ * is delivered one recipient at a time from its own record rather than through
+ * the alert queue: what the owner needs is a per-customer answer — "sent",
+ * "failed", "blocked" — and the alert queue has one row per message, not one
+ * row per person.
+ *
+ * Small and batched on purpose. Telegram allows roughly thirty messages a
+ * second, but this audience is small and a five-minute cron has no reason to
+ * spend it all at once: {@link BROADCAST_BATCH} recipients per run, with a
+ * short pause between sends so a burst cannot trip a rate limit.
+ */
+const BROADCAST_BATCH = 20;
+const BROADCAST_PAUSE_MS = 60;
+
+type BroadcastRow = {
+  id: string;
+  title_ar: string;
+  title_en: string;
+  body_ar: string;
+  body_en: string;
+  href: string | null;
+  recipient_count: number;
+};
+
+type RecipientRow = {
+  id: number;
+  broadcast_id: string;
+  user_id: string;
+  chat_id: number | string | null;
+  attempts: number;
+  broadcast: BroadcastRow | BroadcastRow[] | null;
+};
+
+export async function deliverTelegramBroadcasts(
+  env: BotEnv,
+  cachedSettings?: { telegram: TelegramSettings },
+): Promise<void> {
+  const { telegram } = cachedSettings ?? (await readSettings(env));
+
+  if (telegram.enabled === false) {
+    return;
+  }
+
+  const token = textValue(telegram.bot_token) ?? textValue(env.TELEGRAM_BOT_TOKEN);
+
+  if (!token) {
+    return;
+  }
+
+  const { ok, json } = await supabaseJson(
+    env,
+    `telegram_broadcast_recipients?status=eq.pending&order=created_at.asc&limit=${BROADCAST_BATCH}` +
+      "&select=id,broadcast_id,user_id,chat_id,attempts,telegram_broadcasts!inner(id,title_ar,title_en,body_ar,body_en,href,recipient_count)",
+  );
+
+  if (!ok || !Array.isArray(json) || json.length === 0) {
+    return;
+  }
+
+  const recipients = (json as unknown as RecipientRow[]).flatMap((row) => {
+    const broadcast = Array.isArray(row.broadcast) ? row.broadcast[0] : row.broadcast;
+
+    return broadcast ? [{ ...row, broadcast }] : [];
+  });
+
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+  const touched = new Set<string>();
+
+  for (const recipient of recipients) {
+    touched.add(recipient.broadcast_id);
+
+    const link = await chatLinkForUser(env, recipient.user_id);
+
+    /*
+     * No chat to send to, or a chat Telegram has already refused. Both are
+     * recorded as `skipped` with the reason, once, rather than retried on
+     * every drain forever — which is the whole point of keeping the link
+     * state on the customer.
+     */
+    if (!link) {
+      await markBroadcastRecipient(env, recipient.broadcast_id, recipient.user_id, "skipped", "unlinked");
+      skipped += 1;
+      continue;
+    }
+
+    if (link.blocked) {
+      await markBroadcastRecipient(env, recipient.broadcast_id, recipient.user_id, "skipped", "blocked");
+      skipped += 1;
+      continue;
+    }
+
+    const text = broadcastText(recipient.broadcast, customerLocale(link.language_code));
+    const outcome = await sendTextDetailed(String(link.chat_id), text, token);
+
+    if (outcome.ok) {
+      await markBroadcastRecipient(env, recipient.broadcast_id, recipient.user_id, "sent", null);
+      await markChatDelivery(env, recipient.user_id, "ok");
+      sent += 1;
+    } else {
+      const blocked = outcome.status === 403 || outcome.description.toLowerCase().includes("blocked");
+
+      await markBroadcastRecipient(
+        env,
+        recipient.broadcast_id,
+        recipient.user_id,
+        blocked ? "skipped" : "failed",
+        blocked ? "blocked" : outcome.description,
+      );
+
+      if (blocked) {
+        await markChatDelivery(env, recipient.user_id, "blocked", outcome.description);
+        skipped += 1;
+      } else {
+        failed += 1;
+      }
+    }
+
+    await sleep(BROADCAST_PAUSE_MS);
+  }
+
+  // Recompute each touched broadcast's counters and close it when nothing is
+  // left pending, so "sent" in the dashboard means every recipient was decided.
+  for (const broadcastId of touched) {
+    await refreshBroadcastCounters(env, broadcastId);
+  }
+
+  botLog("broadcasts_delivered", { sent, failed, skipped, broadcasts: touched.size });
+}
+
+function broadcastText(broadcast: BroadcastRow, locale: "ar" | "en"): string {
+  const title = locale === "ar" ? broadcast.title_ar : broadcast.title_en;
+  const body = locale === "ar" ? broadcast.body_ar : broadcast.body_en;
+  const lines = [`📣 <b>${escapeHtml(title)}</b>`, escapeHtml(body)];
+
+  if (broadcast.href) {
+    lines.push(`🔗 ${escapeHtml(absoluteUrl(broadcast.href, locale))}`);
+  }
+
+  return lines.join("\n");
+}
+
+/** Relative hrefs become absolute, because a chat has no base URL. */
+function absoluteUrl(href: string, locale: "ar" | "en"): string {
+  if (/^https?:\/\//i.test(href)) {
+    return href;
+  }
+
+  const path = href.startsWith("/") ? href : `/${href}`;
+
+  return `https://gh-store.me${path.startsWith(`/${locale}/`) || path === `/${locale}` ? path : `/${locale}${path}`}`;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Rewrite a broadcast's counters from its recipient rows.
+ *
+ * Counted from the rows rather than incremented, so a retry that changes a
+ * `failed` row to `sent` corrects the total instead of double-counting it.
+ */
+async function refreshBroadcastCounters(env: BotEnv, broadcastId: string): Promise<void> {
+  const { ok, json } = await supabaseJson(
+    env,
+    `telegram_broadcast_recipients?broadcast_id=eq.${broadcastId}&select=status`,
+  );
+
+  if (!ok || !Array.isArray(json)) {
+    return;
+  }
+
+  const statuses = (json as { status: string }[]).map((row) => row.status);
+  const pending = statuses.filter((status) => status === "pending" || status === "sending").length;
+
+  await supabaseJson(env, `telegram_broadcasts?id=eq.${broadcastId}`, {
+    method: "PATCH",
+    body: {
+      sent_count: statuses.filter((status) => status === "sent").length,
+      failed_count: statuses.filter((status) => status === "failed").length,
+      skipped_count: statuses.filter((status) => status === "skipped").length,
+      recipient_count: statuses.length,
+      status: pending === 0 ? "sent" : "sending",
+      ...(pending === 0 ? { finished_at: new Date().toISOString() } : {}),
+    },
+  });
+}
+
 /** The scheduled drain, guarded so the Worker cron does not need this feature. */
 export async function runTelegramScheduled(env: BotEnv): Promise<void> {
   if (!env.SUPABASE_URL && !env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -579,7 +1003,13 @@ export async function runTelegramScheduled(env: BotEnv): Promise<void> {
     return;
   }
 
-  await deliverTelegramAlerts(env);
+  const settings = await readSettings(env);
+  if (settings.telegram.enabled === false) {
+    return;
+  }
+
+  await deliverTelegramAlerts(env, settings);
+  await deliverTelegramBroadcasts(env, settings);
 }
 
 // ─── Sweep heartbeat ────────────────────────────────────────────────────────

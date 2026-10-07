@@ -36,6 +36,7 @@ import {
   refundOrderManually,
   resendDeliveryNotification,
 } from "./lib/services/admin-order-ops.service";
+import { deliverHeldOrder, listHeldOrders } from "./lib/services/admin-hold.service";
 import {
   getReviewsForModeration,
   moderateReview,
@@ -106,6 +107,12 @@ export async function loadDashboardOperations(args: LoaderFunctionArgs) {
       ...base,
       kind: "orders" as const,
       orders: await getOrders(supabase, { search: q, status }),
+      /*
+       * The held queue is read in full, not filtered by `status`: the chip is a
+       * filter for the long list below, while this panel is the short, always-on
+       * answer to "is anything waiting on me to recharge?".
+       */
+      heldOrders: await listHeldOrders(supabase),
       lastRun: await getLastReconcileRun(supabase),
     };
   } else if (section === "recharges") {
@@ -229,6 +236,19 @@ export async function actDashboardOperations(args: ActionFunctionArgs) {
       case "retry": {
         const result = await retryFulfillment(supabase, id("orderId"));
         detail = `${result.state}${result.reason ? `: ${result.reason}` : ""}`;
+        break;
+      }
+      /*
+       * "I recharged — deliver now." Distinct from `retry` so the held-order
+       * button can report what actually happened to the hold: a delivery clears
+       * it, a supplier that is still empty leaves it in place with a refreshed
+       * reason, and anything else follows the normal refund policy.
+       */
+      case "deliver-held": {
+        const result = await deliverHeldOrder(supabase, id("orderId"));
+        detail = result.delivered
+          ? `delivered: ${result.state}`
+          : `held: ${result.state}${result.reason ? `: ${result.reason}` : ""}`;
         break;
       }
       case "deliver":

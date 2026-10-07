@@ -1,6 +1,8 @@
 import { Form, Link } from "react-router";
 import * as UI from "./operations-shared";
-import { ChevronIcon, UserIcon, AlertIcon } from "@/components/ui/icons";
+import { ChevronIcon, UserIcon, AlertIcon, DepositIcon } from "@/components/ui/icons";
+import { getMessages } from "@/i18n/messages";
+import { isHeldOrderLike } from "@/lib/orders/order-status";
 
 export function OrderView({
   view,
@@ -9,22 +11,29 @@ export function OrderView({
 }) {
   const ar = view.locale === "ar";
   const t = (en: string, arabic: string) => (ar ? arabic : en);
-  const hasLowBalance = view.order.items.some((item) =>
-    item.attempts.some((a) => {
-      const c = (a.errorCode ?? "").toLowerCase();
-      const m = (a.errorMessage ?? "").toLowerCase();
-      return (
-        c.includes("balance") ||
-        c.includes("fund") ||
-        c.includes("credit") ||
-        m.includes("balance") ||
-        m.includes("fund") ||
-        m.includes("credit") ||
-        m.includes("رصيد") ||
-        m.includes("غير كاف")
-      );
-    }),
-  );
+  const copy = getMessages(view.locale, "admin").orders;
+  const attempts = view.order.items.flatMap((item) => item.attempts);
+  const hasLowBalance = attempts.some((a) => {
+    const c = (a.errorCode ?? "").toLowerCase();
+    const m = (a.errorMessage ?? "").toLowerCase();
+    return (
+      c.includes("balance") ||
+      c.includes("fund") ||
+      c.includes("credit") ||
+      m.includes("balance") ||
+      m.includes("fund") ||
+      m.includes("credit") ||
+      m.includes("رصيد") ||
+      m.includes("غير كاف")
+    );
+  });
+  /*
+   * Whether this order belongs in the held queue. Derived from the shared
+   * predicate, not from `status === "held"`: the three orders stranded before
+   * that status existed are still `processing` with an `insufficient_balance`
+   * attempt, and they must get the same one-press deliver button.
+   */
+  const isHeld = isHeldOrderLike(view.order.status, attempts);
 
   return (
     <div className="space-y-6">
@@ -236,9 +245,36 @@ export function OrderView({
               </div>
             )}
 
+            {/*
+              * The one-press recovery the hold state exists for. It is the
+              * primary action on a held order and a separate intent from
+              * `retry`, because it reports what happened to the hold: a
+              * delivery lifts it, a supplier that is still empty leaves it in
+              * place with a refreshed reason.
+              */}
+            {isHeld ? (
+              <div className="space-y-2.5 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] p-3">
+                <p className="text-xs text-[var(--ink-soft)] leading-relaxed">
+                  {t(
+                    "This order is waiting on the supplier's balance. After you top the supplier account up, press the button below to buy and deliver it now.",
+                    "هذا الطلب بانتظار رصيد المزود. بعد شحن حساب المزود، اضغط الزر أدناه لشراء الطلب وتسليمه الآن.",
+                  )}
+                </p>
+                <Form method="post">
+                  <UI.Hidden name="orderId" value={view.order.id} />
+                  <UI.Submit intent="deliver-held" variant="primary">
+                    <span className="flex items-center gap-1.5">
+                      <DepositIcon className="size-3.5" />
+                      <span>{copy.heldDeliverAction}</span>
+                    </span>
+                  </UI.Submit>
+                </Form>
+              </div>
+            ) : null}
+
             <Form method="post">
               <UI.Hidden name="orderId" value={view.order.id} />
-              <UI.Submit intent="retry" variant="primary">
+              <UI.Submit intent="retry" variant={isHeld ? "secondary" : "primary"}>
                 {t("Retry fulfillment", "إعادة محاولة التنفيذ")}
               </UI.Submit>
             </Form>

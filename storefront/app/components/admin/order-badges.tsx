@@ -20,6 +20,9 @@ const ORDER_STATUS_TONES: Record<string, BadgeTone> = {
   paid: "accent",
   processing: "accent",
   fulfilling: "accent",
+  // Held is work waiting on the owner, not an error: warning would read as
+  // "something broke", and accent matches the operation that clears it.
+  held: "accent",
   completed: "success",
   failed: "danger",
   refunded: "warning",

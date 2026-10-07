@@ -95,14 +95,35 @@ describe("bounded image recovery", () => {
   });
 
   it("bounds supplier image widths and keeps an original proxy attempt", () => {
-    const attempts = getImageAttempts({ src: "https://supplier.example/item.jpg", width: 10_000 });
+    const attempts = getImageAttempts({ src: "https://api.g2bulk.com/item.jpg", width: 10_000 });
     expect(attempts).toHaveLength(2);
     expect(attempts[0].src).toContain("&width=1920");
     expect(attempts[1].src).not.toContain("width=");
   });
 
+  it("reserves one srcset candidate per render slot, never upscaling past it", () => {
+    const attempts = getImageAttempts({ src: "https://api.g2bulk.com/item.jpg", width: 640 });
+    const candidates = attempts[0].srcSet!.split(", ").map((entry) => entry.split(" ")[1]);
+    expect(candidates).toEqual(["320w", "384w", "480w", "640w"]);
+    for (const entry of attempts[0].srcSet!.split(", ")) {
+      expect(entry).toContain("/api/media-proxy?");
+      expect(entry).toContain("v=4");
+    }
+  });
+
+  it("keeps a host the proxy refuses on its own origin instead of inventing variants", () => {
+    // A non-allow-listed host (a competitor CDN, a favicon service) is served
+    // direct: the srcset is absent rather than pointing at a request that 403s.
+    for (const src of ["https://images.g2a.com/a/b.png", "https://www.google.com/s2/favicons?domain=x.com"]) {
+      const attempts = getImageAttempts({ src, width: 640 });
+      expect(attempts[0].src).toBe(src);
+      expect(attempts[0].srcSet).toBeUndefined();
+      expect(attempts).toHaveLength(1);
+    }
+  });
+
   it("does not transform vectors, local files, or repeatedly request identical alternates", () => {
-    for (const src of ["/local.webp", "https://supplier.example/logo.svg", "https://supplier.example/animation.gif"]) {
+    for (const src of ["/local.webp", "https://api.g2bulk.com/logo.svg", "https://api.g2bulk.com/animation.gif"]) {
       const attempts = getImageAttempts({ src, fallbackSrc: src });
       expect(attempts).toHaveLength(1);
       expect(attempts[0].srcSet).toBeUndefined();

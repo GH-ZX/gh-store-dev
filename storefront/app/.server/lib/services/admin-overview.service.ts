@@ -4,6 +4,7 @@ import { requireAdmin } from "@server/lib/auth/guards";
 import { GRACE_MINUTES } from "@server/lib/orders/reconciliation-policy";
 import { withDeadline } from "@server/lib/providers/deadline";
 import { createSupabaseServerClient } from "@server/lib/supabase/server";
+import { getHeldOrderCount } from "@server/lib/services/admin-hold.service";
 import {
   getBatStoreCredentials,
   getG2BulkCredentials,
@@ -149,6 +150,16 @@ export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
 export type AttentionCounts = {
   /** Money taken, goods not out: paid/fulfilling/processing past the grace window. */
   stuckOrders: number | null;
+  /**
+   * Paid orders waiting on a supplier wallet the owner controls.
+   *
+   * Counted separately from {@link stuckOrders} on purpose: the sweep can settle
+   * a stuck order by itself, while a held order can only move when the owner
+   * recharges and presses "deliver now" — so it does not belong in the same
+   * "something is late" bucket. Read directly from `orders` rather than from the
+   * overview snapshot, whose stuck-orders definition predates the hold state.
+   */
+  heldOrders: number | null;
   /** Manual top-ups waiting for the owner's decision. */
   pendingRecharges: number | null;
   /** Support threads not yet closed. */
@@ -170,10 +181,25 @@ export type AttentionCounts = {
  */
 export async function getAttentionCounts(): Promise<AttentionCounts> {
   await requireAdmin();
+  const supabase = await createSupabaseServerClient();
   const attention = (await readOverviewSnapshot())?.attention;
+
+  /*
+   * A held-order read failing must not darken the whole strip, so it is its own
+   * call and its own null. The list behind it is the same one the dashboard's
+   * held queue renders, so the badge cannot disagree with the queue.
+   */
+  let heldOrders: number | null = null;
+
+  try {
+    heldOrders = await getHeldOrderCount(supabase);
+  } catch {
+    heldOrders = null;
+  }
 
   return {
     stuckOrders: attention?.stuck_orders ?? null,
+    heldOrders,
     pendingRecharges: attention?.pending_recharges ?? null,
     openSupportThreads: attention?.open_support_threads ?? null,
     pendingReviews: attention?.pending_reviews ?? null,

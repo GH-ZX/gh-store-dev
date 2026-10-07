@@ -10,6 +10,14 @@
 export type FulfillmentOutcome =
   | { state: "completed"; deliveredItems: string[] }
   | { state: "processing" }
+  /**
+   * The supplier refused for lack of funds in a wallet the store owns. The
+   * customer paid, so this is neither a delivery nor a failure: the order is
+   * parked at `held` with the supplier's answer recorded, waiting for the owner
+   * to recharge and press "deliver now". It is never refunded and never bought
+   * by the sweep.
+   */
+  | { state: "held"; reason: string }
   | { state: "failed"; reason: string; refunded: boolean }
   | { state: "skipped"; reason: string };
 

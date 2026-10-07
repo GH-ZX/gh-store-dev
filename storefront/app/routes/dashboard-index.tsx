@@ -30,7 +30,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   await requireDashboardAdmin(request, locale);
   const [stats, attention, kpis, earnings, series, latest, wallets, readiness, health] = await Promise.all([
     getAdminOverviewStats().catch(() => ({ products: null, activeProducts: null, offers: null, activeOffers: null, orders: null, customers: null })),
-    getAttentionCounts().catch(() => ({ stuckOrders: null, pendingRecharges: null, openSupportThreads: null, pendingReviews: null, paymentIssues: null })),
+    getAttentionCounts().catch(() => ({ stuckOrders: null, heldOrders: null, pendingRecharges: null, openSupportThreads: null, pendingReviews: null, paymentIssues: null })),
     getSalesKpis().catch(() => ({ revenueToday: null, revenue7: null, revenuePrev7: null, orders7: null, newCustomers7: null, avgOrder7: null })),
     getEarnings().catch(() => null),
     getDailySeries(14).catch(() => null),

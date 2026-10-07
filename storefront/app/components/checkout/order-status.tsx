@@ -7,24 +7,51 @@ import { CheckIcon } from "@/components/ui/icons";
 import type { CheckoutMessages } from "@/i18n/messages";
 
 /**
- * Fulfilment state, and the codes it delivered.
+ * Status pills for the order page.
  *
  * This is the one client island on the order page: reading a redeem code off the
  * screen and typing it into a game is where a copy button earns its keep. The
  * state itself is decided by the server — nothing here infers progress, it only
  * words what the fulfilment rows already say.
  *
- * The keys are derived from the message dictionary rather than imported from the
+ * The message keys are derived from the dictionary rather than imported from the
  * service, so a status the copy does not cover fails typechecking instead of
- * rendering a blank pill.
+ * rendering a blank pill. `string` is allowed alongside them because the value
+ * arrives from the database as free text with a check constraint: the one state
+ * a customer can see beyond the dictionary is handled explicitly
+ * ({@link heldLabel}), and anything genuinely unknown falls through to the
+ * pending wording rather than throwing on a page a paying customer is looking at.
  */
-export type OrderStatusKey = keyof CheckoutMessages["statuses"];
+export type OrderStatusMessageKey = keyof CheckoutMessages["statuses"];
+export type OrderStatusKey = OrderStatusMessageKey | (string & {});
 export type FulfillmentStateKey = keyof CheckoutMessages["fulfillmentStates"];
+
+/**
+ * The customer-facing wording for a held order.
+ *
+ * `held` is storage vocabulary: it means "the store has not bought this from the
+ * supplier yet", which is not a thing a shopper should ever read. The order is
+ * paid and queued, so the label says exactly that — no supplier, no balance, no
+ * promise about when.
+ */
+export function heldLabel(messages: CheckoutMessages): string {
+  return messages.orderDetail.queuedLabel;
+}
+
+function isHeld(status: string, heldLike: boolean): boolean {
+  return heldLike || status === "held";
+}
 
 export type OrderStatusPanelProps = {
   messages: CheckoutMessages;
   status: OrderStatusKey;
   fulfillmentState: FulfillmentStateKey | null;
+  /**
+   * The order is waiting on a supplier wallet the owner controls. Comes from the
+   * service rather than being inferred here, so a `held` order and one of the
+   * three legacy `processing`/`insufficient_balance` orders read identically.
+   */
+  heldLike: boolean;
   /** True when the payment was returned to the wallet. */
   isRefunded: boolean;
   failureMessage: string | null;
@@ -39,10 +66,11 @@ function presentation({
   messages,
   status,
   fulfillmentState,
+  heldLike,
   isRefunded,
 }: Pick<
   OrderStatusPanelProps,
-  "messages" | "status" | "fulfillmentState" | "isRefunded"
+  "messages" | "status" | "fulfillmentState" | "heldLike" | "isRefunded"
 >): Presentation {
   const detail = messages.orderDetail;
 
@@ -69,6 +97,25 @@ function presentation({
       tone: "success",
       title: detail.completedTitle,
       description: detail.completedDescription,
+    };
+  }
+
+  /*
+   * Held. The supplier has not delivered yet because the store's own supplier
+   * wallet is empty — the customer's money is taken and their order is queued,
+   * and nothing about that is theirs to fix or to know. So this reads as
+   * "queued and being prepared", and the only reassurance it offers is the one
+   * that is certain: no action needed, support is there. No supplier, no
+   * balance, no promised time.
+   *
+   * Checked before the processing branch, which would otherwise absorb it and
+   * claim the supplier is working on it.
+   */
+  if (isHeld(status, heldLike)) {
+    return {
+      tone: "accent",
+      title: detail.queuedTitle,
+      description: detail.queuedDescription,
     };
   }
 
@@ -101,6 +148,7 @@ export function OrderStatusPanel({
   messages,
   status,
   fulfillmentState,
+  heldLike,
   isRefunded,
   failureMessage,
   codes,
@@ -110,12 +158,12 @@ export function OrderStatusPanel({
   const [copied, setCopied] = useState<string | null>(null);
   const [allCopied, setAllCopied] = useState(false);
   const detail = messages.orderDetail;
-  const state = presentation({ messages, status, fulfillmentState, isRefunded });
+  const state = presentation({ messages, status, fulfillmentState, heldLike, isRefunded });
   const failed = state.tone === "danger" || state.tone === "warning";
   const notifiedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const key = `${status}:${fulfillmentState}:${isRefunded}`;
+    const key = `${status}:${fulfillmentState}:${heldLike}:${isRefunded}`;
     if (notifiedRef.current === key) return;
     notifiedRef.current = key;
 
@@ -124,7 +172,7 @@ export function OrderStatusPanel({
     } else if (failed) {
       toast.error(state.title, { description: failureMessage ?? state.description });
     }
-  }, [state, failed, failureMessage, status, fulfillmentState, isRefunded]);
+  }, [state, failed, failureMessage, status, fulfillmentState, heldLike, isRefunded]);
 
 
   async function copyCode(value: string) {
@@ -152,10 +200,17 @@ export function OrderStatusPanel({
     <section className="sf-commerce-panel">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-[var(--ink)]">{detail.fulfillmentTitle}</h2>
-        {fulfillmentState ? (
+        {/*
+          * A held order's attempt row reads `failed`/`insufficient_balance` —
+          * supplier vocabulary that must never reach the customer. The hold
+          * wording wins over both maps.
+          */}
+        {isHeld(status, heldLike) ? (
+          <Badge tone={state.tone}>{heldLabel(messages)}</Badge>
+        ) : fulfillmentState ? (
           <Badge tone={state.tone}>{messages.fulfillmentStates[fulfillmentState]}</Badge>
         ) : (
-          <Badge tone={state.tone}>{messages.statuses[status]}</Badge>
+          <Badge tone={state.tone}>{messages.statuses[status as OrderStatusMessageKey] ?? status}</Badge>
         )}
       </div>
 

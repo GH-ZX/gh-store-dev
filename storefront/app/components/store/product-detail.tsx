@@ -14,10 +14,27 @@ import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
 import type { RelatedProducts } from "@/lib/catalog/related-products";
 import { formatNumber, formatPrice, lowestPrice } from "@/lib/format/money";
+import { AvailabilityNotice, summariseAvailability, type AvailabilityEntry } from "@/components/store/availability-notice";
+import { RegionNotice, RegionSiblingLinks, regionQualifiedName, regionVariantOf } from "@/components/store/region-notice";
+import { regionVariantLabel, siblingVariantSlugs } from "@/lib/catalog/region-variants";
 import "@/styles/storefront-product.css";
 
-export function ProductDetailHeader({ locale, product, offers, offer }: {
+/** Region facts and sibling links, rendered once for a product that has them. */
+export function RegionSection({ locale, product, related }: {
+  locale: Locale; product: StoreProduct; related?: StoreProduct[];
+}) {
+  const variant = regionVariantOf(product);
+  if (!variant) return null;
+  const locked = variant.family === "turkey-store-credit";
+  return <>
+    <RegionNotice product={product} locale={locale} locked={locked} />
+    {related ? <RegionSiblingLinks product={product} siblings={related} locale={locale} /> : null}
+  </>;
+}
+
+export function ProductDetailHeader({ locale, product, offers, offer, availability }: {
   locale: Locale; product: StoreProduct; offers: StoreOffer[]; offer?: StoreOffer;
+  availability?: Record<string, AvailabilityEntry>;
 }) {
   const common = getMessages(locale, "common");
   const catalog = getMessages(locale, "catalog");
@@ -25,14 +42,18 @@ export function ProductDetailHeader({ locale, product, offers, offer }: {
   const cheapest = lowestPrice(offers);
   const description = (offer?.description || product.description || "").trim().replace(/\s+/g, " ");
   const excerpt = description.length > 200 ? `${description.slice(0, 197).trimEnd()}…` : description;
+  const variant = regionVariantOf(product);
+  const regionName = regionVariantLabel(variant, locale);
+  const summary = summariseAvailability(availability);
   return <header className="sf-detail-hero">
     <div className="sf-detail-artwork">
       <ProductArtwork product={{ ...product, imageUrl: offer?.imageUrl ?? product.imageUrl }} priority large />
     </div>
     <div className="sf-detail-hero-copy">
       <div className="sf-detail-eyebrow"><span>{offer ? copy.offerLabel : copy.productLabel}</span>{product.kind !== "other" ? <span>{catalog.productKinds[product.kind]}</span> : null}</div>
-      <h1><bdi>{offer?.name ?? product.name}</bdi></h1>
-      {offer ? <Link className="sf-detail-parent-link" to={productPath(locale, product)}><bdi>{product.name}</bdi></Link> : offers.length ? <p>{catalog.gameDetail.chooseOffer}</p> : null}
+      <h1><bdi>{offer?.name ?? regionQualifiedName(product, locale)}</bdi></h1>
+      {offer ? <Link className="sf-detail-parent-link" to={productPath(locale, product)}><bdi>{regionQualifiedName(product, locale)}</bdi></Link> : offers.length ? <p>{catalog.gameDetail.chooseOffer}</p> : null}
+      {regionName ? <p className="sf-detail-region-line"><bdi>{regionName}</bdi></p> : null}
       {excerpt ? <p className="sf-detail-excerpt"><bdi>{excerpt}</bdi></p> : null}
       <dl className="sf-detail-facts">
         <div><dt>{copy.categoryLabel}</dt><dd><Link to={`/${locale}/${encodeURIComponent(product.categorySlug)}`}>{product.categoryName ?? common.navigation.allProducts}</Link></dd></div>
@@ -40,9 +61,11 @@ export function ProductDetailHeader({ locale, product, offers, offer }: {
           <div><dt>{copy.offersFactLabel}</dt><dd><bdi dir="ltr">{formatNumber(offers.length, locale)}</bdi></dd></div>
           {cheapest ? <div><dt>{common.price.from}</dt><dd className="sf-detail-price"><bdi dir="ltr">{formatPrice(cheapest.price, cheapest.currency, locale)}</bdi></dd></div> : null}
         </>}
+        {variant ? <div><dt>{copy.regionFactLabel}</dt><dd data-region-published={regionName ? "true" : "false"}><bdi>{regionName ?? copy.regionUnverified}</bdi></dd></div> : null}
         {offer?.regionCode ? <div><dt>{catalog.offerDetail.regionLabel}</dt><dd><bdi>{offer.regionCode}</bdi></dd></div> : null}
       </dl>
       {offer ? <OfferTerms terms={offer.terms} locale={locale} /> : null}
+      <AvailabilityNotice availability={summary} locale={locale} />
     </div>
   </header>;
 }

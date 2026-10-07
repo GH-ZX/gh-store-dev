@@ -20,6 +20,13 @@ import { logFailure } from "@server/lib/logging/logger";
 
 export type NotificationType =
   | "order_delivered"
+  /**
+   * The order is paid and queued but not delivered yet, because the store's
+   * supplier wallet is empty. Unlike `order_failed` this carries no refund and
+   * nothing for the customer to do — the message exists so a paying customer is
+   * not left in silence while the owner tops the supplier up.
+   */
+  | "order_queued"
   | "order_failed"
   | "recharge_approved"
   | "recharge_rejected"

@@ -117,6 +117,13 @@ export function statusLabel(value: string, locale: "ar" | "en", section = "") {
     ...admin.support.roles,
     all: locale === "ar" ? "الكل" : "All",
     attention: admin.orders.filterAttention,
+    /*
+     * Explicit for the held queue, and taken from the same dictionary key as the
+     * chip's own label: `held` is storage vocabulary, and an owner should read
+     * "awaiting supplier balance" in the filter exactly as they read it on the
+     * panel above.
+     */
+    held: admin.orders.filterHeld,
     low_funds: locale === "ar" ? "نقص رصيد المزود" : "Low API Funds",
     manual: admin.orders.filterManual,
     ...(section === "recharges" ? recharge.statuses : {}),
@@ -140,7 +147,7 @@ export function Badge({ children }: { children: ReactNode }) {
     badgeCls = "admin-badge admin-badge-danger";
   } else if (value && ["pending", "fulfilling", "attention", "refunded"].includes(value)) {
     badgeCls = "admin-badge admin-badge-warning";
-  } else if (value && ["admin", "processing"].includes(value)) {
+  } else if (value && ["admin", "processing", "held"].includes(value)) {
     badgeCls = "admin-badge admin-badge-accent";
   }
 

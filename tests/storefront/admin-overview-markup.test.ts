@@ -21,7 +21,7 @@ const { renderToStaticMarkup } = requireApp("react-dom/server") as typeof import
 const base: DashboardOverviewData = {
   locale: "en", updatedAt: "2026-09-08T12:30:00Z",
   stats: { products: 12, activeProducts: 10, offers: 24, activeOffers: 20, orders: 0, customers: 0 },
-  attention: { stuckOrders: 0, pendingRecharges: 0, openSupportThreads: 0, pendingReviews: 0, paymentIssues: 0 },
+  attention: { heldOrders: 0, stuckOrders: 0, pendingRecharges: 0, openSupportThreads: 0, pendingReviews: 0, paymentIssues: 0 },
   kpis: { revenueToday: 0, revenue7: 0, revenuePrev7: 0, orders7: 0, newCustomers7: 0, avgOrder7: null },
   earnings: null, series: [{ date: "2026-09-08", label: "09-08", orders: 0, revenue: 0 }], latest: [], wallets: [],
   readiness: { publishedProducts: 10, missingOffers: 0, missingArtwork: 0, missingCategory: 0, needsAttention: 0, items: [] },
@@ -31,10 +31,29 @@ const render = (overrides: Partial<DashboardOverviewData> = {}, refreshing = fal
 describe("actionable dashboard overview", () => {
   it("links each work queue to an existing useful destination", () => {
     const markup = render();
-    for (const suffix of ["orders?status=attention", "recharges", "payments?status=attention", "support", "reviews?status=pending"]) {
+    /*
+     * The held queue leads the strip and must be reachable — it is the one queue
+     * that cannot clear itself, so a missing link would hide paid, undelivered
+     * orders from the owner entirely.
+     */
+    for (const suffix of ["orders?status=held", "orders?status=attention", "recharges", "payments?status=attention", "support", "reviews?status=pending"]) {
       expect(markup).toContain(`href="/en/dashboard/${suffix}"`);
     }
     expect(markup).toContain("All clear");
+  });
+
+  it("never renders a non-numeric count, including a missing one", () => {
+    /*
+     * A count that is undefined used to pass a null-only guard and reach
+     * `Intl.NumberFormat.format(undefined)`, which renders the literal string
+     * "NaN" into the dashboard. Any non-finite count must read as unavailable.
+     */
+    const markup = render({
+      attention: { ...base.attention, heldOrders: undefined as unknown as number },
+    });
+    expect(markup).not.toContain("NaN");
+    expect(markup).toContain("Count unavailable. Open the queue or refresh to try again.");
+    expect(markup).toContain("Some checks are unavailable");
   });
 
   it("does not claim all clear or zero work when any count is unavailable", () => {

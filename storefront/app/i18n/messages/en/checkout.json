@@ -52,9 +52,20 @@
     "unavailable": "This package is no longer available. Browse the other packages we have.",
     "insufficient_balance": "Your wallet balance does not cover this order. Add balance, then try again.",
     "supplier_unavailable": "This offer is temporarily unavailable while the supplier is being checked. Please try again later.",
+    "out_of_stock": "The supplier is out of stock for this offer, so nothing was taken from your balance. Check back soon or pick another offer.",
     "in_progress": "An order with these same details is already being placed. Check My orders before trying again.",
     "invalid_fields": "Check the required account details, then try again.",
-    "unknown": "We could not place this order. Try again, and contact support if it keeps happening."
+    "unknown": "We could not place this order. Try again, and contact support if it keeps happening.",
+    "coupon_not_found": "We do not recognise that code. Check the spelling and try again.",
+    "coupon_inactive": "That code is switched off.",
+    "coupon_not_started": "That code is not active yet.",
+    "coupon_expired": "That code has expired.",
+    "coupon_usage_limit": "That code has reached its limit.",
+    "coupon_already_used": "You have already used that code.",
+    "coupon_below_minimum": "That code needs a larger order.",
+    "coupon_wrong_scope": "That code does not apply to this item.",
+    "coupon_no_discount": "That code gives no discount on this order.",
+    "coupon_below_cost": "That code cannot be used on this item — the discount would take it below what we pay for it. Our margin is small and we will not sell at a loss."
   },
   "orders": {
     "eyebrow": "My orders",
@@ -99,6 +110,9 @@
     "pendingDescription": "We have your order and delivery starts shortly. Refresh to follow the status.",
     "processingTitle": "Delivery in progress",
     "processingDescription": "The supplier is working on this order and it can take a few minutes. This page checks automatically for the result.",
+    "queuedLabel": "Being prepared",
+    "queuedTitle": "Your order is confirmed and queued",
+    "queuedDescription": "We have your payment and your order is in the delivery queue. It will be delivered shortly and you do not need to do anything. If you need help, support is available with your order number.",
     "completedTitle": "Delivered",
     "completedDescription": "This order reached your account. If you cannot find it, contact support with the order number.",
     "failedTitle": "This order could not be delivered",
@@ -142,6 +156,7 @@
     "paid": "Paid",
     "processing": "Processing",
     "fulfilling": "Delivering",
+    "held": "Being prepared",
     "completed": "Completed",
     "failed": "Failed",
     "refunded": "Refunded",
@@ -190,5 +205,28 @@
     "codesHeading": "Your {product} redeem code",
     "codesDescription": "Keep these somewhere safe; they stay available on this page.",
     "keepForSupportNote": "Keep this invoice if you ever need to contact support about this order."
+  },
+  "coupon": {
+    "title": "Discount code",
+    "description": "Have a code? Enter it and we will show the discount on this order.",
+    "placeholder": "CODE",
+    "apply": "Apply code",
+    "applying": "Checking…",
+    "applied": "Code applied. The discount below was calculated on the server and is confirmed when the order is placed.",
+    "remove": "Remove code",
+    "discountLabel": "Discount",
+    "totalAfterLabel": "Total after discount",
+    "errors": {
+      "coupon_not_found": "We do not recognise that code. Check the spelling and try again.",
+      "coupon_inactive": "That code is switched off.",
+      "coupon_not_started": "That code is not active yet.",
+      "coupon_expired": "That code has expired.",
+      "coupon_usage_limit": "That code has reached its limit.",
+      "coupon_already_used": "You have already used that code.",
+      "coupon_below_minimum": "That code needs a larger order.",
+      "coupon_wrong_scope": "That code does not apply to this item.",
+      "coupon_no_discount": "That code gives no discount on this order.",
+      "coupon_below_cost": "That code cannot be used on this item — the discount would take it below what we pay for it. Our margin is small and we will not sell at a loss."
+    }
   }
-}
+}

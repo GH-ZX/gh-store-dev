@@ -3,6 +3,7 @@ import { getSessionSummary } from "@server/lib/services/session.service";
 import { EmptyState } from "@/components/shared/states";
 import { Badge } from "@/components/ui/badge";
 import { ArrowIcon, GamepadIcon } from "@/components/ui/icons";
+import { heldLabel, type OrderStatusMessageKey } from "@/components/checkout/order-status";
 import { Section, SectionHeader } from "@/components/commerce/commerce-page";
 import { formatPrice } from "@/lib/format/money";
 import { formatMessage, type CheckoutMessages } from "@/i18n/messages";
@@ -57,6 +58,9 @@ const STATUS_TONES = {
   paid: "accent",
   processing: "accent",
   fulfilling: "accent",
+  // Held orders stay visible in the history as "being prepared", worded the same
+  // way as the order page so one order never reads as two different statuses.
+  held: "accent",
   completed: "success",
   failed: "danger",
   refunded: "warning",
@@ -88,7 +92,11 @@ function OrderRow({
               <span className="sr-only">{messages.orders.orderNumberLabel}: </span>
               <span dir="ltr">{order.orderNumber}</span>
             </span>
-            <Badge tone={STATUS_TONES[order.status]}>{messages.statuses[order.status]}</Badge>
+            <Badge tone={STATUS_TONES[order.status]}>
+              {order.status === "held"
+                ? heldLabel(messages)
+                : messages.statuses[order.status as OrderStatusMessageKey] ?? order.status}
+            </Badge>
           </div>
 
           <p className="mt-1.5 truncate text-sm text-[var(--ink-soft)]">

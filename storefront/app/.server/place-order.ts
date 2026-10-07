@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isAdminProfile } from "@server/lib/auth/guards";
+import { checkBatStoreStockBeforeCharge } from "@server/lib/services/batstore-stock.service";
+import { createSupabaseServiceClient } from "@server/lib/supabase/service";
 import { enqueueTelegramAlert } from "@server/lib/services/telegram-alerts.service";
 import { fulfillOrder } from "@server/fulfillment";
 import { logFailure, logOutcome } from "@server/lib/logging/logger";
@@ -16,17 +18,36 @@ import { logFailure, logOutcome } from "@server/lib/logging/logger";
  */
 
 export type PlaceOrderResult =
-  | { ok: true; orderId: string; orderNumber: string; total: number; balance: number }
+  | {
+      ok: true;
+      orderId: string;
+      orderNumber: string;
+      total: number;
+      balance: number;
+      /** The discount the database actually applied; 0 when no code was used. */
+      discount: number;
+    }
   | {
       ok: false;
       reason:
         | "unauthenticated"
         | "suspended"
         | "unavailable"
+        | "out_of_stock"
         | "insufficient_balance"
         | "supplier_unavailable"
         | "in_progress"
         | "invalid_fields"
+        | "coupon_not_found"
+        | "coupon_inactive"
+        | "coupon_not_started"
+        | "coupon_expired"
+        | "coupon_usage_limit"
+        | "coupon_already_used"
+        | "coupon_below_minimum"
+        | "coupon_wrong_scope"
+        | "coupon_no_discount"
+        | "coupon_below_cost"
         | "unknown";
     };
 
@@ -38,6 +59,14 @@ export type PlaceOrderInput = {
   quantity: number;
   dynamicFields: Record<string, string>;
   idempotencyKey: string;
+  /**
+   * The coupon code the customer typed, and nothing else about it.
+   *
+   * The code is the only part of a discount that comes from the browser: the
+   * amount is recomputed inside the order transaction, from the live price,
+   * under a row lock on the coupon.
+   */
+  couponCode?: string | null;
   /** Route's background runner (ctx.waitUntil) for fulfilment + alerts. */
   schedule: (promise: Promise<unknown>) => void;
 };
@@ -45,6 +74,23 @@ export type PlaceOrderInput = {
 /** Map the RPC's raised messages onto reasons a page can explain. */
 function reasonFromError(message: string): PlaceOrderResult {
   const text = message.toLowerCase();
+
+  // Coupon refusals first: several of them contain words the order branches
+  // below also match ("below", "unavailable"), and the specific answer is the
+  // useful one.
+  if (text.includes("coupon")) {
+    if (text.includes("not found")) return { ok: false, reason: "coupon_not_found" };
+    if (text.includes("not active")) return { ok: false, reason: "coupon_inactive" };
+    if (text.includes("not valid yet")) return { ok: false, reason: "coupon_not_started" };
+    if (text.includes("expired")) return { ok: false, reason: "coupon_expired" };
+    if (text.includes("usage limit")) return { ok: false, reason: "coupon_usage_limit" };
+    if (text.includes("already used")) return { ok: false, reason: "coupon_already_used" };
+    if (text.includes("below the coupon minimum")) return { ok: false, reason: "coupon_below_minimum" };
+    if (text.includes("does not apply")) return { ok: false, reason: "coupon_wrong_scope" };
+    if (text.includes("no discount")) return { ok: false, reason: "coupon_no_discount" };
+    if (text.includes("below supplier cost")) return { ok: false, reason: "coupon_below_cost" };
+    if (text.includes("required")) return { ok: false, reason: "invalid_fields" };
+  }
 
   if (text.includes("insufficient")) {
     return { ok: false, reason: "insufficient_balance" };
@@ -119,6 +165,43 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
 
   const offerId = (offer as { id: string }).id;
 
+  /*
+   * Supplier stock preflight, before a single cent leaves the wallet.
+   *
+   * The BatStore guard is the store's last line of defence against charging for
+   * an item the supplier cannot deliver. Parking a zero-stock offer
+   * (`is_active = false`, done by the throttled stock sweep) hides it from
+   * browse, search, and this very query — but a snapshot can be stale, the
+   * supplier can sell out between two sweeps, and an administrator can
+   * knowingly re-activate an out-of-stock offer. Two live orders were charged
+   * and then failed with `Insufficient stock for product #16 (requested 1,
+   * available 0)`, which is exactly what this closes.
+   *
+   * It fails closed: an unreadable mapping, an unconfigured BatStore, or an
+   * unreachable supplier refuses the order rather than risking a refund cycle.
+   * It is a no-op for offers that are not mapped to BatStore, so G2Bulk and
+   * MaxStore keep their own guards.
+   *
+   * NOTE FOR THE G2BULK GUARD OWNER: this is the call site
+   * `isG2BulkOfferAffordable` (currently dead code — it has no callers) is
+   * meant to sit beside. Adding it here is a two-line change:
+   * `if (!(await isG2BulkOfferAffordable(offerId, input.quantity))) return
+   * { ok: false, reason: "supplier_unavailable" };`
+   */
+  const stockGuard = await checkBatStoreStockBeforeCharge(
+    createSupabaseServiceClient(),
+    offerId,
+    input.quantity,
+  );
+
+  if (!stockGuard.ok) {
+    // `out_of_stock` gets its own bilingual customer message; every other
+    // refusal reuses the existing "temporarily unavailable" wording. The owner
+    // was alerted inside the guard with a deduplicated `low_stock` Telegram
+    // alert, so a refused customer is never a silent one.
+    return { ok: false, reason: stockGuard.reason };
+  }
+
 
   const { data, error } = await supabase
     .rpc(isAdmin ? "place_gift_order" : "place_wallet_order", {
@@ -126,6 +209,9 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
       p_quantity: input.quantity,
       p_dynamic_fields: input.dynamicFields,
       p_idempotency_key: input.idempotencyKey,
+      // Always sent, even when empty: the parameter is what makes the
+      // discount part of the same transaction rather than a second write.
+      p_coupon_code: input.couponCode?.trim() || null,
     })
     .maybeSingle();
 
@@ -138,6 +224,13 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   }
 
   const placed = data as { order_id: string; order_number: string; total: number; balance: number };
+
+  /*
+   * The stored order is the only place the applied discount can be read from:
+   * the database computed it, and reporting it back is a read of what
+   * happened, not a second calculation.
+   */
+  const appliedDiscount = await readAppliedCouponDiscount(supabase, placed.order_id);
 
   input.schedule(
     (async () => {
@@ -170,5 +263,31 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
     orderNumber: placed.order_number,
     total: placed.total,
     balance: placed.balance,
+    discount: appliedDiscount,
   };
+}
+
+/**
+ * The discount recorded on a just-placed order.
+ *
+ * `orders.discount` is written by the RPC, so this reads the store's own record
+ * of the charge rather than re-deriving it. A read failure leaves the caller
+ * with 0, which is only used for a log field and an order-page line — never for
+ * money — so it must not turn a placed order into an error.
+ */
+async function readAppliedCouponDiscount(
+  supabase: SupabaseClient,
+  orderId: string,
+): Promise<number> {
+  try {
+    const { data } = await supabase
+      .from("orders")
+      .select("discount")
+      .eq("id", orderId)
+      .maybeSingle();
+
+    return typeof data?.discount === "number" ? data.discount : 0;
+  } catch {
+    return 0;
+  }
 }

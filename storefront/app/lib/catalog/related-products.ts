@@ -9,7 +9,12 @@ export type RelatedProducts = {
 };
 
 type RelatedRow = ProductRow & { offers?: { price: number; currency: string }[] };
-const LIMIT = 4;
+/**
+ * Five, not four: a region family can have three members, and the two siblings
+ * of the product being viewed must survive the limit alongside a couple of
+ * genuinely related products.
+ */
+const LIMIT = 5;
 const SUMMARY_SELECT = PRODUCT_SELECT.replace(", description_ar, description_en", "");
 
 /** Optional discovery never makes the product itself unavailable. */

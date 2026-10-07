@@ -3,6 +3,7 @@ import { log, logFailure } from "../.server/lib/logging/logger";
 import { runtimeVar } from "../.server/runtime-env";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "../.server/lib/supabase/service";
 import { reconcileStuckOrders } from "../.server/lib/services/reconciliation.service";
+import { runGrowthJobs } from "../.server/lib/services/growth.service";
 import { recordSweepFailure, recordSweepSuccess } from "../.server/lib/services/sweep-heartbeat.service";
 
 function json(body: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
@@ -35,6 +36,18 @@ export async function action({ request }: { request: Request }): Promise<Respons
     service = createSupabaseServiceClient();
     const run = await reconcileStuckOrders(service);
     await recordSweepSuccess(service);
+
+    /*
+     * The growth pass, after the sweep that settles orders. A restock alert
+     * only means something once the catalogue has finished changing, a referral
+     * only pays once an order is delivered, and a reminder only exists for a
+     * purchase that is already complete — so the order is deliberate.
+     *
+     * It reports its own counters and never throws: a marketing job that failed
+     * must not be able to look like a fulfilment failure in this response.
+     */
+    const growth = await runGrowthJobs();
+
     return json({
       ok: true,
       checked: run.checked,
@@ -48,6 +61,7 @@ export async function action({ request }: { request: Request }): Promise<Respons
       binanceChecked: run.binanceChecked,
       binanceCredited: run.binanceCredited,
       requestsExpired: run.requestsExpired,
+      growth,
     });
   } catch (error) {
     logFailure("fulfilment", "reconcile_failed", error);

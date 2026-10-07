@@ -5,6 +5,7 @@ type Client = SupabaseClient<Database>;
 
 import { requireAdminId } from "@server/lib/auth/guards";
 import { worstFulfillmentState } from "@server/lib/orders/fulfillment-state";
+import { isHeldOrderLike } from "@server/lib/orders/order-status";
 import { safeFilterTerm } from "@server/lib/supabase/filters";
 import type { Json } from "@server/types/database";
 
@@ -29,6 +30,7 @@ export const ADMIN_ORDER_STATUSES = [
   "paid",
   "processing",
   "fulfilling",
+  "held",
   "completed",
   "failed",
   "refunded",
@@ -42,6 +44,10 @@ export type AdminOrderStatus = (typeof ADMIN_ORDER_STATUSES)[number];
  *
  * Selectable as one filter under {@link ATTENTION_FILTER}, because "what is
  * broken right now" is a single question, not four.
+ *
+ * `held` is not in this list: a held order is not broken, it is waiting on an
+ * action only the owner can take, and it has its own queue and its own chip so
+ * that "what needs me to recharge" stays one question.
  */
 export const ATTENTION_STATUSES: AdminOrderStatus[] = ["failed", "fulfilling", "processing", "paid"];
 
@@ -50,6 +56,17 @@ export const ATTENTION_FILTER = "attention";
 export const LOW_FUNDS_FILTER = "low_funds";
 
 export const MANUAL_FILTER = "manual";
+
+/**
+ * The held queue, as one dashboard filter.
+ *
+ * Matches `held` orders and the orders that were stranded at
+ * `processing`/`fulfilling` with an `insufficient_balance` attempt before the
+ * hold state existed. Their status is never rewritten, so without this the three
+ * historical orders would remain invisible in the very queue built to rescue
+ * them.
+ */
+export const HELD_QUEUE_FILTER = "held";
 export type AdminOrderRow = {
   id: string;
   orderNumber: string;
@@ -63,6 +80,13 @@ export type AdminOrderRow = {
   /** Worst fulfilment state across the order's items, or null before any attempt. */
   fulfillmentState: string | null;
   hasLowBalanceError?: boolean;
+  /**
+   * Waiting on a supplier wallet the owner controls — either the `held` status
+   * or the legacy `processing` row carrying an `insufficient_balance` attempt.
+   * Derived once here so the list badge, the held chip and the detail page's
+   * deliver button can never disagree.
+   */
+  isHeld?: boolean;
   latestErrorMessage?: string | null;
 };
 
@@ -180,6 +204,11 @@ export async function getOrders(supabase: Client, filter: OrderListFilter = {}):
     query = query.in("status", ATTENTION_STATUSES);
   } else if (filter.status === LOW_FUNDS_FILTER) {
     query = query.not("status", "in", "(completed,cancelled)");
+  } else if (filter.status === HELD_QUEUE_FILTER) {
+    // `held` is exact; the two transient statuses are narrowed to the legacy
+    // low-balance rows below, in JavaScript, where `hasLowBalanceError` is
+    // already computed from the same attempts.
+    query = query.in("status", ["held", "processing", "fulfilling"]);
   } else if (filter.status === MANUAL_FILTER) {
     // Manual orders: orders with an offer whose delivery_kind is 'manual'
     // and the order is not yet settled.
@@ -269,12 +298,17 @@ export async function getOrders(supabase: Client, filter: OrderListFilter = {}):
       itemNames: items.map((item) => item.name_en_snapshot || item.name_ar_snapshot),
       fulfillmentState: worstFulfillmentState(states),
       hasLowBalanceError: hasLowBalance,
+      isHeld: isHeldOrderLike(row.status, attempts),
       latestErrorMessage: latestError,
     };
   });
 
   if (filter.status === LOW_FUNDS_FILTER) {
     return rows.filter((r) => r.hasLowBalanceError);
+  }
+
+  if (filter.status === HELD_QUEUE_FILTER) {
+    return rows.filter((r) => r.isHeld);
   }
 
   return rows;

@@ -15,6 +15,11 @@ import { formatPrice } from "@/lib/format/money";
 import type { InputField as StoreInputField } from "@/lib/catalog-queries";
 import { toast } from "@/components/ui/toaster";
 
+/** The server's answer to a coupon preview, in the action's own vocabulary. */
+type CouponPreviewResponse =
+  | { ok: true; code: string; discount: number; total: number }
+  | { ok: false; reason: string };
+
 /**
  * The account details a supplier needs, plus the confirm control.
  *
@@ -115,6 +120,26 @@ export function CheckoutForm({
   const [prefillInputError, setPrefillInputError] = useState(false);
   const prefillFetcher = useFetcher<GiftPrefillResult>();
   const isPrefilling = prefillFetcher.state !== "idle";
+
+  /*
+   * The coupon is a preview, not a computation.
+   *
+   * The customer types a code, the server answers with what it is worth on this
+   * exact offer, and the code — never a number — goes into the order form. The
+   * discount shown here is a quote; the one that is charged is recomputed
+   * inside the order transaction, so a tampered preview buys nothing.
+   */
+  const [couponCode, setCouponCode] = useState("");
+  const couponFetcher = useFetcher<CouponPreviewResponse>();
+  const checkingCoupon = couponFetcher.state !== "idle";
+  const couponResult = couponFetcher.data ?? null;
+  const couponApplied = couponResult?.ok === true ? couponResult : null;
+  const couponError =
+    couponResult && couponResult.ok === false
+      ? (messages.coupon.errors[couponResult.reason as keyof CheckoutMessages["coupon"]["errors"]] ??
+        messages.errors.unknown)
+      : null;
+
   const prefill: PrefillState = isPrefilling ? { status: "loading" }
     : prefillInputError ? { status: "error", reason: "not_found" }
     : prefillFetcher.data ? prefillFetcher.data.ok ? { status: "ok" } : { status: "error", reason: prefillFetcher.data.reason }
@@ -189,6 +214,70 @@ export function CheckoutForm({
       <input type="hidden" name="offerSlug" value={offerSlug} />
       <input type="hidden" name="quantity" value="1" />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+      {/*
+        * The code, and only the code. Any amount the preview showed is
+        * deliberately not submitted: the database recomputes it.
+        */}
+      <input type="hidden" name="couponCode" value={couponApplied ? couponApplied.code : couponCode} />
+
+      <div className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] p-4">
+        <div>
+          <p className="text-sm font-semibold text-[var(--ink)]">{messages.coupon.title}</p>
+          <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{messages.coupon.description}</p>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="grid min-w-0 flex-1 gap-2 text-sm">
+            <span className="sr-only">{messages.coupon.title}</span>
+            <input
+              className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--canvas)] px-3 text-sm uppercase text-[var(--ink)]"
+              name="couponCodeInput"
+              value={couponCode}
+              onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
+              placeholder={messages.coupon.placeholder}
+              maxLength={64}
+              autoComplete="off"
+              dir="ltr"
+              disabled={Boolean(couponApplied)}
+            />
+          </label>
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            disabled={checkingCoupon || couponCode.trim().length === 0}
+            onClick={() =>
+              void couponFetcher.submit(
+                { intent: "previewCoupon", couponCode },
+                { method: "post" },
+              )
+            }
+          >
+            {checkingCoupon ? messages.coupon.applying : messages.coupon.apply}
+          </Button>
+          {couponApplied ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="md"
+              onClick={() => {
+                setCouponCode("");
+                void couponFetcher.submit({ intent: "previewCoupon", couponCode: "" }, { method: "post" });
+              }}
+            >
+              {messages.coupon.remove}
+            </Button>
+          ) : null}
+        </div>
+        {couponApplied ? (
+          <p className="text-sm text-[var(--ink)]">
+            <bdi dir="ltr">
+              {messages.coupon.discountLabel}: {formatPrice(couponApplied.discount, currency, locale)} ·{" "}
+              {messages.coupon.totalAfterLabel}: {formatPrice(couponApplied.total, currency, locale)}
+            </bdi>
+          </p>
+        ) : null}
+        {couponError ? <p className="text-sm text-[var(--danger)]">{couponError}</p> : null}
+      </div>
 
       {gift ? (
         <div className="grid gap-3 rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] p-4">

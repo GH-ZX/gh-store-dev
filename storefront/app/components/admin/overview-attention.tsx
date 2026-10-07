@@ -8,6 +8,12 @@ import type { AttentionCounts } from "@server/lib/services/admin-overview.servic
 export function OverviewAttention({ locale, attention }: { locale: Locale; attention: AttentionCounts }) {
   const copy = getMessages(locale, "admin").overview.attention;
   const items = [
+    /*
+     * Held orders lead: they are the only queue here that cannot clear itself.
+     * Every other check moves on its own or waits for a customer; a held order
+     * waits for the owner to recharge a supplier wallet and press deliver.
+     */
+    { key: "held", count: attention.heldOrders, href: "/orders?status=held", label: copy.held, hint: copy.heldHint, icon: DepositIcon },
     { key: "orders", count: attention.stuckOrders, href: "/orders?status=attention", label: copy.stuck, hint: copy.ordersHint, icon: AlertIcon },
     { key: "recharges", count: attention.pendingRecharges, href: "/recharges", label: copy.recharges, hint: copy.rechargesHint, icon: DepositIcon },
     { key: "payments", count: attention.paymentIssues, href: "/payments?status=attention", label: copy.payments, hint: copy.paymentsHint, icon: WalletIcon },
@@ -15,7 +21,17 @@ export function OverviewAttention({ locale, attention }: { locale: Locale; atten
     { key: "reviews", count: attention.pendingReviews, href: "/reviews?status=pending", label: copy.reviews, hint: copy.reviewsHint, icon: StarIcon },
   ];
   const total = items.reduce((sum, item) => sum + (item.count ?? 0), 0);
-  const complete = items.every((item) => item.count !== null);
+  /*
+   * `Number.isFinite`, not `!== null`. A count that is `undefined` — an older
+   * caller, a partially populated fixture, a field added to `AttentionCounts`
+   * after some call site was written — used to slip past a null-only guard and
+   * render `Intl.NumberFormat.format(undefined)` as the literal string "NaN".
+   * A missing number is an unavailable check, which is exactly what the "—"
+   * branch and the incomplete badge already say.
+   */
+  const known = (count: number | null | undefined): count is number =>
+    typeof count === "number" && Number.isFinite(count);
+  const complete = items.every((item) => known(item.count));
   const number = new Intl.NumberFormat(locale);
 
   return (
@@ -30,19 +46,19 @@ export function OverviewAttention({ locale, attention }: { locale: Locale; atten
         ) : <span className="admin-badge admin-badge-warning">{formatMessage(copy.totalHint, { count: total }, locale)}</span>}
       </div>
 
-      <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {items.map((item) => {
           const Icon = item.icon;
-          const hasItems = item.count !== null && item.count > 0;
+          const hasItems = known(item.count) && item.count > 0;
           return (
           <li key={item.key}>
             <Link to={`/${locale}/dashboard${item.href}`} className={cn("group relative grid h-full grid-cols-[2rem_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-[var(--radius-card)] border p-4 pe-9 transition-colors duration-150 sm:flex sm:flex-col sm:gap-3 sm:pe-4", hasItems ? "border-[color-mix(in_srgb,var(--warning)_30%,transparent)] bg-[var(--warning-surface)] hover:border-[var(--warning)]" : "border-[var(--line)] bg-[var(--surface-inset)] hover:border-[var(--line-strong)] hover:bg-[var(--surface-strong)]")}>
               <span className="row-span-2 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
                 <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", hasItems ? "bg-[var(--warning-surface)] text-[var(--warning)]" : "bg-[var(--surface-strong)] text-[var(--ink-muted)]")}><Icon className="size-4" /></span>
-                <bdi className={cn("text-xl font-bold tabular-nums", hasItems ? "text-[var(--warning)]" : "text-[var(--ink-muted)]")}>{item.count === null ? "—" : number.format(item.count)}</bdi>
+                <bdi className={cn("text-xl font-bold tabular-nums", hasItems ? "text-[var(--warning)]" : "text-[var(--ink-muted)]")}>{known(item.count) ? number.format(item.count) : "—"}</bdi>
               </span>
               <span className="text-sm font-semibold leading-5 text-[var(--ink)]">{item.label}</span>
-              <span className="col-start-2 text-xs leading-5 text-[var(--ink-muted)] sm:mt-auto">{item.count === null ? copy.unavailable : item.count === 0 ? copy.none : item.hint}</span>
+              <span className="col-start-2 text-xs leading-5 text-[var(--ink-muted)] sm:mt-auto">{!known(item.count) ? copy.unavailable : item.count === 0 ? copy.none : item.hint}</span>
               <ArrowIcon direction="end" className="absolute top-5 end-4 size-4 text-[var(--ink-muted)] sm:hidden rtl:rotate-180" />
             </Link>
           </li>

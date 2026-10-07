@@ -671,16 +671,30 @@ export async function updateAdminOffers(gameId: string, rows: AdminOfferUpdate[]
       continue;
     }
 
+    /*
+     * A hand-edited offer is no longer the stock sweep's to restore or park.
+     *
+     * `parked_by_stock_sync: false` releases the sweep's ownership so a later
+     * restock cannot re-activate an offer the administrator switched off, and
+     * `stock_override_at` records *that a human decided after the sweep did* —
+     * without it the sweep could not tell a never-parked offer from one an
+     * administrator deliberately put back on sale at zero stock, and would park
+     * it again. With it the administrator wins for the rest of that depletion;
+     * the checkout preflight refuses the sale instead.
+     */
+    const isBatStoreOffer = mapping.providerName === BATSTORE_PROVIDER_NAME;
     const metadata = mapping.metadata && typeof mapping.metadata === "object" && !Array.isArray(mapping.metadata)
       ? mapping.metadata as Record<string, unknown>
       : {};
-    const clearStockPark = mapping.providerName === BATSTORE_PROVIDER_NAME && metadata.parked_by_stock_sync === true;
+    const stockOverride = isBatStoreOffer
+      ? { metadata: { ...metadata, parked_by_stock_sync: false, stock_override_at: updatedAt } as Json }
+      : {};
 
     const { error: mappingError } = await client
       .from("provider_offer_mappings")
       .update({
         pricing_mode: row.pricingMode,
-        ...(clearStockPark ? { metadata: { ...metadata, parked_by_stock_sync: false } as Json } : {}),
+        ...stockOverride,
         updated_at: updatedAt,
       })
       .eq("offer_id", row.id)

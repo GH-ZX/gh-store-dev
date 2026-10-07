@@ -1,4 +1,5 @@
 import { decideReconciliation, GRACE_MINUTES, minutesSince, type ProviderState } from "@server/lib/orders/reconciliation-policy";
+import { isHeldOrderStatus } from "@server/lib/orders/order-status";
 import { getFulfillmentProvider } from "./providers";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@server/lib/supabase/service";
 import { log } from "@server/lib/logging/logger";
@@ -108,6 +109,33 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
   if (context.deliveryKind === "manual") {
     return { action: "skipped", reason: "Manual order — awaiting admin completion." };
   }
+
+  /*
+   * A held order is waiting on a supplier wallet the owner controls. The sweep
+   * must neither buy nor refund it:
+   *
+   *   * buying again would fail the same way on every run — the warehouse is
+   *     still empty — and on the run after the owner recharges it would spend
+   *     the money at a moment nobody chose. The owner's press decides that.
+   *   * refunding would take back money from a customer whose order is still
+   *     going to be delivered.
+   *
+   * Checked before both the stored path (which fulfils) and the "nothing was
+   * ever attempted" branch below (which purchases a paid order): a held order
+   * with no recorded supplier order id would otherwise be bought by the sweep.
+   */
+  if (isHeldOrderStatus(context.status ?? "")) {
+    log.info("fulfilment", "held_order_skipped", {
+      orderId: context.orderId,
+      orderNumber: context.orderNumber,
+    });
+
+    return {
+      action: "wait",
+      reason: "Held for supplier funds — waiting for the owner to recharge and deliver.",
+    };
+  }
+
   if (context.deliveryKind === "stored") {
     if (context.status !== "paid") return { action: "skipped", reason: "Stored order does not use supplier polling." };
     const outcome = await fulfillOrder(orderId);
@@ -115,6 +143,7 @@ export async function reconcileOrder(orderId: string, now = Date.now()): Promise
       ? { action: "completed" }
       : { action: "escalated", reason: "Stored delivery needs attention." };
   }
+
   const adapter = getFulfillmentProvider(context.providerName);
   if (!adapter) {
     return { action: "escalated", reason: "No supported supplier is mapped to this order." };

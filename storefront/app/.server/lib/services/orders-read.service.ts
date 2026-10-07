@@ -1,4 +1,5 @@
 import type { OfferTerms } from "@/lib/catalog/offer-terms";
+import { INSUFFICIENT_BALANCE_CODE } from "@server/lib/orders/order-status";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Locale } from "@/i18n/config";
@@ -25,6 +26,13 @@ const ORDER_STATUSES = [
   "paid",
   "processing",
   "fulfilling",
+  /*
+   * Paid, goods not out, waiting on a supplier wallet the owner controls. Listed
+   * here so `toOrderStatus` reports it instead of quietly degrading to `pending`:
+   * a held order that reads as "Pending" on the customer's own order page is the
+   * exact invisibility the hold state exists to end.
+   */
+  "held",
   "completed",
   "failed",
   "refunded",
@@ -92,6 +100,13 @@ export type OrderFulfillment = {
   /** Redeem codes the supplier delivered, when this is a code product. */
   codes: string[];
   errorMessage: string | null;
+  /**
+   * The failure classification the worker recorded. Kept separate from
+   * `errorMessage` because it is machine vocabulary: `insufficient_balance`
+   * means "the store's supplier wallet is empty", which the order page reads as
+   * "being prepared" while the attempt row itself must stay unedited.
+   */
+  errorCode: string | null;
 };
 
 export type MyOrderItem = {
@@ -122,6 +137,13 @@ export type MyOrderDetail = {
   items: MyOrderItem[];
   /** Worst state across the items, so one stuck item is never hidden. */
   fulfillmentState: FulfillmentState | null;
+  /**
+   * True while the order is waiting on a supplier wallet the owner controls —
+   * either because its status is `held`, or because it is one of the orders
+   * parked at `processing` before that status existed. The order page renders
+   * this as "being prepared / queued" and never as supplier jargon.
+   */
+  heldLike: boolean;
   codes: string[];
   failureMessage: string | null;
 };
@@ -308,7 +330,7 @@ async function readFulfillment(
 
   const { data, error } = await supabase
     .from("fulfillment_attempts")
-    .select("order_item_id, status, delivered_payload, error_message, created_at")
+    .select("order_item_id, status, delivered_payload, error_code, error_message, created_at")
     .in("order_item_id", itemIds)
     .order("created_at", { ascending: false });
 
@@ -326,6 +348,7 @@ async function readFulfillment(
       state: toFulfillmentState(attempt.status),
       codes: toDeliveredCodes(attempt.delivered_payload),
       errorMessage: attempt.error_message,
+      errorCode: attempt.error_code,
     });
   }
 
@@ -416,6 +439,17 @@ export async function getMyOrder(
 
   const attempts = items.flatMap((item) => (item.fulfillment ? [item.fulfillment] : []));
 
+  /*
+   * "Waiting on the store's supplier wallet", whichever era wrote the order.
+   *
+   * A held order says so in its status. The three orders that predate the state
+   * are still `processing` with an `insufficient_balance` attempt, and they must
+   * read the same way to the customer as a held one does.
+   */
+  const heldLike =
+    data.status === "held" ||
+    attempts.some((attempt) => attempt.errorCode === INSUFFICIENT_BALANCE_CODE);
+
   return {
     id: data.id,
     orderNumber: data.order_number,
@@ -430,6 +464,7 @@ export async function getMyOrder(
     createdAt: data.created_at,
     completedAt: data.completed_at,
     items,
+    heldLike,
     fulfillmentState: worstState(attempts.map((attempt) => attempt.state)),
     codes: attempts.flatMap((attempt) => attempt.codes),
     failureMessage: attempts.find((attempt) => attempt.errorMessage)?.errorMessage ?? null,

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AdminForbiddenError } from "@server/lib/services/session.service";
+import type { Json } from "@server/types/database";
 
 import { toSearchTokens } from "@server/lib/catalog-search";
 import { PRICING_MODES, PRODUCT_KINDS, type PricingMode, type ProductKind } from "@/lib/product-kind";
@@ -7,6 +8,7 @@ import { PRICING_MODES, PRODUCT_KINDS, type PricingMode, type ProductKind } from
 
 const G2BULK_PROVIDER_NAME = "g2bulk";
 const MAXSTORE_PROVIDER_NAME = "maxstore";
+const BATSTORE_PROVIDER_NAME = "batstore";
 
 
 /**
@@ -584,8 +586,7 @@ export async function updateAdminOffers(
 
   const { data: mappings, error: mappingsError } = await client
     .from("provider_offer_mappings")
-    .select("offer_id")
-    .eq("provider_name", G2BULK_PROVIDER_NAME)
+    .select("offer_id, provider_name, metadata")
     .in(
       "offer_id",
       writable.map((row) => row.id),
@@ -595,7 +596,39 @@ export async function updateAdminOffers(
     throw new Error(`Reading offer mappings failed: ${mappingsError.message}`);
   }
 
-  const mapped = new Set(mappings.map((mapping) => mapping.offer_id));
+  const mapped = new Set(
+    mappings
+      .filter((mapping) => mapping.provider_name === G2BULK_PROVIDER_NAME)
+      .map((mapping) => mapping.offer_id),
+  );
+
+  /*
+   * Which offers the automatic BatStore stock sweep is currently holding down.
+   *
+   * `metadata.parked_by_stock_sync` is the sweep's ownership marker: it may
+   * auto-restore only offers whose marker is `true`. An administrator saving an
+   * offer by hand has just made a deliberate decision about that offer, so the
+   * marker is cleared here — otherwise a later BatStore restock would silently
+   * re-activate an offer the administrator had chosen to switch off. This is
+   * the same contract the legacy admin catalogue already honours; both writers
+   * must clear it or the decision is not actually preserved.
+   */
+  const parkedByStockSync = new Map<string, Record<string, unknown>>();
+  for (const mapping of mappings) {
+    if (mapping.provider_name !== BATSTORE_PROVIDER_NAME) {
+      continue;
+    }
+
+    const metadata =
+      mapping.metadata && typeof mapping.metadata === "object" && !Array.isArray(mapping.metadata)
+        ? (mapping.metadata as Record<string, unknown>)
+        : null;
+
+    if (metadata?.parked_by_stock_sync === true) {
+      parkedByStockSync.set(mapping.offer_id, metadata);
+    }
+  }
+
   const updatedAt = new Date().toISOString();
 
   for (const row of writable) {
@@ -618,6 +651,39 @@ export async function updateAdminOffers(
 
     if (error) {
       throw new Error(`Saving a package failed: ${error.message}`);
+    }
+
+    /*
+     * A hand-edited offer is no longer the stock sweep's to restore or park.
+     *
+     * Two keys change, and both matter:
+     * - `parked_by_stock_sync: false` releases the sweep's ownership, so a later
+     *   restock cannot re-activate an offer the administrator switched off;
+     * - `stock_override_at` records *that a human decided after the sweep did*.
+     *   Without it, "not owned by the sweep" and "never touched by the sweep"
+     *   are the same state, and the very next sweep would park a zero-stock
+     *   offer the administrator had deliberately put back on sale. With it, the
+     *   administrator wins for the rest of that depletion, and the checkout
+     *   preflight (`batstore-stock.service.ts`) refuses the sale instead.
+     *
+     * Cleared before the G2Bulk early-continue below, because a BatStore offer
+     * has no G2Bulk mapping to write a pricing mode to. The legacy admin
+     * catalogue honours the same contract.
+     */
+    const parked = parkedByStockSync.get(row.id);
+    if (parked) {
+      const { error: parkClearError } = await client
+        .from("provider_offer_mappings")
+        .update({
+          metadata: { ...parked, parked_by_stock_sync: false, stock_override_at: updatedAt } as Json,
+          updated_at: updatedAt,
+        })
+        .eq("offer_id", row.id)
+        .eq("provider_name", BATSTORE_PROVIDER_NAME);
+
+      if (parkClearError) {
+        throw new Error(`Clearing the stock hold on a package failed: ${parkClearError.message}`);
+      }
     }
 
     // Pricing mode lives on the provider mapping, so a manually added offer has

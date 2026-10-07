@@ -139,6 +139,138 @@ export type Database = {
           },
         ]
       }
+      coupon_redemptions: {
+        Row: {
+          amount: number
+          code: string
+          coupon_id: string
+          created_at: string
+          currency: string
+          id: string
+          order_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          code: string
+          coupon_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          order_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          code?: string
+          coupon_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          order_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          admin_note: string | null
+          category_ids: string[]
+          code: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          is_active: boolean
+          max_discount: number | null
+          min_subtotal: number
+          offer_ids: string[]
+          per_customer_limit: number
+          product_ids: string[]
+          times_used: number
+          type: string
+          updated_at: string
+          usage_limit: number | null
+          valid_from: string | null
+          valid_until: string | null
+          value: number
+        }
+        Insert: {
+          admin_note?: string | null
+          category_ids?: string[]
+          code: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          is_active?: boolean
+          max_discount?: number | null
+          min_subtotal?: number
+          offer_ids?: string[]
+          per_customer_limit?: number
+          product_ids?: string[]
+          times_used?: number
+          type: string
+          updated_at?: string
+          usage_limit?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+          value: number
+        }
+        Update: {
+          admin_note?: string | null
+          category_ids?: string[]
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          is_active?: boolean
+          max_discount?: number | null
+          min_subtotal?: number
+          offer_ids?: string[]
+          per_customer_limit?: number
+          product_ids?: string[]
+          times_used?: number
+          type?: string
+          updated_at?: string
+          usage_limit?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -188,6 +320,55 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_offer_interests: {
+        Row: {
+          created_at: string
+          id: number
+          offer_id: string
+          product_id: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          offer_id: string
+          product_id: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          offer_id?: string
+          product_id?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_offer_interests_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_offer_interests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_offer_interests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -542,6 +723,105 @@ export type Database = {
           },
         ]
       }
+      offer_alert_queue: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          new_price: number | null
+          offer_id: string
+          old_price: number | null
+          processed_at: string | null
+          product_id: string
+          recipient_count: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          kind: string
+          new_price?: number | null
+          offer_id: string
+          old_price?: number | null
+          processed_at?: string | null
+          product_id: string
+          recipient_count?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          kind?: string
+          new_price?: number | null
+          offer_id?: string
+          old_price?: number | null
+          processed_at?: string | null
+          product_id?: string
+          recipient_count?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_alert_queue_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_alert_queue_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_alert_state: {
+        Row: {
+          interest_count: number
+          last_alerted_at: string | null
+          last_available: boolean
+          last_price: number
+          offer_id: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          interest_count?: number
+          last_alerted_at?: string | null
+          last_available?: boolean
+          last_price: number
+          offer_id: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          interest_count?: number
+          last_alerted_at?: string | null
+          last_available?: boolean
+          last_price?: number
+          offer_id?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_alert_state_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: true
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_alert_state_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offers: {
         Row: {
           duration_value: number | null
@@ -713,7 +993,10 @@ export type Database = {
           currency: string
           customer_note: string | null
           discount: number
+          held_at: string | null
+          held_reason: string | null
           id: string
+          interests_recorded_at: string | null
           metadata: Json
           order_number: string
           payment_attempt_id: string | null
@@ -732,7 +1015,10 @@ export type Database = {
           currency?: string
           customer_note?: string | null
           discount?: number
+          held_at?: string | null
+          held_reason?: string | null
           id?: string
+          interests_recorded_at?: string | null
           metadata?: Json
           order_number?: string
           payment_attempt_id?: string | null
@@ -751,7 +1037,10 @@ export type Database = {
           currency?: string
           customer_note?: string | null
           discount?: number
+          held_at?: string | null
+          held_reason?: string | null
           id?: string
+          interests_recorded_at?: string | null
           metadata?: Json
           order_number?: string
           payment_attempt_id?: string | null
@@ -1244,6 +1533,39 @@ export type Database = {
         }
         Relationships: []
       }
+      // Added by 20261010030000_batstore_stock_sync.sql: one throttle row per
+      // (provider, kind) for scheduled supplier sweeps. `details.cursor` is the
+      // batch-rotation position the BatStore stock sweep resumes from.
+      provider_sync_state: {
+        Row: {
+          created_at: string
+          details: Json
+          id: string
+          kind: string
+          last_run_at: string | null
+          provider_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: string
+          kind: string
+          last_run_at?: string | null
+          provider_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: string
+          kind?: string
+          last_run_at?: string | null
+          provider_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       provider_wallet_balances: {
         Row: {
           balances: Json
@@ -1350,6 +1672,221 @@ export type Database = {
             foreignKeyName: "recharge_requests_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_program_settings: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          referred_credit: number
+          referrer_credit: number
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          referred_credit?: number
+          referrer_credit?: number
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          referred_credit?: number
+          referrer_credit?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_claims: {
+        Row: {
+          code: string
+          created_at: string
+          credit_checked_at: string | null
+          credited_at: string | null
+          id: string
+          reason: string | null
+          referred_amount: number | null
+          referred_user_id: string
+          referrer_amount: number | null
+          referrer_user_id: string
+          signup_order_id: string | null
+          status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          credit_checked_at?: string | null
+          credited_at?: string | null
+          id?: string
+          reason?: string | null
+          referred_amount?: number | null
+          referred_user_id: string
+          referrer_amount?: number | null
+          referrer_user_id: string
+          signup_order_id?: string | null
+          status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          credit_checked_at?: string | null
+          credited_at?: string | null
+          id?: string
+          reason?: string | null
+          referred_amount?: number | null
+          referred_user_id?: string
+          referrer_amount?: number | null
+          referrer_user_id?: string
+          signup_order_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_claims_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_claims_referrer_user_id_fkey"
+            columns: ["referrer_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repeat_reminders: {
+        Row: {
+          body_ar: string
+          body_en: string
+          channel: string
+          created_at: string
+          cycle_index: number
+          due_at: string
+          error: string | null
+          href: string
+          id: string
+          offer_id: string | null
+          product_id: string
+          sent_at: string | null
+          status: string
+          title_ar: string
+          title_en: string
+          user_id: string
+        }
+        Insert: {
+          body_ar: string
+          body_en: string
+          channel?: string
+          created_at?: string
+          cycle_index: number
+          due_at: string
+          error?: string | null
+          href: string
+          id?: string
+          offer_id?: string | null
+          product_id: string
+          sent_at?: string | null
+          status?: string
+          title_ar: string
+          title_en: string
+          user_id: string
+        }
+        Update: {
+          body_ar?: string
+          body_en?: string
+          channel?: string
+          created_at?: string
+          cycle_index?: number
+          due_at?: string
+          error?: string | null
+          href?: string
+          id?: string
+          offer_id?: string | null
+          product_id?: string
+          sent_at?: string | null
+          status?: string
+          title_ar?: string
+          title_en?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repeat_reminders_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repeat_reminders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repeat_reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repeat_reminder_optouts: {
+        Row: {
+          created_at: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repeat_reminder_optouts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1754,8 +2291,134 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_broadcasts: {
+        Row: {
+          audience: string
+          body_ar: string
+          body_en: string
+          coupon_code: string | null
+          created_at: string
+          created_by: string | null
+          failed_count: number
+          finished_at: string | null
+          href: string | null
+          id: string
+          queued_at: string | null
+          recipient_count: number
+          sent_count: number
+          skipped_count: number
+          status: string
+          title_ar: string
+          title_en: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          body_ar: string
+          body_en: string
+          coupon_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          href?: string | null
+          id?: string
+          queued_at?: string | null
+          recipient_count?: number
+          sent_count?: number
+          skipped_count?: number
+          status?: string
+          title_ar: string
+          title_en: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          body_ar?: string
+          body_en?: string
+          coupon_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          href?: string | null
+          id?: string
+          queued_at?: string | null
+          recipient_count?: number
+          sent_count?: number
+          skipped_count?: number
+          status?: string
+          title_ar?: string
+          title_en?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_broadcasts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_broadcast_recipients: {
+        Row: {
+          attempts: number
+          broadcast_id: string
+          chat_id: number | null
+          created_at: string
+          error: string | null
+          id: number
+          last_attempted_at: string | null
+          sent_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          broadcast_id: string
+          chat_id?: number | null
+          created_at?: string
+          error?: string | null
+          id?: never
+          last_attempted_at?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          broadcast_id?: string
+          chat_id?: number | null
+          created_at?: string
+          error?: string | null
+          id?: never
+          last_attempted_at?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_broadcast_recipients_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_broadcast_recipients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telegram_alerts: {
         Row: {
+          broadcast_id: string | null
           created_at: string
           dedup_key: string | null
           id: number
@@ -1767,6 +2430,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          broadcast_id?: string | null
           created_at?: string
           dedup_key?: string | null
           id?: never
@@ -1778,6 +2442,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          broadcast_id?: string | null
           created_at?: string
           dedup_key?: string | null
           id?: never
@@ -1802,8 +2467,11 @@ export type Database = {
         Row: {
           chat_id: number
           created_at: string
+          delivery_status: string
           first_name: string | null
           language_code: string | null
+          last_delivery_at: string | null
+          last_delivery_error: string | null
           linked_at: string
           user_id: string
           username: string | null
@@ -1811,8 +2479,11 @@ export type Database = {
         Insert: {
           chat_id: number
           created_at?: string
+          delivery_status?: string
           first_name?: string | null
           language_code?: string | null
+          last_delivery_at?: string | null
+          last_delivery_error?: string | null
           linked_at?: string
           user_id: string
           username?: string | null
@@ -1820,8 +2491,11 @@ export type Database = {
         Update: {
           chat_id?: number
           created_at?: string
+          delivery_status?: string
           first_name?: string | null
           language_code?: string | null
+          last_delivery_at?: string | null
+          last_delivery_error?: string | null
           linked_at?: string
           user_id?: string
           username?: string | null
@@ -2029,6 +2703,113 @@ export type Database = {
     }
     Functions: {
       store_posthog_enabled: { Args: never; Returns: boolean }
+      apply_referral_signup: {
+        Args: { p_code: string; p_referred_user_id: string }
+        Returns: string
+      }
+      broadcast_recipients: {
+        Args: { p_audience: string }
+        Returns: {
+          chat_id: number
+          delivery_status: string
+          language_code: string
+          user_id: string
+        }[]
+      }
+      coupon_margin_limit: {
+        Args: { p_offer_id: string; p_quantity?: number }
+        Returns: number
+      }
+      credit_referral_for_order: {
+        Args: { p_order_id: string; p_paid_only?: boolean }
+        Returns: {
+          claim_id: string
+          referred_credited: number
+          referrer_credited: number
+          status: string
+        }[]
+      }
+      customer_purchase_state: {
+        Args: never
+        Returns: {
+          has_purchase: boolean
+          user_id: string
+        }[]
+      }
+      due_repeat_reminders: {
+        Args: { p_limit?: number; p_overdue_days?: number }
+        Returns: {
+          duration_unit: string
+          duration_value: number
+          due_at: string
+          language_code: string
+          offer_id: string
+          offer_name_ar: string
+          offer_name_en: string
+          offer_slug: string
+          product_id: string
+          product_name_ar: string
+          product_name_en: string
+          product_slug: string
+          purchased_at: string
+          user_id: string
+        }[]
+      }
+      enqueue_offer_change_alerts: {
+        Args: { p_limit?: number }
+        Returns: {
+          price_drops: number
+          queued: number
+          restocks: number
+        }[]
+      }
+      ensure_referral_code: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
+      queue_telegram_broadcast: {
+        Args: { p_broadcast_id: string }
+        Returns: {
+          blocked: number
+          queued: number
+          unlinked: number
+        }[]
+      }
+      record_offer_interest: {
+        Args: { p_offer_id: string; p_source?: string; p_user_id: string }
+        Returns: boolean
+      }
+      redeem_coupon: {
+        Args: {
+          p_amount: number
+          p_code: string
+          p_coupon_id: string
+          p_currency: string
+          p_order_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      referral_program_stats: { Args: never; Returns: Json }
+      set_repeat_reminder_optout: {
+        Args: { p_opted_out: boolean; p_reason?: string; p_user_id: string }
+        Returns: boolean
+      }
+      validate_coupon_for_order: {
+        Args: {
+          p_at: string
+          p_code: string
+          p_offer_id: string
+          p_quantity: number
+          p_subtotal: number
+          p_user_id: string
+        }
+        Returns: {
+          code: string
+          coupon_id: string
+          discount: number
+        }[]
+      }
       admin_adjust_wallet: {
         Args: {
           p_amount: number
@@ -2241,6 +3022,7 @@ export type Database = {
       }
       place_gift_order: {
         Args: {
+          p_coupon_code?: string
           p_customer_note?: string
           p_dynamic_fields: Json
           p_idempotency_key: string
@@ -2257,6 +3039,7 @@ export type Database = {
       }
       place_wallet_order: {
         Args: {
+          p_coupon_code?: string
           p_customer_note?: string
           p_dynamic_fields: Json
           p_idempotency_key: string
@@ -2273,6 +3056,7 @@ export type Database = {
       }
       place_wallet_order_for_user: {
         Args: {
+          p_coupon_code?: string
           p_customer_note?: string
           p_dynamic_fields: Json
           p_idempotency_key: string

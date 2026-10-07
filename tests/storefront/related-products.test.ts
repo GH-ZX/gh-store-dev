@@ -39,7 +39,8 @@ describe("optional product discovery", () => {
     expect(queries[0]).toContainEqual(["eq", ["categories.slug", "games"]]);
     expect(queries[0]).toContainEqual(["neq", ["id", "current"]]);
     expect(queries[0]).toContainEqual(["order", ["sort_order", { ascending: true }]]);
-    expect(queries[0]).toContainEqual(["limit", [4]]);
+    // Five, so a three-member region family keeps both siblings after the limit.
+    expect(queries[0]).toContainEqual(["limit", [5]]);
     expect(queries[0]).toContainEqual(["limit", [1, { referencedTable: "offers" }]]);
   });
 

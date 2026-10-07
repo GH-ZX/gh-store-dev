@@ -1,6 +1,10 @@
 import { OfferTerms } from "@/components/store/offer-terms";
 import { OrderRefresh } from "@/components/checkout/order-refresh";
-import { OrderStatusPanel } from "@/components/checkout/order-status";
+import {
+  OrderStatusPanel,
+  heldLabel,
+  type OrderStatusMessageKey,
+} from "@/components/checkout/order-status";
 import { ReviewForm } from "@/components/reviews/review-form";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -57,17 +61,33 @@ export function meta({ params }: Route.MetaArgs) {
   });
 }
 
+/*
+ * `held` is the only status that is never shown as itself: it is storage
+ * vocabulary for "the store has not bought this from the supplier yet", and the
+ * customer-facing reading of it is "being prepared". Every other key falls back
+ * to the raw value rather than rendering an empty pill — a status this copy does
+ * not know is still a real thing that happened to a real order.
+ */
 const STATUS_TONES = {
   pending: "neutral",
   payment_pending: "neutral",
   paid: "accent",
   processing: "accent",
   fulfilling: "accent",
+  held: "accent",
   completed: "success",
   failed: "danger",
   refunded: "warning",
   cancelled: "danger",
 } as const;
+
+function statusText(status: string, messages: CheckoutMessages): string {
+  if (status === "held") {
+    return heldLabel(messages);
+  }
+
+  return messages.statuses[status as OrderStatusMessageKey] ?? status;
+}
 
 const PAYMENT_TONES = {
   pending: "neutral",
@@ -157,7 +177,7 @@ export default function OrderDetailPage() {
           <span className="sr-only">{detail.orderNumberLabel}: </span>
           <span dir="ltr">{order.orderNumber}</span>
         </span>
-        <Badge tone={STATUS_TONES[order.status]}>{messages.statuses[order.status]}</Badge>
+        <Badge tone={STATUS_TONES[order.status]}>{statusText(order.status, messages)}</Badge>
         <Badge tone={PAYMENT_TONES[order.paymentStatus]}>
           {`${detail.paymentStatusLabel}: ${messages.paymentStatuses[order.paymentStatus]}`}
         </Badge>
@@ -230,6 +250,7 @@ export default function OrderDetailPage() {
             messages={messages}
             status={order.status}
             fulfillmentState={order.fulfillmentState}
+            heldLike={order.heldLike}
             isRefunded={order.paymentStatus === "refunded"}
             failureMessage={order.failureMessage}
             codes={order.codes}
@@ -275,7 +296,7 @@ export default function OrderDetailPage() {
                 {detail.orderStatusLabel}
               </dt>
               <dd className="text-sm font-semibold text-[var(--ink)]">
-                {messages.statuses[order.status]}
+                {statusText(order.status, messages)}
               </dd>
             </div>
             {order.completedAt ? (

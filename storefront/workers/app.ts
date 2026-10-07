@@ -145,6 +145,18 @@ export default {
     try {
       const run = await reconcileStuckOrders(service);
       await recordSweepSuccess(service);
+
+      /*
+       * The growth pass, on the same tick as the sweep: restock and price-drop
+       * alerts, repeat-purchase reminders, referral credit for delivered
+       * orders, and the purchase interests those alerts are aimed at. It runs
+       * second because every one of them depends on an order having settled.
+       * `runGrowthJobs` catches each step, so a marketing fault can never be
+       * reported as a fulfilment fault.
+       */
+      const { runGrowthJobs } = await import("../app/.server/lib/services/growth.service");
+      const growth = await runGrowthJobs();
+
       console.log(
         JSON.stringify({
           level: "info",
@@ -156,6 +168,7 @@ export default {
           refunded: run.refunded,
           escalated: run.escalated,
           waiting: run.waiting,
+          growth,
         }),
       );
     } catch (error) {
@@ -165,6 +178,55 @@ export default {
           level: "error",
           area: "fulfilment",
           event: "reconcile_failed",
+          cron: event.cron,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+
+    /*
+     * BatStore stock refresh, throttled inside the tick.
+     *
+     * BatStore is a Telegram bot with dynamic stock, so the store cannot wait
+     * for an operator to press "import" before it stops selling an item the
+     * supplier no longer has — two live orders were charged and then failed
+     * with `Insufficient stock for product #16 (requested 1, available 0)`.
+     *
+     * This rides the existing 5-minute tick rather than adding a 30-minute cron:
+     * there is no new infrastructure, no new CPU budget, and a stock snapshot is
+     * at most 15 minutes old instead of 30. The sweep itself decides whether the
+     * window has elapsed (see `DEFAULT_STOCK_SYNC_THROTTLE_MS`) and reads a
+     * small batch of mappings, so most ticks do nothing but one indexed read.
+     *
+     * It is wrapped twice — the service never throws and this catch is a second
+     * net — because an uncaught throw here would take the fulfilment sweep's
+     * heartbeat with it.
+     */
+    try {
+      const { runBatStoreStockSyncScheduled } = await import(
+        "../app/.server/lib/services/batstore-stock-sync.service"
+      );
+      const stockRun = service ? await runBatStoreStockSyncScheduled(service) : null;
+      if (stockRun?.ran) {
+        console.log(
+          JSON.stringify({
+            level: "info",
+            area: "provider.batstore",
+            event: "stock_sync_run",
+            cron: event.cron,
+            scanned: stockRun.scanned,
+            parked: stockRun.parked,
+            unparked: stockRun.unparked,
+            failed: stockRun.failed,
+          }),
+        );
+      }
+    } catch (error) {
+      console.log(
+        JSON.stringify({
+          level: "error",
+          area: "provider.batstore",
+          event: "stock_sync_failed",
           cron: event.cron,
           error: error instanceof Error ? error.message : String(error),
         }),

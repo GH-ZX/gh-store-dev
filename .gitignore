@@ -48,6 +48,8 @@ next-env.d.ts
 
 # wrangler files
 .wrangler
+
+arabicchatfix.cfg
 .dev.vars*
 !.dev.vars.example
 

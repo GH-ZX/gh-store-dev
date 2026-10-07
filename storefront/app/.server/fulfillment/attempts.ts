@@ -149,3 +149,37 @@ export async function setOrderStatus(orderId: string, status: string): Promise<v
     })
     .eq("id", orderId);
 }
+
+/**
+ * Park a paid order in `held`: the customer's money stays where it is, the goods
+ * are not out, and the store is waiting on a supplier wallet the owner controls.
+ *
+ * `held_reason` and `held_at` are written together and refreshed on every failed
+ * retry, so the dashboard queue always shows the supplier's latest answer and an
+ * accurate hold age rather than the first one it ever saw.
+ *
+ * Never conditional on the previous status: an order being held is reachable
+ * from `fulfilling`, `processing`, `paid` and from `held` again, and a guarded
+ * update would silently strand the very orders this state exists to rescue.
+ */
+export async function setOrderHeld(orderId: string, reason: string, at = new Date().toISOString()): Promise<void> {
+  const supabase = createSupabaseServiceClient();
+  await supabase
+    .from("orders")
+    .update({ status: "held", held_reason: reason, held_at: at })
+    .eq("id", orderId);
+}
+
+/**
+ * Release a hold after a successful delivery.
+ *
+ * Only ever called on the success path: `held_reason` is how an operator sees
+ * why an order was parked, and an order that is not held must not carry one.
+ */
+export async function clearOrderHold(orderId: string): Promise<void> {
+  const supabase = createSupabaseServiceClient();
+  await supabase
+    .from("orders")
+    .update({ held_reason: null, held_at: null })
+    .eq("id", orderId);
+}

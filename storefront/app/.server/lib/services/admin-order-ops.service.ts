@@ -34,6 +34,7 @@ export class OrderOpError extends Error {
     | "not_delivered"
     | "refunded"
     | "not_refundable"
+    | "not_held"
     | "not_configured"
     | "unknown";
 
@@ -94,6 +95,12 @@ export type RetryResult = {
  * so a retry cannot buy twice — and it re-reads the supplier cost before
  * spending. This wrapper adds only the operator-facing refusals and the audit
  * record.
+ *
+ * The refusals are exactly three — `completed`, `refunded`, `cancelled` — and
+ * they are all about a debt that is already settled. `held` is deliberately not
+ * among them: a held order is money taken with the goods not out, which is the
+ * single case this function exists for. Anything that refuses held orders here
+ * re-creates the silent limbo the hold state was built to end.
  */
 export async function retryFulfillment(supabase: Client, orderId: string): Promise<RetryResult> {
   const admin = await requireAdminId(supabase);

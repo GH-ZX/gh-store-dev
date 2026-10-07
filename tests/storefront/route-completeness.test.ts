@@ -31,7 +31,10 @@ function normalize(path: string): string {
 const registered = flatten(routes);
 const registeredPatterns = new Set(registered.map(({ path }) => normalize(path)));
 const legacyEndpoints = filesBelow(legacyApp)
-  .filter((file) => /\/(?:page\.tsx|route\.ts)$/.test(file))
+  // Accept either separator: `join` produces backslashes on Windows, and a
+  // forward-slash-only pattern matched zero files there, which made the
+  // completeness assertion below pass vacuously instead of checking 63 routes.
+  .filter((file) => /[\\/](?:page\.tsx|route\.ts)$/.test(file))
   .map((file) => `/${relative(legacyApp, file).split(sep).slice(0, -1).filter((segment) => !/^\(.+\)$/.test(segment)).join("/")}`);
 
 // These existing pages intentionally share locale-section. Account and admin

@@ -188,6 +188,78 @@ export async function getProductDetail(
 
 const PAGE_SIZE = 24;
 
+export type ProductOrdering = {
+  deliveryKind: "account" | "direct" | "manual" | "stored";
+  /** `field_key`s the buyer must supply, from the offer or the container. */
+  inputFieldKeys: string[];
+};
+
+/**
+ * What the buyer must supply, and how the supplier delivers.
+ *
+ * Read separately from the offer list so a product page can state its own
+ * requirements without loading them for every card in a grid. Offer-level
+ * fields win over the container's, exactly as checkout resolves them, so the
+ * page can never promise "nothing needed" for an offer that asks for a player
+ * ID.
+ */
+export async function getProductOrdering(
+  client: SupabaseClient,
+  productId: string,
+  offers: readonly { id: string }[],
+): Promise<ProductOrdering> {
+  const offerIds = offers.map((offer) => offer.id);
+  const [fieldsResult, offersResult] = await Promise.all([
+    client
+      .from("game_input_fields")
+      .select("field_key, is_required")
+      .eq("game_id", productId)
+      .order("sort_order", { ascending: true }),
+    offerIds.length > 0
+      ? client.from("offers").select("delivery_kind, input_fields").in("id", offerIds).limit(1)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (fieldsResult.error) throw fieldsResult.error;
+
+  const gameKeys = ((fieldsResult.data ?? []) as { field_key: string; is_required: boolean }[])
+    .filter((field) => field.is_required !== false)
+    .map((field) => field.field_key);
+
+  const offerRows = (offersResult.data ?? []) as { delivery_kind: string | null; input_fields: unknown }[];
+  // The page summary describes the product, not one package: a stored package
+  // must never be described with "the supplier will top up your account". When
+  // the packages disagree, the container's own field list is the safe reading.
+  const deliveryKinds = new Set(offerRows.map((row) => row.delivery_kind ?? "account"));
+  const firstOffer = offerRows[0];
+  const singleKind = deliveryKinds.size === 1;
+  const deliveryKind: ProductOrdering["deliveryKind"] = singleKind
+    ? (["direct", "manual", "stored"].includes(firstOffer?.delivery_kind ?? "")
+        ? (firstOffer!.delivery_kind as ProductOrdering["deliveryKind"])
+        : "account")
+    : "account";
+
+  const offerFields = singleKind ? normalizeOfferInputFields(firstOffer?.input_fields) : [];
+  const resolution = resolveCheckoutFieldKeys(
+    { deliveryKind, offerFields },
+    { gameFieldKeys: gameKeys },
+  );
+
+  const requiredOfferKeys = offerFields
+    .filter((field) => field.is_required !== false)
+    .map((field) => field.field_key);
+
+  return {
+    deliveryKind,
+    inputFieldKeys:
+      resolution.kind === "none"
+        ? []
+        : resolution.kind === "offer"
+          ? requiredOfferKeys
+          : gameKeys,
+  };
+}
+
 /** Products in the games category that have at least one active offer. */
 export async function getCatalogPage(
   client: SupabaseClient,

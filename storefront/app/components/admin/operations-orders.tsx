@@ -1,6 +1,7 @@
 import { Form } from "react-router";
 import * as UI from "./operations-shared";
 import { SyncIcon } from "@/components/ui/icons";
+import { HeldOrdersPanel } from "./operations-held-orders";
 
 import { BrowserNotificationBanner } from "@/components/shared/browser-notification-banner";
 export function OrdersView({
@@ -22,6 +23,7 @@ export function OrdersView({
         ar={ar}
         options={[
           "all",
+          "held",
           "attention",
           "low_funds",
           "manual",
@@ -36,6 +38,13 @@ export function OrdersView({
           "cancelled",
         ]}
       />
+
+      {/*
+        * Always rendered, not only when the chip is selected: a wallet running
+        * dry is the one queue the owner must not have to go looking for, and the
+        * count is on the overview too.
+        */}
+      <HeldOrdersPanel locale={view.locale} rows={view.heldOrders} />
 
       {/* Delivery Reconciliation Card */}
       <section className="admin-card space-y-4">

@@ -7,7 +7,7 @@ import { log, logFailure } from "@server/lib/logging/logger";
 import { notify } from "@server/lib/services/notification.service";
 import { enqueueTelegramAlert } from "@server/lib/services/telegram-alerts.service";
 import type { FulfillmentContext } from "./context";
-import { recordAttempt, setOrderStatus } from "./attempts";
+import { recordAttempt, setOrderHeld, setOrderStatus } from "./attempts";
 import type { FulfillmentOutcome } from "./types";
 
 /**
@@ -72,6 +72,12 @@ export function isLowBalanceError(error: unknown): boolean {
  * order but before our server received the response. Never refund or retry that
  * ambiguous case automatically; the stable provider key lets reconciliation
  * look up the original order safely.
+ *
+ * One rejection is singled out first: the supplier refusing for lack of funds in
+ * a wallet the store owns. That is temporary and the owner can fix it, so the
+ * order goes `held` — paid, undelivered, visible in the dashboard's held queue,
+ * and deliverable with one press once the wallet is topped up. It is never a
+ * refund and never a silent `processing` order that nothing picks up again.
  */
 export async function handlePurchaseError(
   context: FulfillmentContext,
@@ -81,30 +87,7 @@ export async function handlePurchaseError(
   const detail = describe(error);
 
   if (isLowBalanceError(error)) {
-    await recordAttempt(attemptId, {
-      status: "processing",
-      errorMessage: detail.customer,
-      errorCode: "insufficient_balance",
-    });
-    await setOrderStatus(context.orderId, "processing");
-
-    const playerDetails = Object.entries(context.dynamicFields)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(", ");
-
-    await enqueueTelegramAlert({
-      type: "low_wallet",
-      payload: {
-        order_id: context.orderId,
-        order_number: context.orderNumber,
-        provider: context.providerName || (context.gameCode ? "g2bulk" : "supplier"),
-        product_name: context.catalogueName || context.gameCode || "Product",
-        player_details: playerDetails,
-        balance: "0.00",
-      },
-    });
-
-    return { state: "processing" };
+    return holdForSupplierBalance(context, attemptId, detail.customer);
   }
 
   const explicitRejection =
@@ -121,6 +104,70 @@ export async function handlePurchaseError(
   }
 
   return failAndRefund(context, attemptId, detail.customer, detail.code);
+}
+
+/**
+ * Park an order that the supplier refused for lack of funds.
+ *
+ * The attempt is written back to a retryable status — not `failed`, which the
+ * dashboard reads as settled — and carries `insufficient_balance` so the reason
+ * survives even if the supplier's wording changes. The order itself becomes
+ * `held` with the supplier's own message as `held_reason`, so the queue explains
+ * itself without opening the order.
+ *
+ * The customer is told by {@link announceOutcome}, in honest copy that never
+ * mentions the store's own balance. No money moves either way: the debit
+ * happened at checkout and is not repeated, and nothing is credited back.
+ */
+export async function holdForSupplierBalance(
+  context: FulfillmentContext,
+  attemptId: string,
+  supplierMessage: string,
+): Promise<FulfillmentOutcome> {
+  /*
+   * `failed` rather than `processing` on the attempt row: both are retryable
+   * (the provider idempotency key is what prevents a double buy), and `failed`
+   * is what the dashboard already reads as "the last attempt did not work", so
+   * a legacy order parked at `processing` and a new one held from the start
+   * look the same to an operator.
+   */
+  await recordAttempt(attemptId, {
+    status: "failed",
+    errorMessage: supplierMessage,
+    errorCode: "insufficient_balance",
+  });
+
+  const reason = `Supplier balance insufficient: ${supplierMessage}`;
+  await setOrderHeld(context.orderId, reason);
+
+  const required =
+    context.requiredSupplierCostUsd === null
+      ? null
+      : context.requiredSupplierCostUsd * context.quantity;
+
+  const playerDetails = Object.entries(context.dynamicFields)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(", ");
+
+  await enqueueTelegramAlert({
+    type: "low_wallet",
+    // One alert per order, however many times the purchase is retried; the
+    // owner would otherwise be pinged on every press of "deliver now".
+    dedupKey: context.orderId,
+    payload: {
+      order_id: context.orderId,
+      order_number: context.orderNumber,
+      provider: context.providerName || (context.gameCode ? "g2bulk" : "supplier"),
+      product_name: context.catalogueName || context.gameCode || "Product",
+      quantity: context.quantity,
+      ...(required === null ? {} : { required: Number(required.toFixed(4)) }),
+      player_details: playerDetails,
+      balance: "0.00",
+      reason,
+    },
+  });
+
+  return { state: "held", reason };
 }
 
 /**
@@ -215,7 +262,7 @@ export async function announceOutcome(
   context: FulfillmentContext,
   outcome: FulfillmentOutcome,
 ): Promise<void> {
-  if (outcome.state !== "completed" && outcome.state !== "failed") {
+  if (outcome.state !== "completed" && outcome.state !== "failed" && outcome.state !== "held") {
     return;
   }
 
@@ -263,6 +310,55 @@ export async function announceOutcome(
         quantity: context.quantity,
       },
     });
+    return;
+  }
+
+  /*
+   * Held: the customer paid, the goods are not out yet, and the store is
+   * waiting on a supplier wallet the owner controls.
+   *
+   * What the customer is told is deliberately narrow and entirely true: their
+   * order is confirmed and queued, it will be delivered, they need to do
+   * nothing, and support is there. `outcome.reason` — which names the supplier's
+   * balance — is never repeated to them: the store's own funding is not the
+   * customer's business, and there is no honest time to promise. Telling them
+   * the truth here means telling them only what is certain.
+   */
+  if (outcome.state === "held") {
+    log.info("fulfilment", "order_held", {
+      orderId: context.orderId,
+      orderNumber: context.orderNumber,
+      reason: outcome.reason,
+    });
+
+    /*
+     * Deliberately no owner alert here. The owner already has the `low_wallet`
+     * alert that explains what to do (enqueued by `holdForSupplierBalance`), and
+     * a second alert saying only "queued" would be noise on a queue they are
+     * about to work through. The customer is the one who has heard nothing.
+     */
+    await enqueueTelegramAlert({
+      type: "order_queued",
+      userId: order.user_id,
+      payload: {
+        order_id: context.orderId,
+        order_number: context.orderNumber,
+        quantity: context.quantity,
+      },
+    });
+
+    await notify({
+      userId: order.user_id,
+      type: "order_queued",
+      titleAr: "طلبك مؤكد وقيد التجهيز",
+      titleEn: "Your order is confirmed and being prepared",
+      bodyAr: `طلب ${context.orderNumber} مؤكد وهو الآن في قائمة التجهيز، وسيُسلَّم قريبًا. لا حاجة لأي إجراء منك. إن احتجت مساعدة فالدعم جاهز لخدمتك.`,
+      bodyEn: `Order ${context.orderNumber} is confirmed and queued for delivery, and it will be delivered shortly. You do not need to do anything. Support is available if you need help.`,
+      href,
+      entityType: "order",
+      entityId: context.orderId,
+    });
+
     return;
   }
 

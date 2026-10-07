@@ -23,7 +23,8 @@ describe("overview loader", () => {
     mocks.readiness.mockResolvedValue(readiness);
     const data = await load();
     expect(Object.values(data.stats)).toEqual([null, null, null, null, null, null]);
-    expect(Object.values(data.attention)).toEqual([null, null, null, null, null]);
+    // Six attention queues since the held-orders queue was added.
+    expect(Object.values(data.attention)).toEqual([null, null, null, null, null, null]);
     expect(Object.values(data.kpis)).toEqual([null, null, null, null, null, null]);
     expect([data.earnings, data.series, data.latest, data.wallets]).toEqual([null, null, null, null]);
     expect(data.readiness).toEqual(readiness);

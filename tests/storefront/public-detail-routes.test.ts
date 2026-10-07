@@ -5,12 +5,14 @@ const mocks = vi.hoisted(() => ({
   product: vi.fn(),
   offer: vi.fn(),
   costs: vi.fn(async (offers) => offers),
+  ordering: vi.fn(async () => ({ deliveryKind: "account" as const, inputFieldKeys: [] as string[] })),
   session: vi.fn(() => { throw new Error("Redirects must not read a session"); }),
 }));
 vi.mock("@/lib/catalog-queries", () => ({
   createPublicClient: () => mocks.client,
   getProductDetail: mocks.product,
   getOfferDetail: mocks.offer,
+  getProductOrdering: mocks.ordering,
 }));
 vi.mock("@server/lib/services/catalog-admin-costs.service", () => ({ withAdminOfferCosts: mocks.costs }));
 vi.mock("@server/session", () => ({ createSessionClient: mocks.session }));

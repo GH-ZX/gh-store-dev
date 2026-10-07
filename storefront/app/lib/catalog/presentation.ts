@@ -72,6 +72,16 @@ export type ImageAttempt = {
   logoInk?: string | null;
 };
 
+/**
+ * Variant ladder for proxied art.
+ *
+ * One width per render slot the storefront actually uses, so every URL in a
+ * `srcset` is a size some layout asks for. Two candidates below the slot cover
+ * a narrow phone at 2x; one below the maximum covers a half-width column on a
+ * tablet. The list stops at the slot itself — an image is never upscaled to
+ * fill a `srcset` entry, which is what made the old ladder spend bytes on
+ * sizes nothing rendered.
+ */
 const RESPONSIVE_WIDTHS = [160, 240, 320, 384, 480, 640, 960, 1280, 1536];
 const STORAGE_MARKER = "/storage/v1/object/public/";
 
@@ -81,9 +91,16 @@ function responsiveSources(src: string, width: number): string | undefined {
   if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
   if (/\.(?:svg|gif)$/i.test(url.pathname)) return undefined;
 
-  const widths = [...new Set([...RESPONSIVE_WIDTHS.filter((candidate) => candidate < width), width])];
+  const isStorage = url.pathname.includes(STORAGE_MARKER);
+  const resolved = isStorage ? null : resolveImageSource(src, width);
+  // A host the proxy refuses is served direct: one URL, no invented variants.
+  if (!isStorage && (!resolved || !resolved.startsWith("/api/media-proxy"))) return undefined;
+
+  const below = RESPONSIVE_WIDTHS.filter((candidate) => candidate < width);
+  const widths = [...new Set([...below.slice(-3), width])];
+
   return widths.map((candidate) => {
-    if (url.pathname.includes(STORAGE_MARKER)) {
+    if (isStorage) {
       const transformed = new URL(url);
       transformed.pathname = url.pathname.replace(STORAGE_MARKER, "/storage/v1/render/image/public/");
       transformed.searchParams.set("width", String(candidate));

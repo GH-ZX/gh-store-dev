@@ -4,14 +4,17 @@ import { Link } from "react-router";
 import type { Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import { CheckIcon } from "@/components/ui/icons";
-import { DetailPurchaseSummary, NoProductOffers } from "@/components/store/product-detail";
+import { DetailPurchaseSummary, NoProductOffers, RegionSection } from "@/components/store/product-detail";
 import { offerPath } from "@/lib/catalog/paths";
 import type { StoreProduct } from "@/lib/catalog/product-mapper";
 import type { StoreOffer } from "@/lib/catalog/offer-mapper";
+import type { AvailabilityEntry } from "@/components/store/availability-notice";
 import { formatNumber, formatPrice } from "@/lib/format/money";
 
-export function ProductOfferSelection({ locale, product, offers }: {
+export function ProductOfferSelection({ locale, product, offers, availability, related }: {
   locale: Locale; product: StoreProduct; offers: StoreOffer[];
+  availability?: Record<string, AvailabilityEntry>;
+  related?: StoreProduct[];
 }) {
   const sortedOffers = [...offers].sort((a, b) => a.price - b.price || a.name.localeCompare(b.name, locale));
   const [selectedId, setSelectedId] = useState(sortedOffers[0]?.id ?? "");
@@ -32,6 +35,7 @@ export function ProductOfferSelection({ locale, product, offers }: {
   return <div className="sf-product-layout sf-detail-layout">
     <section className="sf-offers-panel sf-detail-selection" aria-labelledby="choose-offer-heading">
       <div className="sf-detail-section-heading"><div><h2 id="choose-offer-heading">{copy.chooseHeading}</h2><p>{offers.length === 1 ? copy.singleOfferDescription : copy.chooseDescription}</p></div></div>
+      <RegionSection locale={locale} product={product} related={related} />
       {offers.length > 1 ? <>
         <div className="sf-offer-filters">
           <label className="sf-offer-filter"><span>{copy.findOffer}</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.searchPlaceholder} /></label>
@@ -44,13 +48,14 @@ export function ProductOfferSelection({ locale, product, offers }: {
         <Link className="sf-catalog-primary" to={`/${locale}/checkout/${encodeURIComponent(product.slug)}/${encodeURIComponent(selected.slug)}`}>{copy.checkout}</Link>
       </div> : null}
       <fieldset className="sf-offer-choices sf-detail-choices"><legend className="sr-only">{copy.chooseHeading}</legend>
-        {visibleOffers.map((offer) => <div className="sf-offer-choice" key={offer.id} data-selected={offer.id === selected?.id}>
+        {visibleOffers.map((offer) => <div className="sf-offer-choice" key={offer.id} data-selected={offer.id === selected?.id} data-offer-availability={availability?.[offer.id]?.status ?? "unknown"}>
           <label className="sf-offer-choice-main">
             <input type="radio" name="selected-offer" value={offer.id} checked={offer.id === selected?.id} onChange={() => setSelectedId(offer.id)} />
             <span className="sf-offer-choice-copy"><strong><bdi>{offer.name}</bdi></strong>
               <OfferTerms terms={offer.terms} locale={locale} />
               {offer.regionCode ? <small><bdi>{offer.regionCode}</bdi></small> : null}
               <span className="sf-offer-choice-price"><bdi dir="ltr">{formatPrice(offer.price, offer.currency, locale)}</bdi></span>
+              {availability?.[offer.id]?.status === "unavailable" ? <small className="sf-offer-unavailable">{copy.availabilityUnavailable}</small> : null}
               {typeof offer.supplierCostUsd === "number" ? <small>{common.price.capital}: <bdi dir="ltr">{formatPrice(offer.supplierCostUsd, "USD", locale)}</bdi></small> : null}
               {offer.id === selected?.id ? <span className="sf-detail-selected-label"><CheckIcon />{copy.selectedLabel}</span> : null}
             </span>

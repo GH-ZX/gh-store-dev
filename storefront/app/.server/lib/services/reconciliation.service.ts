@@ -29,6 +29,12 @@ const DEFAULT_BATCH = 10;
  * `paid` is included because in-chat checkout (the Telegram bot) places the
  * order and leaves it `paid` — the supplier is asked by this sweep, since the
  * bot has no server-side fulfilment code to run itself.
+ *
+ * `held` is deliberately absent. A held order is waiting on a supplier wallet
+ * the owner controls; asking the supplier again changes nothing and, once the
+ * balance lands, a sweep that bought it would spend the money at a moment
+ * nobody chose. `reconcileOrder` refuses a held order independently, so a held
+ * order that slipped into this list still cannot be bought or refunded by it.
  */
 const STUCK_STATUSES = ["paid", "fulfilling", "processing"];
 

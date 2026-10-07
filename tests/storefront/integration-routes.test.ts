@@ -19,8 +19,20 @@ vi.mock("../../storefront/app/.server/lib/services/sweep-heartbeat.service", () 
   recordSweepSuccess: mocks.success,
   recordSweepFailure: mocks.failure,
 }));
+vi.mock("../../storefront/app/.server/lib/services/growth.service", () => ({
+  runGrowthJobs: vi.fn().mockResolvedValue({
+    offerAlertsQueued: 0,
+    offerAlertsRestocks: 0,
+    offerAlertsPriceDrops: 0,
+    remindersQueued: 0,
+    remindersSkipped: 0,
+    referralClaimsCredited: 0,
+    referralClaimsChecked: 0,
+    purchaseInterestsRecorded: 0,
+  }),
+}));
 vi.mock("../../storefront/app/.server/lib/logging/logger", () => ({
-  log: { warn: mocks.warn, error: vi.fn() },
+  log: { warn: mocks.warn, error: vi.fn(), info: vi.fn() },
   logFailure: vi.fn(),
 }));
 

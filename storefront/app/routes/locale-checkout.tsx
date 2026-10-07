@@ -20,6 +20,7 @@ import {
   getOfferDetail,
 } from "@/lib/catalog-queries";
 import { resolveQuantityMax } from "@/lib/catalog/checkout-fields";
+import { COUPON_REFUSAL_KEYS, previewCoupon } from "@server/lib/services/coupon.service";
 import { buildPageMeta } from "@/lib/seo";
 import { formText } from "@server/form-data";
 import { placeOrder } from "@server/place-order";
@@ -40,6 +41,14 @@ const checkoutSchema = z.object({
   offerSlug: z.string().trim().min(1).max(SLUG_MAX),
   quantity: z.coerce.number().int().min(1).max(10),
   idempotencyKey: z.uuid(),
+  /**
+   * The coupon code, and only the code.
+   *
+   * A number submitted alongside it is ignored — the discount is recomputed
+   * inside the order transaction — so there is deliberately no field for one.
+   * The length cap keeps a paste bomb out of the RPC.
+   */
+  couponCode: z.string().trim().max(64).optional(),
 });
 
 type FieldSchema = z.ZodType<string | undefined>;
@@ -115,7 +124,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const { supabase, jar, isProduction } = createSessionClient(request, env);
   const userId = await getSessionUserId(supabase);
   if (!userId) {
-    return data({ error: "unauthenticated" }, { status: 401, headers: sessionCookieHeaders(jar, isProduction) });
+    return data({ error: "unauthenticated", coupon: null }, { status: 401, headers: sessionCookieHeaders(jar, isProduction) });
   }
 
   const formData = await request.formData();
@@ -123,14 +132,49 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     const result = await prefillGiftFieldsAction(supabase, String(formData.get("recipientEmail") ?? ""), params.gameSlug, params.offerSlug);
     return data(result, { headers: sessionCookieHeaders(jar, isProduction) });
   }
+  /*
+   * A coupon preview, computed on the server.
+   *
+   * The fetcher posts a code and gets back what it is worth on this exact
+   * offer, or why it is refused. It is a preview only: the amount that is
+   * charged is recomputed inside the order transaction, so nothing returned
+   * here is trusted further than the label on the button.
+   */
+  if (formData.get("intent") === "previewCoupon") {
+    const detail = await getOfferDetail(
+      createPublicClient(env),
+      locale,
+      null,
+      params.gameSlug ?? "",
+      params.offerSlug ?? "",
+    );
+
+    if (!detail) {
+      return data({ ok: false, reason: "coupon_not_found" }, { headers: sessionCookieHeaders(jar, isProduction) });
+    }
+
+    const preview = await previewCoupon(supabase, userId, {
+      code: String(formData.get("couponCode") ?? ""),
+      offerId: detail.offer.id,
+      productId: detail.product.id,
+      quantity: 1,
+      unitPrice: detail.offer.price,
+    });
+
+    return data(
+      preview.ok ? preview : { ok: false, reason: COUPON_REFUSAL_KEYS[preview.reason] },
+      { headers: sessionCookieHeaders(jar, isProduction) },
+    );
+  }
   const parsed = checkoutSchema.safeParse({
     gameSlug: formText(formData, "gameSlug"),
     offerSlug: formText(formData, "offerSlug"),
     quantity: formText(formData, "quantity") ?? "1",
     idempotencyKey: formText(formData, "idempotencyKey"),
+    couponCode: formText(formData, "couponCode") ?? undefined,
   });
   if (!parsed.success) {
-    return data({ error: "invalid_fields" }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
+    return data({ error: "invalid_fields", coupon: null }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
   }
 
   const detail = await getOfferDetail(
@@ -141,7 +185,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     parsed.data.offerSlug,
   );
   if (!detail) {
-    return data({ error: "unavailable" }, { status: 404, headers: sessionCookieHeaders(jar, isProduction) });
+    return data({ error: "unavailable", coupon: null }, { status: 404, headers: sessionCookieHeaders(jar, isProduction) });
   }
 
   /*
@@ -169,7 +213,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   }
   const parsedFields = z.object(shape).safeParse(submitted);
   if (!parsedFields.success) {
-    return data({ error: "invalid_fields" }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
+    return data({ error: "invalid_fields", coupon: null }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
   }
 
   const dynamicFields: Record<string, string> = {};
@@ -188,11 +232,15 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     quantity,
     dynamicFields,
     idempotencyKey: parsed.data.idempotencyKey,
+    couponCode: parsed.data.couponCode ?? null,
     schedule: (promise) => ctx.waitUntil(promise),
   });
 
   if (!result.ok) {
-    return data({ error: result.reason }, { status: 400, headers: sessionCookieHeaders(jar, isProduction) });
+    return data(
+      { error: result.reason, coupon: null },
+      { status: 400, headers: sessionCookieHeaders(jar, isProduction) },
+    );
   }
   return withSessionCookies(
     redirect(`/${locale}/orders/${result.orderId}`, 302),

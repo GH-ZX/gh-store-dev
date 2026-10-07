@@ -9,11 +9,28 @@
  * checkout form that renders "done" while the order lives elsewhere invites a
  * second submit.
  */
+
+/**
+ * What the server computed for a coupon code, for display only.
+ *
+ * `discount` and `total` were computed server-side and are shown back to the
+ * customer as a quote. The client cannot influence either: the code is the
+ * only coupon-shaped thing the form submits, and the discount that is charged
+ * is recomputed inside the order transaction.
+ */
+export type CheckoutCouponPreview = {
+  code: string;
+  discount: number;
+  total: number;
+} | null;
+
 export type CheckoutActionState = {
   error: string | null;
+  /** Present when the last submit carried a coupon code. */
+  coupon?: CheckoutCouponPreview;
 };
 
-export const INITIAL_CHECKOUT_STATE: CheckoutActionState = { error: null };
+export const INITIAL_CHECKOUT_STATE: CheckoutActionState = { error: null, coupon: null };
 
 /**
  * Namespace for the account fields inside the form.

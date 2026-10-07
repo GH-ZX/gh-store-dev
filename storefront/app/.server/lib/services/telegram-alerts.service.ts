@@ -30,6 +30,7 @@ import type { Json } from "@server/types/database";
 
 export type TelegramAlertType =
   | "order_placed"
+  | "order_queued"
   | "order_delivered"
   | "order_failed"
   | "recharge_request"
@@ -41,6 +42,15 @@ export type TelegramAlertType =
   | "low_stock"
   | "wallet_adjusted"
   | "new_customer"
+  /**
+   * Growth workstreams. Restock and price-drop alerts go to customers who
+   * bought or watched the offer; `repeat_reminder` is a recurring offer's
+   * renewal nudge; `owner_message` is chat that reaches the 36 registered
+   * customers rather than only the people currently on the site.
+   */
+  | "price_drop"
+  | "repeat_reminder"
+  | "owner_message"
   | "sweep_stalled";
 
 export async function enqueueTelegramAlert(input: {
