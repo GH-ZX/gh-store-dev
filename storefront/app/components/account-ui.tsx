@@ -23,7 +23,10 @@ export function AccountNavigation({
     { path: "profile", label: messages.profile.title },
     { path: "orders", label: messages.orders.title },
     ...(!chrome?.session?.isAdmin
-      ? [{ path: "wallet", label: messages.wallet.title }]
+      ? [
+          { path: "wallet", label: messages.wallet.title },
+          { path: "redeem", label: messages.wallet.redeemAction },
+        ]
       : []),
     { path: "notifications", label: messages.notifications.title },
     { path: "support", label: messages.support.title },

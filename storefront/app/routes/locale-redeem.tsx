@@ -9,6 +9,7 @@ import { createSessionClient, getSessionUserId, redirectToLogin, sessionCookieHe
 import { getMyWallet, type WalletSummary } from "@server/lib/services/wallet.service";
 import { redeemCouponToWallet } from "@server/lib/services/coupon.service";
 import { Section, SectionHeader } from "@/components/commerce/commerce-page";
+import { AccountNavigation } from "@/components/account-ui";
 import { formatPrice } from "@/lib/format/money";
 import { ChevronIcon, WalletIcon, TagIcon, CheckIcon, AlertIcon, ArrowIcon } from "@/components/ui/icons";
 import { buttonClassName } from "@/components/ui/button";
@@ -24,8 +25,8 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
   const { supabase, jar, isProduction } = createSessionClient(request, env);
   const userId = await getSessionUserId(supabase);
 
+  const url = new URL(request.url);
   if (!userId) {
-    const url = new URL(request.url);
     return withSessionCookies(
       redirectToLogin(request, locale, url.pathname.replace(/\.data$/, "")),
       jar,
@@ -33,10 +34,11 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
     );
   }
 
+  const initialCode = (url.searchParams.get("code") || url.searchParams.get("c") || "").trim().toUpperCase();
   const wallet = await getMyWallet(supabase, userId);
 
   return data(
-    { locale, wallet },
+    { locale, wallet, initialCode },
     { headers: sessionCookieHeaders(jar, isProduction) },
   );
 }
@@ -101,7 +103,7 @@ export function meta({ params }: { params: { locale?: string } }) {
 }
 
 export default function LocaleRedeem() {
-  const { locale, wallet } = useLoaderData<typeof loader>();
+  const { locale, wallet, initialCode } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
@@ -110,7 +112,7 @@ export default function LocaleRedeem() {
   const copy = messages.redeem;
   const currency = wallet?.currency ?? "USD";
 
-  const [inputCode, setInputCode] = useState("");
+  const [inputCode, setInputCode] = useState(initialCode || "");
 
   const currentBalance = actionData && actionData.ok
     ? actionData.balanceAfter
@@ -143,6 +145,8 @@ export default function LocaleRedeem() {
         subtitle={copy.description}
         className="mt-5"
       />
+
+      <AccountNavigation locale={locale} messages={messages} />
 
       <div className="mt-8 space-y-6">
         {/* Wallet Balance Strip */}

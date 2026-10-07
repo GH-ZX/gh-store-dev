@@ -28,19 +28,28 @@ async function loadGames(): Promise<
   const supabase = await createSupabaseServerClient();
 
   try {
-    const [providerGames, mappings, categories] = await Promise.all([
+    const [providerGames, mappingsResult, categories] = await Promise.all([
       new G2BulkClient({ apiKey }).listGames(),
       supabase
         .from("provider_game_mappings")
-        .select("external_game_code, products(category_id)")
+        .select("external_game_code, game_id")
         .eq("provider_name", G2BULK_PROVIDER_NAME),
       listAdminCategories(),
     ]);
 
+    const gameIds = (mappingsResult.data ?? []).map((row: any) => row.game_id).filter(Boolean);
+    const { data: productsData } = gameIds.length > 0
+      ? await supabase.from("products").select("id, category_id").in("id", gameIds)
+      : { data: [] };
+
+    const categoryByProductId = new Map(
+      (productsData ?? []).map((p: any) => [p.id, p.category_id]),
+    );
+
     const mappingByCode = new Map<string, string | null>(
-      (mappings.data ?? []).map((row: any) => [
+      (mappingsResult.data ?? []).map((row: any) => [
         row.external_game_code,
-        row.products?.category_id ?? null,
+        categoryByProductId.get(row.game_id) ?? null,
       ]),
     );
 

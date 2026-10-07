@@ -112,6 +112,10 @@ export function SiteHeader({
     },
     { href: `/${locale}/wallet`, label: messages.account.openWallet },
     {
+      href: `/${locale}/redeem`,
+      label: locale === "ar" ? "شحن الرصيد بكود" : "Redeem code",
+    },
+    {
       href: `/${locale}/notifications`,
       label: notificationsLabel + (unreadCount ? ` (${unreadCount})` : ""),
     },
