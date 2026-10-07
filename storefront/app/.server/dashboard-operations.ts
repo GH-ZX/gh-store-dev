@@ -36,7 +36,12 @@ import {
   refundOrderManually,
   resendDeliveryNotification,
 } from "./lib/services/admin-order-ops.service";
-import { deliverHeldOrder, listHeldOrders } from "./lib/services/admin-hold.service";
+import {
+  deliverHeldOrder,
+  listHeldOrders,
+  listRiskHolds,
+  resolveRiskHold,
+} from "./lib/services/admin-hold.service";
 import {
   getReviewsForModeration,
   moderateReview,
@@ -113,6 +118,7 @@ export async function loadDashboardOperations(args: LoaderFunctionArgs) {
        * answer to "is anything waiting on me to recharge?".
        */
       heldOrders: await listHeldOrders(supabase),
+      riskHolds: await listRiskHolds(supabase),
       lastRun: await getLastReconcileRun(supabase),
     };
   } else if (section === "recharges") {
@@ -249,6 +255,13 @@ export async function actDashboardOperations(args: ActionFunctionArgs) {
         detail = result.delivered
           ? `delivered: ${result.state}`
           : `held: ${result.state}${result.reason ? `: ${result.reason}` : ""}`;
+        break;
+      }
+      case "resolve-risk-hold": {
+        const holdId = id("holdId");
+        const status = (text("status") || "approved") as "approved" | "rejected";
+        const ok = await resolveRiskHold(supabase, holdId, status);
+        detail = ok ? `hold: ${status}` : "failed to resolve hold";
         break;
       }
       case "deliver":

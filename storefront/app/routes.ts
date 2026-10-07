@@ -9,6 +9,7 @@ export default [
   route("api/media-proxy", "routes/media-proxy.ts"),
   route("api/reconcile", "routes/api-reconcile.ts"),
   route("api/csp-report", "routes/api-csp-report.ts"),
+  route("api/client-error", "routes/api-client-error.ts"),
   route("api/admin-actions", "routes/admin-actions.ts"),
   route("api/admin/wallet-sync", "routes/api-admin-wallet-sync.ts"),
   route("auth/callback", "routes/auth-callback.ts"),
@@ -16,6 +17,7 @@ export default [
     index("routes/locale-home.tsx"),
     route("dashboard", "routes/dashboard-layout.tsx", [
       index("routes/dashboard-index.tsx"),
+      route("mfa", "routes/dashboard-mfa.tsx"),
       route("logs", "routes/dashboard-logs.tsx"),
       route("operations", "routes/dashboard-operations.tsx"),
       route("support", "routes/dashboard-support.tsx"),

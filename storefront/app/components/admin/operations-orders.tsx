@@ -2,6 +2,7 @@ import { Form } from "react-router";
 import * as UI from "./operations-shared";
 import { SyncIcon } from "@/components/ui/icons";
 import { HeldOrdersPanel } from "./operations-held-orders";
+import { RiskHoldsPanel } from "./operations-risk-holds";
 
 import { BrowserNotificationBanner } from "@/components/shared/browser-notification-banner";
 export function OrdersView({
@@ -45,6 +46,9 @@ export function OrdersView({
         * count is on the overview too.
         */}
       <HeldOrdersPanel locale={view.locale} rows={view.heldOrders} />
+
+      {/* Automated velocity & fraud holds */}
+      <RiskHoldsPanel locale={view.locale} rows={view.riskHolds} />
 
       {/* Delivery Reconciliation Card */}
       <section className="admin-card space-y-4">

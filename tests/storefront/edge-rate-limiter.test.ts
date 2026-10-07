@@ -275,4 +275,49 @@ describe("edge rate limiter", () => {
       expect(html).toContain("30s");
     });
   });
+
+  describe("Cloudflare Workers rate limiting bindings", () => {
+    it("uses RL_AUTH binding when present and rejects when binding limit fails", async () => {
+      const request = new Request("https://gh-store.me/ar/login", { method: "POST" });
+      const env = {
+        RL_AUTH: {
+          limit: async ({ key }: { key: string }) => {
+            expect(key).toContain("auth:127.0.0.1");
+            return { success: false };
+          },
+        },
+      };
+
+      const result = await checkRateLimit(request, env);
+      expect(result.allowed).toBe(false);
+      expect(result.tier).toBe("auth");
+      expect(result.resetSeconds).toBe(60);
+    });
+
+    it("incorporates authenticated user ID into the rate limit key when cookie is present", async () => {
+      // Base64 payload with sub: "user-123" -> eyJzdWIiOiJ1c2VyLTEyMyJ9
+      const token = `header.${btoa(JSON.stringify({ sub: "user-123" }))}.sig`;
+      const request = new Request("https://gh-store.me/en/checkout/pubg/item", {
+        method: "POST",
+        headers: {
+          cookie: `sb-token-auth-token=${encodeURIComponent(JSON.stringify([token]))}`,
+        },
+      });
+
+      let calledKey = "";
+      const env = {
+        RL_CHECKOUT: {
+          limit: async ({ key }: { key: string }) => {
+            calledKey = key;
+            return { success: true };
+          },
+        },
+      };
+
+      const result = await checkRateLimit(request, env);
+      expect(result.allowed).toBe(true);
+      expect(calledKey).toBe("checkout:127.0.0.1:user-123");
+    });
+  });
 });
+

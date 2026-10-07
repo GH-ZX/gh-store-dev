@@ -109,6 +109,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
             __html: `if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(function(regs){return Promise.all(regs.filter(function(r){return [r.active,r.waiting,r.installing].some(function(w){return w&&w.scriptURL===location.origin+"/sw.js";});}).map(function(r){return r.unregister();}));}).catch(function(){});}`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.addEventListener("error",function(e){try{navigator.sendBeacon("/api/client-error",JSON.stringify({message:e.message,source:e.filename,lineno:e.lineno,colno:e.colno,stack:e.error?e.error.stack:null,type:"error"}))}catch(x){}});window.addEventListener("unhandledrejection",function(e){try{var r=e.reason;navigator.sendBeacon("/api/client-error",JSON.stringify({message:r?r.message||String(r):"Unhandled rejection",stack:r?r.stack:null,type:"unhandledrejection"}))}catch(x){}});`,
+          }}
+        />
       </head>
       <body>
         {children}

@@ -33,6 +33,28 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!session?.isAdmin) {
     throw new Response("Forbidden", { status: 403 });
   }
+
+  const url = new URL(request.url);
+  const isMfaRoute = url.pathname.endsWith("/dashboard/mfa") || url.pathname.includes("/dashboard/mfa.");
+
+  let mfaEnrolled = false;
+  if (typeof supabase.auth?.mfa?.getAuthenticatorAssuranceLevel === "function") {
+    try {
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData) {
+        if (!isMfaRoute && aalData.currentLevel === "aal1" && aalData.nextLevel === "aal2") {
+          const next = `${url.pathname}${url.search}`.replace(/\.data$/, "");
+          return withSessionCookies(
+            Response.redirect(new URL(`/${locale}/dashboard/mfa?next=${encodeURIComponent(next)}`, request.url), 302),
+            jar,
+            isProduction,
+          );
+        }
+        mfaEnrolled = aalData.nextLevel === "aal2";
+      }
+    } catch {}
+  }
+
   const settings = await getPublicStoreSettings(createPublicClient(env));
   return data(
     {
@@ -40,6 +62,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       displayName: session.displayName,
       theme: settings.theme,
       showLogo: settings.branding.showLogo ?? false,
+      mfaEnrollmentNeeded: !mfaEnrolled && !isMfaRoute,
     },
     { headers: sessionCookieHeaders(jar, isProduction) },
   );
@@ -51,7 +74,7 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export default function DashboardLayout() {
-  const { locale, displayName, theme, showLogo } = useLoaderData<typeof loader>();
+  const { locale, displayName, theme, showLogo, mfaEnrollmentNeeded } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "admin");
   const { revalidate } = useRevalidator();
 
@@ -77,6 +100,28 @@ export default function DashboardLayout() {
         displayName={displayName}
         showLogo={showLogo}
       />
+      {mfaEnrollmentNeeded && (
+        <aside
+          role="status"
+          aria-label="Security recommendation"
+          className="bg-[var(--surface-strong)] border-b border-[var(--line)] px-4 py-2.5 text-xs sm:text-sm text-[var(--ink-soft)] flex items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+            <span>
+              {locale === "ar"
+                ? "يُنصح بتفعيل التحقق بخطوتين (2FA) لحماية لوحة الإدارة."
+                : "Two-factor authentication (2FA) is recommended to protect your admin dashboard."}
+            </span>
+          </div>
+          <a
+            href={`/${locale}/dashboard/mfa`}
+            className="font-medium text-[var(--accent-primary)] hover:underline shrink-0"
+          >
+            {locale === "ar" ? "تفعيل الآن ←" : "Set up now →"}
+          </a>
+        </aside>
+      )}
       <main id="main" className="gh-page py-6 sm:py-8 w-full flex-1">
         <Outlet />
       </main>

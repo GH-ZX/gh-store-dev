@@ -1,0 +1,56 @@
+name: Nightly Database Backup
+
+on:
+  schedule:
+    # 02:30 UTC daily
+    - cron: "30 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-backup-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Database Dump & Backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify backup credentials
+        id: check_secret
+        run: |
+          if [ -n "${{ secrets.SUPABASE_DB_URL }}" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "::notice::SUPABASE_DB_URL secret is not set. Nightly database dump skipped."
+          fi
+
+      - name: Set up Supabase CLI
+        if: steps.check_secret.outputs.configured == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Execute database dump
+        if: steps.check_secret.outputs.configured == 'true'
+        run: |
+          mkdir -p backups
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          supabase db dump --db-url "${{ secrets.SUPABASE_DB_URL }}" -f "backups/gh_store_backup_${TIMESTAMP}.sql"
+          gzip "backups/gh_store_backup_${TIMESTAMP}.sql"
+
+      - name: Upload backup artifact
+        if: steps.check_secret.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-database-backup
+          path: backups/*.sql.gz
+          retention-days: 30

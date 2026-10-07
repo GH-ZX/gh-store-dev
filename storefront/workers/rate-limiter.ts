@@ -212,15 +212,102 @@ export function resolveRateLimitTier(request: Request): RateLimitTier {
 }
 
 /**
+ * Extracts candidate authenticated user id from Supabase cookie if present.
+ */
+export function getClientUserId(request: Request): string | null {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(/sb-[^=]+-auth-token=([^;]+)/);
+  if (!match) return null;
+  try {
+    const raw = decodeURIComponent(match[1]);
+    let token = "";
+    if (raw.startsWith("[")) {
+      const parsed = JSON.parse(raw);
+      token = typeof parsed[0] === "string" ? parsed[0] : "";
+    } else if (raw.startsWith("{")) {
+      const parsed = JSON.parse(raw);
+      token = typeof parsed.access_token === "string" ? parsed.access_token : "";
+    } else {
+      token = raw;
+    }
+    if (token.includes(".")) {
+      const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      const json = atob(base64);
+      const payload = JSON.parse(json);
+      if (typeof payload.sub === "string" && payload.sub) return payload.sub;
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Builds the rate limit key using the tier, IP, and user ID when known.
+ */
+export function buildRateLimitKey(request: Request, tier: RateLimitTier): string {
+  const ip = getClientIp(request);
+  const userId = getClientUserId(request);
+  return userId ? `${tier.name}:${ip}:${userId}` : `${tier.name}:${ip}`;
+}
+
+export type RateLimitBinding = {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+};
+
+export type RateLimitEnv = {
+  RL_AUTH?: RateLimitBinding;
+  RL_CHECKOUT?: RateLimitBinding;
+  RL_RECHARGE?: RateLimitBinding;
+};
+
+/**
  * Performs rate limit check on an incoming request.
  */
 export function checkRateLimit(
   request: Request,
-  now: number = Date.now(),
-): RateLimitResult {
+  now?: number,
+): RateLimitResult;
+export function checkRateLimit(
+  request: Request,
+  env: RateLimitEnv | unknown,
+  now?: number,
+): Promise<RateLimitResult>;
+export function checkRateLimit(
+  request: Request,
+  envOrNow?: RateLimitEnv | unknown,
+  maybeNow?: number,
+): RateLimitResult | Promise<RateLimitResult> {
+  const now = typeof envOrNow === "number" ? envOrNow : (typeof maybeNow === "number" ? maybeNow : Date.now());
+  const env = typeof envOrNow === "object" && envOrNow !== null ? (envOrNow as RateLimitEnv) : undefined;
   const tier = resolveRateLimitTier(request);
-  const ip = getClientIp(request);
-  const key = `${tier.name}:${ip}`;
+  const key = buildRateLimitKey(request, tier);
+
+  if (env) {
+    let binding: RateLimitBinding | undefined;
+    if (tier.name === "auth" && env.RL_AUTH) binding = env.RL_AUTH;
+    else if (tier.name === "checkout" && env.RL_CHECKOUT) binding = env.RL_CHECKOUT;
+    else if (tier.name === "recharge" && env.RL_RECHARGE) binding = env.RL_RECHARGE;
+
+    if (binding && typeof binding.limit === "function") {
+      return (async () => {
+        try {
+          const outcome = await binding.limit({ key });
+          if (!outcome.success) {
+            return {
+              allowed: false,
+              limit: tier.limit,
+              remaining: 0,
+              resetSeconds: 60,
+              tier: tier.name,
+            };
+          }
+        } catch {
+          // Fall through to in-memory store
+        }
+        return rateLimitStore.check(key, tier, now);
+      })();
+    }
+  }
 
   return rateLimitStore.check(key, tier, now);
 }

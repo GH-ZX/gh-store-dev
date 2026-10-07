@@ -1,6 +1,12 @@
 import { redirect } from "react-router";
 import type { Locale } from "@/i18n/config";
-import { ForbiddenError, requireAdmin, UnauthorizedError } from "./lib/auth/guards";
+import {
+  ForbiddenError,
+  MfaChallengeRequiredError,
+  MfaEnrollmentRequiredError,
+  requireAdmin,
+  UnauthorizedError,
+} from "./lib/auth/guards";
 
 /** Child loaders also run on their own during dashboard navigation. */
 export async function requireDashboardAdmin(request: Request, locale: Locale): Promise<void> {
@@ -11,6 +17,11 @@ export async function requireDashboardAdmin(request: Request, locale: Locale): P
       const url = new URL(request.url);
       const next = `${url.pathname}${url.search}`;
       throw redirect(`/${locale}/login?next=${encodeURIComponent(next)}`);
+    }
+    if (error instanceof MfaChallengeRequiredError || error instanceof MfaEnrollmentRequiredError) {
+      const url = new URL(request.url);
+      const next = `${url.pathname}${url.search}`;
+      throw redirect(`/${locale}/dashboard/mfa?next=${encodeURIComponent(next)}`);
     }
     if (error instanceof ForbiddenError) throw new Response("Forbidden", { status: 403 });
     throw error;

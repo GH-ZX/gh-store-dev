@@ -5,6 +5,7 @@ import { createSupabaseServiceClient } from "@server/lib/supabase/service";
 import { enqueueTelegramAlert } from "@server/lib/services/telegram-alerts.service";
 import { fulfillOrder } from "@server/fulfillment";
 import { logFailure, logOutcome } from "@server/lib/logging/logger";
+import { assertVelocityLimit } from "@server/lib/services/velocity-guard.service";
 
 /**
  * Placing an order — Workers port.
@@ -48,6 +49,7 @@ export type PlaceOrderResult =
         | "coupon_wrong_scope"
         | "coupon_no_discount"
         | "coupon_below_cost"
+        | "too_many"
         | "unknown";
     };
 
@@ -202,6 +204,10 @@ async function attemptOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
     return { ok: false, reason: stockGuard.reason };
   }
 
+  const velocity = await assertVelocityLimit(supabase, input.userId, "order");
+  if (!velocity.allowed) {
+    return { ok: false, reason: "too_many" };
+  }
 
   const { data, error } = await supabase
     .rpc(isAdmin ? "place_gift_order" : "place_wallet_order", {

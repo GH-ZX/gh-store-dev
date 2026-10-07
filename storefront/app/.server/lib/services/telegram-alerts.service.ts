@@ -51,6 +51,7 @@ export type TelegramAlertType =
   | "price_drop"
   | "repeat_reminder"
   | "owner_message"
+  | "risk_hold"
   | "sweep_stalled";
 
 export async function enqueueTelegramAlert(input: {

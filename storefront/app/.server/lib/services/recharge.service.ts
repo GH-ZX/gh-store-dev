@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logOutcome } from "@server/lib/logging/logger";
 import { normalizeRechargeConfig, type RechargeConfig } from "@server/lib/settings/recharge-settings";
 import { enqueueTelegramAlert } from "@server/lib/services/telegram-alerts.service";
+import { assertVelocityLimit } from "@server/lib/services/velocity-guard.service";
 
 
 /**
@@ -198,6 +199,17 @@ async function attemptRechargeRequest(
   // A method must exist and be enabled; otherwise a crafted form could invent one.
   if (!config.methods.some((method) => method.id === input.method && method.enabled)) {
     return { ok: false, reason: "invalid_input" };
+  }
+
+  if (typeof supabase?.auth?.getClaims === "function") {
+    const { data: claimsData } = await supabase.auth.getClaims();
+    const userId = claimsData?.claims?.sub;
+    if (typeof userId === "string" && userId) {
+      const velocity = await assertVelocityLimit(supabase, userId, "recharge");
+      if (!velocity.allowed) {
+        return { ok: false, reason: "too_many" };
+      }
+    }
   }
 
   const { data, error } = await supabase

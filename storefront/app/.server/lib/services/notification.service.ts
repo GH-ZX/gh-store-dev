@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Locale } from "@/i18n/config";
 import { createSupabaseServiceClient, hasServiceRoleKey } from "@server/lib/supabase/service";
 import { logFailure } from "@server/lib/logging/logger";
+import { sendTransactionalEmail } from "./email.service";
 
 /**
  * Customer notifications.
@@ -92,6 +93,27 @@ export async function notify(input: NotifyInput): Promise<boolean> {
       logFailure("notifications", "insert_failed", error, {
         userId: input.userId,
         type: input.type,
+      });
+    } else if (
+      input.type === "order_delivered" ||
+      input.type === "order_failed" ||
+      input.type === "recharge_approved"
+    ) {
+      void sendTransactionalEmail({
+        userId: input.userId,
+        kind: input.type,
+        refId: input.entityId ?? undefined,
+        data: {
+          titleAr: input.titleAr,
+          titleEn: input.titleEn,
+          bodyAr: input.bodyAr,
+          bodyEn: input.bodyEn,
+        },
+      }).catch((err) => {
+        logFailure("notifications", "email_dispatch_failed", err, {
+          userId: input.userId,
+          type: input.type,
+        });
       });
     }
 

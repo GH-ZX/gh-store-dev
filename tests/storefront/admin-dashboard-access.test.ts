@@ -3,11 +3,15 @@ const mocks = vi.hoisted(() => ({
   admin: vi.fn(),
   UnauthorizedError: class UnauthorizedError extends Error {},
   ForbiddenError: class ForbiddenError extends Error {},
+  MfaChallengeRequiredError: class MfaChallengeRequiredError extends Error {},
+  MfaEnrollmentRequiredError: class MfaEnrollmentRequiredError extends Error {},
 }));
 vi.mock("@server/lib/auth/guards", () => ({
   requireAdmin: mocks.admin,
   UnauthorizedError: mocks.UnauthorizedError,
   ForbiddenError: mocks.ForbiddenError,
+  MfaChallengeRequiredError: mocks.MfaChallengeRequiredError,
+  MfaEnrollmentRequiredError: mocks.MfaEnrollmentRequiredError,
 }));
 import { requireDashboardAdmin } from "@server/dashboard-access";
 import { loader as loadCatalog } from "../../storefront/app/routes/dashboard-catalog";
@@ -39,6 +43,22 @@ describe("dashboard navigation authentication", () => {
   it("returns a forbidden response for a customer account", async () => {
     mocks.admin.mockRejectedValueOnce(new mocks.ForbiddenError());
     await expect(requireDashboardAdmin(new Request("https://store.example/ar/dashboard/providers"), "ar")).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("redirects to the MFA challenge page when MFA is required", async () => {
+    mocks.admin.mockRejectedValueOnce(new mocks.MfaChallengeRequiredError());
+    const request = new Request("https://store.example/en/dashboard/operations");
+    try {
+      await requireDashboardAdmin(request, "en");
+      expect.unreachable("MFA challenge must redirect");
+    } catch (error) {
+      expect(error).toBeInstanceOf(Response);
+      const response = error as Response;
+      expect(response.status).toBe(302);
+      const target = new URL(response.headers.get("Location")!, request.url);
+      expect(target.pathname).toBe("/en/dashboard/mfa");
+      expect(target.searchParams.get("next")).toBe("/en/dashboard/operations");
+    }
   });
 
   it.each([loadCatalog, loadProduct])("protects child loader requests without relying on the parent layout", async (loader) => {

@@ -371,3 +371,83 @@ export async function deliverHeldOrder(
     delivered: releaseHold,
   };
 }
+
+export type RiskHoldRow = {
+  id: string;
+  userId: string;
+  action: "order" | "recharge" | "redeem";
+  reason: string;
+  refId: string | null;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  customer?: { id: string; email: string | null; name: string | null };
+};
+
+export async function listRiskHolds(supabase: Client): Promise<RiskHoldRow[]> {
+  await requireAdminId(supabase);
+  const { data, error } = await (supabase as any)
+    .from("risk_holds")
+    .select("id, user_id, action, reason, ref_id, status, created_at, resolved_at, resolved_by")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error || !data) return [];
+
+  const userIds = Array.from(new Set((data as { user_id: string }[]).map((r) => r.user_id)));
+  const { data: profiles } = userIds.length
+    ? await supabase.from("profiles").select("id, email, full_name, username").in("id", userIds)
+    : { data: [] };
+
+  const profileMap = new Map((profiles || []).map((p: ProfileEmbed) => [p.id, p]));
+
+  return (data as {
+    id: string;
+    user_id: string;
+    action: string;
+    reason: string;
+    ref_id: string | null;
+    status: string;
+    created_at: string;
+    resolved_at: string | null;
+    resolved_by: string | null;
+  }[]).map((r) => {
+    const prof = profileMap.get(r.user_id);
+    return {
+      id: r.id,
+      userId: r.user_id,
+      action: r.action as "order" | "recharge" | "redeem",
+      reason: r.reason,
+      refId: r.ref_id,
+      status: r.status as "pending" | "approved" | "rejected",
+      createdAt: r.created_at,
+      resolvedAt: r.resolved_at,
+      resolvedBy: r.resolved_by,
+      customer: {
+        id: r.user_id,
+        email: prof?.email ?? null,
+        name: prof?.full_name ?? prof?.username ?? null,
+      },
+    };
+  });
+}
+
+export async function resolveRiskHold(
+  supabase: Client,
+  holdId: string,
+  status: "approved" | "rejected",
+): Promise<boolean> {
+  const admin = await requireAdminId(supabase);
+  const { error } = await (supabase as any)
+    .from("risk_holds")
+    .update({
+      status,
+      resolved_at: new Date().toISOString(),
+      resolved_by: admin.id,
+    })
+    .eq("id", holdId);
+
+  return !error;
+}
+

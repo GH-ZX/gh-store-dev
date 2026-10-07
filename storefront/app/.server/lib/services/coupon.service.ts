@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAdminId, requireUserId } from "@server/lib/auth/guards";
 import { createSupabaseServiceClient } from "@server/lib/supabase/service";
 import { recordAudit } from "@server/lib/services/admin-audit.service";
+import { assertVelocityLimit } from "@server/lib/services/velocity-guard.service";
 
 /**
  * Coupons.
@@ -840,6 +841,17 @@ export async function redeemCouponToWallet(
   const cleanCode = normalizeCouponCode(code);
   if (!cleanCode || cleanCode.length < 2) {
     return { ok: false, reason: "invalid_code" };
+  }
+
+  if (typeof supabase?.auth?.getClaims === "function") {
+    const { data: claimsData } = await supabase.auth.getClaims();
+    const userId = claimsData?.claims?.sub;
+    if (typeof userId === "string" && userId) {
+      const velocity = await assertVelocityLimit(supabase, userId, "redeem", cleanCode);
+      if (!velocity.allowed) {
+        return { ok: false, reason: "too_many_attempts" };
+      }
+    }
   }
 
   const { data, error } = await supabase.rpc("redeem_coupon_to_wallet", {

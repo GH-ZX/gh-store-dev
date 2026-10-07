@@ -53,7 +53,7 @@ export default {
       applySecurityHeaders(response.headers);
       return response;
     }
-    const rateLimit = checkRateLimit(request);
+    const rateLimit = await checkRateLimit(request, env);
     if (!rateLimit.allowed) {
       const response = buildRateLimitResponse(request, rateLimit);
       applySecurityHeaders(response.headers);

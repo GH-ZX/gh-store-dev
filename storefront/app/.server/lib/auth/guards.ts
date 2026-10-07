@@ -15,6 +15,20 @@ export class ForbiddenError extends Error {
   }
 }
 
+export class MfaChallengeRequiredError extends Error {
+  constructor(message = "MFA challenge required") {
+    super(message);
+    this.name = "MfaChallengeRequiredError";
+  }
+}
+
+export class MfaEnrollmentRequiredError extends Error {
+  constructor(message = "Admin MFA enrollment required") {
+    super(message);
+    this.name = "MfaEnrollmentRequiredError";
+  }
+}
+
 export type AuthenticatedUser = {
   id: string;
 };
@@ -27,6 +41,10 @@ type ProfileAccess = {
 export function isAdminProfile(profile: ProfileAccess | null | undefined): boolean {
   return profile?.role === "admin" && profile.is_active === true;
 }
+
+export type AdminGuardOptions = {
+  allowAal1?: boolean;
+};
 
 /**
  * Session user id from a request-bound client. The client is explicit —
@@ -44,7 +62,10 @@ export async function requireUserId(supabase: SupabaseClient): Promise<Authentic
   return { id: userId };
 }
 
-export async function requireAdminId(supabase: SupabaseClient): Promise<AuthenticatedUser> {
+export async function requireAdminId(
+  supabase: SupabaseClient,
+  options?: AdminGuardOptions,
+): Promise<AuthenticatedUser> {
   const user = await requireUserId(supabase);
   const { data: profile, error } = await supabase
     .from("profiles")
@@ -56,6 +77,31 @@ export async function requireAdminId(supabase: SupabaseClient): Promise<Authenti
     throw new ForbiddenError();
   }
 
+  if (!options?.allowAal1 && typeof supabase.auth?.mfa?.getAuthenticatorAssuranceLevel === "function") {
+    try {
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData) {
+        if (aalData.currentLevel === "aal1" && aalData.nextLevel === "aal2") {
+          throw new MfaChallengeRequiredError();
+        }
+        if (aalData.currentLevel === "aal1" && aalData.nextLevel === "aal1") {
+          const { data: settings } = await supabase
+            .from("store_settings")
+            .select("admin_mfa_required")
+            .eq("id", "global")
+            .maybeSingle();
+          if (settings?.admin_mfa_required) {
+            throw new MfaEnrollmentRequiredError();
+          }
+        }
+      }
+    } catch (err) {
+      if (err instanceof MfaChallengeRequiredError || err instanceof MfaEnrollmentRequiredError) {
+        throw err;
+      }
+    }
+  }
+
   return user;
 }
 
@@ -63,6 +109,8 @@ export function requireAuth(): Promise<AuthenticatedUser> {
   return memoizeRequest("auth", () => requireUserId(getRequestState().supabase));
 }
 
-export function requireAdmin(): Promise<AuthenticatedUser> {
-  return memoizeRequest("admin", () => requireAdminId(getRequestState().supabase));
+export function requireAdmin(options?: AdminGuardOptions): Promise<AuthenticatedUser> {
+  const memoKey = options?.allowAal1 ? "admin_aal1" : "admin";
+  return memoizeRequest(memoKey, () => requireAdminId(getRequestState().supabase, options));
 }
+
