@@ -39,6 +39,7 @@ export type ChromeData = {
   session: ChromeSession;
   walletPanel: ChromeWalletPanel;
   unreadCount: number;
+  cartCount?: number;
   brandName: string;
   showLogo?: boolean;
   socialLinks: ChromeSocialLink[];

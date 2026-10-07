@@ -418,3 +418,34 @@ export function PlusIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function MinusIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12h14" />
+    </Icon>
+  );
+}
+
+export function CartIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 4h2l2.2 10.4a1.8 1.8 0 0 0 1.8 1.4h8.8a1.8 1.8 0 0 0 1.8-1.4L21 7H6" />
+      <circle cx="9.5" cy="19.5" r="1.5" />
+      <circle cx="17.5" cy="19.5" r="1.5" />
+    </Icon>
+  );
+}
+
+export function HeartIcon({ filled = false, ...props }: IconProps & { filled?: boolean }) {
+  return (
+    <Icon {...props}>
+      <path
+        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+        fill={filled ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={filled ? "0" : "1.75"}
+      />
+    </Icon>
+  );
+}

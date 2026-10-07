@@ -27,6 +27,7 @@ import {
   HomeSections,
   HomeFallbackLinks,
 } from "@/components/home/home-sections";
+import { RecentlyViewedRail } from "@/components/home/recently-viewed-rail";
 import { Section } from "@/components/ui/section";
 import type { Route } from "./+types/locale-home";
 
@@ -149,6 +150,7 @@ export default function LocaleHome() {
           <HomeFallbackLinks locale={locale} common={common} />
         </Section>
       )}
+      <RecentlyViewedRail locale={locale} />
       <HomeCategoryShowcases discovery={discovery} locale={locale} exclude={excludedSlugs} />
     </>
   );

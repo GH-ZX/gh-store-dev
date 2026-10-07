@@ -60,3 +60,56 @@ export function supplierMarginUsd(price: number, currency: string, supplierCostU
   if (currency.trim().toUpperCase() !== "USD" || supplierCostUsd === null || !Number.isFinite(supplierCostUsd) || supplierCostUsd < 0 || !Number.isFinite(price) || price < 0) return null;
   return price - supplierCostUsd;
 }
+
+export type OfferSaleResolution = {
+  effectivePrice: number;
+  isSale: boolean;
+  isFlashSale: boolean;
+  endsAt?: string | null;
+};
+
+/**
+ * Resolves active flash sale pricing with cost guard.
+ * A flash sale price is never allowed below supplier cost + 2% margin.
+ */
+export function resolveOfferSalePrice({
+  regularPrice,
+  salePrice,
+  saleStartsAt,
+  saleEndsAt,
+  supplierCostUsd,
+  currency = "USD",
+}: {
+  regularPrice: number;
+  salePrice?: number | null;
+  saleStartsAt?: string | null;
+  saleEndsAt?: string | null;
+  supplierCostUsd?: number | null;
+  currency?: string;
+}): OfferSaleResolution {
+  const now = new Date().toISOString();
+  const isTimeActive =
+    (!saleStartsAt || saleStartsAt <= now) &&
+    (!saleEndsAt || saleEndsAt >= now);
+
+  if (typeof salePrice === "number" && salePrice > 0 && salePrice < regularPrice && isTimeActive) {
+    const minSafePrice =
+      currency.toUpperCase() === "USD" && typeof supplierCostUsd === "number" && supplierCostUsd > 0
+        ? Math.round(supplierCostUsd * 1.02 * 100) / 100
+        : 0;
+
+    const safeSalePrice = Math.max(salePrice, minSafePrice);
+    return {
+      effectivePrice: safeSalePrice,
+      isSale: true,
+      isFlashSale: true,
+      endsAt: saleEndsAt ?? null,
+    };
+  }
+
+  return {
+    effectivePrice: regularPrice,
+    isSale: false,
+    isFlashSale: false,
+  };
+}

@@ -1,10 +1,10 @@
 import { OfferTerms } from "@/components/store/offer-terms";
 import type { ReactNode } from "react";
 import { useId } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { Link, useFetcher, useLocation, useNavigate } from "react-router";
 import type { Locale } from "@/i18n/config";
 import { formatMessage, getMessages } from "@/i18n/messages";
-import { ArrowIcon } from "@/components/ui/icons";
+import { ArrowIcon, CartIcon } from "@/components/ui/icons";
 import { SearchField } from "@/components/search/search-field";
 import { StoreImage } from "@/components/store/store-image";
 import { formatPrice } from "@/lib/format/money";
@@ -86,10 +86,28 @@ export function CatalogPager({ locale, path, page, pageSize, total }: { locale: 
   </nav>;
 }
 
+function useSafeFetcher() {
+  try {
+    return useFetcher();
+  } catch {
+    return {
+      state: "idle" as const,
+      formData: undefined,
+      data: undefined,
+      submit: () => {},
+      Form: ({ children, ...props }: any) => <form {...props}>{children}</form>,
+    } as any;
+  }
+}
+
 export function PurchaseSummary({ locale, product, offer }: { locale: Locale; product: StoreProduct; offer: StoreOffer | undefined }) {
   const common = getMessages(locale, "common");
   const presentation = getMessages(locale, "presentation");
   const artwork = getProductArtwork({ ...product, imageUrl: offer?.imageUrl ?? product.imageUrl });
+  const cartFetcher = useSafeFetcher();
+  const isAdding = cartFetcher.state !== "idle" && cartFetcher.formData?.get("intent") === "add";
+  const justAdded = Boolean((cartFetcher.data as any)?.ok && (cartFetcher.data as any)?.added);
+
   return <aside className="sf-purchase-summary" aria-labelledby="purchase-summary-heading">
     <h2 id="purchase-summary-heading">{locale === "ar" ? "ملخص الطلب" : "Order summary"}</h2>
     {offer ? <>
@@ -98,7 +116,36 @@ export function PurchaseSummary({ locale, product, offer }: { locale: Locale; pr
       <OfferTerms terms={offer.terms} locale={locale} />
       <div className="sf-purchase-total" aria-live="polite"><span>{locale === "ar" ? "الإجمالي" : "Total"}</span><strong><bdi dir="ltr">{formatPrice(offer.price, offer.currency, locale)}</bdi></strong></div>
       {typeof offer.supplierCostUsd === "number" ? <p className="sf-catalog-muted">{common.price.capital}: <bdi dir="ltr">{formatPrice(offer.supplierCostUsd, "USD", locale)}</bdi></p> : null}
-      <Link className="sf-catalog-primary" to={`/${locale}/checkout/${encodeURIComponent(product.slug)}/${encodeURIComponent(offer.slug)}`}>{locale === "ar" ? "المتابعة إلى إتمام الطلب" : "Continue to checkout"}</Link>
+      <div className="flex flex-col gap-2 mt-2">
+        <Link className="sf-catalog-primary text-center" to={`/${locale}/checkout/${encodeURIComponent(product.slug)}/${encodeURIComponent(offer.slug)}`}>
+          {locale === "ar" ? "المتابعة إلى إتمام الطلب" : "Continue to checkout"}
+        </Link>
+        <cartFetcher.Form method="post" action={`/${locale}/cart`}>
+          <input type="hidden" name="intent" value="add" />
+          <input type="hidden" name="offerId" value={offer.id} />
+          <input type="hidden" name="quantity" value="1" />
+          <button
+            type="submit"
+            disabled={isAdding}
+            className="sf-detail-secondary w-full text-center inline-flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <CartIcon className="size-4" />
+            <span>
+              {justAdded
+                ? locale === "ar"
+                  ? "تمت الإضافة للسلة ✓"
+                  : "Added to cart ✓"
+                : isAdding
+                ? locale === "ar"
+                  ? "جاري الإضافة..."
+                  : "Adding..."
+                : locale === "ar"
+                ? "إضافة إلى السلة"
+                : "Add to cart"}
+            </span>
+          </button>
+        </cartFetcher.Form>
+      </div>
       <p className="sf-purchase-note">{locale === "ar" ? "يمكنك مراجعة التفاصيل قبل الدفع." : "You can review the details before paying."}</p>
     </> : <p className="sf-catalog-muted">{locale === "ar" ? "اختر عرضاً للمتابعة." : "Choose an offer to continue."}</p>}
   </aside>;

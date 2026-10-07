@@ -38,6 +38,7 @@ import {
   sessionCookieHeaders,
   withSessionCookies,
 } from "@server/session";
+import { getCartCount } from "@server/lib/services/cart.service";
 import type { Route } from "./+types/locale-layout";
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
@@ -53,9 +54,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     getPublicStoreSettings(supabase),
     getHeaderCategories(createPublicClient(env), locale),
   ]);
-  const [walletPanel, unreadCount] = await Promise.all([
+  const [walletPanel, unreadCount, cartCount] = await Promise.all([
     getHeaderWalletPanel(supabase, session),
     getUnreadNotificationCount(supabase, userId),
+    userId ? getCartCount(supabase, userId) : Promise.resolve(0),
   ]);
   const maintenance = getMaintenanceNotice(
     settings,
@@ -71,6 +73,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     session,
     walletPanel,
     unreadCount,
+    cartCount,
     brandName: settings.branding.useEverywhere
       ? buildBrandName(settings, locale)
       : APP_NAME,

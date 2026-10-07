@@ -4,6 +4,7 @@ import { type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import {
   BellIcon,
+  CartIcon,
   CloseIcon,
   GlobeIcon,
   MenuIcon,
@@ -177,6 +178,7 @@ export function HeaderShell({
 export interface HeaderActionsProps {
   locale: Locale;
   unreadCount?: number;
+  cartCount?: number;
   notificationsLabel?: string;
   switchLocaleLabel?: string;
   themeToggleLabel?: string;
@@ -194,6 +196,7 @@ export interface HeaderActionsProps {
 export function HeaderActions({
   locale,
   unreadCount = 0,
+  cartCount = 0,
   notificationsLabel = "Notifications",
   switchLocaleLabel = "Language",
   themeToggleLabel = "Toggle theme",
@@ -262,6 +265,21 @@ export function HeaderActions({
 
   return (
     <div className="sf-header-actions">
+      {/* Cart Button */}
+      <Link
+        to={`/${locale}/cart`}
+        aria-label={locale === "ar" ? "سلة المشتريات" : "Shopping cart"}
+        title={locale === "ar" ? "سلة المشتريات" : "Shopping cart"}
+        className={`${headerControlClass} relative`}
+      >
+        <CartIcon className="size-5" />
+        {cartCount > 0 ? (
+          <span className="absolute -top-1 -end-1 flex min-w-4 h-4 px-1 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-[var(--accent-ink)] shadow-xs leading-none">
+            {cartCount > 9 ? "9+" : cartCount}
+          </span>
+        ) : null}
+      </Link>
+
       {/* Notifications Button */}
       <Link
         to={`/${locale}/notifications`}

@@ -25,6 +25,9 @@ export type OfferRow = OfferTerms & {
   description_en: string | null;
   price: number;
   original_price: number | null;
+  sale_price?: number | null;
+  sale_starts_at?: string | null;
+  sale_ends_at?: string | null;
   currency: string;
   is_sale: boolean;
   region_code?: string | null;
@@ -52,6 +55,8 @@ export type StoreOffer = {
   originalPrice: number | null;
   currency: string;
   isSale: boolean;
+  isFlashSale?: boolean;
+  saleEndsAt?: string | null;
   regionCode: string | null;
   imageUrl: string | null;
   /** Present when the read joined the parent game, needed for offer links. */
@@ -118,6 +123,18 @@ export function toStoreOffer(row: OfferRow, locale: Locale): StoreOffer {
   const cat = game?.categories;
   const catSlug = (Array.isArray(cat) ? cat[0]?.slug : (cat && typeof cat === "object" && "slug" in cat ? cat.slug : null)) ?? UNCATEGORIZED_PRODUCT_PATH;
 
+  const nowIso = new Date().toISOString();
+  const isFlashSale =
+    typeof row.sale_price === "number" &&
+    row.sale_price > 0 &&
+    row.sale_price < row.price &&
+    (!row.sale_starts_at || row.sale_starts_at <= nowIso) &&
+    (!row.sale_ends_at || row.sale_ends_at >= nowIso);
+
+  const price = isFlashSale ? row.sale_price! : row.price;
+  const originalPrice = isFlashSale ? row.price : row.original_price;
+  const isSale = row.is_sale || isFlashSale || (originalPrice !== null && originalPrice > price);
+
   return {
     terms: { duration_value: row.duration_value, duration_unit: row.duration_unit, warranty_kind: row.warranty_kind, warranty_value: row.warranty_value, warranty_unit: row.warranty_unit, terms_review_required: row.terms_review_required },
     id: row.id,
@@ -125,10 +142,12 @@ export function toStoreOffer(row: OfferRow, locale: Locale): StoreOffer {
     offerType,
     name: readableOfferName(displayName(isArabic ? row.name_ar : row.name_en, pointsName), row),
     description: catalogDescriptionText(isArabic ? row.description_ar : row.description_en),
-    price: row.price,
-    originalPrice: row.original_price,
+    price,
+    originalPrice,
     currency: row.currency,
-    isSale: row.is_sale,
+    isSale,
+    isFlashSale,
+    saleEndsAt: isFlashSale ? (row.sale_ends_at ?? null) : null,
     regionCode: row.region_code ?? null,
     imageUrl: row.sale_image_url ?? game?.image_url ?? null,
     game: game
@@ -140,6 +159,6 @@ export function toStoreOffer(row: OfferRow, locale: Locale): StoreOffer {
           logoUrl: game.logo_url,
         }
       : null,
-    discountPercent: discountPercent(row.price, row.original_price),
+    discountPercent: discountPercent(price, originalPrice),
   };
 }

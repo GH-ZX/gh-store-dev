@@ -84,6 +84,8 @@ export function StorefrontHeader({
     },
   ];
   const accountItems = [
+    { href: `/${locale}/cart`, label: locale === "ar" ? "سلة المشتريات" : "Cart" },
+    { href: `/${locale}/account/wishlist`, label: locale === "ar" ? "قائمة الرغبات" : "Wishlist" },
     { href: `/${locale}/profile`, label: messages.account.account },
     {
       href: `/${locale}/orders`,
@@ -282,6 +284,7 @@ export function StorefrontHeader({
         <HeaderActions
           locale={locale}
           unreadCount={unreadCount}
+          cartCount={data.cartCount ?? 0}
           notificationsLabel={notificationsLabel}
           switchLocaleLabel={messages.locale.switchLabel}
           themeToggleLabel={messages.theme.toggleLabel}

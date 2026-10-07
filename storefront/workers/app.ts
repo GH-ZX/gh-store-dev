@@ -157,6 +157,31 @@ export default {
       const { runGrowthJobs } = await import("../app/.server/lib/services/growth.service");
       const growth = await runGrowthJobs();
 
+      // Automated provider stock sync guarded by auto_sync_enabled
+      try {
+        const { data: syncSettings } = await (service as any)
+          .from("store_settings")
+          .select("auto_sync_enabled, auto_sync_max_change_pct")
+          .eq("id", "global")
+          .maybeSingle();
+
+        if (syncSettings?.auto_sync_enabled) {
+          const { runBatStoreStockSyncScheduled } = await import(
+            "../app/.server/lib/services/batstore-stock-sync.service"
+          );
+          await runBatStoreStockSyncScheduled(service as any);
+        }
+      } catch (syncError) {
+        console.log(
+          JSON.stringify({
+            level: "warn",
+            area: "provider_sync",
+            event: "auto_sync_failed",
+            error: String(syncError),
+          }),
+        );
+      }
+
       console.log(
         JSON.stringify({
           level: "info",

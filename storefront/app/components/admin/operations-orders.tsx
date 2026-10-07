@@ -13,9 +13,57 @@ export function OrdersView({
   const ar = view.locale === "ar";
   const t = (en: string, arabic: string) => (ar ? arabic : en);
 
+  const handleExportCsv = () => {
+    const headers = [
+      ar ? "رقم الطلب" : "Order #",
+      ar ? "العميل" : "Customer",
+      ar ? "البريد الإلكتروني" : "Email",
+      ar ? "المنتجات" : "Items",
+      ar ? "الحالة" : "Status",
+      ar ? "الإجمالي" : "Total",
+      ar ? "العملة" : "Currency",
+      ar ? "التاريخ" : "Date",
+    ];
+
+    const lines = [
+      headers.join(","),
+      ...view.orders.map((o) =>
+        [
+          `"${o.orderNumber}"`,
+          `"${(o.customer.name || "").replace(/"/g, '""')}"`,
+          `"${(o.customer.email || "").replace(/"/g, '""')}"`,
+          `"${(o.itemNames || []).join(" | ").replace(/"/g, '""')}"`,
+          `"${o.status}"`,
+          o.total,
+          `"${o.currency}"`,
+          `"${o.createdAt}"`,
+        ].join(","),
+      ),
+    ];
+
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `orders-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   return (
     <div className="space-y-6">
       <BrowserNotificationBanner locale={view.locale} />
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          disabled={view.orders.length === 0}
+          className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-strong)] disabled:opacity-40 transition-colors cursor-pointer"
+        >
+          <span>{ar ? "تصدير الطلبات CSV" : "Export Orders CSV"}</span>
+        </button>
+      </div>
       {/* Search & Filter Toolbar */}
       <UI.Filters
         q={view.q}

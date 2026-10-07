@@ -34,6 +34,8 @@ export function RegionSection({ locale, product, related }: {
   </>;
 }
 
+import { WishlistButton } from "@/components/store/wishlist-button";
+
 export function ProductDetailHeader({ locale, product, offers, offer, availability }: {
   locale: Locale; product: StoreProduct; offers: StoreOffer[]; offer?: StoreOffer;
   availability?: Record<string, AvailabilityEntry>;
@@ -53,7 +55,10 @@ export function ProductDetailHeader({ locale, product, offers, offer, availabili
     </div>
     <div className="sf-detail-hero-copy">
       <div className="sf-detail-eyebrow"><span>{offer ? copy.offerLabel : copy.productLabel}</span>{product.kind !== "other" ? <span>{catalog.productKinds[product.kind]}</span> : null}</div>
-      <h1><bdi>{offer?.name ?? regionQualifiedName(product, locale)}</bdi></h1>
+      <div className="flex items-start justify-between gap-4">
+        <h1><bdi>{offer?.name ?? regionQualifiedName(product, locale)}</bdi></h1>
+        <WishlistButton productId={product.id} locale={locale} size="sm" />
+      </div>
       {offer ? <Link className="sf-detail-parent-link" to={productPath(locale, product)}><bdi>{regionQualifiedName(product, locale)}</bdi></Link> : offers.length ? <p>{catalog.gameDetail.chooseOffer}</p> : null}
       {regionName ? <p className="sf-detail-region-line"><bdi>{regionName}</bdi></p> : null}
       {excerpt ? <p className="sf-detail-excerpt"><bdi>{excerpt}</bdi></p> : null}

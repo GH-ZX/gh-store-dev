@@ -5,7 +5,9 @@ import { withAdminOfferCosts } from "@server/lib/services/catalog-admin-costs.se
 import { buildStorePageMeta } from "@/lib/store-seo";
 export { CatalogErrorBoundary as ErrorBoundary } from "@/components/store/catalog-error-boundary";
 import { ProductBreadcrumb } from "@/components/store/product-breadcrumb";
+import { useEffect } from "react";
 import { redirect, useLoaderData } from "react-router";
+import { recordRecentlyViewed } from "@/components/home/recently-viewed-rail";
 import { getCloudflareContext } from "@/lib/cloudflare-context";
 import { DEFAULT_LOCALE, isLocale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
@@ -166,6 +168,20 @@ export function meta({ params, matches }: Route.MetaArgs) {
 export default function LocaleProduct() {
   const { locale, product, offers, relatedProducts, availability } = useLoaderData<typeof loader>();
   const common = getMessages(locale, "common");
+
+  useEffect(() => {
+    if (product) {
+      recordRecentlyViewed({
+        id: product.id,
+        slug: product.slug,
+        categorySlug: product.categorySlug,
+        name: regionQualifiedName(product, locale),
+        imageUrl: product.imageUrl ?? product.logoUrl,
+        priceFrom: product.priceFrom,
+      });
+    }
+  }, [product, locale]);
+
   return <CatalogPage><div className="sf-detail-page">
     <ProductBreadcrumb locale={locale} homeLabel={common.navigation.home} categorySlug={product.categorySlug} categoryName={product.categoryName ?? common.navigation.allProducts} productName={regionQualifiedName(product, locale)} />
     <ProductDetailHeader locale={locale} product={product} offers={offers} availability={availability} />

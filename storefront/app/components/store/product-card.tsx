@@ -9,6 +9,7 @@ import type { ProductKind } from "@/lib/catalog/product-kind-mapper";
 import { cn } from "@/lib/cn";
 import { getProductArtwork } from "@/lib/catalog/presentation";
 import { productPath } from "@/lib/catalog/paths";
+import { WishlistButton } from "@/components/store/wishlist-button";
 
 export type ProductCardProps = {
   product: StoreProduct;
@@ -51,10 +52,14 @@ export function ProductCard({ product, locale, labels, meta, priority = false, o
       </div>
     </Link>
   );
-  return overlay ? (
-    <div className="sf-product-wrapper">
+
+  return (
+    <div className="sf-product-wrapper relative group">
       {card}
-      <div className="sf-product-overlay">{overlay}</div>
+      <div className="absolute top-2.5 end-2.5 z-10 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <WishlistButton productId={product.id} locale={locale} size="sm" />
+      </div>
+      {overlay ? <div className="sf-product-overlay">{overlay}</div> : null}
     </div>
-  ) : card;
+  );
 }
