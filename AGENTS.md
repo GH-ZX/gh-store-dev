@@ -44,3 +44,11 @@ the generic catalog entity, and only where the rename stays localized:
 ## Active store upgrade handoff
 
 Read `docs/store-upgrade/README.md` for completed work, migration status and release gates before continuing this upgrade. The user requests **no screenshots or image inspection**; verify with code, DOM and functional checks.
+
+## Deployment & CI/CD (IMPORTANT)
+
+- **Do NOT manually run `wrangler deploy` or attempt CLI Cloudflare deployment**:
+  The GitHub repository (`origin/main`) is connected directly to Cloudflare.
+  Cloudflare automatically builds and deploys the storefront upon pushing to `main`.
+  Once code is verified, committed, and pushed to `main`, deployment is complete.
+

@@ -31,6 +31,7 @@ Supabase). Read `AGENTS.md` and `docs/store-upgrade/README.md` before you start.
    pre-existing unrelated reason, say so explicitly and show the evidence.
 8. Prefer editing existing files. Add tests for new behaviour under `tests/`.
 9. Do not commit. Leave changes in the working tree and report what you touched.
+10. **Do not manually deploy to Cloudflare (`wrangler deploy`)**: The GitHub repository is connected directly to Cloudflare. Pushing to `main` deploys the storefront automatically.
 
 ## Live database access for read-only inspection
 

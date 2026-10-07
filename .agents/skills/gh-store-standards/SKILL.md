@@ -34,4 +34,10 @@ name: gh-store-standards
 - New behavior starts with a failing test.
 - Keep services small and domain-focused.
 - Run `pnpm check` after TypeScript or route changes.
-- Run OpenNext build before claiming Cloudflare compatibility.
+- Run build to verify Cloudflare compatibility.
+
+## Deployment & CI/CD
+
+- The GitHub repository (`origin/main`) is connected directly to Cloudflare.
+- Pushing commits to `main` triggers automatic deployment.
+- Never manually run `wrangler deploy` or attempt CLI deployment.
