@@ -11,6 +11,9 @@ describe("legacy product bookmarks", () => {
     ["/en/games-vouchers", "/en/vouchers"],
     ["/ar/games-vouchers/pubg-mobile-uc-vouchers", "/ar/vouchers/pubg-mobile-uc-vouchers"],
     ["/en/gift-cards-codes/psn-turkey", "/en/vouchers/psn-turkey"],
+    ["/services", "/ar/streaming"],
+    ["/en/services", "/en/streaming"],
+    ["/ar/services/spotify", "/ar/products/spotify"],
   ])("redirects %s in one hop", (path, destination) => {
     expect(legacyProductRedirect(new Request(`https://store.example${path}`))?.href).toBe(`https://store.example${destination}`);
   });

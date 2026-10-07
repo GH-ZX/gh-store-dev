@@ -14,6 +14,10 @@ import {
   CardIcon,
   SparkIcon,
   TagIcon,
+  PlayIcon,
+  ShieldIcon,
+  BoltIcon,
+  CableIcon,
 } from "@/components/ui/icons";
 import { formatPrice } from "@/lib/format/money";
 import { parseSearchParams } from "@/lib/catalog/search";
@@ -57,7 +61,21 @@ export function StorefrontHeader({
     ]).map(category => ({
       href: `/${locale}/${encodeURIComponent(category.slug)}`,
       label: category.name,
-      icon: category.slug === "games" ? GamepadIcon : category.slug === "ai" ? SparkIcon : category.slug.includes("cards") || category.slug.includes("vouchers") ? CardIcon : GridIcon,
+      icon: category.slug === "games"
+        ? GamepadIcon
+        : category.slug === "ai"
+        ? SparkIcon
+        : category.slug.includes("cards") || category.slug.includes("vouchers")
+        ? CardIcon
+        : category.slug === "streaming"
+        ? PlayIcon
+        : category.slug === "vpn"
+        ? ShieldIcon
+        : category.slug.includes("recharge")
+        ? BoltIcon
+        : category.slug === "developing"
+        ? CableIcon
+        : GridIcon,
     })),
     {
       href: `/${locale}/sale`,

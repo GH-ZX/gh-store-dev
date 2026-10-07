@@ -34,6 +34,14 @@ export function legacyProductRedirect(request: Request): URL | null {
     url.pathname = `/${locale}/${newCat}${product ? `/${product}` : ""}${offer ? `/${offer}` : ""}`;
     return url;
   }
+  const servicesMatch = url.pathname.match(/^\/(?:(ar|en)\/)?services(?:\/([^/]+))?(?:\/([^/]+))?\/?$/);
+  if (servicesMatch) {
+    const locale = servicesMatch[1] ?? "ar";
+    const product = servicesMatch[2];
+    const offer = servicesMatch[3];
+    url.pathname = product ? `/${locale}/products/${product}${offer ? `/${offer}` : ""}` : `/${locale}/streaming`;
+    return url;
+  }
   return null;
 }
 

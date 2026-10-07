@@ -25,6 +25,6 @@ export function pageEvent(pathname: string): StoreEvent | null {
   if (first === "search") return "search";
   if (first === "recharge") return "recharge_view";
   if (parts.length === 2 || parts.length === 3) return "product_view";
-  if (!first || ["products", "games", "gift-cards", "gift-cards-codes", "games-vouchers", "games-instant-recharge", "design", "ai", "productivity", "services", "sale", "best-sellers"].includes(first)) return "catalog_view";
+  if (!first || ["products", "games", "gift-cards", "gift-cards-codes", "games-vouchers", "games-instant-recharge", "design", "ai", "productivity", "services", "streaming", "vpn", "recharge-balance", "developing", "vouchers", "sale", "best-sellers"].includes(first)) return "catalog_view";
   return null;
 }

@@ -28,6 +28,9 @@ const CATEGORY_PALETTES: Record<string, Palette> = {
   keys: { start: "#334155", end: "#059669", accent: "#6ee7b7" },
   social: { start: "#f43f5e", end: "#db2777", accent: "#fbcfe8" },
   "gift-cards": { start: "#0891b2", end: "#0e7490", accent: "#a5f3fc" },
+  vouchers: { start: "#0891b2", end: "#0e7490", accent: "#a5f3fc" },
+  "recharge-balance": { start: "#eab308", end: "#ca8a04", accent: "#fef08a" },
+  developing: { start: "#6366f1", end: "#4338ca", accent: "#c7d2fe" },
 };
 
 const DEFAULT_PALETTES: Palette[] = [

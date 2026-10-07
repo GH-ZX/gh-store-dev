@@ -11,6 +11,8 @@ name: gh-store-standards
 - Do not write inline Arabic/English ternaries in components.
 - Add user-facing messages to both locale message files.
 - Use message keys and formatting helpers for placeholders.
+- Category names must be concise/single-word without compound '&' or 'and' (e.g. VPN, not VPN & Security).
+- Maintain strict bilingual separation: English and Arabic stay in their dedicated fields (`name_en` / `name_ar`), never concatenated.
 
 ## Architecture
 

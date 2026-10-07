@@ -41,6 +41,16 @@ the generic catalog entity, and only where the rename stays localized:
 
 <!-- END:product-terminology -->
 
+<!-- BEGIN:category-naming-rules -->
+
+# Category naming rules (IMPORTANT)
+
+- **Single-word / concise naming**: Categories must be simple, concise, and ideally single-word (e.g. `Games`, `Vouchers`, `Streaming`, `VPN`, `Developing`, `Design`, `Productivity`).
+- **No compound '&' or 'and' names**: Do NOT create category names like "VPN & Security", "Gift Cards & Vouchers", "Games & Recharge", or "AI & Subscriptions". Avoid the `&` symbol entirely in category titles and taxonomy.
+- **Strict bilingual separation**: Always keep English (`name_en`) and Arabic (`name_ar`) strictly separate in their respective columns/fields. Never mix, concatenate, or blend English and Arabic into a single name field.
+
+<!-- END:category-naming-rules -->
+
 ## Active store upgrade handoff
 
 Read `docs/store-upgrade/README.md` for completed work, migration status and release gates before continuing this upgrade. The user requests **no screenshots or image inspection**; verify with code, DOM and functional checks.
