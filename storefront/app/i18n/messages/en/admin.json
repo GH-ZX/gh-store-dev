@@ -1567,6 +1567,15 @@
     "errorInvalid": "Check the fields and try again.",
     "errorUnknown": "Saving failed. Try again.",
     "loading": "Loading…",
-    "addProduct": "Add product"
+    "addProduct": "Add product",
+    "carouselToolbar": "Featured products toolbar",
+    "carouselAdmin": "Featured products admin",
+    "reorder": "Reorder",
+    "reorderDone": "Done",
+    "editProduct": "Edit product",
+    "carouselSettings": "Display settings",
+    "manageCatalog": "Catalog",
+    "moveEarlier": "Earlier",
+    "moveLater": "Later"
   }
 }

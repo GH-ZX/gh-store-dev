@@ -1,1024 +1,412 @@
 /* ==========================================================================
-   Hero Carousel: Agency Masterpiece (Awwwards-Tier Mobile-First)
-   - 100% Vivid, Un-darkened Artwork on Top
-   - Machined Double-Bezel Hardware Architecture
-   - Dedicated Action & Content Tray Down Below
-   - Swiper-grade Momentum Physics & Embla Precision Snapping
-   - Ambient Aura Glow & Button-in-Button Micro-Interactions
+   Featured strip — flat, token-driven, RTL-safe.
+   One slide in view, a quiet control row below. No glass, glow or gradients
+   beyond a single image scrim; every colour comes from the storefront tokens.
    ========================================================================== */
 
 .cinematic-hero {
   position: relative;
   width: 100%;
-  max-width: var(--page-max, 1400px);
+  max-width: var(--page-max, 1240px);
   margin-inline: auto;
-  padding-block: 6px 16px;
-  overflow: hidden;
+  padding-inline: var(--page-gutter, 16px);
+  padding-block: 8px 12px;
 }
 
-/* ==========================================================================
-   Viewport & Track: Rock-solid Embla Architecture
-   ========================================================================== */
-
-.cinematic-viewport-wrapper {
-  position: relative;
-  width: 100%;
-  padding-block: 6px 12px;
-}
-
-/* Embla requires overflow: hidden on its ref container */
 .cinematic-viewport {
-  width: 100%;
   overflow: hidden;
-  cursor: grab;
+  border-radius: var(--radius-shell);
   touch-action: pan-y pinch-zoom;
 }
-
-.cinematic-viewport:active {
-  cursor: grabbing;
-}
-
 .cinematic-track {
   display: flex;
-  touch-action: pan-y pinch-zoom;
   user-select: none;
   -webkit-user-select: none;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  transform: translate3d(0, 0, 0);
-  margin-inline-start: -10px;
 }
-
-/* Slide item: Measured precisely by Embla. NO transforms on this root container! */
 .cinematic-slide {
-  flex: 0 0 91%;
-  max-width: 880px;
+  flex: 0 0 100%;
   min-width: 0;
-  padding-inline-start: 12px;
-  padding-block: 18px 24px;
   outline: none;
 }
-
-@media (min-width: 640px) {
-  .cinematic-slide {
-    flex: 0 0 85%;
-    padding-inline-start: 16px;
-    padding-block: 24px 30px;
-  }
-  .cinematic-track {
-    margin-inline-start: -16px;
-  }
+.cinematic-slide:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  border-radius: var(--radius-shell);
 }
 
-@media (min-width: 1024px) {
-  .cinematic-slide {
-    flex: 0 0 78%;
-    max-width: 1160px;
-    padding-inline-start: 22px;
-    padding-block: 28px 36px;
-  }
-  .cinematic-track {
-    margin-inline-start: -22px;
-  }
-}
-
-/* ==========================================================================
-   Inner Card Stage: Depth, Ambient Glow, Staging Scale
-   ========================================================================== */
-
-.cinematic-card-stage {
+/* Card: image band on top for phones, side by side from 768px */
+.cinematic-card {
   position: relative;
-  width: 100%;
-  transform: scale(0.95);
-  opacity: 0.68;
-  transition:
-    transform 450ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 450ms ease;
-  cursor: pointer;
-}
-
-.cinematic-slide.is-active .cinematic-card-stage {
-  transform: scale(1);
-  opacity: 1;
-  z-index: 2;
-  cursor: pointer;
-}
-
-.cinematic-slide.is-peeking:hover .cinematic-card-stage {
-  opacity: 0.88;
-  transform: scale(0.97);
-}
-
-/* Dynamic Ambient Glow behind active card */
-.cinematic-card-glow {
-  position: absolute;
-  inset: -20px -14px;
-  border-radius: 40px;
-  background: radial-gradient(circle at 50% 50%, var(--slide-accent, var(--accent)) 0%, transparent 70%);
-  opacity: 0;
-  filter: blur(48px);
-  pointer-events: none;
-  transition: opacity 650ms ease;
-  z-index: 0;
-}
-
-.cinematic-slide.is-active .cinematic-card-glow {
-  opacity: 0.42;
-}
-
-/* ==========================================================================
-   The Double-Bezel Hardware Card
-   ========================================================================== */
-
-.cinematic-card-shell {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
-  width: 100%;
-  border-radius: 26px;
+  height: 100%;
   overflow: hidden;
-  background: var(--surface-strong, #0e1929);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    0 32px 80px -20px rgba(0, 0, 0, 0.90),
-    0 4px 16px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transition:
-    border-color var(--duration-fast, 180ms) ease,
-    box-shadow var(--duration-fast, 180ms) ease;
+  border-radius: var(--radius-shell);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
 }
-
-@media (max-width: 640px) {
-  .cinematic-card-shell {
-    border-radius: 22px;
-  }
-}
-
-.cinematic-slide.is-active:hover .cinematic-card-shell {
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow:
-    0 42px 96px -24px rgba(0, 0, 0, 0.95),
-    0 0 0 1px rgba(90, 216, 255, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-}
-
-/* Top Media Section: 100% Pure, Crisp Artwork */
 .cinematic-card-media {
   position: relative;
-  width: 100%;
-  height: clamp(360px, 36vw, 490px);
+  aspect-ratio: 16 / 10;
   overflow: hidden;
-  background: var(--surface-inset, #050d18);
+  background: var(--surface-inset);
 }
-
-@media (max-width: 640px) {
-  .cinematic-card-media {
-    height: clamp(270px, 72vw, 360px);
-  }
-}
-
 .cinematic-card-img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 1; /* 100% untouched original brightness! No dark veil! */
-  transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-
-.cinematic-slide.is-active:hover .cinematic-card-img {
-  transform: scale(1.028);
-}
-
-/* Floating Glass Badges in top corner */
 .cinematic-media-tags {
   position: absolute;
-  top: 14px;
-  inset-inline-start: 14px;
-  z-index: 5;
+  inset-block-start: 12px;
+  inset-inline-start: 12px;
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
-
-.cinematic-glass-tag {
+.cinematic-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 11px;
-  border-radius: var(--radius-pill, 999px);
-  font-size: 11px;
-  font-weight: 750;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
 }
-
-.cinematic-glass-tag--accent {
-  background: rgba(3, 8, 16, 0.78);
-  color: var(--slide-accent, var(--accent, #5ad8ff));
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-}
-
-.cinematic-glass-tag--subtle {
-  background: rgba(3, 8, 16, 0.65);
-  color: var(--ink-soft, #c2d2e2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Admin Live Edit Pencil */
-.cinematic-edit-badge {
-  position: absolute;
-  top: 12px;
-  inset-inline-end: 12px;
-  z-index: 10;
-}
-
-/* ==========================================================================
-   Down Action Tray (Clean Content & CTA Panel strictly BELOW the image)
-   ========================================================================== */
-
-.cinematic-card-tray {
-  position: relative;
+.cinematic-card-body {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 18px;
-  background: rgba(8, 14, 24, 0.42);
-  border-top: none;
-  box-shadow: none;
-  overflow: hidden;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  transition:
-    background-color var(--duration-fast, 180ms) ease,
-    border-color var(--duration-fast, 180ms) ease;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px;
 }
-
-@media (max-width: 640px) {
-  .cinematic-card-tray {
-    padding: 8px 14px;
-    gap: 10px;
-  }
-}
-
-/* Directional Ambient Artwork Blur Flow - High Optical Transparency */
-.cinematic-tray-glass-bg {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-  -webkit-mask-image: linear-gradient(
-    135deg,
-    rgba(0, 0, 0, 1) 0%,
-    rgba(0, 0, 0, 0.88) 60%,
-    rgba(0, 0, 0, 0.55) 100%
-  );
-  mask-image: linear-gradient(
-    135deg,
-    rgba(0, 0, 0, 1) 0%,
-    rgba(0, 0, 0, 0.88) 60%,
-    rgba(0, 0, 0, 0.55) 100%
-  );
-}
-
-[dir="rtl"] .cinematic-tray-glass-bg,
-[data-storefront-shell][dir="rtl"] .cinematic-tray-glass-bg {
-  -webkit-mask-image: linear-gradient(
-    225deg,
-    rgba(0, 0, 0, 1) 0%,
-    rgba(0, 0, 0, 0.88) 60%,
-    rgba(0, 0, 0, 0.55) 100%
-  );
-  mask-image: linear-gradient(
-    225deg,
-    rgba(0, 0, 0, 1) 0%,
-    rgba(0, 0, 0, 0.88) 60%,
-    rgba(0, 0, 0, 0.55) 100%
-  );
-}
-
-.cinematic-tray-glass-img {
-  position: absolute;
-  inset: -48px;
-  width: calc(100% + 96px);
-  height: calc(100% + 96px);
-  object-fit: cover;
-  filter: blur(42px) saturate(145%);
-  opacity: 0.82;
-  pointer-events: none;
-}
-
-/* Light, Gentle Vignette for High Text Contrast without Masking Blur */
-.cinematic-tray-glass-sheen {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(6, 11, 20, 0.12) 0%,
-    rgba(6, 11, 20, 0.42) 100%
-  );
-  pointer-events: none;
-}
-
-/* Left / Leading Info (Emblem + Title + Price + Star Rating) */
-.cinematic-tray-info {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  flex: 1;
-}
-
-.cinematic-tray-logo {
+.cinematic-logo-tile {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: auto;
-  min-width: 22px;
-  max-width: 36px;
-  height: 28px;
-  padding: 0;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  flex-shrink: 0;
+  width: 124px;
+  height: 56px;
+  padding: 10px 14px;
+  border-radius: var(--radius-inner);
+  background: var(--brand-logo-surface);
+  color: var(--brand-logo-ink);
+}
+.cinematic-title {
+  margin: 0;
+  font-size: clamp(22px, 3.4vw, 32px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+[dir="rtl"] .cinematic-title {
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+.cinematic-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.cinematic-price-label {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.cinematic-price-val {
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.cinematic-desc {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cinematic-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  min-height: 44px;
+  padding-inline: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--sf-button, var(--accent));
+  color: var(--accent-ink);
+  font-size: 15px;
+  font-weight: 600;
+  transition: filter 150ms, transform 150ms;
+}
+.cinematic-cta:hover {
+  filter: brightness(1.08);
+}
+.cinematic-cta:active {
+  transform: scale(0.97);
+}
+.cinematic-edit-badge {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  z-index: 3;
 }
 
-@media (max-width: 640px) {
-  .cinematic-tray-logo {
-    min-width: 18px;
-    max-width: 30px;
-    height: 24px;
-  }
-}
-
-.cinematic-tray-logo .sf-carousel-brand {
+/* Brand mark inside the tile */
+.cinematic-logo-tile .sf-carousel-brand {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
 }
-
-.cinematic-tray-logo .sf-carousel-brand img {
+.cinematic-logo-tile .sf-carousel-brand img {
   width: auto;
   height: auto;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  transition:
-    transform var(--duration-fast, 180ms) ease,
-    filter var(--duration-fast, 180ms) ease;
 }
-
-.cinematic-slide.is-active:hover .cinematic-tray-logo .sf-carousel-brand img {
-  transform: scale(1.08);
+/* The tile is always light, so monochrome marks render dark. */
+.cinematic-logo-tile .sf-carousel-brand img[data-monochrome="true"]:not([data-logo-tone]),
+.cinematic-logo-tile .sf-carousel-brand img[data-logo-tone="light"],
+.cinematic-logo-tile .sf-carousel-brand img[data-logo-tone="dark"] {
+  filter: brightness(0);
 }
-
-/* Luminous White for Monochrome and Black logos on the dark glossy tray */
-[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"]:not([data-logo-tone]),
-[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
-[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
-[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"],
-.cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"]:not([data-logo-tone]),
-.cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
-.cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
-.cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"] {
-  filter: brightness(0) invert(1) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6)) !important;
+.cinematic-logo-tile .sf-carousel-brand img[data-logo-ink] {
+  filter: none;
 }
-
-/* When admin explicitly set dark logo tone */
-[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="dark"],
-.cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="dark"] {
-  filter: brightness(0) !important;
-}
-
-/* When custom ink color is specified (via product.carouselColor) */
-[data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-ink],
-.cinematic-tray-logo .sf-carousel-brand img[data-logo-ink] {
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5)) !important;
-}
-
-.cinematic-tray-text {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.cinematic-tray-title {
-  margin: 0;
-  font-size: clamp(14px, 1.8vw, 16.5px);
-  font-weight: 850;
-  line-height: 1.25;
-  color: var(--ink, #f4f8fc);
-  letter-spacing: -0.015em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
-}
-
-.cinematic-tray-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
-  line-height: 1.2;
-}
-
-.cinematic-price-box {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  line-height: 1.2;
-}
-
-.cinematic-price-label {
-  font-size: 10.5px;
-  font-weight: 650;
-  color: var(--ink-muted, #8598ac);
-  text-transform: uppercase;
-}
-
-.cinematic-price-val {
-  font-size: 14px;
-  font-weight: 850;
-  color: var(--slide-accent, var(--accent, #5ad8ff));
-  line-height: 1.2;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-}
-
-.cinematic-desc-preview {
-  margin: 0;
-  font-size: 11.5px;
-  color: var(--ink-muted, #8598ac);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Luxury Star Rating Trust Badge */
-.cinematic-star-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 5.5px;
-  border-radius: var(--radius-pill, 999px);
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.28);
-  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.08);
-}
-
-.cinematic-star-val {
-  font-size: 10.5px;
-  font-weight: 850;
-  color: #fbbf24;
-  line-height: 1;
-}
-
-/* Compact Sleek Action Button (replaces large, bulky button) */
-.cinematic-tray-action {
-  position: relative;
-  z-index: 1;
-  flex-shrink: 0;
-}
-
-.cinematic-compact-action {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--slide-accent, var(--accent, #5ad8ff));
-  color: var(--accent-ink, #04121c);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow:
-    var(--glow-accent, 0 6px 18px -4px rgba(90, 216, 255, 0.45)),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transition:
-    transform var(--duration-fast, 180ms) ease,
-    filter var(--duration-fast, 180ms) ease,
-    box-shadow var(--duration-fast, 180ms) ease;
-  cursor: pointer;
-}
-
-.cinematic-compact-action:hover {
-  transform: scale(1.08);
-  filter: brightness(1.1);
-  box-shadow:
-    var(--glow-accent, 0 8px 22px -4px rgba(90, 216, 255, 0.6)),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-.cinematic-compact-action:active {
-  transform: scale(0.92);
-}
-
-@media (max-width: 640px) {
-  .cinematic-compact-action {
-    width: 30px;
-    height: 30px;
-  }
-}
-
-/* ==========================================================================
-   Clean, Borderless Control Dock Below the Cards
-   ========================================================================== */
-
-.cinematic-dock-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 14px;
-  padding-inline: 16px;
-}
-
-.cinematic-dock {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  padding: 4px 8px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-
-.cinematic-dock-btn {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-pill, 999px);
-  background: transparent;
-  border: none;
-  color: var(--ink-soft, #c2d2e2);
-  cursor: pointer;
-  transition: all var(--duration-fast, 180ms) ease;
-}
-
-.cinematic-dock-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--ink, #f4f8fc);
-  transform: scale(1.12);
-}
-
-.cinematic-dock-btn:active {
-  transform: scale(0.92);
-}
-
-.cinematic-dock-btn--toggle {
-  color: var(--ink-muted, #8598ac);
-}
-
-.cinematic-dock-btn--toggle:hover {
-  color: var(--ink, #f4f8fc);
-}
-
-/* Slide Counter */
-.cinematic-counter {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
+.cinematic-logo-tile .sf-carousel-brand-fallback {
+  color: var(--brand-logo-ink);
+  font-size: 15px;
   font-weight: 700;
-  color: var(--ink-muted, #8598ac);
-  padding-inline: 4px;
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
-.cinematic-counter-cur {
-  color: var(--ink, #f4f8fc);
+/* Controls */
+.cinematic-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-block-start: 14px;
 }
-
-.cinematic-counter-sep {
-  opacity: 0.4;
-}
-
-/* Interactive Pill Dots with Filling Countdown */
-.cinematic-pills-list {
+.cinematic-dots {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-inline: 4px;
 }
-
-.cinematic-pill-dot {
+.cinematic-dot {
   position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.cinematic-dot::before {
+  content: "";
   width: 8px;
   height: 8px;
-  border-radius: var(--radius-pill, 999px);
-  background: rgba(255, 255, 255, 0.22);
-  border: none;
-  padding: 0;
+  border-radius: var(--radius-pill);
+  background: var(--line-strong);
+  transition: width 250ms var(--ease-out-expo), background-color 200ms;
+}
+.cinematic-dot.is-active::before {
+  width: 26px;
+  background: var(--line-strong);
+}
+.cinematic-dot-fill {
+  position: absolute;
+  inset-block: 10px;
+  inset-inline-start: 1px;
+  width: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  transform-origin: left center;
+  animation: cinematic-fill var(--interval, 6s) linear forwards;
+}
+[dir="rtl"] .cinematic-dot-fill {
+  transform-origin: right center;
+}
+.cinematic-dot-fill[data-paused="true"] {
+  animation-play-state: paused;
+}
+.cinematic-dot-fill[data-static="true"] {
+  animation: none;
+}
+@keyframes cinematic-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.cinematic-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-strong);
+  color: var(--ink);
   cursor: pointer;
-  overflow: hidden;
-  transition:
-    width 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
-    background-color var(--duration-fast, 180ms) ease;
+  transition: background-color 150ms, transform 150ms;
+}
+.cinematic-btn:hover {
+  background: var(--line-strong);
+}
+.cinematic-btn:active {
+  transform: scale(0.94);
 }
 
-.cinematic-pill-dot:hover {
-  background: rgba(255, 255, 255, 0.5);
+@media (min-width: 768px) {
+  .cinematic-card {
+    flex-direction: row-reverse;
+    min-height: 340px;
+  }
+  .cinematic-card-media {
+    flex: 1 1 52%;
+    aspect-ratio: auto;
+  }
+  .cinematic-card-body {
+    flex: 1 1 48%;
+    padding: 36px 40px;
+    gap: 18px;
+  }
+  .cinematic-logo-tile {
+    width: 148px;
+    height: 64px;
+  }
+}
+@media (hover: hover) {
+  .cinematic-card:hover .cinematic-card-img {
+    transform: scale(1.03);
+  }
+}
+.cinematic-card-img {
+  transition: transform 600ms var(--ease-out-expo);
 }
 
-.cinematic-pill-dot.is-active {
-  width: 38px;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.cinematic-pill-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--accent, #5ad8ff);
-  box-shadow: 0 0 10px rgba(90, 216, 255, 0.6);
-  transition: width 50ms linear;
-}
-
-/* ==========================================================================
-   Admin Toolbar & Reorder Suite for Authenticated Administrators
-   ========================================================================== */
-
+/* ---- Admin toolbar and reordering (signed-in administrators only) ---- */
 .cinematic-admin-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 8px 16px;
-  margin-bottom: 14px;
-  border-radius: var(--radius-card, 16px);
-  background: rgba(15, 23, 42, 0.78);
-  border: 1px solid rgba(90, 216, 255, 0.22);
-  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  gap: 8px;
+  margin-block-end: 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-inner);
+  background: var(--surface);
 }
-
 .cinematic-admin-badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-
 .cinematic-admin-dot {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
-  background: #fbbf24;
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+  border-radius: 50%;
+  background: var(--success);
 }
-
 .cinematic-admin-title {
-  font-size: 12.5px;
-  font-weight: 800;
-  color: var(--ink, #f4f8fc);
-  letter-spacing: -0.01em;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
 }
-
 .cinematic-admin-actions {
   display: flex;
-  align-items: center;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 6px;
 }
-
 .cinematic-admin-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 12px;
-  border-radius: var(--radius-pill, 999px);
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--ink-soft, #c2d2e2);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: all var(--duration-fast, 180ms) ease;
+  min-height: 36px;
+  padding-inline: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  text-decoration: none;
 }
-
 .cinematic-admin-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
+  color: var(--ink);
+  border-color: var(--line-strong);
 }
-
 .cinematic-admin-btn--active {
-  background: var(--accent, #5ad8ff);
-  color: var(--accent-ink, #04121c);
-  border-color: var(--accent, #5ad8ff);
-  box-shadow: 0 0 14px -2px rgba(90, 216, 255, 0.5);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
-
-.cinematic-admin-btn--active:hover {
-  background: var(--accent, #5ad8ff);
-  color: var(--accent-ink, #04121c);
-  filter: brightness(1.08);
-}
-
-/* Floating Reorder Actions on the Card */
 .cinematic-reorder-actions {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 25;
+  inset-inline: 12px;
+  inset-block-end: 12px;
+  z-index: 3;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  border-radius: var(--radius-pill, 999px);
-  background: rgba(8, 14, 24, 0.92);
-  border: 1.5px solid var(--accent, #5ad8ff);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
 }
-
 .cinematic-reorder-move-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: var(--radius-pill, 999px);
+  gap: 4px;
+  min-height: 36px;
+  padding-inline: 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-strong);
+  color: var(--ink);
   font-size: 12px;
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--ink, #fff);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 600;
   cursor: pointer;
-  transition: all 160ms ease;
 }
-
-.cinematic-reorder-move-btn:hover:not(:disabled) {
-  background: var(--accent, #5ad8ff);
-  color: var(--accent-ink, #04121c);
-  border-color: var(--accent, #5ad8ff);
-  transform: scale(1.05);
-}
-
 .cinematic-reorder-move-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+  opacity: 0.4;
+  cursor: default;
 }
-
 .cinematic-reorder-pos-badge {
   font-size: 12px;
-  font-weight: 850;
-  color: var(--accent, #5ad8ff);
-  padding-inline: 4px;
-  letter-spacing: 0.04em;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ==========================================================================
-   Light Mode (data-theme="light") Adaptations
-   - Frosted Glass Tray with High Optical Luminance & Blur
-   - Crisp, High-Contrast Typography & Accents
-   - Sophisticated Diffused Elevation Shadows
-   - Pure Black / Ink Brand Logos
-   - Polished Admin Suite & Reordering Controls
-   ========================================================================== */
-
-/* Ambient Stage Glow: Softer and more subtle on light canvas */
-[data-theme="light"] .cinematic-slide.is-active .cinematic-card-glow {
-  opacity: 0.22;
-  filter: blur(56px);
-}
-
-/* Double-Bezel Hardware Card Shell in Light Mode */
-[data-theme="light"] .cinematic-card-shell {
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--line, rgba(13, 28, 46, 0.14));
-  box-shadow:
-    0 20px 48px -16px rgba(13, 28, 46, 0.16),
-    0 4px 14px rgba(13, 28, 46, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-}
-
-[data-theme="light"] .cinematic-slide.is-active:hover .cinematic-card-shell {
-  border-color: var(--line-strong, rgba(13, 28, 46, 0.28));
-  box-shadow:
-    0 28px 64px -18px rgba(13, 28, 46, 0.22),
-    0 0 0 1px var(--accent-line, rgba(6, 96, 123, 0.32)),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-}
-
-[data-theme="light"] .cinematic-card-media {
-  background: var(--surface-strong, #eef4f9);
-}
-
-/* Floating Glass Badges in top corner */
-[data-theme="light"] .cinematic-glass-tag--accent {
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--slide-accent, var(--accent, #06607b));
-  border: 1px solid rgba(13, 28, 46, 0.12);
-  box-shadow: 0 4px 14px rgba(13, 28, 46, 0.1);
-}
-
-[data-theme="light"] .cinematic-glass-tag--subtle {
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--ink-soft, #33475d);
-  border: 1px solid rgba(13, 28, 46, 0.1);
-}
-
-/* Admin Live Edit Pencil */
-.cinematic-edit-badge button {
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-}
-
-[data-theme="light"] .cinematic-edit-badge button {
-  box-shadow: 0 4px 14px rgba(13, 28, 46, 0.14);
-}
-
-/* Down Action Tray: Luminous, Frosted Glass with Artwork Bleed */
-[data-theme="light"] .cinematic-card-tray {
-  background: rgba(255, 255, 255, 0.68);
-  border-top: none;
-  backdrop-filter: blur(28px) saturate(160%);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
-}
-
-[data-theme="light"] .cinematic-tray-glass-img {
-  opacity: 0.52;
-  filter: blur(38px) saturate(135%);
-}
-
-[data-theme="light"] .cinematic-tray-glass-sheen {
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.58) 100%
-  );
-}
-
-/* Brand Logos in Light Mode Tray */
-[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"],
-[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
-[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="dark"],
-[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
-[data-theme="light"] .cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"],
-[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-monochrome="true"],
-[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="light"],
-[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[data-logo-tone="dark"],
-[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="roblox"],
-[data-theme="light"] [data-storefront-shell] .cinematic-tray-logo .sf-carousel-brand img[src*="Roblox"] {
-  filter: brightness(0) drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8)) !important;
-}
-
-/* Tray Typography & Details */
-[data-theme="light"] .cinematic-tray-title {
-  color: var(--ink, #0d1c2e);
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
-}
-
-[data-theme="light"] .cinematic-price-label {
-  color: var(--ink-muted, #52657b);
-}
-
-[data-theme="light"] .cinematic-price-val {
-  color: var(--slide-accent, var(--accent, #06607b));
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
-}
-
-[data-theme="light"] .cinematic-desc-preview {
-  color: var(--ink-muted, #52657b);
-}
-
-[data-theme="light"] .cinematic-star-badge {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.32);
-}
-
-[data-theme="light"] .cinematic-star-val {
-  color: #d97706;
-}
-
-[data-theme="light"] .cinematic-compact-action {
-  background: var(--slide-accent, var(--accent, #06607b));
-  color: var(--accent-ink, #ffffff);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow:
-    0 4px 14px -2px rgba(6, 96, 123, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-[data-theme="light"] .cinematic-compact-action:hover {
-  box-shadow:
-    0 6px 18px -2px rgba(6, 96, 123, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
-}
-
-/* Minimalist Control Dock in Light Mode */
-[data-theme="light"] .cinematic-dock-btn {
-  color: var(--ink-muted, #52657b);
-}
-
-[data-theme="light"] .cinematic-dock-btn:hover {
-  background: rgba(13, 28, 46, 0.06);
-  color: var(--ink, #0d1c2e);
-}
-
-[data-theme="light"] .cinematic-dock-btn--toggle {
-  color: var(--ink-faint, #647689);
-}
-
-[data-theme="light"] .cinematic-dock-btn--toggle:hover {
-  color: var(--ink, #0d1c2e);
-}
-
-[data-theme="light"] .cinematic-counter {
-  color: var(--ink-muted, #52657b);
-}
-
-[data-theme="light"] .cinematic-counter-cur {
-  color: var(--ink, #0d1c2e);
-}
-
-[data-theme="light"] .cinematic-pill-dot {
-  background: rgba(13, 28, 46, 0.15);
-}
-
-[data-theme="light"] .cinematic-pill-dot:hover {
-  background: rgba(13, 28, 46, 0.28);
-}
-
-[data-theme="light"] .cinematic-pill-dot.is-active {
-  background: rgba(13, 28, 46, 0.08);
-}
-
-[data-theme="light"] .cinematic-pill-fill {
-  background: var(--accent, #06607b);
-  box-shadow: 0 1px 6px rgba(6, 96, 123, 0.35);
-}
-
-/* Admin Toolbar & Reorder Suite in Light Mode */
-[data-theme="light"] .cinematic-admin-bar {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--line-strong, rgba(13, 28, 46, 0.22));
-  box-shadow:
-    0 10px 30px -10px rgba(13, 28, 46, 0.12),
-    0 2px 6px rgba(13, 28, 46, 0.04);
-}
-
-[data-theme="light"] .cinematic-admin-title {
-  color: var(--ink, #0d1c2e);
-}
-
-[data-theme="light"] .cinematic-admin-btn {
-  color: var(--ink-soft, #33475d);
-  background: rgba(13, 28, 46, 0.04);
-  border: 1px solid var(--line, rgba(13, 28, 46, 0.14));
-}
-
-[data-theme="light"] .cinematic-admin-btn:hover {
-  color: var(--ink, #0d1c2e);
-  background: rgba(13, 28, 46, 0.08);
-  border-color: var(--line-strong, rgba(13, 28, 46, 0.24));
-}
-
-[data-theme="light"] .cinematic-admin-btn--active {
-  background: var(--accent, #06607b);
-  color: #ffffff;
-  border-color: var(--accent, #06607b);
-  box-shadow: 0 2px 10px rgba(6, 96, 123, 0.35);
-}
-
-[data-theme="light"] .cinematic-admin-btn--active:hover {
-  background: var(--accent-strong, #044a5e);
-  color: #ffffff;
-}
-
-[data-theme="light"] .cinematic-reorder-actions {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1.5px solid var(--accent, #06607b);
-  box-shadow: 0 12px 36px rgba(13, 28, 46, 0.22);
-}
-
-[data-theme="light"] .cinematic-reorder-move-btn {
-  background: rgba(13, 28, 46, 0.06);
-  color: var(--ink, #0d1c2e);
-  border: 1px solid var(--line-strong, rgba(13, 28, 46, 0.22));
-}
-
-[data-theme="light"] .cinematic-reorder-move-btn:hover:not(:disabled) {
-  background: var(--accent, #06607b);
-  color: #ffffff;
-  border-color: var(--accent, #06607b);
-}
-
-[data-theme="light"] .cinematic-reorder-pos-badge {
-  color: var(--accent, #06607b);
+@media (prefers-reduced-motion: reduce) {
+  .cinematic-card-img,
+  .cinematic-dot::before {
+    transition: none;
+  }
+  .cinematic-dot-fill {
+    animation: none;
+    transform: scaleX(1);
+  }
 }

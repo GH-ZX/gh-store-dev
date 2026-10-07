@@ -1567,6 +1567,15 @@
     "errorInvalid": "راجع الحقول ثم أعد المحاولة.",
     "errorUnknown": "تعذّر الحفظ. أعد المحاولة.",
     "loading": "جارٍ التحميل…",
-    "addProduct": "إضافة منتج"
+    "addProduct": "إضافة منتج",
+    "carouselToolbar": "شريط أدوات المنتجات المميزة",
+    "carouselAdmin": "إدارة المنتجات المميزة",
+    "reorder": "ترتيب الشرائح",
+    "reorderDone": "إنهاء الترتيب",
+    "editProduct": "تعديل هذا المنتج",
+    "carouselSettings": "إعدادات العرض",
+    "manageCatalog": "إدارة الكتالوج",
+    "moveEarlier": "تقديم",
+    "moveLater": "تأخير"
   }
 }

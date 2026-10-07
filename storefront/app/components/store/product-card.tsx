@@ -47,7 +47,6 @@ export function ProductCard({ product, locale, labels, meta, priority = false, o
         ) : null}
         <div className="sf-product-card-footer">
           {meta ? <p className="sf-product-price"><span>{meta.label}</span> <bdi dir="ltr">{meta.price}</bdi></p> : null}
-          <span className="sf-product-cta">{presentation.viewProduct}<ArrowIcon direction="end" className="size-4 rtl:rotate-180" /></span>
         </div>
       </div>
     </Link>

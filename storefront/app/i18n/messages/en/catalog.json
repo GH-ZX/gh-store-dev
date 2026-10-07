@@ -152,6 +152,8 @@
     "noMatches": "No offers match these filters. Try another name or region, or clear the filters.",
     "noOffersHeading": "This product is currently unavailable",
     "noOffersDescription": "Offers for this product are temporarily out of automated stock. You can request it directly from our support team and we will provide it for you.",
+    "requestText": "Hello, I'd like to ask about availability for \"{name}\"",
+    "requestTicketSubject": "Product request: {name}",
     "requestViaTelegram": "Request via Telegram",
     "requestViaWhatsApp": "Request via WhatsApp",
     "requestViaTicket": "Request via Support Ticket",

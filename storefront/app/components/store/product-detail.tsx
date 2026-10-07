@@ -1,8 +1,10 @@
 import { ProductArtwork } from "@/components/store/product-artwork";
 import { OfferTerms } from "@/components/store/offer-terms";
-import { Link } from "react-router";
+import { Link, useRouteLoaderData } from "react-router";
 import type { Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
+import { formatMessage } from "@/i18n/format";
+import type { ChromeData } from "@/components/site-chrome";
 import { PackageIcon } from "@/components/ui/icons";
 import { TelegramIcon, WhatsAppIcon } from "@/components/ui/brand-icons";
 import { ProductGrid } from "@/components/store/collections";
@@ -89,17 +91,34 @@ export function ProductInformation({ locale, product, offer }: {
   </div>;
 }
 
+/** A configured contact channel's deep link with the request text pre-filled. */
+function withText(url: string, text: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("text", text);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 export function NoProductOffers({ locale, product }: { locale: Locale; product?: StoreProduct }) {
   const copy = getMessages(locale, "catalog").productDetail;
-  const isAr = locale === "ar";
-  const productName = product?.name ?? "";
-  const requestText = isAr
-    ? `مرحباً، أود الاستفسار عن توفر منتج "${productName}"`
-    : `Hello, I'd like to ask about availability for "${productName}"`;
-
-  const telegramUrl = `https://t.me/ahmedghx?text=${encodeURIComponent(requestText)}`;
-  const whatsappUrl = `https://wa.me/963968098330?text=${encodeURIComponent(requestText)}`;
-  const ticketSubject = isAr ? `طلب توفير منتج: ${productName}` : `Product Request: ${productName}`;
+  let chrome: ChromeData | undefined;
+  try {
+    chrome = useRouteLoaderData("routes/locale-layout") as ChromeData | undefined;
+  } catch {
+    chrome = undefined;
+  }
+  const name = product?.name ?? "";
+  const requestText = formatMessage(copy.requestText, { name }, locale);
+  const ticketSubject = formatMessage(copy.requestTicketSubject, { name }, locale);
+  // Contacts come from the dashboard's social links, falling back to store contacts when not configured.
+  const links = chrome?.socialLinks ?? [];
+  const telegram = links.find((link) => link.platform === "telegram");
+  const whatsapp = links.find((link) => link.platform === "whatsapp");
+  const telegramUrl = telegram ? withText(telegram.url, requestText) : `https://t.me/ahmedghx?text=${encodeURIComponent(requestText)}`;
+  const whatsappUrl = whatsapp ? withText(whatsapp.url, requestText) : `https://wa.me/963968098330?text=${encodeURIComponent(requestText)}`;
   const supportTicketUrl = `/${locale}/support?subject=${encodeURIComponent(ticketSubject)}&body=${encodeURIComponent(requestText)}`;
 
   return <section className="sf-detail-unavailable" aria-labelledby="no-product-offers">
@@ -123,7 +142,6 @@ export function NoProductOffers({ locale, product }: { locale: Locale; product?:
     </div>
   </section>;
 }
-
 export function RelatedProductDiscovery({ locale, product, related }: {
   locale: Locale; product: StoreProduct; related: RelatedProducts;
 }) {

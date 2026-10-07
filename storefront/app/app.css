@@ -361,25 +361,6 @@ html:not([data-theme="light"]) .gh-only-light {
   animation: gh-page-in var(--enter-duration, 520ms) var(--ease-out-expo) both;
 }
 
-/*
- * The carousel's progress rail: the active segment fills itself over the
- * interval the slide stays up, as a countdown written in the brand accent
- * rather than dots. The duration is set inline by the carousel from its
- * configured interval, so only the neutral longer default lives here.
- */
-@keyframes gh-progress {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-
-@utility gh-progress {
-  animation: gh-progress 6s linear both;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -423,20 +404,7 @@ html:not([data-theme="light"]) .gh-only-light {
   }
 }
 
-/* Navigation progress bar: fills most of the width, then waits for the page. */
-@keyframes gh-progress {
-  0% {
-    transform: scaleX(0);
-  }
-  60% {
-    transform: scaleX(0.7);
-  }
-  100% {
-    transform: scaleX(0.92);
-  }
-}
-
-:root { --font-geist-sans: "Geist", "Noto Sans Arabic", sans-serif; --font-geist-mono: "Geist Mono", monospace; --font-tektur: "Tektur", sans-serif; --font-space-grotesk: "Space Grotesk", sans-serif; --font-sora: "Sora", sans-serif; }
+:root { --font-geist-sans: "Geist", "IBM Plex Sans Arabic", system-ui, sans-serif; --font-geist-mono: "Geist Mono", monospace; --font-tektur: var(--font-geist-sans); }
 @layer base { *, ::before, ::after { border-color: var(--line); } input:not([type="checkbox"]):not([type="radio"]), select, textarea { background-color: var(--surface-inset); color: var(--ink); } button, a, summary { -webkit-tap-highlight-color: transparent; } button:not(:disabled), summary { cursor: pointer; } }
 
 body:has(.gh-drawer[open]) { overflow: hidden; }

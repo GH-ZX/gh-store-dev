@@ -20,9 +20,9 @@ export type SectionProps = HTMLAttributes<HTMLElement> & {
 };
 
 const SPACING_CLASSES = {
-  tight: "py-8 sm:py-10",
-  normal: "py-12 sm:py-16",
-  page: "pt-10 pb-14 sm:pt-14 sm:pb-20",
+  tight: "py-5 sm:py-7",
+  normal: "py-7 sm:py-10",
+  page: "pt-6 pb-8 sm:pt-10 sm:pb-12",
 } as const;
 
 export function Section({
@@ -64,8 +64,8 @@ export type SectionHeaderProps = {
 };
 
 const TITLE_CLASSES = {
-  h1: "text-[clamp(2.25rem,6vw,3.75rem)] leading-[1.05] font-semibold tracking-[-0.035em]",
-  h2: "text-[clamp(1.5rem,3.4vw,2.25rem)] leading-[1.15] font-semibold tracking-[-0.03em]",
+  h1: "text-[clamp(2rem,5vw,3.25rem)] leading-[1.08] font-bold tracking-[-0.03em]",
+  h2: "text-[clamp(1.375rem,2.6vw,1.875rem)] leading-[1.2] font-semibold tracking-[-0.022em]",
 } as const;
 
 export function SectionHeader({
@@ -84,16 +84,16 @@ export function SectionHeader({
   return (
     <div
       className={cn(
-        "flex flex-row flex-wrap items-end justify-between gap-x-5 gap-y-4",
+        "flex flex-row flex-wrap items-end justify-between gap-x-5 gap-y-3",
         align === "center" && "flex-col sm:flex-col sm:items-center sm:text-center",
         className,
       )}
     >
       <div className={cn("max-w-2xl", align === "center" && "sm:mx-auto")}>
-        {eyebrow ? <Eyebrow className="mb-4">{eyebrow}</Eyebrow> : null}
+        {eyebrow ? <Eyebrow className="mb-2">{eyebrow}</Eyebrow> : null}
         <Heading className={cn(TITLE_CLASSES[as], "text-[var(--ink)]")}>{title}</Heading>
         {subtitle ? (
-          <p className="mt-4 text-base leading-7 text-[var(--ink-soft)]">{subtitle}</p>
+          <p className="mt-1.5 text-[15px] leading-6 text-[var(--ink-muted)]">{subtitle}</p>
         ) : null}
       </div>
 
@@ -104,12 +104,10 @@ export function SectionHeader({
             <Link
               to={viewAllHref}
               aria-label={title ? `${viewAllLabel} — ${title}` : viewAllLabel}
-              className="group inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] px-4 text-sm font-semibold text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+              className="group inline-flex min-h-11 items-center gap-1 text-[15px] font-medium text-[var(--accent)] transition-opacity duration-[var(--duration-fast)] hover:opacity-80"
             >
               {viewAllLabel}
-              <span className="grid size-6 place-items-center rounded-full bg-[var(--shell)] transition-transform duration-[var(--duration)] ease-[var(--ease-spring)] group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">
-                <ArrowIcon direction="end" className="size-3.5 rtl:rotate-180" />
-              </span>
+              <ArrowIcon direction="end" className="size-4 transition-transform duration-[var(--duration-fast)] group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
             </Link>
           ) : null}
         </div>

@@ -21,6 +21,7 @@ import {
   resolveHomeSections,
 } from "@server/lib/services/home.service";
 import { HeroCarouselCinematic } from "@/components/home/hero-carousel-cinematic";
+import { HomeHero } from "@/components/home/home-hero";
 import "@/styles/storefront-home.css";
 import {
   HomeSections,
@@ -86,6 +87,7 @@ export default function LocaleHome() {
   const common = getMessages(locale, "common");
   const home = getMessages(locale, "home");
   const catalog = getMessages(locale, "catalog");
+  const searchMessages = getMessages(locale, "search");
   const page = (
     <>
       <script
@@ -97,27 +99,37 @@ export default function LocaleHome() {
           ),
         }}
       />
-      <Section spacing="page" className="sf-home-opening">
-        <div className="sf-shop-intro">
-          <div>
-            <h1>{home.shop.title}</h1>
-            <p>{home.shop.description}</p>
-          </div>
-        </div>
-      </Section>
+      <HomeHero
+        locale={locale}
+        title={home.shop.title}
+        description={home.shop.description}
+        categories={chrome?.categories ?? []}
+        search={{
+          fieldLabel: searchMessages.fieldLabel,
+          placeholder: home.shop.searchPlaceholder,
+          submit: searchMessages.submit,
+          clear: searchMessages.clear,
+        }}
+      />
       {carousel.products.length > 0 ? (
         <HeroCarouselCinematic
           liveEdit={liveEdit}
           products={carousel.products}
           locale={locale}
-          intervalSeconds={carousel.section?.intervalSeconds ?? 5}
+          intervalSeconds={carousel.section?.intervalSeconds ?? 6}
           autoplay={carousel.section?.autoplay ?? true}
           loop={carousel.section?.loop ?? true}
           labels={{
-            ...home.carousel,
+            regionLabel: home.carousel.regionLabel,
+            slideLabel: home.carousel.slideLabel,
+            goToProduct: home.carousel.goToProduct,
+            previous: home.carousel.previous,
+            next: home.carousel.next,
+            pause: home.carousel.pause,
+            play: home.carousel.play,
             details: common.actions.details,
-            featured: common.badges.featured,
-            fromPrice: locale === "ar" ? "تبدأ من" : "From",
+            featured: home.shop.featuredBadge,
+            fromPrice: home.shop.fromPrice,
           }}
         />
       ) : null}

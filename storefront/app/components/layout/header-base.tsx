@@ -139,7 +139,7 @@ export function HeaderShell({
         />
       ) : null}
 
-      <div className="gh-page sf-header-main flex items-center justify-between" dir="ltr">
+      <div className="gh-page sf-header-main flex items-center justify-between">
         <div className="flex items-center gap-2 shrink-0">
           {onOpenDrawer ? (
             <button
@@ -443,7 +443,7 @@ export function HeaderMobileDrawer({
         }
       }}
     >
-      <div className="flex items-center justify-between" dir="ltr">
+      <div className="flex items-center justify-between">
         <Link to={homeHref} className="flex items-center gap-2 shrink-0" onClick={() => dialogRef.current?.close()}>
           <StorefrontBrand name={brandName} showLogo={showLogo} />
           {brandBadge}

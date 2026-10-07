@@ -86,6 +86,22 @@
     "featured": "Featured products",
     "browse": "Browse all products",
     "seoTitle": "GH Store | Digital Products, Gift Cards & Subscriptions",
-    "seoDescription": "Shop digital products, gift cards, AI subscriptions and game top-ups at GH Store. Compare packages, prices and delivery requirements."
+    "seoDescription": "Shop digital products, gift cards, AI subscriptions and game top-ups at GH Store. Compare packages, prices and delivery requirements.",
+    "searchPlaceholder": "Search games, gift cards or subscriptions",
+    "searchLabel": "Search the store",
+    "fromPrice": "From",
+    "featuredBadge": "Featured"
+  },
+  "quickBuy": {
+    "eyebrow": "Quick buy",
+    "title": "Popular right now",
+    "note": "Check the duration, warranty and region, then confirm your order at checkout.",
+    "allProducts": "All products",
+    "chooseOffer": "Choose a package",
+    "region": "Region",
+    "buy": "Buy",
+    "quickBuy": "Buy now",
+    "details": "Details & all packages",
+    "viewAll": "View all"
   }
 }

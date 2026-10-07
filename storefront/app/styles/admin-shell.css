@@ -59,7 +59,7 @@
 
   background-color: var(--canvas);
   color: var(--ink);
-  font-family: var(--font-geist-sans), "Noto Sans Arabic", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-geist-sans), "IBM Plex Sans Arabic", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
 }
 

@@ -38,12 +38,12 @@ export function Badge({ className, tone = "neutral", icon, children, ...props }:
   );
 }
 
-/** Microscopic uppercase label that precedes a section or page heading. */
+/** Short label that precedes a section or page heading. */
 export function Eyebrow({ className, children, icon, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] bg-[var(--shell)] px-3 py-1 text-[0.6875rem] font-semibold tracking-[0.16em] text-[var(--ink-soft)] uppercase [&>svg]:size-3.5 [&>svg]:text-[var(--accent)]",
+        "inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--accent)] [&>svg]:size-3.5",
         className,
       )}
       {...props}

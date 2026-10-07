@@ -51,11 +51,11 @@ export const links: Route.LinksFunction = () => [
   {
     rel: "preload",
     as: "style",
-    href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap",
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap",
   },
 ];
 
@@ -90,8 +90,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link rel="icon" href="/gh-store-logo-mark.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <meta name="theme-color" content="#101218" media="(prefers-color-scheme: dark)" />
-        <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#0b0b0d" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

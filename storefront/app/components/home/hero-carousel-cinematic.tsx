@@ -8,7 +8,6 @@ import { StoreImage } from "@/components/store/store-image";
 import { CarouselBrand } from "@/components/home/carousel-brand";
 import {
   ArrowIcon,
-  BoltIcon,
   ChevronIcon,
   CloseIcon,
   GearIcon,
@@ -17,7 +16,6 @@ import {
   PlayIcon,
   PlusIcon,
   SparkIcon,
-  StarIcon,
 } from "@/components/ui/icons";
 import { reorderCarouselProducts } from "@/lib/admin-actions";
 import type { Locale } from "@/i18n/config";
@@ -33,17 +31,17 @@ export type CinematicCarouselProps = {
   intervalSeconds?: number;
   autoplay?: boolean;
   loop?: boolean;
-  labels?: {
-    regionLabel?: string;
-    slideLabel?: string;
-    goToProduct?: string;
-    previous?: string;
-    next?: string;
-    pause?: string;
-    play?: string;
-    details?: string;
-    featured?: string;
-    fromPrice?: string;
+  labels: {
+    regionLabel: string;
+    slideLabel: string;
+    goToProduct: string;
+    previous: string;
+    next: string;
+    pause: string;
+    play: string;
+    details: string;
+    featured: string;
+    fromPrice: string;
   };
   liveEdit?: AdminMessages["liveEdit"] | null;
   className?: string;
@@ -64,6 +62,13 @@ function subscribeVisibility(onChange: () => void): () => void {
   return () => document.removeEventListener("visibilitychange", onChange);
 }
 
+/**
+ * Featured products strip.
+ *
+ * One slide in view. Autoplay is driven by the active dot's CSS animation: when
+ * its fill finishes the carousel advances, so nothing re-renders on a timer and
+ * pausing the animation pauses the rotation.
+ */
 export function HeroCarouselCinematic({
   products,
   locale,
@@ -85,19 +90,12 @@ export function HeroCarouselCinematic({
   const [isMoving, setIsMoving] = useState(false);
 
   const moveProduct = useCallback(
-    async (fromIndex: number, direction: "left" | "right") => {
-      const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1;
+    async (fromIndex: number, toIndex: number) => {
       if (toIndex < 0 || toIndex >= total) return;
-
-      const fromId = products[fromIndex].id;
-      const toId = products[toIndex].id;
-
       setIsMoving(true);
       try {
-        const result = await reorderCarouselProducts(fromId, toId);
-        if (result.success) {
-          void revalidate();
-        }
+        const result = await reorderCarouselProducts(products[fromIndex].id, products[toIndex].id);
+        if (result.success) void revalidate();
       } catch (err) {
         console.error("Failed to reorder carousel products:", err);
       } finally {
@@ -107,17 +105,13 @@ export function HeroCarouselCinematic({
     [products, total, revalidate],
   );
 
-  // Production-grade Embla Carousel Instance (Swiper-grade touch physics + Apple glide)
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop,
-    align: "center",
+    align: "start",
     direction: isRtl ? "rtl" : "ltr",
     containScroll: loop ? false : "trimSnaps",
-    dragFree: false,
-    skipSnaps: false,
-    duration: 32, // Luxury momentum glide (Apple / Linear standard)
-    dragThreshold: 8, // Instantaneous, responsive touch detection
-    inViewThreshold: 0.65,
+    duration: 30,
+    dragThreshold: 8,
   });
 
   const subscribeEmbla = useCallback(
@@ -157,14 +151,13 @@ export function HeroCarouselCinematic({
   const [hovered, setHovered] = useState(false);
   const [isInteracting, setIsInteracting] = useState(false);
   const paused = userPaused ?? reducedMotion;
-  const [progress, setProgress] = useState(0);
-  const progressStartTimeRef = useRef<number>(Date.now());
-
+  const holding = paused || hovered || tabHidden || isInteracting;
   const isDraggingRef = useRef(false);
 
-  // Listen to Embla pointer and scroll events to freeze autoplay and distinguish tap vs drag
+  // A drag freezes autoplay and keeps its trailing click from navigating.
   useEffect(() => {
     if (!emblaApi) return;
+    let release: ReturnType<typeof setTimeout> | undefined;
     const onPointerDown = () => {
       isDraggingRef.current = false;
       setIsInteracting(true);
@@ -173,78 +166,37 @@ export function HeroCarouselCinematic({
       isDraggingRef.current = true;
     };
     const onPointerUp = () => {
-      setTimeout(() => {
-        setIsInteracting(false);
-      }, 1500);
+      release = setTimeout(() => setIsInteracting(false), 1200);
     };
-
     emblaApi.on("pointerDown", onPointerDown);
     emblaApi.on("scroll", onScroll);
     emblaApi.on("pointerUp", onPointerUp);
-
     return () => {
+      if (release) clearTimeout(release);
       emblaApi.off("pointerDown", onPointerDown);
       emblaApi.off("scroll", onScroll);
       emblaApi.off("pointerUp", onPointerUp);
     };
   }, [emblaApi]);
 
-  // Smooth live progress timer for active slide indicator
-  useEffect(() => {
-    if (!emblaApi || !isRotating || paused || tabHidden || hovered || isInteracting) {
-      return;
-    }
-
-    progressStartTimeRef.current = Date.now();
-    setProgress(0);
-
-    const frame = () => {
-      const elapsed = Date.now() - progressStartTimeRef.current;
-      const currentPct = Math.min(100, (elapsed / intervalMs) * 100);
-      setProgress(currentPct);
-
-      if (elapsed >= intervalMs) {
-        if (emblaApi.canScrollNext()) {
-          emblaApi.scrollNext();
-        } else {
-          emblaApi.scrollTo(0);
-        }
-        progressStartTimeRef.current = Date.now();
-        setProgress(0);
-      }
-    };
-
-    const intervalTimer = setInterval(frame, 50);
-    return () => clearInterval(intervalTimer);
-  }, [emblaApi, isRotating, paused, tabHidden, hovered, isInteracting, intervalMs, selectedIndex]);
-
-  const toggleRotation = useCallback(() => {
-    setUserPaused(!paused);
-  }, [paused]);
+  const advance = useCallback(() => {
+    if (!emblaApi) return;
+    if (emblaApi.canScrollNext()) emblaApi.scrollNext();
+    else emblaApi.scrollTo(0);
+  }, [emblaApi]);
 
   if (total === 0) return null;
 
-  const resolvedLabels = {
-    regionLabel: labels?.regionLabel ?? (isRtl ? "العروض والمنتجات المميزة" : "Featured Products & Offers"),
-    slideLabel: labels?.slideLabel ?? (isRtl ? "شريحة {index} من {total}" : "Slide {index} of {total}"),
-    goToProduct: labels?.goToProduct ?? (isRtl ? "عرض تفاصيل {name}" : "View details for {name}"),
-    previous: labels?.previous ?? (isRtl ? "الشريحة السابقة" : "Previous slide"),
-    next: labels?.next ?? (isRtl ? "الشريحة التالية" : "Next slide"),
-    pause: labels?.pause ?? (isRtl ? "إيقاف التدوير التلقائي" : "Pause auto-rotation"),
-    play: labels?.play ?? (isRtl ? "تشغيل التدوير التلقائي" : "Play auto-rotation"),
-    details: labels?.details ?? (isRtl ? "استكشف الباقات" : "Explore Offers"),
-    featured: labels?.featured ?? (isRtl ? "مميز" : "Featured"),
-    fromPrice: labels?.fromPrice ?? (isRtl ? "تبدأ من" : "From"),
-  };
-
   const activeProduct = products[selectedIndex] ?? products[0];
+  const prevSide = isRtl ? "end" : "start";
+  const nextSide = isRtl ? "start" : "end";
 
   return (
     <section
       className={cn("cinematic-hero", className)}
       aria-roledescription="carousel"
-      aria-label={resolvedLabels.regionLabel}
-      aria-live={isRotating && !paused && !hovered && !tabHidden ? "off" : "polite"}
+      aria-label={labels.regionLabel}
+      aria-live={isRotating && !holding ? "off" : "polite"}
       onPointerEnter={(e) => {
         if (e.pointerType === "mouse") setHovered(true);
       }}
@@ -256,433 +208,229 @@ export function HeroCarouselCinematic({
         }
       }}
     >
-      {/* Admin Settings & Controls Bar (Visible only when Admin is signed in) */}
       {liveEdit ? (
-        <div
-          className="cinematic-admin-bar"
-          role="toolbar"
-          aria-label={isRtl ? "شريط أدوات المسؤول" : "Admin Carousel Toolbar"}
-        >
+        <div className="cinematic-admin-bar" role="toolbar" aria-label={liveEdit.carouselToolbar}>
           <div className="cinematic-admin-badge">
             <span className="cinematic-admin-dot" />
-            <span className="cinematic-admin-title">
-              {isRtl ? "إدارة الكاروسيل" : "Carousel Admin"}
-            </span>
+            <span className="cinematic-admin-title">{liveEdit.carouselAdmin}</span>
           </div>
-
           <div className="cinematic-admin-actions">
-            {/* Reorder Mode Toggle Button */}
             <button
               type="button"
               onClick={() => setReorderMode((v) => !v)}
-              className={cn(
-                "cinematic-admin-btn",
-                reorderMode && "cinematic-admin-btn--active"
-              )}
+              className={cn("cinematic-admin-btn", reorderMode && "cinematic-admin-btn--active")}
               aria-pressed={reorderMode}
-              title={
-                reorderMode
-                  ? isRtl
-                    ? "إنهاء ترتيب المنتجات"
-                    : "Done Reordering"
-                  : isRtl
-                    ? "ترتيب المنتجات المميزة في الكاروسيل"
-                    : "Reorder Featured Carousel Items"
-              }
             >
-              {reorderMode ? (
-                <CloseIcon className="size-3.5" />
-              ) : (
-                <ChevronIcon direction="end" className="size-3.5" />
-              )}
-              <span>
-                {reorderMode
-                  ? isRtl
-                    ? "إنهاء الترتيب"
-                    : "Done"
-                  : isRtl
-                    ? "ترتيب الشرائح"
-                    : "Reorder"}
-              </span>
+              {reorderMode ? <CloseIcon className="size-3.5" /> : <ChevronIcon direction="end" className="size-3.5" />}
+              <span>{reorderMode ? liveEdit.reorderDone : liveEdit.reorder}</span>
             </button>
-
-            {/* Edit Current Product Shortcut */}
             {activeProduct ? (
-              <Link
-                to={`/${locale}/dashboard/catalog/${activeProduct.id}`}
-                className="cinematic-admin-btn"
-                title={
-                  isRtl
-                    ? `تعديل منتج (${activeProduct.name}) في لوحة التحكم`
-                    : `Edit (${activeProduct.name}) in Dashboard`
-                }
-              >
+              <Link to={`/${locale}/dashboard/catalog/${activeProduct.id}`} className="cinematic-admin-btn">
                 <PencilIcon className="size-3.5" />
-                <span>{isRtl ? "تعديل هذا المنتج" : "Edit Product"}</span>
+                <span>{liveEdit.editProduct}</span>
               </Link>
             ) : null}
-
-            {/* Direct Link to Carousel Speed & Behavior Settings */}
-            <Link
-              to={`/${locale}/dashboard/website#carousel`}
-              className="cinematic-admin-btn"
-              title={
-                isRtl
-                  ? "تعديل سرعة الكاروسيل، التكرار، والتأثيرات"
-                  : "Carousel Speed, Loop & Autoplay Settings"
-              }
-            >
+            <Link to={`/${locale}/dashboard/website#carousel`} className="cinematic-admin-btn">
               <GearIcon className="size-3.5" />
-              <span>{isRtl ? "إعدادات الكاروسيل" : "Settings"}</span>
+              <span>{liveEdit.carouselSettings}</span>
             </Link>
-
-            {/* Direct Link to Catalog to Add/Remove from Carousel */}
-            <Link
-              to={`/${locale}/dashboard/catalog`}
-              className="cinematic-admin-btn"
-              title={
-                isRtl
-                  ? "إدارة المنتجات المميزة والكتالوج"
-                  : "Manage Catalog & Featured Items"
-              }
-            >
+            <Link to={`/${locale}/dashboard/catalog`} className="cinematic-admin-btn">
               <PlusIcon className="size-3.5" />
-              <span>{isRtl ? "إدارة الكتالوج" : "Catalog"}</span>
+              <span>{liveEdit.manageCatalog}</span>
             </Link>
           </div>
         </div>
       ) : null}
 
-      {/* Viewport with Center Peeking Stage */}
-      <div className="cinematic-viewport-wrapper">
-        <div ref={emblaRef} className="cinematic-viewport">
-          <div className="cinematic-track">
-            {products.map((product, index) => {
-              const active = index === selectedIndex;
-              const accentColor = product.carouselColor || "var(--accent)";
-              const productUrl = `/${locale}/${product.categorySlug}/${product.slug}`;
-              const formattedPrice =
-                typeof product.priceFrom === "number" && product.priceFrom > 0
-                  ? formatPrice(product.priceFrom, "USD", locale)
-                  : null;
+      <div ref={emblaRef} className="cinematic-viewport">
+        <div className="cinematic-track">
+          {products.map((product, index) => {
+            const active = index === selectedIndex;
+            const productUrl = `/${locale}/${product.categorySlug}/${product.slug}`;
+            const formattedPrice =
+              typeof product.priceFrom === "number" && product.priceFrom > 0
+                ? formatPrice(product.priceFrom, "USD", locale)
+                : null;
+            const badge = product.carouselBadge || (product.isFeatured ? labels.featured : null);
 
-              // Card tap handler: ignore if dragged/swiped!
-              const handleCardClick = (e: React.MouseEvent) => {
-                if (!emblaApi) return;
-                // If user was swiping or dragging, ignore click completely
-                if (isDraggingRef.current) {
-                  e.preventDefault();
-                  return;
-                }
+            // A swipe's trailing click must not open the product.
+            const handleCardClick = (e: React.MouseEvent) => {
+              if (isDraggingRef.current || reorderMode) {
+                e.preventDefault();
+                return;
+              }
+              if ((e.target as HTMLElement).closest("a, button, .cinematic-edit-badge")) return;
+              void navigate(productUrl);
+            };
 
-                if (reorderMode) {
-                  e.preventDefault();
-                  return;
-                }
-
-                // If user tapped admin pencil, let that modal open
-                if ((e.target as HTMLElement).closest(".cinematic-edit-badge")) {
-                  return;
-                }
-
-                if (!active) {
-                  e.preventDefault();
-                  emblaApi.scrollTo(index);
-                } else {
-                  void navigate(productUrl);
-                }
-              };
-
-              return (
-                <div
-                  key={product.id}
-                  className={cn("cinematic-slide", active ? "is-active" : "is-peeking")}
-                  role="group"
-                  aria-roledescription="slide"
-                  aria-hidden={!active}
-                  aria-label={`${index + 1} / ${total}: ${product.name}`}
-                  onClick={handleCardClick}
-                  tabIndex={active ? 0 : -1}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      if (!active) {
-                        emblaApi?.scrollTo(index);
-                      } else {
-                        void navigate(productUrl);
-                      }
-                    }
-                  }}
-                >
-                  {/* The Inner Card Stage: Handles scale and ambient lighting without breaking Embla width math */}
-                  <div
-                    className="cinematic-card-stage"
-                    style={
-                      {
-                        "--slide-accent": accentColor,
-                      } as React.CSSProperties
-                    }
-                  >
-                    {/* Ambient Glow Aura behind active card */}
-                    <div className="cinematic-card-glow" aria-hidden="true" />
-
-                    {/* Double-Bezel Outer Shell Container */}
-                    <div className="cinematic-card-shell">
-                      {/* TOP SECTION: 100% Pure, Un-darkened Artwork (Zero Dark Overlay) */}
-                      <div className="cinematic-card-media" aria-hidden="true">
-                        {product.imageUrl ? (
-                          <StoreImage
-                            src={product.imageUrl}
-                            alt=""
-                            fit="cover"
-                            focus={product.carouselFocus ?? { x: 50, y: 50 }}
-                            width={1280}
-                            priority={index === 0}
-                            className="cinematic-card-img"
-                          />
+            return (
+              <div
+                key={product.id}
+                className="cinematic-slide"
+                role="group"
+                aria-roledescription="slide"
+                aria-hidden={!active}
+                inert={!active}
+                aria-label={labels.slideLabel.replace("{index}", String(index + 1)).replace("{total}", String(total))}
+              >
+                <div className="cinematic-card" onClick={handleCardClick}>
+                  <div className="cinematic-card-media" aria-hidden="true">
+                    {product.imageUrl ? (
+                      <StoreImage
+                        src={product.imageUrl}
+                        alt=""
+                        fit="cover"
+                        focus={product.carouselFocus ?? { x: 50, y: 50 }}
+                        width={1280}
+                        priority={index === 0}
+                        className="cinematic-card-img"
+                      />
+                    ) : null}
+                    {badge || product.categoryName ? (
+                      <div className="cinematic-media-tags">
+                        {badge ? (
+                          <span className="cinematic-tag">
+                            <SparkIcon className="size-3" />
+                            {badge}
+                          </span>
                         ) : null}
-
-                        {/* Top Floating Glass Badge */}
-                        <div className="cinematic-media-tags">
-                          {product.carouselBadge ? (
-                            <span className="cinematic-glass-tag cinematic-glass-tag--accent">
-                              <SparkIcon className="size-3" />
-                              {product.carouselBadge}
-                            </span>
-                          ) : (
-                            <span className="cinematic-glass-tag cinematic-glass-tag--accent">
-                              <BoltIcon className="size-3" />
-                              {isRtl ? "تسليم فوري" : "Instant"}
-                            </span>
-                          )}
-
-                          {product.categoryName ? (
-                            <span className="cinematic-glass-tag cinematic-glass-tag--subtle">
-                              {product.categoryName}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {/* Admin Live Edit Pencil */}
-                        {liveEdit && active ? (
-                          <div
-                            className="cinematic-edit-badge"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ProductEditor
-                              gameId={product.id}
-                              gameSlug={product.slug}
-                              label={product.name}
-                              locale={locale}
-                              messages={liveEdit}
-                            />
-                          </div>
-                        ) : null}
-
-                        {/* Interactive Reordering Controls when in Reorder Mode */}
-                        {reorderMode && active ? (
-                          <div
-                            className="cinematic-reorder-actions"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                          >
-                            <button
-                              type="button"
-                              disabled={index === 0 || isMoving}
-                              onClick={() => moveProduct(index, isRtl ? "right" : "left")}
-                              className="cinematic-reorder-move-btn"
-                              aria-label={isRtl ? "تحريك لليمين (للأمام)" : "Move earlier"}
-                              title={isRtl ? "تحريك لليمين (للأمام)" : "Move earlier"}
-                            >
-                              <ChevronIcon direction="start" className="size-4" />
-                              <span>{isRtl ? "تقديم" : "Earlier"}</span>
-                            </button>
-
-                            <div className="cinematic-reorder-pos-badge">
-                              <span>
-                                {index + 1} / {total}
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              disabled={index === total - 1 || isMoving}
-                              onClick={() => moveProduct(index, isRtl ? "left" : "right")}
-                              className="cinematic-reorder-move-btn"
-                              aria-label={isRtl ? "تحريك لليسار (للخلف)" : "Move later"}
-                              title={isRtl ? "تحريك لليسار (للخلف)" : "Move later"}
-                            >
-                              <span>{isRtl ? "تأخير" : "Later"}</span>
-                              <ChevronIcon direction="end" className="size-4" />
-                            </button>
-                          </div>
-                        ) : null}
+                        {product.categoryName ? <span className="cinematic-tag">{product.categoryName}</span> : null}
                       </div>
+                    ) : null}
+                  </div>
 
-                      {/* BOTTOM SECTION: Dedicated Action & Content Tray (Down Below the Image) */}
-                      <div className="cinematic-card-tray">
-                        {/* Dynamic Glossy Product-Artwork Blurred Backdrop */}
-                        {product.imageUrl ? (
-                          <div className="cinematic-tray-glass-bg" aria-hidden="true">
-                            <StoreImage
-                              src={product.imageUrl}
-                              alt=""
-                              fit="cover"
-                              focus={product.carouselFocus ?? { x: 50, y: 85 }}
-                              width={640}
-                              priority={index === 0}
-                              className="cinematic-tray-glass-img"
-                            />
-                            <div className="cinematic-tray-glass-sheen" />
-                          </div>
-                        ) : null}
-
-                        <div className="cinematic-tray-info">
-                          {/* Brand Logo - Native floating mark with zero background tile */}
-                          <div
-                            className="cinematic-tray-logo"
-                            data-logo-tone={product.carouselLogoTone ?? undefined}
-                          >
-                            <CarouselBrand product={product} priority={index === 0} />
-                          </div>
-
-                          {/* Product Title + Meta (Price & Star Rating) */}
-                          <div className="cinematic-tray-text">
-                            <h3 className="cinematic-tray-title">{product.name}</h3>
-
-                            <div className="cinematic-tray-meta">
-                              {formattedPrice ? (
-                                <div className="cinematic-price-box">
-                                  <span className="cinematic-price-label">{resolvedLabels.fromPrice}</span>
-                                  <span className="cinematic-price-val" dir="ltr">
-                                    {formattedPrice}
-                                  </span>
-                                </div>
-                              ) : product.description ? (
-                                <p className="cinematic-desc-preview">{product.description}</p>
-                              ) : null}
-
-                              {/* Star Rating Trust Badge */}
-                              <div
-                                className="cinematic-star-badge"
-                                title={isRtl ? "تقييم 4.9 من 5 نجوم" : "Rating 4.9 out of 5 stars"}
-                              >
-                                <StarIcon filled className="size-3 text-amber-400" />
-                                <span className="cinematic-star-val">4.9</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Sleek Compact Action Disc (Takes minimal space, prevents title/price squeeze) */}
-                        <div className="cinematic-tray-action">
-                          <Link
-                            to={productUrl}
-                            tabIndex={active ? undefined : -1}
-                            className="cinematic-compact-action group"
-                            aria-label={`${product.name} - ${resolvedLabels.details}`}
-                            onClick={(e) => {
-                              if (isDraggingRef.current) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                return;
-                              }
-                              e.stopPropagation();
-                            }}
-                          >
-                            <ArrowIcon
-                              direction="end"
-                              className={cn(
-                                "size-3.5 transition-transform duration-200",
-                                isRtl ? "group-hover:-translate-x-0.5 rotate-180" : "group-hover:translate-x-0.5"
-                              )}
-                            />
-                          </Link>
-                        </div>
-                      </div>
+                  {liveEdit && active ? (
+                    <div className="cinematic-edit-badge">
+                      <ProductEditor
+                        gameId={product.id}
+                        gameSlug={product.slug}
+                        label={product.name}
+                        locale={locale}
+                        messages={liveEdit}
+                      />
                     </div>
+                  ) : null}
+
+                  {reorderMode && active && liveEdit ? (
+                    <div className="cinematic-reorder-actions">
+                      <button
+                        type="button"
+                        disabled={index === 0 || isMoving}
+                        onClick={() => moveProduct(index, index - 1)}
+                        className="cinematic-reorder-move-btn"
+                      >
+                        <ChevronIcon direction={prevSide} className="size-4" />
+                        <span>{liveEdit.moveEarlier}</span>
+                      </button>
+                      <span className="cinematic-reorder-pos-badge">
+                        {index + 1} / {total}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={index === total - 1 || isMoving}
+                        onClick={() => moveProduct(index, index + 1)}
+                        className="cinematic-reorder-move-btn"
+                      >
+                        <span>{liveEdit.moveLater}</span>
+                        <ChevronIcon direction={nextSide} className="size-4" />
+                      </button>
+                    </div>
+                  ) : null}
+
+                  <div className="cinematic-card-body">
+                    <div
+                      className="cinematic-logo-tile"
+                      style={product.logoSurfaceColor ? { backgroundColor: product.logoSurfaceColor } : undefined}
+                      data-logo-tone={product.carouselLogoTone ?? undefined}
+                    >
+                      <CarouselBrand product={product} priority={index === 0} />
+                    </div>
+                    <h3 className="cinematic-title">{product.name}</h3>
+                    {formattedPrice ? (
+                      <p className="cinematic-price">
+                        <span className="cinematic-price-label">{labels.fromPrice}</span>
+                        <bdi className="cinematic-price-val" dir="ltr">
+                          {formattedPrice}
+                        </bdi>
+                      </p>
+                    ) : product.description ? (
+                      <p className="cinematic-desc">{product.description}</p>
+                    ) : null}
+                    <Link
+                      to={productUrl}
+                      className="cinematic-cta"
+                      aria-label={labels.goToProduct.replace("{name}", product.name)}
+                    >
+                      {labels.details}
+                      <ArrowIcon direction={nextSide} className="size-4" />
+                    </Link>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Floating Minimalist Control Dock */}
       {total > 1 ? (
-        <div className="cinematic-dock-wrapper">
-          <div className="cinematic-dock" role="group" aria-label={resolvedLabels.regionLabel}>
-            {/* Prev Button */}
-            <button
-              type="button"
-              onClick={() => emblaApi?.scrollPrev()}
-              className="cinematic-dock-btn"
-              aria-label={resolvedLabels.previous}
-            >
-              <ArrowIcon direction="start" className={cn("size-4", isRtl && "rotate-180")} />
-            </button>
+        <div className="cinematic-controls" role="group" aria-label={labels.regionLabel}>
+          <button
+            type="button"
+            onClick={() => emblaApi?.scrollPrev()}
+            className="cinematic-btn"
+            aria-label={labels.previous}
+          >
+            <ArrowIcon direction={prevSide} className="size-4" />
+          </button>
 
-            {/* Slide Index Counter */}
-            <div className="cinematic-counter" aria-hidden="true">
-              <span className="cinematic-counter-cur">
-                {String(selectedIndex + 1).padStart(2, "0")}
-              </span>
-              <span className="cinematic-counter-sep">/</span>
-              <span className="cinematic-counter-tot">
-                {String(total).padStart(2, "0")}
-              </span>
-            </div>
-
-            {/* Interactive Progress Indicators */}
-            <div className="cinematic-pills-list">
-              {products.map((p, idx) => {
-                const isActive = idx === selectedIndex;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => emblaApi?.scrollTo(idx)}
-                    className={cn("cinematic-pill-dot", isActive && "is-active")}
-                    aria-current={isActive ? "true" : undefined}
-                    aria-label={`${p.name} (${idx + 1}/${total})`}
-                  >
-                    {isActive ? (
-                      <span
-                        className="cinematic-pill-fill"
-                        style={{ width: `${progress}%` }}
-                      />
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Next Button */}
-            <button
-              type="button"
-              onClick={() => emblaApi?.scrollNext()}
-              className="cinematic-dock-btn"
-              aria-label={resolvedLabels.next}
-            >
-              <ArrowIcon direction="end" className={cn("size-4", isRtl && "rotate-180")} />
-            </button>
-
-            {/* Pause / Play Toggle */}
-            {isRotating ? (
-              <button
-                type="button"
-                data-carousel-rotation
-                onClick={toggleRotation}
-                className="cinematic-dock-btn cinematic-dock-btn--toggle"
-                aria-label={paused ? resolvedLabels.play : resolvedLabels.pause}
-                aria-pressed={paused}
-              >
-                {paused ? <PlayIcon className="size-3.5" /> : <PauseIcon className="size-3.5" />}
-              </button>
-            ) : null}
+          <div className="cinematic-dots">
+            {products.map((p, idx) => {
+              const isActive = idx === selectedIndex;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => emblaApi?.scrollTo(idx)}
+                  className={cn("cinematic-dot", isActive && "is-active")}
+                  aria-current={isActive ? "true" : undefined}
+                  aria-label={`${p.name} (${idx + 1}/${total})`}
+                >
+                  {isActive && isRotating ? (
+                    <span
+                      // Re-keyed per slide so the fill restarts from empty.
+                      key={`${selectedIndex}`}
+                      className="cinematic-dot-fill"
+                      data-paused={holding ? "true" : undefined}
+                      style={{ "--interval": `${intervalMs}ms` } as React.CSSProperties}
+                      onAnimationEnd={advance}
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
+
+          <button
+            type="button"
+            onClick={() => emblaApi?.scrollNext()}
+            className="cinematic-btn"
+            aria-label={labels.next}
+          >
+            <ArrowIcon direction={nextSide} className="size-4" />
+          </button>
+
+          {isRotating ? (
+            <button
+              type="button"
+              data-carousel-rotation
+              onClick={() => setUserPaused(!paused)}
+              className="cinematic-btn"
+              aria-label={paused ? labels.play : labels.pause}
+              aria-pressed={paused}
+            >
+              {paused ? <PlayIcon className="size-3.5" /> : <PauseIcon className="size-3.5" />}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </section>
