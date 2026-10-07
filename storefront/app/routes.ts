@@ -54,6 +54,7 @@ export default [
     route("orders", "routes/locale-orders.tsx"),
     route("wallet", "routes/locale-wallet.tsx"),
     route("recharge", "routes/locale-recharge.tsx"),
+    route("redeem", "routes/locale-redeem.tsx"),
     route("recharge/pay/:invoiceId", "routes/locale-recharge-pay.tsx"),
     route("recharge/:requestId", "routes/locale-recharge-detail.tsx"),
     route("orders/:orderId", "routes/locale-order-detail.tsx"),

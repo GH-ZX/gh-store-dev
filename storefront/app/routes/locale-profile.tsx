@@ -269,6 +269,9 @@ export default function Profile() {
                 <Link className={accountSecondary} to={`/${locale}/recharge`}>
                   {messages.wallet.rechargeAction}
                 </Link>
+                <Link className={accountSecondary} to={`/${locale}/redeem`}>
+                  {messages.wallet.redeemAction}
+                </Link>
               </div>
             </AccountCard>
           ) : null}

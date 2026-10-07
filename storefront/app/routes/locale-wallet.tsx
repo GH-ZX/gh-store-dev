@@ -80,6 +80,7 @@ export default function Page() {
           messages={messages}
           wallet={wallet}
           rechargeHref={`/${locale}/recharge`}
+          redeemHref={`/${locale}/redeem`}
         />
 
         <div>

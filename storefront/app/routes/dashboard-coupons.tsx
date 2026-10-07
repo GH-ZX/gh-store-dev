@@ -78,13 +78,14 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   if (intent === "create") {
     const code = String(formData.get("code") ?? "").trim().toUpperCase();
-    const type = (formData.get("type") === "fixed" ? "fixed" : "percent") as CouponType;
+    const rawType = String(formData.get("type") ?? "percent");
+    const type: CouponType = rawType === "balance" ? "balance" : rawType === "fixed" ? "fixed" : "percent";
     const value = parseFloat(String(formData.get("value") ?? "0"));
-    const minSubtotal = parseFloat(String(formData.get("minSubtotal") ?? "0")) || 0;
-    const maxDiscountRaw = formData.get("maxDiscount");
+    const minSubtotal = type === "balance" ? 0 : (parseFloat(String(formData.get("minSubtotal") ?? "0")) || 0);
+    const maxDiscountRaw = type === "balance" ? null : formData.get("maxDiscount");
     const maxDiscount = maxDiscountRaw ? parseFloat(String(maxDiscountRaw)) : null;
     const usageLimitRaw = formData.get("usageLimit");
-    const usageLimit = usageLimitRaw ? parseInt(String(usageLimitRaw), 10) : null;
+    const usageLimit = usageLimitRaw ? parseInt(String(usageLimitRaw), 10) : (type === "balance" ? 1 : null);
     const perCustomerLimit = parseInt(String(formData.get("perCustomerLimit") ?? "1"), 10) || 1;
     const validUntilRaw = formData.get("validUntil");
     const validUntil = validUntilRaw ? new Date(String(validUntilRaw)).toISOString() : null;
@@ -200,6 +201,7 @@ export default function DashboardCoupons() {
                 options={[
                   { value: "percent", label: copy.typePercent },
                   { value: "fixed", label: copy.typeFixed },
+                  { value: "balance", label: copy.typeBalance ?? "Wallet Balance ($)" },
                 ]}
               />
 
@@ -214,14 +216,16 @@ export default function DashboardCoupons() {
                 placeholder={selectedType === "percent" ? "10" : "1.00"}
               />
 
-              <TextField
-                label={copy.minSubtotalLabel}
-                name="minSubtotal"
-                type="number"
-                step="0.01"
-                min="0"
-                defaultValue="0"
-              />
+              {selectedType !== "balance" ? (
+                <TextField
+                  label={copy.minSubtotalLabel}
+                  name="minSubtotal"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue="0"
+                />
+              ) : null}
 
               {selectedType === "percent" ? (
                 <TextField
@@ -240,8 +244,9 @@ export default function DashboardCoupons() {
                 name="usageLimit"
                 type="number"
                 min="1"
-                hint={copy.usageLimitHint}
-                placeholder="100"
+                hint={selectedType === "balance" ? (copy.balanceNotice ?? copy.usageLimitHint) : copy.usageLimitHint}
+                placeholder={selectedType === "balance" ? "1" : "100"}
+                defaultValue={selectedType === "balance" ? "1" : undefined}
               />
 
               <TextField
@@ -341,7 +346,14 @@ export default function DashboardCoupons() {
 
                     {/* Value */}
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      {coupon.type === "percent" ? (
+                      {coupon.type === "balance" ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-[var(--accent)]">
+                            +${coupon.value.toFixed(2)} USD
+                          </span>
+                          <Badge tone="accent">{copy.walletCredit}</Badge>
+                        </div>
+                      ) : coupon.type === "percent" ? (
                         <div className="font-semibold text-[var(--ink)]">
                           {coupon.value}%
                           {coupon.maxDiscount ? (
@@ -359,7 +371,7 @@ export default function DashboardCoupons() {
 
                     {/* Min Spend */}
                     <td className="px-4 py-3.5 whitespace-nowrap text-[var(--ink-soft)]">
-                      {coupon.minSubtotal > 0 ? `$${coupon.minSubtotal.toFixed(2)}` : "—"}
+                      {coupon.type === "balance" ? "—" : coupon.minSubtotal > 0 ? `$${coupon.minSubtotal.toFixed(2)}` : "—"}
                     </td>
 
                     {/* Usage */}

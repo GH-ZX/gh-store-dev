@@ -26,7 +26,7 @@ import { recordAudit } from "@server/lib/services/admin-audit.service";
  * one coupon in Postgres as well as in the dashboard.
  */
 
-export type CouponType = "percent" | "fixed";
+export type CouponType = "percent" | "fixed" | "balance";
 
 export type Coupon = {
   id: string;
@@ -59,7 +59,9 @@ export type CouponRefusal =
   | "below_minimum"
   | "wrong_scope"
   | "no_discount"
-  | "below_cost";
+  | "below_cost"
+  | "balance_coupon_not_for_checkout"
+  | "discount_coupon_not_for_wallet";
 
 export type CouponEvaluation =
   | { ok: true; discount: number; total: number }
@@ -146,6 +148,10 @@ export function evaluateCoupon(
   if (!window.isActive) {
     return { ok: false, reason: "inactive" };
   }
+
+  if (rule.type === "balance") {
+    return { ok: false, reason: "balance_coupon_not_for_checkout" };
+  }
   const from = window.validFrom ? Date.parse(window.validFrom) : null;
   const until = window.validUntil ? Date.parse(window.validUntil) : null;
   const at = now.getTime();
@@ -225,6 +231,8 @@ export const COUPON_REFUSAL_KEYS: Record<CouponRefusal, string> = {
   wrong_scope: "coupon_wrong_scope",
   no_discount: "coupon_no_discount",
   below_cost: "coupon_below_cost",
+  balance_coupon_not_for_checkout: "coupon_balance_not_for_checkout",
+  discount_coupon_not_for_wallet: "coupon_discount_not_for_wallet",
 };
 
 /** Map a raised database message onto the same vocabulary as the pure port. */
@@ -237,6 +245,8 @@ export function refusalFromDatabase(message: string): CouponRefusal {
   if (text.includes("expired")) return "expired";
   if (text.includes("usage limit")) return "usage_limit";
   if (text.includes("already used")) return "already_used";
+  if (text.includes("balance coupon")) return "balance_coupon_not_for_checkout";
+  if (text.includes("discount coupon")) return "discount_coupon_not_for_wallet";
   if (text.includes("below the coupon minimum")) return "below_minimum";
   if (text.includes("does not apply")) return "wrong_scope";
   if (text.includes("no discount")) return "no_discount";
@@ -813,3 +823,50 @@ export async function countCustomerRedemptions(
 
   return countMyRedemptions(user.id, couponId);
 }
+
+export type RedeemCouponResult =
+  | { ok: true; amount: number; balanceAfter: number; code: string }
+  | { ok: false; reason: string };
+
+/**
+ * Redeem a 'balance' coupon directly into the authenticated customer's wallet.
+ * Uses atomic Postgres RPC under a row-lock to verify, deposit, update balance,
+ * and mark single-use coupons as inactive.
+ */
+export async function redeemCouponToWallet(
+  supabase: SupabaseClient,
+  code: string,
+): Promise<RedeemCouponResult> {
+  const cleanCode = normalizeCouponCode(code);
+  if (!cleanCode || cleanCode.length < 2) {
+    return { ok: false, reason: "invalid_code" };
+  }
+
+  const { data, error } = await supabase.rpc("redeem_coupon_to_wallet", {
+    p_code: cleanCode,
+  });
+
+  if (error) {
+    return { ok: false, reason: error.message || "failed" };
+  }
+
+  const res = data as {
+    ok?: boolean;
+    error?: string;
+    amount?: number;
+    balance_after?: number;
+    code?: string;
+  } | null;
+
+  if (!res || !res.ok) {
+    return { ok: false, reason: res?.error || "failed" };
+  }
+
+  return {
+    ok: true,
+    amount: Number(res.amount ?? 0),
+    balanceAfter: Number(res.balance_after ?? 0),
+    code: String(res.code || cleanCode),
+  };
+}
+

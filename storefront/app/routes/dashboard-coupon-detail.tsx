@@ -98,13 +98,14 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
 
   if (intent === "update") {
     const code = String(formData.get("code") ?? "").trim().toUpperCase();
-    const type = (formData.get("type") === "fixed" ? "fixed" : "percent") as CouponType;
+    const rawType = String(formData.get("type") ?? "percent");
+    const type: CouponType = rawType === "balance" ? "balance" : rawType === "fixed" ? "fixed" : "percent";
     const value = parseFloat(String(formData.get("value") ?? "0"));
-    const minSubtotal = parseFloat(String(formData.get("minSubtotal") ?? "0")) || 0;
-    const maxDiscountRaw = formData.get("maxDiscount");
+    const minSubtotal = type === "balance" ? 0 : (parseFloat(String(formData.get("minSubtotal") ?? "0")) || 0);
+    const maxDiscountRaw = type === "balance" ? null : formData.get("maxDiscount");
     const maxDiscount = maxDiscountRaw ? parseFloat(String(maxDiscountRaw)) : null;
     const usageLimitRaw = formData.get("usageLimit");
-    const usageLimit = usageLimitRaw ? parseInt(String(usageLimitRaw), 10) : null;
+    const usageLimit = usageLimitRaw ? parseInt(String(usageLimitRaw), 10) : (type === "balance" ? 1 : null);
     const perCustomerLimit = parseInt(String(formData.get("perCustomerLimit") ?? "1"), 10) || 1;
     const validUntilRaw = formData.get("validUntil");
     const validUntil = validUntilRaw ? new Date(String(validUntilRaw)).toISOString() : null;
@@ -191,7 +192,11 @@ export default function DashboardCouponDetail() {
               {coupon.isActive ? copy.active : copy.inactive}
             </Badge>
             <Badge tone="accent">
-              {coupon.type === "percent" ? `${coupon.value}% OFF` : `$${coupon.value.toFixed(2)} OFF`}
+              {coupon.type === "balance"
+                ? `+$${coupon.value.toFixed(2)} WALLET`
+                : coupon.type === "percent"
+                  ? `${coupon.value}% OFF`
+                  : `$${coupon.value.toFixed(2)} OFF`}
             </Badge>
           </div>
           {coupon.adminNote ? (
@@ -247,6 +252,13 @@ export default function DashboardCouponDetail() {
             <Form method="post" className="space-y-4">
               <input type="hidden" name="intent" value="update" />
 
+              {selectedType === "balance" ? (
+                <div className="rounded-[var(--radius-control)] border border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] p-3 text-xs text-[var(--ink)]">
+                  <p className="font-semibold text-[var(--accent)]">{copy.typeBalance}</p>
+                  <p className="mt-0.5 text-[var(--ink-muted)]">{copy.balanceNotice}</p>
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <TextField
                   label={copy.codeLabel}
@@ -264,6 +276,7 @@ export default function DashboardCouponDetail() {
                   options={[
                     { value: "percent", label: copy.typePercent },
                     { value: "fixed", label: copy.typeFixed },
+                    { value: "balance", label: copy.typeBalance ?? "Wallet Balance ($)" },
                   ]}
                 />
 
@@ -278,14 +291,16 @@ export default function DashboardCouponDetail() {
                   required
                 />
 
-                <TextField
-                  label={copy.minSubtotalLabel}
-                  name="minSubtotal"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  defaultValue={coupon.minSubtotal}
-                />
+                {selectedType !== "balance" ? (
+                  <TextField
+                    label={copy.minSubtotalLabel}
+                    name="minSubtotal"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    defaultValue={coupon.minSubtotal}
+                  />
+                ) : null}
 
                 {selectedType === "percent" ? (
                   <TextField
@@ -398,16 +413,22 @@ export default function DashboardCouponDetail() {
                         {redemption.customerName || redemption.customerEmail || redemption.userId.slice(0, 8)}
                       </span>
                       <span className="font-bold text-[var(--success)]">
-                        -${redemption.amount.toFixed(2)}
+                        {redemption.orderId ? `-$${redemption.amount.toFixed(2)}` : `+$${redemption.amount.toFixed(2)}`}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-1 text-[var(--ink-muted)]">
-                      <Link
-                        to={`/${locale}/dashboard/orders/${redemption.orderId}`}
-                        className="underline hover:text-[var(--ink)]"
-                      >
-                        Order #{redemption.orderId.slice(0, 8)}
-                      </Link>
+                      {redemption.orderId ? (
+                        <Link
+                          to={`/${locale}/dashboard/orders/${redemption.orderId}`}
+                          className="underline hover:text-[var(--ink)]"
+                        >
+                          Order #{redemption.orderId.slice(0, 8)}
+                        </Link>
+                      ) : (
+                        <span className="text-[var(--accent)] font-medium">
+                          {copy.walletCredit}
+                        </span>
+                      )}
                       <span>
                         {new Date(redemption.createdAt).toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US", {
                           month: "short",

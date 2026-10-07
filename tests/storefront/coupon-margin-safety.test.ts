@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { discountCeiling, MINIMUM_STORE_MARGIN_RATE } from "../../storefront/app/.server/lib/services/coupon.service";
+import { discountCeiling, evaluateCoupon, MINIMUM_STORE_MARGIN_RATE } from "../../storefront/app/.server/lib/services/coupon.service";
 
 describe("coupon safety and 2% minimum margin guard", () => {
   it("enforces MINIMUM_STORE_MARGIN_RATE of 2%", () => {
@@ -35,5 +35,26 @@ describe("coupon safety and 2% minimum margin guard", () => {
     // Unit price $20.00, stored delivery (already purchased warehouse inventory)
     const ceiling = discountCeiling(20.0, 1, null, true);
     expect(ceiling).toBe(20.0);
+  });
+
+  it("rejects balance coupons from order checkout with balance_coupon_not_for_checkout", () => {
+    const res = evaluateCoupon(
+      {
+        type: "balance",
+        value: 10,
+        minSubtotal: 0,
+        maxDiscount: null,
+      },
+      {
+        isActive: true,
+      },
+      {
+        supplierCostUsd: 5,
+        storedDelivery: false,
+      },
+      1,
+      20,
+    );
+    expect(res).toEqual({ ok: false, reason: "balance_coupon_not_for_checkout" });
   });
 });

@@ -30,6 +30,7 @@
     "description": "Your balance and every movement on it.",
     "balanceLabel": "Current balance",
     "rechargeAction": "Add balance",
+    "redeemAction": "Redeem code",
     "rechargeSoon": "Payment methods are coming soon. Contact support to add balance for now.",
     "historyTitle": "Transaction history",
     "historyDescription": "This history is append-only and cannot be edited.",
@@ -152,6 +153,31 @@
     "resetDone": "Your password is set. You can use it now.",
     "linkExpired": "That link has expired or is not valid. Request a new one.",
     "forgotLink": "Forgot your password?"
+  },
+  "redeem": {
+    "eyebrow": "Redeem",
+    "title": "Redeem Balance Code",
+    "description": "Enter your coupon or gift code to instantly credit your wallet balance.",
+    "codeLabel": "Coupon or Gift Code",
+    "codePlaceholder": "e.g. GIFT50 or WALLET10",
+    "submitAction": "Redeem Balance",
+    "submitting": "Redeeming…",
+    "currentBalance": "Current Balance",
+    "viewWallet": "View Wallet",
+    "viewCatalog": "Browse Catalog",
+    "successTitle": "Wallet Credited Successfully!",
+    "successMessage": "Successfully added {amount} to your balance. Your new balance is {balance}.",
+    "errors": {
+      "invalid_code": "Please enter a valid coupon code.",
+      "not_found": "Coupon code not found or invalid.",
+      "inactive": "This coupon is currently inactive.",
+      "expired": "This coupon has expired.",
+      "exhausted": "This coupon has already been redeemed and is no longer available.",
+      "already_redeemed": "You have already redeemed this coupon.",
+      "discount_coupon_not_for_wallet": "This code is an order discount coupon, not a wallet balance card. Apply it during checkout.",
+      "not_signed_in": "You must be signed in to redeem a coupon.",
+      "failed": "Failed to redeem coupon, please try again."
+    }
   },
   "errors": {
     "invalid_input": "Check the values you entered, then try again.",

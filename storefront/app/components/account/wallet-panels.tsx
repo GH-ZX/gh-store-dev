@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { EmptyState, NoticePanel } from "@/components/shared/states";
 import { Badge } from "@/components/ui/badge";
-import { ArrowIcon, WalletIcon } from "@/components/ui/icons";
+import { ArrowIcon, WalletIcon, TagIcon } from "@/components/ui/icons";
 import type { Locale } from "@/i18n/config";
 import type { AccountMessages } from "@/i18n/messages";
 import { formatPrice } from "@/lib/format/money";
@@ -21,6 +21,7 @@ export function WalletSummaryPanel({
   wallet,
   detailHref,
   rechargeHref,
+  redeemHref,
 }: {
   locale: Locale;
   messages: AccountMessages;
@@ -29,6 +30,8 @@ export function WalletSummaryPanel({
   detailHref?: string;
   /** Present once recharge exists; otherwise an honest note is shown instead. */
   rechargeHref?: string;
+  /** Present when code redemption is available. */
+  redeemHref?: string;
 }) {
   const currency = wallet?.currency ?? "USD";
 
@@ -56,17 +59,29 @@ export function WalletSummaryPanel({
         ) : null}
       </div>
 
-      {rechargeHref ? (
-        <Link
-          to={rechargeHref}
-          className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-ink)] transition-colors duration-[var(--duration)] hover:bg-[var(--accent-strong)]"
-        >
-          {messages.wallet.rechargeAction}
-          <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
-        </Link>
-      ) : (
-        <NoticePanel className="mt-5" description={messages.wallet.rechargeSoon} />
-      )}
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        {rechargeHref ? (
+          <Link
+            to={rechargeHref}
+            className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-ink)] transition-colors duration-[var(--duration)] hover:bg-[var(--accent-strong)]"
+          >
+            {messages.wallet.rechargeAction}
+            <ArrowIcon direction="end" className="size-4 rtl:rotate-180" />
+          </Link>
+        ) : (
+          <NoticePanel description={messages.wallet.rechargeSoon} />
+        )}
+
+        {redeemHref ? (
+          <Link
+            to={redeemHref}
+            className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line-strong)] bg-[var(--surface)] px-5 text-sm font-semibold text-[var(--ink)] transition-colors duration-[var(--duration)] hover:border-[var(--accent)] hover:bg-[var(--surface-strong)]"
+          >
+            <TagIcon className="size-4 text-[var(--accent)]" />
+            <span>{messages.wallet.redeemAction}</span>
+          </Link>
+        ) : null}
+      </div>
     </div>
   );
 }
