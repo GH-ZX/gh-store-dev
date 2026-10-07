@@ -32,12 +32,17 @@ async function loadGames(): Promise<
       new G2BulkClient({ apiKey }).listGames(),
       supabase
         .from("provider_game_mappings")
-        .select("external_game_code")
+        .select("external_game_code, products(category_id)")
         .eq("provider_name", G2BULK_PROVIDER_NAME),
       listAdminCategories(),
     ]);
 
-    const imported = new Set((mappings.data ?? []).map((row) => row.external_game_code));
+    const mappingByCode = new Map<string, string | null>(
+      (mappings.data ?? []).map((row: any) => [
+        row.external_game_code,
+        row.products?.category_id ?? null,
+      ]),
+    );
 
     const items = providerGames
       .map((game) => ({
@@ -45,8 +50,9 @@ async function loadGames(): Promise<
         name: game.name,
         imageUrl: resolveProviderImageUrl(game.image_url),
         available: true,
-        alreadyImported: imported.has(game.code),
+        alreadyImported: mappingByCode.has(game.code),
         providerCode: game.code,
+        currentCategoryId: mappingByCode.get(game.code) ?? null,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -129,6 +135,7 @@ const messages = getMessages(locale, "admin"); const providerErrors = messages.p
           providerErrors={providerErrors}
           lanes={result.lanes}
           categories={result.categories}
+          defaultCategoryId={result.categories.find((c) => c.slug === "games")?.id}
           formAction={importG2BulkGamesAction}
           initialState={INITIAL_UNIVERSAL_IMPORT_STATE}
           backHref={`/${locale}/dashboard/providers`}

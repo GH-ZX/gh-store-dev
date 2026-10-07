@@ -28,6 +28,8 @@ export type UniversalImportFormProps = {
   viewStoreHref: string;
   /** Extra hidden fields to include in the form (e.g. categoryIds for MaxStore). */
   hiddenFields?: Array<{ name: string; value: string }>;
+  /** Optional fallback category to preselect for new items. */
+  defaultCategoryId?: string;
 };
 
 export function UniversalImportForm({
@@ -41,6 +43,7 @@ export function UniversalImportForm({
   backHref,
   viewStoreHref,
   hiddenFields,
+  defaultCategoryId,
 }: UniversalImportFormProps) {
   const [state, action, pending] = useActionState<ImportActionState, FormData>(
     formAction as (state: ImportActionState, formData: FormData) => Promise<ImportActionState>,
@@ -389,6 +392,7 @@ export function UniversalImportForm({
                   messages={messages}
                   locale={locale}
                   onRemoved={onRemoved}
+                  defaultCategoryId={defaultCategoryId}
                 />
               </>
             ) : (
@@ -432,6 +436,7 @@ export function UniversalImportForm({
             messages={messages}
             locale={locale}
             onRemoved={onRemoved}
+            defaultCategoryId={defaultCategoryId}
           />
         </div>
       )}
@@ -517,6 +522,7 @@ function ItemGrid({
   messages,
   locale,
   onRemoved,
+  defaultCategoryId,
 }: {
   items: ImportItem[];
   selected: Set<string>;
@@ -527,6 +533,7 @@ function ItemGrid({
   messages: AdminMessages["import"];
   locale: Locale;
   onRemoved: (result: RemoveImportedResult, code: string, itemId: string) => void;
+  defaultCategoryId?: string;
 }) {
   if (items.length === 0) {
     return <p className="p-4 text-sm text-[var(--ink-muted)]">{messages.emptyTitle}</p>;
@@ -607,6 +614,7 @@ function ItemGrid({
                       name={`category-${item.id}`}
                       defaultValue={
                         item.currentCategoryId ??
+                        defaultCategoryId ??
                         categories.find(
                           (cat) =>
                             item.categoryName &&

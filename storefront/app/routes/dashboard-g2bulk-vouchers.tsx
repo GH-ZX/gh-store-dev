@@ -35,24 +35,33 @@ async function loadCategories(): Promise<
       loadG2BulkVoucherCatalog(),
       supabase
         .from("provider_game_mappings")
-        .select("external_game_code")
+        .select("external_game_code, products(category_id)")
         .eq("provider_name", G2BULK_PROVIDER_NAME),
       listAdminCategories(),
     ]);
 
-    const imported = new Set((mappings.data ?? []).map((row) => row.external_game_code));
+    const mappingByCode = new Map<string, string | null>(
+      (mappings.data ?? []).map((row: any) => [
+        row.external_game_code,
+        row.products?.category_id ?? null,
+      ]),
+    );
 
     const items = groups
-      .map(({ category, products, hasStock }) => ({
-        id: String(category.id),
-        name: category.title,
-        imageUrl: resolveProviderImageUrl(category.image_url),
-        categoryName: category.title,
-        available: hasStock,
-        alreadyImported: imported.has(toVoucherGameCode(category.id)),
-        providerCode: toVoucherGameCode(category.id),
-        stockCount: products.length || (category.product_count ?? 0),
-      }))
+      .map(({ category, products, hasStock }) => {
+        const providerCode = toVoucherGameCode(category.id);
+        return {
+          id: String(category.id),
+          name: category.title,
+          imageUrl: resolveProviderImageUrl(category.image_url),
+          categoryName: category.title,
+          available: hasStock,
+          alreadyImported: mappingByCode.has(providerCode),
+          providerCode,
+          stockCount: products.length || (category.product_count ?? 0),
+          currentCategoryId: mappingByCode.get(providerCode) ?? null,
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return {
@@ -134,6 +143,7 @@ const messages = getMessages(locale, "admin"); const vouchers = messages.voucher
           providerErrors={providerErrors}
           lanes={result.lanes}
           categories={result.categories}
+          defaultCategoryId={result.categories.find((c) => c.slug === "vouchers")?.id}
           formAction={importG2BulkVouchersAction}
           initialState={INITIAL_UNIVERSAL_IMPORT_STATE}
           backHref={`/${locale}/dashboard/providers`}
