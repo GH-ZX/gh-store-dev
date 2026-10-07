@@ -16,13 +16,25 @@ export function canonicalHostRedirect(request: Request, appUrl?: string): URL | 
   return url;
 }
 
-/** Preserve bookmarks from the original singular product URL convention. */
+/** Preserve bookmarks from the original singular product URL convention and consolidated categories. */
 export function legacyProductRedirect(request: Request): URL | null {
   const url = new URL(request.url);
   const match = url.pathname.match(/^\/(?:(ar|en)\/)?game\/([^/]+)(?:\/([^/]+))?\/?$/);
-  if (!match) return null;
-  url.pathname = `/${match[1] ?? "ar"}/games/${match[2]}${match[3] ? `/${match[3]}` : ""}`;
-  return url;
+  if (match) {
+    url.pathname = `/${match[1] ?? "ar"}/games/${match[2]}${match[3] ? `/${match[3]}` : ""}`;
+    return url;
+  }
+  const catMatch = url.pathname.match(/^\/(?:(ar|en)\/)?(games-instant-recharge|games-vouchers|gift-cards-codes)(?:\/([^/]+))?(?:\/([^/]+))?\/?$/);
+  if (catMatch) {
+    const locale = catMatch[1] ?? "ar";
+    const oldCat = catMatch[2];
+    const product = catMatch[3];
+    const offer = catMatch[4];
+    const newCat = oldCat === "games-instant-recharge" ? "games" : "vouchers";
+    url.pathname = `/${locale}/${newCat}${product ? `/${product}` : ""}${offer ? `/${offer}` : ""}`;
+    return url;
+  }
+  return null;
 }
 
 /** Only public document routes can be shared between anonymous visitors. */

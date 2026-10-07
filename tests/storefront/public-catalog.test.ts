@@ -133,7 +133,7 @@ describe("restored public catalog data", () => {
     const { client, queries } = mockClient([{ data: [], count: 0 }]);
     await getOfferRailPage(client, "en", "gift-cards", 1);
     expect(queries[0].calls.find(([name]) => name === "select")?.[1][0]).toContain("categories!products_category_id_fkey!inner(");
-    expect(queries[0].calls).toContainEqual(["eq", ["products.categories.slug", "gift-cards-codes"]]);
+    expect(queries[0].calls).toContainEqual(["eq", ["products.categories.slug", "vouchers"]]);
   });
 
   it("paginates all sale offers instead of truncating the collection to a rail", async () => {

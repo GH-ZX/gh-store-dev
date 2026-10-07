@@ -52,7 +52,7 @@ export function StorefrontHeader({
     },
     ...(data.categories ?? [
       { slug: "games", name: messages.navigation.games },
-      { slug: "gift-cards-codes", name: messages.navigation.giftCards },
+      { slug: "vouchers", name: (messages.navigation as Record<string, string>).vouchers ?? messages.navigation.giftCards },
       { slug: "ai", name: messages.navigation.aiSubscriptions },
     ]).map(category => ({
       href: `/${locale}/${encodeURIComponent(category.slug)}`,
