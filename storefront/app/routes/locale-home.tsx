@@ -21,7 +21,6 @@ import {
   resolveHomeSections,
 } from "@server/lib/services/home.service";
 import { HeroCarouselCinematic } from "@/components/home/hero-carousel-cinematic";
-import { HomeHero } from "@/components/home/home-hero";
 import "@/styles/storefront-home.css";
 import {
   HomeSections,
@@ -88,7 +87,6 @@ export default function LocaleHome() {
   const common = getMessages(locale, "common");
   const home = getMessages(locale, "home");
   const catalog = getMessages(locale, "catalog");
-  const searchMessages = getMessages(locale, "search");
   const page = (
     <>
       <script
@@ -98,18 +96,6 @@ export default function LocaleHome() {
             /</g,
             "\\u003c",
           ),
-        }}
-      />
-      <HomeHero
-        locale={locale}
-        title={home.shop.title}
-        description={home.shop.description}
-        categories={chrome?.categories ?? []}
-        search={{
-          fieldLabel: searchMessages.fieldLabel,
-          placeholder: home.shop.searchPlaceholder,
-          submit: searchMessages.submit,
-          clear: searchMessages.clear,
         }}
       />
       {carousel.products.length > 0 ? (

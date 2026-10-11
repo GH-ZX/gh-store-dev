@@ -185,6 +185,15 @@ export function HeroCarouselCinematic({
     else emblaApi.scrollTo(0);
   }, [emblaApi]);
 
+  const stripRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!stripRef.current) return;
+    const activeTab = stripRef.current.children[selectedIndex] as HTMLElement | undefined;
+    if (activeTab && typeof activeTab.scrollIntoView === "function") {
+      activeTab.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [selectedIndex]);
+
   if (total === 0) return null;
 
   const activeProduct = products[selectedIndex] ?? products[0];
@@ -242,7 +251,8 @@ export function HeroCarouselCinematic({
         </div>
       ) : null}
 
-      <div ref={emblaRef} className="cinematic-viewport">
+      <div className="cinematic-frame">
+        <div ref={emblaRef} className="cinematic-viewport">
         <div className="cinematic-track">
           {products.map((product, index) => {
             const active = index === selectedIndex;
@@ -365,17 +375,6 @@ export function HeroCarouselCinematic({
                     </div>
                   ) : null}
 
-                  {/* Mobile: Bottom logo strip only */}
-                  <div className="cinematic-logo-strip" aria-hidden="true">
-                    <div
-                      className="cinematic-logo-tile cinematic-logo-tile--strip"
-                      style={product.logoSurfaceColor ? { backgroundColor: product.logoSurfaceColor } : undefined}
-                      data-logo-tone={product.carouselLogoTone ?? undefined}
-                    >
-                      <CarouselBrand product={product} priority={index === 0} />
-                    </div>
-                  </div>
-
                   <div className="cinematic-card-body">
                     <div
                       className="cinematic-logo-tile"
@@ -410,6 +409,48 @@ export function HeroCarouselCinematic({
           })}
         </div>
       </div>
+
+      {total > 1 ? (
+        <div
+          ref={stripRef}
+          className="cinematic-logo-strip"
+          role="tablist"
+          aria-label={labels.regionLabel}
+        >
+          {products.map((p, idx) => {
+            const isSelected = idx === selectedIndex;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => emblaApi?.scrollTo(idx)}
+                className={cn("cinematic-logo-tab", isSelected && "is-active")}
+                aria-label={`${p.name} (${idx + 1}/${total})`}
+              >
+                <div
+                  className="cinematic-logo-tab-surface"
+                  style={p.logoSurfaceColor ? { backgroundColor: p.logoSurfaceColor } : undefined}
+                  data-logo-tone={p.carouselLogoTone ?? undefined}
+                >
+                  <CarouselBrand product={p} priority={idx === 0} />
+                </div>
+                {isSelected && isRotating ? (
+                  <span
+                    key={`${selectedIndex}`}
+                    className="cinematic-tab-progress"
+                    data-paused={holding ? "true" : undefined}
+                    style={{ "--interval": `${intervalMs}ms` } as React.CSSProperties}
+                    onAnimationEnd={advance}
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
 
       {total > 1 ? (
         <div className="cinematic-controls" role="group" aria-label={labels.regionLabel}>

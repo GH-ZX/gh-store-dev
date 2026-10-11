@@ -13,9 +13,17 @@
   padding-block: 8px 12px;
 }
 
+.cinematic-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-shell);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
 .cinematic-viewport {
   overflow: hidden;
-  border-radius: var(--radius-shell);
   touch-action: pan-y pinch-zoom;
 }
 .cinematic-track {
@@ -181,23 +189,125 @@
   transform: scale(0.96);
 }
 
-/* Mobile: Bottom logo strip */
+/* Logo strip: shows all products with the chosen one highlighted */
 .cinematic-logo-strip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+.cinematic-logo-strip::-webkit-scrollbar {
+  display: none;
+}
+@media (min-width: 640px) {
+  .cinematic-logo-strip {
+    justify-content: center;
+  }
+}
+.cinematic-logo-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 3px;
+  border: 1.5px solid transparent;
+  border-radius: calc(var(--radius-inner) + 3px);
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 200ms ease, border-color 200ms ease, background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  outline: none;
+  scroll-snap-align: center;
+}
+.cinematic-logo-tab:hover {
+  opacity: 0.85;
+}
+.cinematic-logo-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.cinematic-logo-tab.is-active {
+  opacity: 1;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 1px var(--accent), 0 2px 10px color-mix(in srgb, var(--accent) 25%, transparent);
+  transform: translateY(-1px);
+}
+.cinematic-logo-tab-surface {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 36px;
+  padding: 3px 6px;
+  border-radius: var(--radius-inner);
+  background: var(--brand-logo-surface);
+  color: var(--brand-logo-ink);
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .cinematic-logo-tab-surface {
+    width: 86px;
+    height: 42px;
+    padding: 5px 10px;
+  }
+}
+.cinematic-logo-tab-surface .sf-carousel-brand {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 50px;
-  padding: 6px 16px;
-  background: var(--surface);
-  border-top: 1px solid var(--line);
+  height: 100%;
 }
-.cinematic-logo-tile--strip {
+.cinematic-logo-tab-surface .sf-carousel-brand img {
   width: auto;
-  min-width: 100px;
-  max-width: 150px;
-  height: 36px;
-  padding: 5px 14px;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.cinematic-logo-tab-surface .sf-carousel-brand img[data-monochrome="true"]:not([data-logo-tone]),
+.cinematic-logo-tab-surface .sf-carousel-brand img[data-logo-tone="light"],
+.cinematic-logo-tab-surface .sf-carousel-brand img[data-logo-tone="dark"] {
+  filter: brightness(0);
+}
+.cinematic-logo-tab-surface .sf-carousel-brand img[data-logo-ink] {
+  filter: none;
+}
+.cinematic-logo-tab-surface .sf-carousel-brand-fallback {
+  color: var(--brand-logo-ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cinematic-tab-progress {
+  position: absolute;
+  inset-inline: 4px;
+  inset-block-end: -1px;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  transform-origin: left center;
+  animation: cinematic-fill var(--interval, 6s) linear forwards;
+}
+[dir="rtl"] .cinematic-tab-progress {
+  transform-origin: right center;
+}
+.cinematic-tab-progress[data-paused="true"] {
+  animation-play-state: paused;
 }
 
 /* Desktop card body: hidden on mobile, shown from 768px */
@@ -331,6 +441,11 @@
   align-items: center;
   gap: 6px;
 }
+@media (max-width: 767px) {
+  .cinematic-dots {
+    display: none;
+  }
+}
 .cinematic-dot {
   position: relative;
   display: grid;
@@ -411,8 +526,7 @@
     aspect-ratio: auto;
   }
   .cinematic-media-scrim,
-  .cinematic-media-overlay,
-  .cinematic-logo-strip {
+  .cinematic-media-overlay {
     display: none;
   }
   .cinematic-card-body {
