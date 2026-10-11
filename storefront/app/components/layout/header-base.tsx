@@ -1,5 +1,5 @@
 import { Form, Link, useLocation, useNavigation } from "react-router";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { type Locale } from "@/i18n/config";
 import { getMessages } from "@/i18n/messages";
 import {
@@ -439,11 +439,31 @@ export function HeaderMobileDrawer({
 }: HeaderMobileDrawerProps) {
   const navigation = getMessages(locale, "common").navigation;
   const homeHref = brandHref || `/${locale}`;
+  const [isClosing, setIsClosing] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    closeTimerRef.current = setTimeout(() => {
+      dialogRef.current?.close();
+      setIsClosing(false);
+    }, 220);
+  }, [dialogRef, isClosing]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
   return (
     <dialog
       ref={dialogRef}
-      className="sf-mobile-drawer bg-[var(--surface)] text-[var(--ink)] lg:hidden"
+      className={cn(
+        "sf-mobile-drawer bg-[var(--surface)] text-[var(--ink)] lg:hidden",
+        isClosing && "sf-mobile-drawer--closing",
+      )}
       style={{
         position: "fixed",
         top: 0,
@@ -455,30 +475,46 @@ export function HeaderMobileDrawer({
         marginRight: 0,
       }}
       aria-label={navigation.mobileLabel}
+      onCancel={(event) => {
+        event.preventDefault();
+        handleClose();
+      }}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
-          dialogRef.current?.close();
+          handleClose();
         }
       }}
     >
-      <div className="flex items-center justify-between">
-        <Link to={homeHref} className="flex items-center gap-2 shrink-0" onClick={() => dialogRef.current?.close()}>
+      <div className="sf-drawer-header flex items-center justify-between">
+        <Link
+          to={homeHref}
+          className="flex items-center gap-2 shrink-0"
+          onClick={() => {
+            dialogRef.current?.close();
+            setIsClosing(false);
+          }}
+        >
           <StorefrontBrand name={brandName} showLogo={showLogo} />
           {brandBadge}
         </Link>
         <button
           type="button"
           className={headerControlClass}
-          onClick={() => dialogRef.current?.close()}
+          onClick={handleClose}
           aria-label={navigation.close}
         >
           <CloseIcon />
         </button>
       </div>
 
-      <div className="my-5 border-y border-[var(--line)] py-4" dir={locale === "ar" ? "rtl" : "ltr"}>{children}</div>
+      <div
+        className="sf-drawer-body my-5 border-y border-[var(--line)] py-4"
+        dir={locale === "ar" ? "rtl" : "ltr"}
+      >
+        {children}
+      </div>
 
-      {footer}
+      {footer ? <div className="sf-drawer-footer">{footer}</div> : null}
     </dialog>
   );
 }

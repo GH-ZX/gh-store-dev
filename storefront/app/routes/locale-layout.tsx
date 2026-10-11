@@ -166,7 +166,9 @@ export default function LocaleLayout() {
             </div>
           </Section>
         ) : (
-          <Outlet />
+          <div key={pathname} className="sf-page-transition w-full flex-1 flex flex-col">
+            <Outlet />
+          </div>
         )}
       </main>
       <StorefrontFooter locale={locale} messages={common} data={chrome} />

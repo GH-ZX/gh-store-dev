@@ -451,17 +451,132 @@
   height: 100dvh;
   max-height: none;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border: none;
   border-inline-start: 1px solid var(--line);
   padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
   background: var(--surface);
   color: var(--ink);
+  box-shadow: -12px 0 36px rgb(0 0 0 / 28%);
 }
 [data-storefront-shell] .sf-mobile-drawer::backdrop,
 [data-admin-shell] .sf-mobile-drawer::backdrop,
 .sf-mobile-drawer::backdrop {
-  background: rgb(0 0 0 / 45%);
+  background: rgb(0 0 0 / 55%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
+
+/* Mobile Drawer Entrance Animation */
+[data-storefront-shell] .sf-mobile-drawer[open],
+[data-admin-shell] .sf-mobile-drawer[open],
+.sf-mobile-drawer[open] {
+  animation: sf-drawer-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+[data-storefront-shell] .sf-mobile-drawer[open]::backdrop,
+[data-admin-shell] .sf-mobile-drawer[open]::backdrop,
+.sf-mobile-drawer[open]::backdrop {
+  animation: sf-backdrop-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Staggered Content Animation inside drawer */
+.sf-mobile-drawer[open] .sf-drawer-header {
+  animation: sf-drawer-content-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: 30ms;
+}
+.sf-mobile-drawer[open] .sf-drawer-body {
+  animation: sf-drawer-content-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: 70ms;
+}
+.sf-mobile-drawer[open] .sf-drawer-footer {
+  animation: sf-drawer-content-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: 110ms;
+}
+
+/* Mobile Drawer Exit Animation */
+.sf-mobile-drawer.sf-mobile-drawer--closing {
+  animation: sf-drawer-exit 220ms cubic-bezier(0.32, 0.72, 0, 1) forwards !important;
+}
+.sf-mobile-drawer.sf-mobile-drawer--closing::backdrop {
+  animation: sf-backdrop-exit 220ms cubic-bezier(0.32, 0.72, 0, 1) forwards !important;
+}
+
+@keyframes sf-drawer-enter {
+  0% {
+    transform: translateX(100%);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes sf-drawer-exit {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes sf-backdrop-enter {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+  }
+}
+
+@keyframes sf-backdrop-exit {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes sf-drawer-content-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Page Entrance Animation */
+.sf-page-transition {
+  animation: sf-page-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes sf-page-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 dialog:not([open]) {
   display: none !important;
 }
@@ -616,6 +731,22 @@ body:has(.sf-mobile-drawer[open]) {
 @media (prefers-reduced-motion: reduce) {
   [data-storefront-shell] .sf-navigation-progress {
     animation: none;
+  }
+  [data-storefront-shell] .sf-mobile-drawer[open],
+  [data-admin-shell] .sf-mobile-drawer[open],
+  .sf-mobile-drawer[open],
+  .sf-mobile-drawer.sf-mobile-drawer--closing,
+  [data-storefront-shell] .sf-mobile-drawer[open]::backdrop,
+  [data-admin-shell] .sf-mobile-drawer[open]::backdrop,
+  .sf-mobile-drawer[open]::backdrop,
+  .sf-mobile-drawer.sf-mobile-drawer--closing::backdrop,
+  .sf-mobile-drawer[open] .sf-drawer-header,
+  .sf-mobile-drawer[open] .sf-drawer-body,
+  .sf-mobile-drawer[open] .sf-drawer-footer,
+  .sf-page-transition {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
 @media (max-width: 639px) {

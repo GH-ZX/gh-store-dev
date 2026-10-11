@@ -1,4 +1,4 @@
-import { data, Outlet, useLoaderData, useRevalidator } from "react-router";
+import { data, Outlet, useLoaderData, useLocation, useRevalidator } from "react-router";
 import { useEffect } from "react";
 import { getLocaleDirection, isLocale } from "@/i18n/config";
 import { AdminHeader } from "@/components/admin/admin-header";
@@ -77,6 +77,7 @@ export default function DashboardLayout() {
   const { locale, displayName, theme, showLogo, mfaEnrollmentNeeded } = useLoaderData<typeof loader>();
   const messages = getMessages(locale, "admin");
   const { revalidate } = useRevalidator();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     const refresh = () => { void revalidate(); };
@@ -123,7 +124,9 @@ export default function DashboardLayout() {
         </aside>
       )}
       <main id="main" className="gh-page py-6 sm:py-8 w-full flex-1">
-        <Outlet />
+        <div key={pathname} className="sf-page-transition w-full flex-1 flex flex-col">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
