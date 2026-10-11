@@ -274,7 +274,7 @@ export function HeroCarouselCinematic({
                 aria-label={labels.slideLabel.replace("{index}", String(index + 1)).replace("{total}", String(total))}
               >
                 <div className="cinematic-card" onClick={handleCardClick}>
-                  <div className="cinematic-card-media" aria-hidden="true">
+                  <div className="cinematic-card-media">
                     {product.imageUrl ? (
                       <StoreImage
                         src={product.imageUrl}
@@ -297,6 +297,34 @@ export function HeroCarouselCinematic({
                         {product.categoryName ? <span className="cinematic-tag">{product.categoryName}</span> : null}
                       </div>
                     ) : null}
+
+                    {/* Mobile: Product info rendered directly in the image with dark gradient scrim */}
+                    <div className="cinematic-media-scrim" aria-hidden="true" />
+                    <div className="cinematic-media-overlay">
+                      <h3 className="cinematic-overlay-title">{product.name}</h3>
+                      <div className="cinematic-overlay-row">
+                        {formattedPrice ? (
+                          <p className="cinematic-overlay-price">
+                            <span className="cinematic-overlay-price-label">{labels.fromPrice}</span>
+                            <bdi className="cinematic-overlay-price-val" dir="ltr">
+                              {formattedPrice}
+                            </bdi>
+                          </p>
+                        ) : product.description ? (
+                          <p className="cinematic-overlay-desc">{product.description}</p>
+                        ) : (
+                          <div />
+                        )}
+                        <Link
+                          to={productUrl}
+                          className="cinematic-overlay-cta"
+                          aria-label={labels.goToProduct.replace("{name}", product.name)}
+                        >
+                          {labels.details}
+                          <ArrowIcon direction={nextSide} className="size-4" />
+                        </Link>
+                      </div>
+                    </div>
                   </div>
 
                   {liveEdit && active ? (
@@ -336,6 +364,17 @@ export function HeroCarouselCinematic({
                       </button>
                     </div>
                   ) : null}
+
+                  {/* Mobile: Bottom logo strip only */}
+                  <div className="cinematic-logo-strip" aria-hidden="true">
+                    <div
+                      className="cinematic-logo-tile cinematic-logo-tile--strip"
+                      style={product.logoSurfaceColor ? { backgroundColor: product.logoSurfaceColor } : undefined}
+                      data-logo-tone={product.carouselLogoTone ?? undefined}
+                    >
+                      <CarouselBrand product={product} priority={index === 0} />
+                    </div>
+                  </div>
 
                   <div className="cinematic-card-body">
                     <div
