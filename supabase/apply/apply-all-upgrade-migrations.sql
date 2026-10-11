@@ -3289,6 +3289,962 @@ grant execute on function public.redeem_coupon_to_wallet(text) to authenticated,
 -- END 20261010170000_coupon_wallet_recharge.sql
 -- ---------------------------------------------------------------------------
 
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261011100000_admin_mfa_setting.sql
+-- ---------------------------------------------------------------------------
+
+-- Migration 20261011100000: Admin MFA requirement setting
+-- Allows the store owner to require TOTP 2FA for all administrative accounts.
+
+alter table public.store_settings
+  add column if not exists admin_mfa_required boolean not null default false;
+
+comment on column public.store_settings.admin_mfa_required is
+  'When true, administrators must enroll and verify TOTP 2FA before accessing dashboard operations.';
+
+-- ---------------------------------------------------------------------------
+-- END 20261011100000_admin_mfa_setting.sql
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261011110000_velocity_guards.sql
+-- ---------------------------------------------------------------------------
+
+-- Migration 20261011110000: Velocity and fraud guards
+-- Tracks risk holds and provides an automated velocity checker for orders, recharges, and coupon redemptions.
+
+create table if not exists public.risk_holds (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  action text not null check (action in ('order', 'recharge', 'redeem')),
+  reason text not null,
+  ref_id text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  created_at timestamptz not null default timezone('utc', now()),
+  resolved_at timestamptz,
+  resolved_by uuid references auth.users(id) on delete set null
+);
+
+create index if not exists risk_holds_user_idx on public.risk_holds(user_id, created_at desc);
+create index if not exists risk_holds_status_idx on public.risk_holds(status, created_at desc);
+
+alter table public.risk_holds enable row level security;
+alter table public.risk_holds force row level security;
+
+-- Admin only RLS policy
+drop policy if exists "Admins manage risk holds" on public.risk_holds;
+create policy "Admins manage risk holds"
+  on public.risk_holds
+  for all
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.role = 'admin'
+        and profiles.is_active = true
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.role = 'admin'
+        and profiles.is_active = true
+    )
+  );
+
+create or replace function public.check_velocity(
+  p_user uuid,
+  p_action text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_created_at timestamptz;
+  v_is_new_account boolean := false;
+  v_count_10m integer := 0;
+  v_count_24h integer := 0;
+  v_limit_10m integer := 6;
+  v_limit_24h integer := 25;
+begin
+  select created_at into v_created_at from public.profiles where id = p_user;
+  if v_created_at is not null and v_created_at > timezone('utc', now()) - interval '24 hours' then
+    v_is_new_account := true;
+  end if;
+
+  if p_action = 'order' then
+    if v_is_new_account then
+      v_limit_10m := 3;
+      v_limit_24h := 10;
+    else
+      v_limit_10m := 6;
+      v_limit_24h := 25;
+    end if;
+
+    select count(*) into v_count_10m
+    from public.orders
+    where user_id = p_user and created_at > timezone('utc', now()) - interval '10 minutes';
+
+    select count(*) into v_count_24h
+    from public.orders
+    where user_id = p_user and created_at > timezone('utc', now()) - interval '24 hours';
+
+  elsif p_action = 'recharge' then
+    if v_is_new_account then
+      v_limit_10m := 2;
+      v_limit_24h := 5;
+    else
+      v_limit_10m := 4;
+      v_limit_24h := 15;
+    end if;
+
+    select count(*) into v_count_10m
+    from public.recharge_requests
+    where user_id = p_user and created_at > timezone('utc', now()) - interval '10 minutes';
+
+    select count(*) into v_count_24h
+    from public.recharge_requests
+    where user_id = p_user and created_at > timezone('utc', now()) - interval '24 hours';
+
+  elsif p_action = 'redeem' then
+    if v_is_new_account then
+      v_limit_10m := 3;
+      v_limit_24h := 10;
+    else
+      v_limit_10m := 6;
+      v_limit_24h := 20;
+    end if;
+
+    select count(*) into v_count_10m
+    from public.wallet_transactions
+    where user_id = p_user
+      and type in ('coupon', 'credit', 'voucher')
+      and created_at > timezone('utc', now()) - interval '10 minutes';
+
+    select count(*) into v_count_24h
+    from public.wallet_transactions
+    where user_id = p_user
+      and type in ('coupon', 'credit', 'voucher')
+      and created_at > timezone('utc', now()) - interval '24 hours';
+  end if;
+
+  if v_count_10m >= v_limit_10m then
+    return jsonb_build_object(
+      'allowed', false,
+      'reason', 'velocity_10m',
+      'count', v_count_10m,
+      'limit', v_limit_10m,
+      'is_new_account', v_is_new_account
+    );
+  end if;
+
+  if v_count_24h >= v_limit_24h then
+    return jsonb_build_object(
+      'allowed', false,
+      'reason', 'velocity_24h',
+      'count', v_count_24h,
+      'limit', v_limit_24h,
+      'is_new_account', v_is_new_account
+    );
+  end if;
+
+  return jsonb_build_object('allowed', true);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- END 20261011110000_velocity_guards.sql
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261011120000_email_preferences.sql
+-- ---------------------------------------------------------------------------
+
+-- Migration 20261011120000: Email preferences and transactional email log
+-- Adds customer email preferences to profiles and creates an idempotent email_log table.
+
+alter table public.profiles
+  add column if not exists email_notifications boolean not null default true;
+
+comment on column public.profiles.email_notifications is
+  'Customer preference for receiving transactional email updates.';
+
+create table if not exists public.email_log (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  email text not null,
+  kind text not null,
+  ref_id text,
+  status text not null check (status in ('sent', 'failed', 'skipped')),
+  error_message text,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+create unique index if not exists email_log_dedup_idx
+  on public.email_log (user_id, kind, ref_id)
+  where ref_id is not null;
+
+create index if not exists email_log_user_idx on public.email_log (user_id, created_at desc);
+
+alter table public.email_log enable row level security;
+alter table public.email_log force row level security;
+
+drop policy if exists "Admins read email logs" on public.email_log;
+create policy "Admins read email logs"
+  on public.email_log
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid()
+        and profiles.role = 'admin'
+        and profiles.is_active = true
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- END 20261011120000_email_preferences.sql
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261012100000_cart.sql
+-- ---------------------------------------------------------------------------
+
+-- 20261012100000_cart.sql
+-- Multi-item cart storage and atomic cart checkout RPC.
+
+create table if not exists public.cart_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  offer_id uuid not null references public.offers(id) on delete cascade,
+  quantity integer not null default 1 check (quantity >= 1 and quantity <= 10),
+  dynamic_fields jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint uq_cart_items_user_offer unique (user_id, offer_id)
+);
+
+create index if not exists idx_cart_items_user_id on public.cart_items(user_id);
+create index if not exists idx_cart_items_offer_id on public.cart_items(offer_id);
+
+alter table public.cart_items enable row level security;
+
+drop policy if exists cart_items_owner_select on public.cart_items;
+create policy cart_items_owner_select on public.cart_items
+  for select to authenticated using (auth.uid() = user_id);
+
+drop policy if exists cart_items_owner_insert on public.cart_items;
+create policy cart_items_owner_insert on public.cart_items
+  for insert to authenticated with check (auth.uid() = user_id);
+
+drop policy if exists cart_items_owner_update on public.cart_items;
+create policy cart_items_owner_update on public.cart_items
+  for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists cart_items_owner_delete on public.cart_items;
+create policy cart_items_owner_delete on public.cart_items
+  for delete to authenticated using (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.cart_items to authenticated;
+
+-- Cart checkout RPC
+create or replace function public.place_cart_order(
+  p_items jsonb,
+  p_idempotency_key uuid,
+  p_coupon_code text default null
+)
+returns table (
+  order_id uuid,
+  order_number text,
+  total numeric,
+  balance numeric,
+  idempotent boolean
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_is_active boolean;
+  v_at timestamptz := timezone('utc', now());
+  v_wallet_id uuid;
+  v_before numeric(12, 2);
+  v_after numeric(12, 2);
+  v_item record;
+  v_offer record;
+  v_item_subtotal numeric(12, 2);
+  v_total_all numeric(12, 2) := 0;
+  v_order_id uuid;
+  v_order_number text;
+  v_item_id uuid;
+  v_stored jsonb;
+  v_result_orders jsonb := '[]'::jsonb;
+  v_item_count integer := 0;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required' using errcode = 'P0001';
+  end if;
+
+  if p_idempotency_key is null then
+    raise exception 'Idempotency key required' using errcode = 'P0001';
+  end if;
+
+  select p.is_active into v_is_active
+  from public.profiles p
+  where p.id = v_user_id;
+
+  if v_is_active is not true then
+    raise exception 'Account suspended' using errcode = 'P0001';
+  end if;
+
+  -- Claim idempotency key
+  begin
+    insert into public.idempotency_keys (key, user_id, operation, expires_at)
+    values (p_idempotency_key, v_user_id, 'place_cart_order', timezone('utc', now()) + interval '7 days');
+  exception
+    when unique_violation then
+      select ik.response_body into v_stored
+      from public.idempotency_keys ik
+      where ik.key = p_idempotency_key
+        and ik.user_id = v_user_id
+        and ik.operation = 'place_cart_order';
+
+      if v_stored is null then
+        raise exception 'Order already in progress' using errcode = 'P0001';
+      end if;
+
+      return query
+      select (elem ->> 'order_id')::uuid,
+             elem ->> 'order_number',
+             (elem ->> 'total')::numeric,
+             (elem ->> 'balance')::numeric,
+             true
+      from jsonb_array_elements(v_stored) as elem;
+      return;
+  end;
+
+  -- Lock user wallet first
+  select w.id, w.balance
+  into v_wallet_id, v_before
+  from public.wallets w
+  where w.user_id = v_user_id
+  for update;
+
+  if v_wallet_id is null then
+    raise exception 'Wallet not found' using errcode = 'P0001';
+  end if;
+
+  -- Phase 1: validate items and calculate total
+  for v_item in
+    select (value ->> 'offer_id')::uuid as offer_id,
+           coalesce((value ->> 'quantity')::integer, 1) as quantity,
+           coalesce(value -> 'dynamic_fields', '{}'::jsonb) as dynamic_fields
+    from jsonb_array_elements(p_items)
+  loop
+    v_item_count := v_item_count + 1;
+    if v_item.quantity < 1 or v_item.quantity > 10 then
+      raise exception 'Invalid quantity' using errcode = 'P0001';
+    end if;
+
+    select o.id, o.price
+    into v_offer
+    from public.offers o
+    join public.products p on p.id = o.product_id
+    where o.id = v_item.offer_id
+      and o.is_active = true
+      and p.is_active = true;
+
+    if v_offer.id is null then
+      raise exception 'Offer unavailable' using errcode = 'P0001';
+    end if;
+
+    v_total_all := v_total_all + round(v_offer.price * v_item.quantity, 2);
+  end loop;
+
+  if v_item_count = 0 then
+    raise exception 'Cart is empty' using errcode = 'P0001';
+  end if;
+
+  if v_before < v_total_all then
+    raise exception 'Insufficient wallet balance' using errcode = 'P0001';
+  end if;
+
+  v_after := v_before - v_total_all;
+  update public.wallets
+  set balance = v_after,
+      updated_at = v_at
+  where id = v_wallet_id;
+
+  -- Phase 2: Create orders and order items
+  for v_item in
+    select (value ->> 'offer_id')::uuid as offer_id,
+           coalesce((value ->> 'quantity')::integer, 1) as quantity,
+           coalesce(value -> 'dynamic_fields', '{}'::jsonb) as dynamic_fields
+    from jsonb_array_elements(p_items)
+  loop
+    select o.id,
+           o.product_id,
+           o.name_ar,
+           o.name_en,
+           o.price,
+           o.currency,
+           o.offer_type
+    into v_offer
+    from public.offers o
+    where o.id = v_item.offer_id;
+
+    v_item_subtotal := round(v_offer.price * v_item.quantity, 2);
+
+    insert into public.orders (
+      user_id, status, payment_status, payment_method, currency,
+      subtotal, discount, total, metadata
+    )
+    values (
+      v_user_id, 'pending', 'pending', 'wallet', v_offer.currency,
+      v_item_subtotal, 0, v_item_subtotal,
+      jsonb_build_object('source', 'cart')
+    )
+    returning id, orders.order_number into v_order_id, v_order_number;
+
+    insert into public.order_items (
+      order_id, offer_id, name_ar_snapshot, name_en_snapshot,
+      unit_price, quantity, total_price, dynamic_fields, metadata
+    )
+    values (
+      v_order_id,
+      v_offer.id,
+      v_offer.name_ar,
+      v_offer.name_en,
+      v_offer.price,
+      v_item.quantity,
+      v_item_subtotal,
+      v_item.dynamic_fields,
+      jsonb_build_object('offer_type', v_offer.offer_type, 'product_id', v_offer.product_id)
+    )
+    returning id into v_item_id;
+
+    insert into public.wallet_transactions (
+      wallet_id, user_id, type, amount,
+      balance_before, balance_after,
+      reference_type, reference_id,
+      description, metadata
+    )
+    values (
+      v_wallet_id, v_user_id, 'purchase', -v_item_subtotal,
+      v_before, v_before - v_item_subtotal,
+      'order', v_order_id,
+      'Cart item order #' || v_order_number,
+      jsonb_build_object('order_id', v_order_id, 'offer_id', v_offer.id)
+    );
+
+    v_before := v_before - v_item_subtotal;
+
+    -- Append to results array
+    v_result_orders := v_result_orders || jsonb_build_object(
+      'order_id', v_order_id,
+      'order_number', v_order_number,
+      'total', v_item_subtotal,
+      'balance', v_after
+    );
+  end loop;
+
+  -- Clear cart items for this user
+  delete from public.cart_items
+  where user_id = v_user_id;
+
+  -- Record idempotency cache
+  update public.idempotency_keys
+  set response_body = v_result_orders
+  where key = p_idempotency_key
+    and user_id = v_user_id;
+
+  return query
+  select (elem ->> 'order_id')::uuid,
+         elem ->> 'order_number',
+         (elem ->> 'total')::numeric,
+         (elem ->> 'balance')::numeric,
+         false
+  from jsonb_array_elements(v_result_orders) as elem;
+end;
+$$;
+
+revoke all on function public.place_cart_order(jsonb, uuid, text) from public, anon;
+grant execute on function public.place_cart_order(jsonb, uuid, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- END 20261012100000_cart.sql
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261012110000_wishlist.sql
+-- ---------------------------------------------------------------------------
+
+-- 20261012110000_wishlist.sql
+-- User wishlist / favorites storage with owner-only RLS.
+
+create table if not exists public.wishlist_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  product_id uuid not null references public.products(id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now()),
+  constraint uq_wishlist_user_product unique (user_id, product_id)
+);
+
+create index if not exists idx_wishlist_items_user_id on public.wishlist_items(user_id);
+create index if not exists idx_wishlist_items_product_id on public.wishlist_items(product_id);
+
+alter table public.wishlist_items enable row level security;
+
+drop policy if exists wishlist_items_owner_select on public.wishlist_items;
+create policy wishlist_items_owner_select on public.wishlist_items
+  for select to authenticated using (auth.uid() = user_id);
+
+drop policy if exists wishlist_items_owner_insert on public.wishlist_items;
+create policy wishlist_items_owner_insert on public.wishlist_items
+  for insert to authenticated with check (auth.uid() = user_id);
+
+drop policy if exists wishlist_items_owner_delete on public.wishlist_items;
+create policy wishlist_items_owner_delete on public.wishlist_items
+  for delete to authenticated using (auth.uid() = user_id);
+
+grant select, insert, delete on public.wishlist_items to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- END 20261012110000_wishlist.sql
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261012120000_cashback.sql
+-- ---------------------------------------------------------------------------
+
+-- 20261012120000_cashback.sql
+-- Store loyalty / cashback system triggered on order delivery.
+
+-- 1. Add cashback_percent column to store_settings
+alter table public.store_settings
+  add column if not exists cashback_percent numeric(5, 2) default 0
+  check (cashback_percent >= 0 and cashback_percent <= 100);
+
+comment on column public.store_settings.cashback_percent is
+  'Cashback percentage credited to customer wallet when an order is delivered (0 = disabled).';
+
+-- 2. Allow 'cashback' in wallet_transactions type check
+alter table public.wallet_transactions
+  drop constraint if exists wallet_transactions_type_check;
+
+alter table public.wallet_transactions
+  add constraint wallet_transactions_type_check
+  check (type in ('deposit', 'purchase', 'refund', 'adjustment', 'withdrawal', 'cashback'));
+
+-- 3. Idempotent unique index for cashback transactions per order
+create unique index if not exists idx_wallet_tx_order_cashback
+  on public.wallet_transactions (reference_id)
+  where type = 'cashback';
+
+-- 4. Trigger function to award cashback upon order delivery
+create or replace function public.handle_order_cashback()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_cashback_pct numeric(5, 2) := 0;
+  v_cashback_amount numeric(12, 2);
+  v_wallet_id uuid;
+  v_before numeric(12, 2);
+  v_after numeric(12, 2);
+begin
+  -- Only trigger when transitioning to delivered
+  if new.status = 'delivered' and (old.status is distinct from 'delivered') then
+    select coalesce(cashback_percent, 0)
+    into v_cashback_pct
+    from public.store_settings
+    where id = 'global'
+    limit 1;
+
+    if v_cashback_pct > 0 and new.total > 0 and new.user_id is not null then
+      v_cashback_amount := round(new.total * (v_cashback_pct / 100.0), 2);
+
+      if v_cashback_amount > 0 then
+        -- Verify no prior cashback transaction exists for this order
+        if not exists (
+          select 1 from public.wallet_transactions
+          where reference_id = new.id and type = 'cashback'
+        ) then
+          select w.id, w.balance
+          into v_wallet_id, v_before
+          from public.wallets w
+          where w.user_id = new.user_id
+          for update;
+
+          if v_wallet_id is not null then
+            v_after := v_before + v_cashback_amount;
+
+            update public.wallets
+            set balance = v_after,
+                updated_at = timezone('utc', now())
+            where id = v_wallet_id;
+
+            insert into public.wallet_transactions (
+              wallet_id, user_id, type, amount,
+              balance_before, balance_after,
+              reference_type, reference_id,
+              description, metadata
+            )
+            values (
+              v_wallet_id, new.user_id, 'cashback', v_cashback_amount,
+              v_before, v_after,
+              'order', new.id,
+              'Cashback for order #' || new.order_number,
+              jsonb_build_object(
+                'order_id', new.id,
+                'order_number', new.order_number,
+                'rate_percent', v_cashback_pct,
+                'order_total', new.total
+              )
+            );
+          end if;
+        end if;
+      end if;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_order_cashback on public.orders;
+create trigger trg_order_cashback
+  after update of status on public.orders
+  for each row
+  execute function public.handle_order_cashback();
+
+-- ---------------------------------------------------------------------------
+-- END 20261012120000_cashback.sql
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261012130000_offer_sales.sql
+-- ---------------------------------------------------------------------------
+
+-- 20261012130000_offer_sales.sql
+-- Add flash sale price and scheduling columns to offers.
+
+alter table public.offers
+  add column if not exists sale_price numeric(12, 2) default null,
+  add column if not exists sale_starts_at timestamptz default null,
+  add column if not exists sale_ends_at timestamptz default null;
+
+comment on column public.offers.sale_price is 'Promotional flash sale price in offer currency.';
+comment on column public.offers.sale_starts_at is 'UTC start timestamp for flash sale price activation.';
+comment on column public.offers.sale_ends_at is 'UTC end timestamp for flash sale price expiration.';
+
+create index if not exists idx_offers_sale_active
+  on public.offers (sale_starts_at, sale_ends_at)
+  where sale_price is not null;
+
+-- ---------------------------------------------------------------------------
+-- END 20261012130000_offer_sales.sql
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261012140000_reports.sql
+-- ---------------------------------------------------------------------------
+
+-- 20261012140000_reports.sql
+-- Admin sales reports RPC returning revenue, cost, profit, and order metrics grouped by dimension.
+
+create or replace function public.admin_sales_report(
+  p_from date default (current_date - interval '30 days')::date,
+  p_to date default current_date,
+  p_group text default 'day'
+)
+returns table (
+  group_key text,
+  group_label text,
+  orders_count bigint,
+  items_count bigint,
+  revenue numeric,
+  cost numeric,
+  profit numeric,
+  margin_percent numeric
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_role text;
+  v_from_ts timestamptz := p_from::timestamptz;
+  v_to_ts timestamptz := (p_to + interval '1 day')::timestamptz;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required' using errcode = 'P0001';
+  end if;
+
+  select p.role into v_role
+  from public.profiles p
+  where p.id = v_user_id;
+
+  if v_role is distinct from 'admin' then
+    raise exception 'Admin privileges required' using errcode = 'P0001';
+  end if;
+
+  if p_group = 'product' then
+    return query
+    select
+      coalesce(p.id::text, 'unknown') as group_key,
+      coalesce(p.name_en, p.name_ar, 'Unknown product') as group_label,
+      count(distinct o.id) as orders_count,
+      coalesce(sum(oi.quantity), 0)::bigint as items_count,
+      round(coalesce(sum(oi.total_price), 0), 2) as revenue,
+      round(coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0), 2) as cost,
+      round(coalesce(sum(oi.total_price), 0) - coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0), 2) as profit,
+      case
+        when coalesce(sum(oi.total_price), 0) > 0 then
+          round(((coalesce(sum(oi.total_price), 0) - coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0)) / sum(oi.total_price) * 100), 1)
+        else 0
+      end as margin_percent
+    from public.order_items oi
+    join public.orders o on o.id = oi.order_id
+    left join public.offers off on off.id = oi.offer_id
+    left join public.products p on p.id = off.product_id
+    left join lateral (
+      select pm.supplier_cost_usd
+      from public.provider_offer_mappings pm
+      where pm.offer_id = oi.offer_id
+      order by pm.created_at, pm.id
+      limit 1
+    ) m on true
+    where o.payment_status = 'paid'
+      and o.created_at >= v_from_ts
+      and o.created_at < v_to_ts
+    group by p.id, p.name_en, p.name_ar
+    order by revenue desc;
+
+  elsif p_group = 'category' then
+    return query
+    select
+      coalesce(c.slug, 'uncategorized') as group_key,
+      coalesce(c.name_en, c.name_ar, 'Uncategorized') as group_label,
+      count(distinct o.id) as orders_count,
+      coalesce(sum(oi.quantity), 0)::bigint as items_count,
+      round(coalesce(sum(oi.total_price), 0), 2) as revenue,
+      round(coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0), 2) as cost,
+      round(coalesce(sum(oi.total_price), 0) - coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0), 2) as profit,
+      case
+        when coalesce(sum(oi.total_price), 0) > 0 then
+          round(((coalesce(sum(oi.total_price), 0) - coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0)) / sum(oi.total_price) * 100), 1)
+        else 0
+      end as margin_percent
+    from public.order_items oi
+    join public.orders o on o.id = oi.order_id
+    left join public.offers off on off.id = oi.offer_id
+    left join public.products p on p.id = off.product_id
+    left join public.categories c on c.id = p.category_id
+    left join lateral (
+      select pm.supplier_cost_usd
+      from public.provider_offer_mappings pm
+      where pm.offer_id = oi.offer_id
+      order by pm.created_at, pm.id
+      limit 1
+    ) m on true
+    where o.payment_status = 'paid'
+      and o.created_at >= v_from_ts
+      and o.created_at < v_to_ts
+    group by c.slug, c.name_en, c.name_ar
+    order by revenue desc;
+
+  elsif p_group = 'provider' then
+    return query
+    select
+      coalesce(m.provider_name, 'manual') as group_key,
+      case
+        when m.provider_name is not null then upper(m.provider_name)
+        else 'Manual / Internal'
+      end as group_label,
+      count(distinct o.id) as orders_count,
+      coalesce(sum(oi.quantity), 0)::bigint as items_count,
+      round(coalesce(sum(oi.total_price), 0), 2) as revenue,
+      round(coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0), 2) as cost,
+      round(coalesce(sum(oi.total_price), 0) - coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0), 2) as profit,
+      case
+        when coalesce(sum(oi.total_price), 0) > 0 then
+          round(((coalesce(sum(oi.total_price), 0) - coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0)) / sum(oi.total_price) * 100), 1)
+        else 0
+      end as margin_percent
+    from public.order_items oi
+    join public.orders o on o.id = oi.order_id
+    left join lateral (
+      select pm.provider_name, pm.supplier_cost_usd
+      from public.provider_offer_mappings pm
+      where pm.offer_id = oi.offer_id
+      order by pm.created_at, pm.id
+      limit 1
+    ) m on true
+    where o.payment_status = 'paid'
+      and o.created_at >= v_from_ts
+      and o.created_at < v_to_ts
+    group by m.provider_name
+    order by revenue desc;
+
+  else
+    -- Default: day
+    return query
+    select
+      to_char(date_trunc('day', o.created_at), 'YYYY-MM-DD') as group_key,
+      to_char(date_trunc('day', o.created_at), 'YYYY-MM-DD') as group_label,
+      count(distinct o.id) as orders_count,
+      coalesce(sum(oi.quantity), 0)::bigint as items_count,
+      round(coalesce(sum(oi.total_price), 0), 2) as revenue,
+      round(coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0), 2) as cost,
+      round(coalesce(sum(oi.total_price), 0) - coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0), 2) as profit,
+      case
+        when coalesce(sum(oi.total_price), 0) > 0 then
+          round(((coalesce(sum(oi.total_price), 0) - coalesce(sum(coalesce(m.supplier_cost_usd, 0) * oi.quantity), 0)) / sum(oi.total_price) * 100), 1)
+        else 0
+      end as margin_percent
+    from public.order_items oi
+    join public.orders o on o.id = oi.order_id
+    left join lateral (
+      select pm.supplier_cost_usd
+      from public.provider_offer_mappings pm
+      where pm.offer_id = oi.offer_id
+      order by pm.created_at, pm.id
+      limit 1
+    ) m on true
+    where o.payment_status = 'paid'
+      and o.created_at >= v_from_ts
+      and o.created_at < v_to_ts
+    group by date_trunc('day', o.created_at)
+    order by group_key desc;
+  end if;
+end;
+$$;
+
+revoke all on function public.admin_sales_report(date, date, text) from public, anon;
+grant execute on function public.admin_sales_report(date, date, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- END 20261012140000_reports.sql
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261012150000_auto_sync_settings.sql
+-- ---------------------------------------------------------------------------
+
+-- 20261012150000_auto_sync_settings.sql
+-- Settings for automated supplier stock & price sync.
+
+alter table public.store_settings
+  add column if not exists auto_sync_enabled boolean default false,
+  add column if not exists auto_sync_max_change_pct numeric(5, 2) default 15
+  check (auto_sync_max_change_pct >= 0 and auto_sync_max_change_pct <= 100);
+
+comment on column public.store_settings.auto_sync_enabled is
+  'When true, scheduled provider sync automatically updates active stock and prices within safety threshold.';
+comment on column public.store_settings.auto_sync_max_change_pct is
+  'Maximum price change percent allowable for automatic sync without requiring manual review.';
+
+-- ---------------------------------------------------------------------------
+-- END 20261012150000_auto_sync_settings.sql
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- BEGIN 20261012160000_store_telegram_bot_option.sql
+-- ---------------------------------------------------------------------------
+
+-- Migration: Add the Telegram Store Bot purchase option to store_settings
+--
+-- The store owner operates a dedicated automated Telegram sales bot (https://t.me/gh_store1_bot)
+-- that sells the same digital catalog products directly to buyers on Telegram.
+--
+-- Note on bot separation:
+-- 1. store_settings.telegram: Reserved exclusively for the store administrator alerts
+--    and system logs (order notifications, failure alerts, recharge verification). This
+--    must NOT be confused with or replaced by the consumer storefront bot.
+-- 2. social_links: Customer-facing links. Includes:
+--    - WhatsApp direct contact (https://wa.me/963968098330)
+--    - Owner personal Telegram for 1-on-1 support (https://t.me/ahmedghx)
+--    - Dedicated Telegram store bot for buyers to purchase (https://t.me/gh_store1_bot)
+-- 3. contact.channels: Customer contact options. Includes:
+--    - WhatsApp, Personal Telegram, Store Bot, Email.
+-- 4. telegram_store_bot_url: Dedicated column on store_settings holding the store bot URL.
+
+-- 1. Add dedicated store bot column
+alter table public.store_settings
+  add column if not exists telegram_store_bot_url text default 'https://t.me/gh_store1_bot';
+
+comment on column public.store_settings.telegram_store_bot_url is
+  'Customer-facing Telegram bot URL for purchasing products directly on Telegram (separate from admin alerts).';
+
+-- 2. Update store_settings with the store bot in social_links and contact channels
+update public.store_settings
+set
+  telegram_store_bot_url = 'https://t.me/gh_store1_bot',
+  social_links = '[
+    {"platform":"whatsapp","label_ar":"واتساب","label_en":"WhatsApp","url":"https://wa.me/963968098330"},
+    {"platform":"telegram","label_ar":"تيليجرام (الدعم الفني)","label_en":"Telegram (Support)","url":"https://t.me/ahmedghx"},
+    {"platform":"telegram","label_ar":"بوت المتجر للشراء","label_en":"Store Bot (Shop on Telegram)","url":"https://t.me/gh_store1_bot"}
+  ]'::jsonb,
+  contact = jsonb_set(
+    coalesce(contact, '{}'::jsonb),
+    '{channels}',
+    '[
+      {"kind":"whatsapp","label_ar":"واتساب","label_en":"WhatsApp","value":"00963968098330"},
+      {"kind":"telegram","label_ar":"تيليجرام (الدعم)","label_en":"Telegram (Support)","value":"ahmedghx"},
+      {"kind":"telegram","label_ar":"بوت المتجر للشراء","label_en":"Store Bot (Shop)","value":"gh_store1_bot"},
+      {"kind":"email","label_ar":"البريد الإلكتروني","label_en":"Email","value":"ahmedghuwu3@gmail.com"}
+    ]'::jsonb,
+    true
+  ),
+  updated_at = timezone('utc', now())
+where id = 'global';
+
+-- 3. Expose telegram_store_bot_url safely through public RPC
+create or replace function public.get_public_store_settings()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'home_layout', coalesce(settings.home_layout, '[]'::jsonb),
+    'social_links', coalesce(settings.social_links, '[]'::jsonb),
+    'seo', coalesce(settings.seo, '{}'::jsonb),
+    'contact', coalesce(settings.contact, '{}'::jsonb),
+    'theme', coalesce(settings.theme, '{}'::jsonb),
+    'branding', coalesce(settings.branding, '{}'::jsonb),
+    'maintenance_mode', settings.maintenance_mode,
+    'maintenance_message_ar', settings.maintenance_message_ar,
+    'maintenance_message_en', settings.maintenance_message_en,
+    'telegram_bot_username', coalesce(
+      nullif(settings.telegram->'telegram'->>'bot_username', ''),
+      settings.telegram->>'bot_username',
+      ''
+    ),
+    'telegram_store_bot_url', coalesce(settings.telegram_store_bot_url, 'https://t.me/gh_store1_bot')
+  )
+  from public.store_settings as settings
+  where settings.id = 'global';
+$$;
+
+revoke all on function public.get_public_store_settings() from public;
+grant execute on function public.get_public_store_settings() to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- END 20261012160000_store_telegram_bot_option.sql
+-- ---------------------------------------------------------------------------
+
 -- ===========================================================================
 -- Post-apply verification. Every query below must return the stated result.
 -- ===========================================================================

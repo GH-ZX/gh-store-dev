@@ -100,6 +100,7 @@ const publicSettingsSchema = z.object({
   maintenance_message_en: z.string().trim().max(400).nullish(),
   home_layout: z.unknown().optional(),
   telegram_bot_username: z.string().trim().max(64).nullish(),
+  telegram_store_bot_url: z.string().trim().max(200).nullish(),
 });
 
 export type SocialLink = {
@@ -145,6 +146,8 @@ export type PublicStoreSettings = {
   maintenanceMessageEn: string;
   /** The store's Telegram bot @username, for connect instructions. */
   telegramBotUsername: string | null;
+  /** Customer-facing Telegram bot URL for direct purchases. */
+  telegramStoreBotUrl: string | null;
 };
 
 export const EMPTY_PUBLIC_SETTINGS: PublicStoreSettings = {
@@ -152,6 +155,7 @@ export const EMPTY_PUBLIC_SETTINGS: PublicStoreSettings = {
   contactChannels: [],
   contactNoteAr: "",
   contactNoteEn: "",
+  telegramStoreBotUrl: null,
   seo: {
     titleAr: "",
     titleEn: "",
@@ -292,6 +296,12 @@ export function normalizePublicSettings(value: unknown): PublicStoreSettings {
       typeof settings.telegram_bot_username === "string" && settings.telegram_bot_username.trim()
         ? settings.telegram_bot_username.trim()
         : null,
+    telegramStoreBotUrl:
+      typeof settings.telegram_store_bot_url === "string" && settings.telegram_store_bot_url.trim()
+        ? settings.telegram_store_bot_url.trim()
+        : normalizeSocialLinks(settings.social_links ?? []).find(
+            (link) => link.platform === "telegram" && (link.url.includes("gh_store1_bot") || link.url.includes("gh-store1-bot")),
+          )?.url ?? "https://t.me/gh_store1_bot",
   };
 }
 

@@ -6,13 +6,10 @@ import { ArrowIcon, CheckIcon, InfoIcon } from "@/components/ui/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { ContactIcon } from "@/components/ui/brand-icons";
+import { BotIcon, ContactIcon, isBotChannel, SocialIcon } from "@/components/ui/brand-icons";
 import { EmptyState } from "@/components/shared/states";
-import { FaqList } from "@/components/content/content-blocks";
-import { ProseSections } from "@/components/content/content-blocks";
+import { FaqList, ProseSections, StepList } from "@/components/content/content-blocks";
 import { AccountHeading } from "@/components/account-ui";
-import { SocialIcon } from "@/components/ui/brand-icons";
-import { StepList } from "@/components/content/content-blocks";
 import { getContactChannelLabel } from "@/lib/settings/public-settings";
 import { getMessages } from "@/i18n/messages";
 import { getSocialLinkLabel } from "@/lib/settings/public-settings";
@@ -193,24 +190,28 @@ export function ContactContent({
             <ul className="mt-5 grid gap-3 sm:grid-cols-2">
               {channels.map((channel) => {
                 const label = getContactChannelLabel(channel, locale);
+                const isBot = isBotChannel(channel.value, label);
 
                 const body = (
                   <>
-                    {/*
-                     * The mark carries the kind, so a customer scanning the
-                     * grid finds WhatsApp by its shape rather than by reading
-                     * four labels. It is not the label: the name is right
-                     * beside it, which is what a screen reader announces.
-                     */}
                     <span
-                      className="grid size-9 shrink-0 place-items-center rounded-lg border border-[var(--line)] bg-[var(--shell)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)] [&>svg]:size-4.5"
+                      className={
+                        isBot
+                          ? "grid size-9 shrink-0 place-items-center rounded-lg border border-[#229ED9]/40 bg-[#229ED9]/15 text-[#229ED9] [&>svg]:size-4.5"
+                          : "grid size-9 shrink-0 place-items-center rounded-lg border border-[var(--line)] bg-[var(--shell)] text-[var(--ink-soft)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)] [&>svg]:size-4.5"
+                      }
                       aria-hidden="true"
                     >
-                      <ContactIcon kind={channel.kind} />
+                      {isBot ? <BotIcon /> : <ContactIcon kind={channel.kind} />}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-[var(--ink)]">
-                        {label}
+                      <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ink)]">
+                        <span>{label}</span>
+                        {isBot ? (
+                          <span className="inline-flex items-center rounded bg-[#229ED9]/20 px-1.5 py-0.2 text-[10px] font-black tracking-wide text-[#229ED9] uppercase border border-[#229ED9]/30">
+                            BOT
+                          </span>
+                        ) : null}
                       </span>
                       <span
                         className="mt-1 block truncate text-sm text-[var(--ink-muted)]"
@@ -295,27 +296,38 @@ export function LinksContent({
         />
       ) : (
         <ul className="sf-content-social-list">
-          {settings.socialLinks.map((link) => (
-            <li key={link.id}>
-              <a
-                href={link.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="sf-content-social-link group"
-              >
-                {/*
-                 * Two glyphs on one row, saying different things: the mark at
-                 * the start is which app this opens, the arrow at the end is
-                 * that it leaves the store. Both earn their place on a row this
-                 * wide, where a lone label would float in the middle of it.
-                 */}
-                <SocialIcon
-                  platform={link.platform}
-                  className="size-5 shrink-0 text-[var(--ink-soft)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)]"
-                />
-                <span className="min-w-0 flex-1 truncate">
-                  {getSocialLinkLabel(link, locale)}
-                </span>
+          {settings.socialLinks.map((link) => {
+            const label = getSocialLinkLabel(link, locale);
+            const isBot = isBotChannel(link.url, label);
+
+            return (
+              <li key={link.id}>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className={
+                    isBot
+                      ? "sf-content-social-link group border-[#229ED9]/40 bg-[#229ED9]/5 hover:border-[#229ED9] hover:bg-[#229ED9]/15"
+                      : "sf-content-social-link group"
+                  }
+                >
+                  {isBot ? (
+                    <BotIcon className="size-5 shrink-0 text-[#229ED9]" />
+                  ) : (
+                    <SocialIcon
+                      platform={link.platform}
+                      className="size-5 shrink-0 text-[var(--ink-soft)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)]"
+                    />
+                  )}
+                  <span className="min-w-0 flex-1 truncate flex items-center gap-2">
+                    <span>{label}</span>
+                    {isBot ? (
+                      <span className="inline-flex items-center rounded bg-[#229ED9]/20 px-1.5 py-0.5 text-[10px] font-black tracking-wide text-[#229ED9] uppercase border border-[#229ED9]/30">
+                        BOT
+                      </span>
+                    ) : null}
+                  </span>
                 <span
                   className="grid size-9 shrink-0 place-items-center rounded-lg border border-[var(--line)] text-[var(--ink-muted)] transition-[background-color,color] duration-[var(--duration)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-ink)]"
                   aria-hidden="true"
@@ -326,8 +338,9 @@ export function LinksContent({
                   />
                 </span>
               </a>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

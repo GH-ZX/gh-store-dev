@@ -45,6 +45,16 @@ const UPGRADE_MIGRATIONS = [
   "20261010150000_split_services_category.sql",
   "20261010160000_coupon_safety_and_permissions.sql",
   "20261010170000_coupon_wallet_recharge.sql",
+  "20261011100000_admin_mfa_setting.sql",
+  "20261011110000_velocity_guards.sql",
+  "20261011120000_email_preferences.sql",
+  "20261012100000_cart.sql",
+  "20261012110000_wishlist.sql",
+  "20261012120000_cashback.sql",
+  "20261012130000_offer_sales.sql",
+  "20261012140000_reports.sql",
+  "20261012150000_auto_sync_settings.sql",
+  "20261012160000_store_telegram_bot_option.sql",
 ];
 
 const banner = `-- ===========================================================================

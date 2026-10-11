@@ -53,6 +53,20 @@ export function TelegramIcon(props: IconProps) {
   );
 }
 
+export function BotIcon(props: IconProps) {
+  return (
+    <Mark {...props}>
+      <path d="M12 2a1.5 1.5 0 0 1 1.5 1.5V4h1.75A4.75 4.75 0 0 1 20 8.75v6.5A4.75 4.75 0 0 1 15.25 20H8.75A4.75 4.75 0 0 1 4 15.25v-6.5A4.75 4.75 0 0 1 8.75 4H10.5V3.5A1.5 1.5 0 0 1 12 2ZM8.5 10a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm7 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm-6.75 5.5a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5ZM2 10.5a1.5 1.5 0 0 1 1.5-1.5H4v4h-.5A1.5 1.5 0 0 1 2 11.5v-1Zm18 0a1.5 1.5 0 0 1 1.5-1.5h.5v4h-.5A1.5 1.5 0 0 1 20 11.5v-1Z" />
+    </Mark>
+  );
+}
+
+export function isBotChannel(url?: string, label?: string): boolean {
+  if (!url && !label) return false;
+  const target = `${url ?? ""} ${label ?? ""}`.toLowerCase();
+  return target.includes("bot") || target.includes("بوت");
+}
+
 /**
  * Instagram, drawn rather than traced.
  *

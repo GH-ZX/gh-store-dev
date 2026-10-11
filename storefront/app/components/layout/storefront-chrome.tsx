@@ -5,7 +5,7 @@ import { type Locale } from "@/i18n/config";
 import { getMessages, type CommonMessages } from "@/i18n/messages";
 import type { ChromeData } from "@/components/site-chrome";
 export { getStorefrontThemeStyle } from "@/lib/storefront-theme";
-import { SocialIcon } from "@/components/ui/brand-icons";
+import { BotIcon, isBotChannel, SocialIcon } from "@/components/ui/brand-icons";
 import { getSocialLinkLabel } from "@/lib/settings/public-settings";
 import { SearchField } from "@/components/search/search-field";
 import {
@@ -365,18 +365,24 @@ export function StorefrontFooter({
                 className="sf-footer-social"
                 aria-label={messages.footer.followHeading}
               >
-                {data.socialLinks.map((link) => (
-                  <a
-                    key={link.id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={getSocialLinkLabel(link, locale)}
-                    title={getSocialLinkLabel(link, locale)}
-                  >
-                    <SocialIcon platform={link.platform} />
-                  </a>
-                ))}
+                {data.socialLinks.map((link) => {
+                  const label = getSocialLinkLabel(link, locale);
+                  const isBot = isBotChannel(link.url, label);
+
+                  return (
+                    <a
+                      key={link.id}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      title={label}
+                      className={isBot ? "text-[#229ED9] hover:text-[#229ED9]/80" : undefined}
+                    >
+                      {isBot ? <BotIcon /> : <SocialIcon platform={link.platform} />}
+                    </a>
+                  );
+                })}
               </nav>
             ) : null}
           </div>

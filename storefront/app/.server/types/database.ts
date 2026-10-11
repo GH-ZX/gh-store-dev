@@ -2142,6 +2142,7 @@ export type Database = {
           seo: Json
           social_links: Json
           telegram: Json
+          telegram_store_bot_url: string | null
           theme: Json
           updated_at: string
           updated_by: string | null
@@ -2160,6 +2161,7 @@ export type Database = {
           seo?: Json
           social_links?: Json
           telegram?: Json
+          telegram_store_bot_url?: string | null
           theme?: Json
           updated_at?: string
           updated_by?: string | null
@@ -2178,6 +2180,7 @@ export type Database = {
           seo?: Json
           social_links?: Json
           telegram?: Json
+          telegram_store_bot_url?: string | null
           theme?: Json
           updated_at?: string
           updated_by?: string | null

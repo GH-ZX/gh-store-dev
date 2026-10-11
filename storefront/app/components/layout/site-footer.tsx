@@ -1,6 +1,6 @@
 
 import { Link } from "react-router";
-import { SocialIcon } from "@/components/ui/brand-icons";
+import { BotIcon, isBotChannel, SocialIcon } from "@/components/ui/brand-icons";
 import type { Locale } from "@/i18n/config";
 import type { CommonMessages } from "@/i18n/messages";
 import { getSocialLinkLabel, type SocialLink } from "@/lib/settings/public-settings";
@@ -119,29 +119,40 @@ export function SiteFooter({ locale, messages, socialLinks, year, brandName }: S
               {messages.footer.followHeading}
             </h2>
             <ul className="mt-4 flex flex-wrap gap-2">
-              {socialLinks.map((link) => (
-                <li key={link.id}>
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="group inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] px-4 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
-                  >
-                    {/*
-                     * The mark leads and nothing trails. A pill this size can
-                     * carry one glyph before it starts looking like a toolbar,
-                     * and the mark is the more useful of the two: it says which
-                     * app opens, where an arrow only repeats that a link is a
-                     * link.
-                     */}
-                    <SocialIcon
-                      platform={link.platform}
-                      className="size-4 shrink-0 text-[var(--ink-faint)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)]"
-                    />
-                    {getSocialLinkLabel(link, locale)}
-                  </a>
-                </li>
-              ))}
+              {socialLinks.map((link) => {
+                const label = getSocialLinkLabel(link, locale);
+                const isBot = isBotChannel(link.url, label);
+
+                return (
+                  <li key={link.id}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className={
+                        isBot
+                          ? "group inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-[#229ED9]/40 bg-[#229ED9]/10 px-4 text-sm font-medium text-[var(--ink)] shadow-sm transition-all duration-[var(--duration)] hover:border-[#229ED9] hover:bg-[#229ED9]/20 hover:shadow-md"
+                          : "group inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--line)] px-4 text-sm text-[var(--ink-soft)] transition-colors duration-[var(--duration)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+                      }
+                    >
+                      {isBot ? (
+                        <BotIcon className="size-4 shrink-0 text-[#229ED9] transition-transform duration-[var(--duration)] group-hover:scale-110" />
+                      ) : (
+                        <SocialIcon
+                          platform={link.platform}
+                          className="size-4 shrink-0 text-[var(--ink-faint)] transition-colors duration-[var(--duration)] group-hover:text-[var(--accent)]"
+                        />
+                      )}
+                      <span>{label}</span>
+                      {isBot ? (
+                        <span className="inline-flex items-center rounded bg-[#229ED9]/20 px-1.5 py-0.5 text-[10px] font-black tracking-wide text-[#229ED9] uppercase border border-[#229ED9]/30">
+                          BOT
+                        </span>
+                      ) : null}
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ) : null}
