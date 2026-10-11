@@ -36,38 +36,47 @@ function QuickBuy({
             {...getProductArtwork(item.product, "thumbnail")}
             alt=""
             width={128}
-            sizes="64px"
+            sizes="48px"
             fallbackLabel={item.product.name}
           />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <span>{item.product.categoryName}</span>
           <h3 id={`${id}-title`} dir="auto">
             {item.product.name}
           </h3>
         </div>
       </Link>
-      <label htmlFor={`${id}-offer`}>{t.chooseOffer}</label>
-      <select id={`${id}-offer`} value={offer.id} onChange={(event) => setOfferId(event.target.value)}>
-        {item.offers.map((choice) => (
-          <option key={choice.id} value={choice.id}>
-            {choice.name}
-            {choice.regionCode ? ` · ${choice.regionCode}` : ""} — {formatPrice(choice.price, choice.currency, locale)}
-          </option>
-        ))}
-      </select>
+      <div className="sf-quick-select-wrap">
+        <label htmlFor={`${id}-offer`} className="sr-only">
+          {t.chooseOffer}
+        </label>
+        <select id={`${id}-offer`} value={offer.id} onChange={(event) => setOfferId(event.target.value)}>
+          {item.offers.map((choice) => (
+            <option key={choice.id} value={choice.id}>
+              {choice.name}
+              {choice.regionCode ? ` · ${choice.regionCode}` : ""} — {formatPrice(choice.price, choice.currency, locale)}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="sf-quick-facts" aria-live="polite">
         <OfferTerms terms={offer.terms} locale={locale} />
         {offer.regionCode ? (
-          <p>
+          <span className="sf-quick-badge">
             {t.region}: <bdi>{offer.regionCode}</bdi>
-          </p>
+          </span>
         ) : null}
       </div>
       <div className="sf-quick-actions">
-        <strong data-price>
-          <bdi>{formatPrice(offer.price, offer.currency, locale)}</bdi>
-        </strong>
+        <div className="sf-quick-price-box">
+          <strong data-price>
+            <bdi>{formatPrice(offer.price, offer.currency, locale)}</bdi>
+          </strong>
+          <Link className="sf-quick-details" to={productPath(locale, item.product)}>
+            {t.details}
+          </Link>
+        </div>
         <Link
           onClick={() => measureStoreEvent("quick_buy")}
           className="sf-catalog-primary"
@@ -77,9 +86,6 @@ function QuickBuy({
           {t.quickBuy}
         </Link>
       </div>
-      <Link className="sf-quick-details" to={productPath(locale, item.product)}>
-        {t.details}
-      </Link>
     </article>
   );
 }
